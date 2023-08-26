@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta property="og:title" content="Catch Rest">
+  <meta property="og:type" content="article" />
+  <meta property="og:description" content="Catch Rest">
+  <meta name="twitter:image:alt" content="Catch Rest">
+  <meta name="twitter:card" content="summary_large_image">
+  <title>bSkye</title>
+  <script>
+    (function () {
+      var baseUrl = getBaseUrl(location.pathname, location.protocol, location.host);
+      if (baseUrl) {
+        var inject = '<base href="' + baseUrl + '">';
+        document.write(inject);
+      }
+
+      function getBaseUrl(pathname, protocol, host) {
+        if (protocol && protocol.indexOf('file') >= 0) return; // running from local file, no need to adjust base URL
+        var verb = getVerb(pathname);
+        if (!verb) return; // no deep URL, no need to adjust base URL
+
+        var baseUrl = (protocol || '') + '//' + (host || '') + pathname.slice(0, verb.index);
+
+        return baseUrl;
+      }
+      function getVerb(path) {
+        var verbMatch = /(^|\/)(post|settings|likes|search|did:[a-z0-9\.]+)(\/|$)/i.exec(path + '');
+        return verbMatch ? { leadingSlash: verbMatch[1], verb: verbMatch[2], trailingSlash: verbMatch[3], index: verbMatch.index + (verbMatch[1] ? 1 : 0) } : void 0;
+      }
+    })()
+  </script>
+  <style>
+    html {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+
+      background: white;
+      color: black;
+      font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+        "Arial Unicode";
+    }
+
+    *,
+    *:before,
+    *:after {
+      box-sizing: inherit;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+        "Arial Unicode";
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <script src="index.js"></script>
+  <script src="lib.js"></script>
+  <script> atlas("page") </script>
+</body>
+
+</html>
