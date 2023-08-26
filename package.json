@@ -1,0 +1,21 @@
+{
+  "name": "atlas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "npx esbuild lib/lib.js --outfile=lib.js --bundle",
+    "start": "node index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@atproto/api": "^0.6.6",
+    "@atproto/repo": "^0.2.0",
+    "@atproto/xrpc-server": "^0.3.0",
+    "@ipld/car": "^5.2.0",
+    "cbor-x": "^1.5.4",
+    "esbuild": "^0.19.2"
+  }
+}
