@@ -7,7 +7,10 @@ function atlas(invokeType) {
   * ({$type: 'app.bsky.feed.like'} & import ('@atproto/api').AppBskyFeedLike.Record) |
   * ({$type: 'app.bsky.graph.follow'} & import ('@atproto/api').AppBskyGraphFollow.Record) |
   * ({$type: 'app.bsky.feed.post'} & import ('@atproto/api').AppBskyFeedPost.Record) |
-  * ({$type: 'app.bsky.feed.repost'} & import ('@atproto/api').AppBskyFeedRepost.Record)
+  * ({$type: 'app.bsky.feed.repost'} & import ('@atproto/api').AppBskyFeedRepost.Record) |
+  * ({$type: 'app.bsky.graph.listitem'} & import ('@atproto/api').AppBskyGraphListitem.Record) |
+  * ({$type: 'app.bsky.graph.block'} & import ('@atproto/api').AppBskyGraphBlock.Record) |
+  * ({$type: 'app.bsky.actor.profile'} & import ('@atproto/api').AppBskyActorProfile.Record)
   * )} FeedRecord */
 
   const api = (function () {
@@ -114,7 +117,7 @@ function atlas(invokeType) {
   const shared = (function () {
 
     const shared = {
-      dumpFirehose,
+      debugDumpFirehose,
       subscriptionAsyncIterator
     };
 
@@ -183,31 +186,46 @@ function atlas(invokeType) {
 
     }
 
-    async function dumpFirehose() {
+    async function debugDumpFirehose() {
       const firehose = api.operationsFirehose();
       for await (const value of firehose) {
         switch (value.record?.$type) {
           case 'app.bsky.feed.like':
-            console.log(value.record.$type, '  ', value.record.subject?.uri);
+            console.log(value.op?.action + ' ' + value.record.$type + '  ', value.record.subject?.uri);
             break;
 
           case 'app.bsky.graph.follow':
-            console.log(value.record.$type, '  ', value.record.subject);
+            console.log(value.op?.action + ' ' + value.record.$type + '  ', value.record.subject);
             break;
 
           case 'app.bsky.feed.post':
-            console.log(value.record.$type, '  ', value.record.text.length < 20 ? value.record.text : value.record.text.slice(0, 20).replace(/\s+/g, ' ') + '...');
+            console.log(value.op?.action + ' ' + value.record.$type + '  ', value.record.text.length < 20 ? value.record.text : value.record.text.slice(0, 20).replace(/\s+/g, ' ') + '...');
             break;
 
           case 'app.bsky.feed.repost':
-            console.log(value.record.$type, '  ', value.record.subject?.uri);
+            console.log(value.op?.action + ' ' + value.record.$type + '  ', value.record.subject?.uri);
+            break;
+
+          case 'app.bsky.graph.listitem':
+            console.log(value.op?.action + ' ' + value.record.$type + '  ', value.record.subject, ' : ', value.record.list);
+            break;
+
+          case 'app.bsky.graph.block':
+            console.log(value.op?.action + ' ' + value.record.$type + '  ', value.record.subject);
+            break;
+
+          case 'app.bsky.actor.profile':
+            console.log(value.op?.action + ' ' + value.record.$type +
+              '  [', value.record.displayName, '] : "',
+              (value.record.description?.length || 0) < 20 ? value.record.description : (value.record.description || '').slice(0, 20).replace(/\s+/g, ' ') + '...',
+              '" : LABELS: ', value.record.labels ? JSON.stringify(value.record.labels) : value.record.labels);
             break;
 
           default:
             if (value.record) {
-              console.log(/** @type {*} */(value.record).$type, '  RECORD????????????????????????');
+              console.log(/** @type {*} */(value.record).$type, '  RECORD????????????????????????\n\n');
             } else {
-              console.log(value.commit.$type, '  COMMIT????????????????????????');
+              console.log(value.commit.$type, '  COMMIT????????????????????????\n\n');
             }
         }
       }
@@ -219,7 +237,132 @@ function atlas(invokeType) {
   function runBrowser(invokeType) {
     console.log('browser: ', invokeType);
     if (invokeType === 'init') return;
-    if (invokeType === 'page') shared.dumpFirehose();
+    if (invokeType === 'page') showFirehoseConsole();
+
+    async function showFirehoseConsole() {
+      let recycledLast = Date.now();
+      const firehoseConsoleBoundary = document.createElement('div');
+      firehoseConsoleBoundary.style.cssText = `
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      overflow: hidden;
+      `;
+      const firehoseConsoleContent = document.createElement('div');
+      firehoseConsoleContent.style.cssText = `
+      position: absolute;
+      bottom: 0; left: 0; width: 100%;
+      padding: 2em;
+      font-size: 80%;
+      `;
+      firehoseConsoleBoundary.appendChild(firehoseConsoleContent);
+
+      document.body.appendChild(firehoseConsoleBoundary);
+
+      const firehose = api.operationsFirehose();
+      for await (const value of firehose) {
+        switch (value.record?.$type) {
+          case 'app.bsky.feed.like':
+            const likeElement = addDOM();
+            likeElement.textContent = '💓' + (value.record.subject?.uri || '').slice(-4);
+            break;
+
+          case 'app.bsky.graph.follow':
+            const followElement = addDOM();
+            followElement.textContent = 'follow> ' + (value.record.subject || '').slice(-4);
+            break;
+
+          case 'app.bsky.feed.post':
+            const postElement = addDOM();
+            postElement.style.display = 'block';
+            postElement.style.marginTop = '1em';
+            postElement.style.marginBottom = '1em';
+            postElement.style.borderColor = 'black';
+            postElement.style.background = 'whitesmoke';
+            postElement.textContent = '📧 ';
+            const postText = document.createElement('span');
+            postText.style.fontSize = '150%';
+            postText.textContent = value.record.text + (
+              value.record.embed ? '📋' : ''
+            ) + (value.op?.path || '').slice(-4);
+            postElement.appendChild(postText);
+            break;
+
+          case 'app.bsky.feed.repost':
+            const repostElement = addDOM();
+            repostElement.textContent = '🔁' + (value.record.subject?.uri || '').slice(-4);
+            break;
+
+          case 'app.bsky.graph.listitem':
+            const listitemElement = addDOM();
+            listitemElement.textContent = 'listitem> ' + value.record.subject + ' : ' + value.record.list;
+            break;
+
+          case 'app.bsky.graph.block':
+            const blockElement = addDOM();
+            blockElement.textContent = '🛑 ' + (value.record.subject || '').slice(-4);
+            break;
+
+          case 'app.bsky.actor.profile':
+            const profileElement = addDOM();
+            profileElement.style.display = 'block';
+            profileElement.textContent = '👤 ' + value.record.displayName;
+            const profileDescription = document.createElement('div');
+            profileDescription.textContent = value.record.description || '';
+            profileDescription.style.cssText = `font-decoration: italic;`;
+            break;
+
+          default:
+            if (value.record) {
+              console.log(value, /** @type {*} */(value.record).$type, '  RECORD????????????????????????\n\n');
+            } else {
+              console.log(value, value.commit.$type, '  COMMIT????????????????????????\n\n');
+            }
+        }
+      }
+
+      function addDOM() {
+        const elementCSS = `display: inline-block; margin: 0.1em; padding-left: 0.25em; padding-right: 0.25em; border: solid 1px silver; border-radius: 1em;`;
+        const now = Date.now();
+        if (now - recycledLast > 3000) {
+          recycledLast = now;
+          const wholeContentBounds = firehoseConsoleContent.getBoundingClientRect();
+          const viewBounds = firehoseConsoleBoundary.getBoundingClientRect();
+
+          if (wholeContentBounds.height > viewBounds.height * 2) {
+            const retainHeight = Math.max(viewBounds.height * 1.5, 500);
+            const removeElements = [];
+            let removedHeight = 0;
+            for (let i = 0; i < firehoseConsoleContent.children.length; i++) {
+              const element = firehoseConsoleContent.children[i];
+              if (!element) break;
+              const elementBounds = element.getBoundingClientRect();
+              if (wholeContentBounds.height - removedHeight - elementBounds.height < retainHeight)
+                break;
+
+              removeElements.push(element);
+              removedHeight += elementBounds.height;
+            }
+
+            if (removeElements.length) {
+              for (const el of removeElements) {
+                firehoseConsoleContent.removeChild(el);
+              }
+
+              /** @type {HTMLElement} */
+              const reuseElement = removeElements[0];
+              reuseElement.innerHTML = '';
+              reuseElement.style.cssText = elementCSS;
+              return reuseElement;
+            }
+          }
+        }
+
+        const newElement = document.createElement('span');
+        newElement.style.cssText = elementCSS;
+        firehoseConsoleContent.appendChild(newElement);
+        return newElement;
+      }
+    }
   }
 
   function runNode(invokeType) {
@@ -237,7 +380,7 @@ function atlas(invokeType) {
 
     api.rawFirehose = nodeFirehose;
 
-    shared.dumpFirehose();
+    shared.debugDumpFirehose();
 
 
     async function* nodeFirehose() {
