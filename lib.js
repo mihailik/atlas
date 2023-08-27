@@ -31376,7 +31376,7 @@ if (cid) {
     return decoded;
   }
 
-  // node_modules/@ipld/dag-cbor/node_modules/multiformats/vendor/varint.js
+  // node_modules/multiformats/vendor/varint.js
   var encode_12 = encode4;
   var MSB2 = 128;
   var REST2 = 127;
@@ -31435,7 +31435,7 @@ if (cid) {
   var _brrp_varint2 = varint2;
   var varint_default2 = _brrp_varint2;
 
-  // node_modules/@ipld/dag-cbor/node_modules/multiformats/src/varint.js
+  // node_modules/multiformats/src/varint.js
   var decode7 = (data, offset = 0) => {
     const code = varint_default2.decode(data, offset);
     return [code, varint_default2.decode.bytes];
@@ -31448,7 +31448,7 @@ if (cid) {
     return varint_default2.encodingLength(int);
   };
 
-  // node_modules/@ipld/dag-cbor/node_modules/multiformats/src/bytes.js
+  // node_modules/multiformats/src/bytes.js
   var empty2 = new Uint8Array(0);
   var equals3 = (aa, bb) => {
     if (aa === bb)
@@ -31474,7 +31474,7 @@ if (cid) {
     throw new Error("Unknown type, must be binary type");
   };
 
-  // node_modules/@ipld/dag-cbor/node_modules/multiformats/src/hashes/digest.js
+  // node_modules/multiformats/src/hashes/digest.js
   var create2 = (code, digest) => {
     const size = digest.byteLength;
     const sizeOffset = encodingLength2(code);
@@ -31523,7 +31523,7 @@ if (cid) {
     }
   };
 
-  // node_modules/@ipld/dag-cbor/node_modules/multiformats/vendor/base-x.js
+  // node_modules/multiformats/vendor/base-x.js
   function base2(ALPHABET, name) {
     if (ALPHABET.length >= 255) {
       throw new TypeError("Alphabet too long");
@@ -31659,7 +31659,7 @@ if (cid) {
   var _brrp__multiformats_scope_baseX2 = src2;
   var base_x_default2 = _brrp__multiformats_scope_baseX2;
 
-  // node_modules/@ipld/dag-cbor/node_modules/multiformats/src/bases/base.js
+  // node_modules/multiformats/src/bases/base.js
   var Encoder2 = class {
     /**
      * @param {Base} name
@@ -31874,7 +31874,7 @@ if (cid) {
     });
   };
 
-  // node_modules/@ipld/dag-cbor/node_modules/multiformats/src/bases/base58.js
+  // node_modules/multiformats/src/bases/base58.js
   var base58btc2 = baseX2({
     name: "base58btc",
     prefix: "z",
@@ -31886,7 +31886,7 @@ if (cid) {
     alphabet: "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
   });
 
-  // node_modules/@ipld/dag-cbor/node_modules/multiformats/src/bases/base32.js
+  // node_modules/multiformats/src/bases/base32.js
   var base322 = rfc46482({
     prefix: "b",
     name: "base32",
@@ -31942,7 +31942,7 @@ if (cid) {
     bitsPerChar: 5
   });
 
-  // node_modules/@ipld/dag-cbor/node_modules/multiformats/src/cid.js
+  // node_modules/multiformats/src/cid.js
   var format2 = (link, base3) => {
     const { bytes, version } = link;
     switch (version) {
@@ -36732,6 +36732,7 @@ if (cid) {
   var atproto_api = atproto_api_import;
   var ipld_car = { CarReader };
   var cbor_x = { addExtension: addExtension2, decode: decode12, decodeMultiple };
+  var multiformats = { CID: CID2 };
   exportToGlobal(
     typeof window !== "undefined" && window ? window : typeof module !== "undefined" && module?.exports ? module.exports : typeof global !== "undefined" && global ? global : void 0
   );
@@ -36739,5 +36740,6 @@ if (cid) {
     window2.atproto_api = atproto_api;
     window2.ipld_car = ipld_car;
     window2.cbor_x = cbor_x;
+    window2.multiformats = multiformats;
   }
 })();

@@ -1,8 +1,6 @@
 // @ts-check
 /// <reference path="./lib/global.d.ts" />
 
-const { PostRecord } = require('@atproto/api');
-
 function atlas(invokeType) {
 
   /** @typedef {(
@@ -26,15 +24,68 @@ function atlas(invokeType) {
       return agent;
     }
 
+    var cborExtensionInstalled = false;
     async function* rawFirehose() {
-      // com.atproto.sync.subscribeRepos
-      const agent = unauthenticatedAgent();
-      yield /** @type {import('@atproto/api').ComAtprotoSyncSubscribeRepos.Commit} */({});
+      if (!cborExtensionInstalled) {
+        cbor_x.addExtension({
+          Class: multiformats.CID,
+          tag: 42,
+          encode: () => {
+            throw new Error("cannot encode cids");
+          },
+          decode: (bytes) => {
+            if (bytes[0] !== 0) {
+              throw new Error("invalid cid for cbor tag 42");
+            }
+            return multiformats.CID.decode(bytes.subarray(1)); // ignore leading 0x00
+          },
+        });
+      }
+
+      const wsAddress = bskyService.replace(/^(http|https)\:/, 'wss:') + 'com.atproto.sync.subscribeRepos';
+      const ws = new WebSocket(wsAddress);
+      ws.addEventListener('message', handleMessage);
+
+      const subscription = shared.subscriptionAsyncIterator();
+      try {
+        for await (const entry of subscription.iterator) {
+          yield /** @type {import('@atproto/api').ComAtprotoSyncSubscribeRepos.Commit}*/(entry);
+        }
+      } finally {
+        ws.removeEventListener('message', handleMessage);
+        ws.close();
+      }
+
+      async function handleMessage(e) {
+        if (e.data instanceof Blob) {
+          const messageBuf = await e.data.arrayBuffer();
+          // @ts-ignore
+          const [header, body] = cbor_x.decodeMultiple(new Uint8Array(messageBuf));
+          if (header.op !== 1) return;
+          subscription.next(body);
+          // const car = await ipld_car.CarReader.fromBytes(body.blocks);
+          // for (const op of body.ops) {
+          //   if (!op.cid) continue;
+          //   const block = await car.get(op.cid);
+          //   if (!block) return;
+
+          //   const record = cbor_x.decode(block.bytes);
+          //   if (record.$type === "app.bsky.feed.post" && typeof record.text === "string") {
+          //     // Optional filter out empty posts
+          //     if (record.text.length > 0) {
+          //       const rkey = op.path.split("/").at(-1);
+
+          //       await _appendToFeed(body.repo, record, rkey);
+          //     }
+          //   }
+          // }
+        }
+      }
     }
 
     async function* operationsFirehose() {
       for await (const commit of api.rawFirehose()) {
-        if (commit.$type !== 'com.atproto.sync.subscribeRepos#commit') {
+        if (!commit.blocks) {
           // unusual commit type?
           yield { commit };
           continue;
@@ -60,27 +111,77 @@ function atlas(invokeType) {
     return api;
   })();
 
-  function runBrowser(invokeType) {
-    console.log('browser: ', invokeType);
-  }
+  const shared = (function () {
 
-  function runNode(invokeType) {
-    console.log('node: ', invokeType);
+    const shared = {
+      dumpFirehose,
+      subscriptionAsyncIterator
+    };
 
-    atproto_api = require('@atproto/api');
+    function subscriptionAsyncIterator() {
+      const buffer = [];
+      var resolveNext, rejectNext;
+      var failed = false;
+      var stopped = false;
 
-    /** @type {typeof import('./lib/lib')} */
-    const localLibExports =
-      // @ts-ignore
-      /** @type {*} */(require('./lib')) || global;
+      return {
+        iterator: iterate(),
+        next,
+        error
+      };
 
-    ipld_car = localLibExports.ipld_car;
-    cbor_x = localLibExports.cbor_x;
+      async function* iterate() {
+        try {
+          while (true) {
+            if (stopped) return;
 
-    api.rawFirehose = nodeFirehose;
+            let next;
+            if (buffer.length) {
+              next = buffer.shift();
+            } else {
+              next = await new Promise((resolve, reject) => {
+                resolveNext = resolve;
+                rejectNext = reject;
+              });
+            }
 
-    dumpFirehose();
+            if (failed && !buffer.length)
+              throw next;
+            else
+              yield next;
+          }
+        } finally {
+          stopped = true;
+          buffer.length = 0;
+        }
+      }
 
+      function next(item) {
+        if (failed || stopped) return;
+        if (resolveNext) {
+          const resolve = resolveNext;
+          resolveNext = undefined;
+          rejectNext = undefined;
+          resolve(item);
+        } else {
+          buffer.push(item);
+        }
+      }
+
+      function error(error) {
+        if (failed || stopped) return;
+        failed = true;
+        if (rejectNext) {
+          const reject = rejectNext;
+          resolveNext = undefined;
+          rejectNext = undefined;
+          reject(error);
+        } else {
+          buffer.push(error);
+        }
+      }
+
+    }
 
     async function dumpFirehose() {
       const firehose = api.operationsFirehose();
@@ -104,13 +205,39 @@ function atlas(invokeType) {
 
           default:
             if (value.record) {
-              console.log(value.record.$type, '  RECORD????????????????????????');
+              console.log(/** @type {*} */(value.record).$type, '  RECORD????????????????????????');
             } else {
               console.log(value.commit.$type, '  COMMIT????????????????????????');
             }
         }
       }
     }
+
+    return shared;
+  })();
+
+  function runBrowser(invokeType) {
+    console.log('browser: ', invokeType);
+    if (invokeType === 'init') return;
+    if (invokeType === 'page') shared.dumpFirehose();
+  }
+
+  function runNode(invokeType) {
+    console.log('node: ', invokeType);
+
+    atproto_api = require('@atproto/api');
+
+    /** @type {typeof import('./lib/lib')} */
+    const localLibExports =
+      // @ts-ignore
+      /** @type {*} */(require('./lib')) || global;
+
+    ipld_car = localLibExports.ipld_car;
+    cbor_x = localLibExports.cbor_x;
+
+    api.rawFirehose = nodeFirehose;
+
+    shared.dumpFirehose();
 
 
     async function* nodeFirehose() {
