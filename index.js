@@ -168,7 +168,18 @@ function atlas(invokeType) {
       const agent = await authenticatedAgent(auth);
 
       while (true) {
-        const reply = await agent.app.bsky.actor.searchActors({ cursor: cursor ?? undefined, term, limit: 100 });
+        /** @type {import('@atproto/api').AppBskyActorSearchActors.Response | undefined} */
+        let reply;
+        for (let i = 0; i < 5; i++) {
+          try {
+            reply = await agent.app.bsky.actor.searchActors({ cursor: cursor ?? undefined, term, limit: 100 });
+            if (reply) break;
+          } catch (error) {
+            reply = await agent.app.bsky.actor.searchActors({ cursor: cursor ?? undefined, term, limit: 100 });
+          }
+        }
+        if (!reply) reply = await agent.app.bsky.actor.searchActors({ cursor: cursor ?? undefined, term, limit: 100 });
+
         if (!reply.data.cursor || !reply.data.actors?.length) return;
         cursor = reply.data.cursor;
         yield reply.data;
@@ -651,58 +662,49 @@ function atlas(invokeType) {
     })();
 
     async function continueDumpUsers() {
+      const cursorsJsonPath = path.resolve(__dirname, 'db/cursors.json');
       const usersJsonPath = path.resolve(__dirname, 'db/users.json');
+      let { users: { cursor, timestamp } } = JSON.parse(fs.readFileSync(cursorsJsonPath, 'utf8'));
+      const users = JSON.parse(fs.readFileSync(usersJsonPath, 'utf8'));
 
-      const firstLine = (cursor) => (`{ "cursor": ${JSON.stringify(cursor ?? null)}, "timestamp": ${Date.now()},`
-        .padEnd(200, ' '));
-      const secondLine = '"users": { "fields": ["did-short", "handle-short", "description" ], "list": ['
-
-      const lastLine = ']}}';
-
-      await utils.openOrCreateTextFile(
-        usersJsonPath,
-        firstLine() + '\n' +
-        secondLine + '\n' +
-        lastLine
-      );
-
-      const currentFirstLine = await utils.readTextFileFirstLine(usersJsonPath);
-      let { cursor } = JSON.parse(currentFirstLine + ' "a": 0}');
+      const startTime = Date.now();
+      let startBatchTime = Date.now();
 
       console.log({ cursor });
-      let added = 0;
+      let totalAddedUsers = 0;
 
-      const start = Date.now();
-      let startBatch = Date.now();
       for await (const batchEntry of api.searchActorsStreaming({ cursor, term: 'bsky.social' })) {
-        await utils.overwriteLastLine(
-          usersJsonPath,
-          (cursor ? ',\n' : '') +
-          batchEntry.actors.map(actor => JSON.stringify([
-            actor.did,
-            actor.handle,
-            actor.description
-          ])).join(',\n') +
-          '\n]}}'
-        );
+        let batchAddedUsers = 0;
+        for (const actor of batchEntry.actors) {
+          if (users[actor.did]) continue;
+          const shortDID = actor.did.replace(/^did:plc:/, '');
+          const shortHandle = actor.handle.replace(/\.bsky\.social$/, '');
+          users[shortDID] = actor.description ? [shortHandle, actor.description] : shortHandle;
+          batchAddedUsers++;
+        }
 
-        await utils.overwriteFirstLine(
-          usersJsonPath,
-          firstLine(batchEntry.cursor));
-        
         cursor = batchEntry.cursor;
-        added += batchEntry.actors.length;
+        totalAddedUsers += batchEntry.actors.length;
 
+        const newUsersJsonContent = '{\n' + Object.entries(users).map(
+          ([did, entry]) => JSON.stringify(did) + ':' + JSON.stringify(entry)).join(',\n') + '\n}\n';
+        fs.writeFileSync(usersJsonPath, newUsersJsonContent, 'utf8');
+
+        const currentCursorsJson = JSON.parse(fs.readFileSync(cursorsJsonPath, 'utf8'));
+        currentCursorsJson.users.cursor = cursor;
         const now = Date.now();
+        currentCursorsJson.users.timestamp = now;
+        fs.writeFileSync(cursorsJsonPath, JSON.stringify(currentCursorsJson, null, 2), 'utf8');
+
 
         console.log(
           batchEntry.cursor,
           '[' + batchEntry.actors.length + '] ' + batchEntry.actors[0].handle + '...' + batchEntry.actors[batchEntry.actors.length - 1].handle,
-          ' in ' + (now - startBatch) / 1000 + 's (' +
-          added + ' in ' + (now - start) / 1000 + 's)'
+          ' in ' + (now - startBatchTime) / 1000 + 's (' +
+          totalAddedUsers + ' in ' + (now - startTime) / 1000 + 's, ' + (totalAddedUsers / (now - startTime) / 1000) + ' per second)'
         );
 
-        startBatch = now;
+        startBatchTime = now;
       }
 
     }
