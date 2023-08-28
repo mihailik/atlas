@@ -21,7 +21,8 @@ function atlas(invokeType) {
       authenticatedAgent,
       rawFirehose,
       operationsFirehose,
-      searchActorsStreaming
+      searchActorsStreaming,
+      listReposStreaming
     };
 
     const bskyService = 'https://bsky.social/xrpc/';
@@ -181,6 +182,29 @@ function atlas(invokeType) {
         if (!reply) reply = await agent.app.bsky.actor.searchActors({ cursor: cursor ?? undefined, term, limit: 100 });
 
         if (!reply.data.cursor || !reply.data.actors?.length) return;
+        cursor = reply.data.cursor;
+        yield reply.data;
+      }
+    }
+
+    /** @param {string?} cursor */
+    async function* listReposStreaming(cursor) {
+      const agent = unauthenticatedAgent();
+
+      while (true) {
+        /** @type {import('@atproto/api').ComAtprotoSyncListRepos.Response | undefined} */
+        let reply;
+        for (let i = 0; i < 5; i++) {
+          try {
+            reply = await agent.com.atproto.sync.listRepos({ cursor: cursor ?? undefined, limit: 1000 });
+            if (reply) break;
+          } catch (error) {
+            reply = await agent.com.atproto.sync.listRepos({ cursor: cursor ?? undefined, limit: 1000 });
+          }
+        }
+        if (!reply) reply = await agent.com.atproto.sync.listRepos({ cursor: cursor ?? undefined, limit: 1000 });
+
+        if (!reply.data.cursor || !reply.data.repos?.length) return;
         cursor = reply.data.cursor;
         yield reply.data;
       }
@@ -661,53 +685,123 @@ function atlas(invokeType) {
       return utils;
     })();
 
-    async function continueDumpUsers() {
+    const continueUpdateUsers = (function () {
+
       const cursorsJsonPath = path.resolve(__dirname, 'db/cursors.json');
       const usersJsonPath = path.resolve(__dirname, 'db/users.json');
-      let { users: { cursor, timestamp } } = JSON.parse(fs.readFileSync(cursorsJsonPath, 'utf8'));
-      const users = JSON.parse(fs.readFileSync(usersJsonPath, 'utf8'));
 
-      const startTime = Date.now();
-      let startBatchTime = Date.now();
+      async function continueDumpAllUsers(users) {
+        let { users: { listRepos, timestamp } } = JSON.parse(fs.readFileSync(cursorsJsonPath, 'utf8'));
+        if (!users)
+          users = JSON.parse(fs.readFileSync(usersJsonPath, 'utf8'));
 
-      console.log({ cursor });
-      let totalAddedUsers = 0;
+        const startTime = Date.now();
+        let startBatchTime = Date.now();
 
-      for await (const batchEntry of api.searchActorsStreaming({ cursor, term: 'bsky.social' })) {
-        let batchAddedUsers = 0;
-        for (const actor of batchEntry.actors) {
-          if (users[actor.did]) continue;
-          const shortDID = actor.did.replace(/^did:plc:/, '');
-          const shortHandle = actor.handle.replace(/\.bsky\.social$/, '');
-          users[shortDID] = actor.description ? [shortHandle, actor.description] : shortHandle;
-          batchAddedUsers++;
+        console.log({ cursor: listRepos });
+        let totalAddedUsers = 0;
+
+        for await (const batchEntry of api.listReposStreaming(listRepos)) {
+          let batchAddedUsers = 0;
+          for (const actor of batchEntry.repos) {
+            const shortDID = actor.did.replace(/^did:plc:/, '');
+            if (!(shortDID in users)) continue;
+            users[shortDID] = 0;
+            batchAddedUsers++;
+          }
+
+          listRepos = batchEntry.cursor;
+          totalAddedUsers += batchAddedUsers;
+
+          writeUsers(users);
+
+          const currentCursorsJson = JSON.parse(fs.readFileSync(cursorsJsonPath, 'utf8'));
+          currentCursorsJson.users.listRepos = listRepos;
+          const now = Date.now();
+          currentCursorsJson.users.timestamp = now;
+          fs.writeFileSync(cursorsJsonPath, JSON.stringify(currentCursorsJson, null, 2), 'utf8');
+
+
+          console.log(
+            'LISTREPOS ',
+            batchEntry.cursor,
+            '[' + (batchAddedUsers === batchEntry.repos.length ? batchAddedUsers : batchAddedUsers + ' of ' + batchEntry.repos.length) + '] ' + batchEntry.repos[0].did + '...' + batchEntry.repos[batchEntry.repos.length - 1].did,
+            ' in ' + (now - startBatchTime) / 1000 + 's (' +
+            totalAddedUsers + ' in ' + (now - startTime) / 1000 + 's, ' + (totalAddedUsers / (now - startTime) * 1000).toFixed(3).replace(/0+$/, '') + ' per second)'
+          );
+
+          startBatchTime = now;
         }
+      }
 
-        cursor = batchEntry.cursor;
-        totalAddedUsers += batchEntry.actors.length;
+      async function continueDumpUserDetails(users) {
+        let { users: { searchActors, timestamp } } = JSON.parse(fs.readFileSync(cursorsJsonPath, 'utf8'));
+        if (!users)
+          users = JSON.parse(fs.readFileSync(usersJsonPath, 'utf8'));
 
+        const startTime = Date.now();
+        let startBatchTime = Date.now();
+
+        console.log({ cursor: searchActors });
+        let totalAddedUsers = 0;
+
+        for await (const batchEntry of api.searchActorsStreaming({ cursor: searchActors, term: 'bsky.social' })) {
+          let batchAddedUsers = 0;
+          for (const actor of batchEntry.actors) {
+            const shortDID = actor.did.replace(/^did:plc:/, '');
+            if (users[shortDID]) continue;
+            const shortHandle = actor.handle.replace(/\.bsky\.social$/, '');
+            users[shortDID] = actor.description ? [shortHandle, actor.description] : shortHandle;
+            batchAddedUsers++;
+          }
+
+          searchActors = batchEntry.cursor;
+          totalAddedUsers += batchAddedUsers;
+
+          writeUsers(users);
+
+          const currentCursorsJson = JSON.parse(fs.readFileSync(cursorsJsonPath, 'utf8'));
+          currentCursorsJson.users.searchActors = searchActors;
+          const now = Date.now();
+          currentCursorsJson.users.timestamp = now;
+          fs.writeFileSync(cursorsJsonPath, JSON.stringify(currentCursorsJson, null, 2), 'utf8');
+
+
+          console.log(
+            'SEARCHACTORS ',
+            batchEntry.cursor,
+            '[' + batchAddedUsers + '] ' + batchEntry.actors[0].handle + '...' + batchEntry.actors[batchEntry.actors.length - 1].handle,
+            ' in ' + (now - startBatchTime) / 1000 + 's (' +
+            totalAddedUsers + ' in ' + (now - startTime) / 1000 + 's, ' + (totalAddedUsers / (now - startTime) * 1000).toFixed(3).replace(/0+$/, '') + ' per second)'
+          );
+
+          startBatchTime = now;
+        }
+      }
+
+      async function writeUsers(users) {
         const newUsersJsonContent = '{\n' + Object.entries(users).map(
           ([did, entry]) => JSON.stringify(did) + ':' + JSON.stringify(entry)).join(',\n') + '\n}\n';
         fs.writeFileSync(usersJsonPath, newUsersJsonContent, 'utf8');
-
-        const currentCursorsJson = JSON.parse(fs.readFileSync(cursorsJsonPath, 'utf8'));
-        currentCursorsJson.users.cursor = cursor;
-        const now = Date.now();
-        currentCursorsJson.users.timestamp = now;
-        fs.writeFileSync(cursorsJsonPath, JSON.stringify(currentCursorsJson, null, 2), 'utf8');
-
-
-        console.log(
-          batchEntry.cursor,
-          '[' + batchEntry.actors.length + '] ' + batchEntry.actors[0].handle + '...' + batchEntry.actors[batchEntry.actors.length - 1].handle,
-          ' in ' + (now - startBatchTime) / 1000 + 's (' +
-          totalAddedUsers + ' in ' + (now - startTime) / 1000 + 's, ' + (totalAddedUsers / (now - startTime) / 1000) + ' per second)'
-        );
-
-        startBatchTime = now;
       }
 
-    }
+      async function continueUpdateUsers() {
+        const usersJsonPath = path.resolve(__dirname, 'db/users.json');
+        const users = JSON.parse(fs.readFileSync(usersJsonPath, 'utf8'));
+        const finishUserDetails = continueDumpUserDetails(users);
+        const finishAllUsers = continueDumpAllUsers(users);
+
+        await finishUserDetails;
+        await finishAllUsers;
+      }
+
+      continueUpdateUsers.continueDumpUserDetails = continueDumpUserDetails;
+      continueUpdateUsers.continueDumpAllUsers = continueDumpAllUsers;
+
+      return continueUpdateUsers;
+
+    })();
+  
 
     console.log('node: ', invokeType);
 
@@ -720,7 +814,7 @@ function atlas(invokeType) {
 
     //shared.debugDumpFirehose();
 
-    continueDumpUsers();
+    continueUpdateUsers();
 
 
   }
