@@ -200,9 +200,9 @@ function atlas(invokeType) {
       while (true) {
         const reply = await api.repeatUntilSuccess(() => agent.com.atproto.sync.listRepos({ cursor: cursor ?? undefined, limit: 1000 }));
 
-        if (!reply.data.cursor || !reply.data.repos?.length) return;
-        cursor = reply.data.cursor;
+        if (!reply.data.cursor || reply.data.cursor === cursor) return;
         yield reply.data;
+        cursor = reply.data.cursor;
       }
     }
 
@@ -838,7 +838,7 @@ function atlas(invokeType) {
           console.log(
             'SEARCHACTORS ',
             batchEntry.cursor,
-            '[' + batchAddedUsers + '] ' + utils.shortenHandle(batchEntry.actors[0].handle) + '...' + utils.shortenHandle(batchEntry.actors[batchEntry.actors.length - 1].handle),
+            '[' + (batchAddedUsers === batchEntry.actors.length ? batchAddedUsers : batchAddedUsers + '..' + batchEntry.actors.length) + '] ' + utils.shortenHandle(batchEntry.actors[0].handle) + '...' + utils.shortenHandle(batchEntry.actors[batchEntry.actors.length - 1].handle),
             ' in ' + (now - startBatchTime) / 1000 + 's (' +
             totalAddedUsers + ' in ' + (now - startTime) / 1000 + 's, ' + (totalAddedUsers / (now - startTime) * 1000).toFixed(3).replace(/0+$/, '') + ' per second)'
           );
