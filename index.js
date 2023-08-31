@@ -398,16 +398,19 @@ function atlas(invokeType) {
         }
       }
 
-      function addFirehoseEntry(value) {
-        switch (value.record?.$type) {
+      /**
+       * @param {FeedRecord} record 
+       */
+      function addFirehoseEntry(record) {
+        switch (record?.$type) {
           case 'app.bsky.feed.like':
             const likeElement = addDOM();
-            likeElement.textContent = '💓' + (value.record.subject?.uri || '').slice(-4);
+            likeElement.textContent = '💓' + (record.subject?.uri || '').slice(-4);
             break;
 
           case 'app.bsky.graph.follow':
             const followElement = addDOM();
-            followElement.textContent = 'follow> ' + (value.record.subject || '').slice(-4);
+            followElement.textContent = 'follow> ' + (record.subject || '').slice(-4);
             break;
 
           case 'app.bsky.feed.post':
@@ -420,41 +423,41 @@ function atlas(invokeType) {
             postElement.textContent = '📧 ';
             const postText = document.createElement('span');
             postText.style.fontSize = '150%';
-            postText.textContent = value.record.text + (
-              value.record.embed ? '📋' : ''
-            ) + (value.op?.path || '').slice(-4);
+            postText.textContent = record.text + (
+              record.embed ? '📋' : ''
+            ) + (record?.path || '').slice(-4);
             postElement.appendChild(postText);
             break;
 
           case 'app.bsky.feed.repost':
             const repostElement = addDOM();
-            repostElement.textContent = '🔁' + (value.record.subject?.uri || '').slice(-4);
+            repostElement.textContent = '🔁' + (record.subject?.uri || '').slice(-4);
             break;
 
           case 'app.bsky.graph.listitem':
             const listitemElement = addDOM();
-            listitemElement.textContent = 'listitem> ' + value.record.subject + ' : ' + value.record.list;
+            listitemElement.textContent = 'listitem> ' + record.subject + ' : ' + record.list;
             break;
 
           case 'app.bsky.graph.block':
             const blockElement = addDOM();
-            blockElement.textContent = '🛑 ' + (value.record.subject || '').slice(-4);
+            blockElement.textContent = '🛑 ' + (record.subject || '').slice(-4);
             break;
 
           case 'app.bsky.actor.profile':
             const profileElement = addDOM();
             profileElement.style.display = 'block';
-            profileElement.textContent = '👤 ' + value.record.displayName;
+            profileElement.textContent = '👤 ' + record.displayName;
             const profileDescription = document.createElement('div');
-            profileDescription.textContent = value.record.description || '';
+            profileDescription.textContent = record.description || '';
             profileDescription.style.cssText = `font-decoration: italic;`;
             break;
 
           default:
-            if (value.record) {
-              console.log(value, /** @type {*} */(value.record).$type, '  RECORD????????????????????????\n\n');
+            if (record) {
+              console.log(record, record.$type, '  RECORD????????????????????????\n\n');
             } else {
-              console.log(value, value.commit.$type, '  COMMIT????????????????????????\n\n');
+              console.log(record, /** @type {*} */(record).$type, '  COMMIT????????????????????????\n\n');
             }
         }
       }
