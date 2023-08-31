@@ -882,7 +882,9 @@ function atlas(invokeType) {
         let lastReport = Date.now() + Math.random() * reportEveryMsec;
         let batchAddedUsers = 0;
         let batchWholeSize = 0;
-        for await (const batchEntry of api.searchActorsStreaming({ cursor: searchActors, term: 'bsky.social' })) {
+        //const searchTerm = 'bsky.social';
+        const searchTerm = '1';
+        for await (const batchEntry of api.searchActorsStreaming({ cursor: searchActors, term: searchTerm })) {
           batchWholeSize += batchEntry.actors.length;
           for (const actor of batchEntry.actors) {
             const shortDID = utils.shortenDID(actor.did);
@@ -937,11 +939,11 @@ function atlas(invokeType) {
           Object.keys(users).filter((shortDID) => !users[shortDID]).length + ' raw DID\n' +
           Object.keys(users).filter((shortDID) => users[shortDID]).length + ' populated');
 
-        //const finishUserDetails = continueDumpUserDetails(users);
+        const finishUserDetails = continueDumpUserDetails(users);
         const finishAllUsers = continueDumpAllUsers(users);
         const finishEnrichingUsers = continueEnrichUsers(users);
 
-        //await finishUserDetails;
+        await finishUserDetails;
         await finishAllUsers;
         await finishEnrichingUsers;
       }
