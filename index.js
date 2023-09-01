@@ -1053,6 +1053,7 @@ function atlas(invokeType) {
     async function makeSmallFirehoseDump(count) {
       if (!count) count = 200;
       const firehoses = [];
+      console.log('Dumping firehose content: [' + count + ']...');
       let start = Date.now();
       for await (const record of api.operationsFirehose()) {
         if (!record) continue;
@@ -1063,8 +1064,11 @@ function atlas(invokeType) {
         };
         const keys = Object.keys(entry).sort();
         firehoses.push(
-          '{ ' + keys.map(key => JSON.stringify(key) + ':' + JSON.stringify(entry[key])).join(',\n  ') + ' }'
+          '{ ' + keys.filter(key => entry[key] != null).map(key =>
+            JSON.stringify(key) + ':' + JSON.stringify(entry[key])).join(',\n  ') + ' }'
         );
+        if (firehoses.length % 100) process.stdout.write('-');
+        else process.stdout.write('[' + firehoses.length + ']');
         if (firehoses.length > count) break;
       }
 
@@ -1074,6 +1078,8 @@ function atlas(invokeType) {
         firehoses.join(',\n') +
         '\n]\n',
         'utf8');
+
+      console.log(' ' + firehoses.length + ' saved.');
     }
 
 
