@@ -628,6 +628,8 @@ function atlas(invokeType) {
   position: fixed;
   bottom: 0; left: 0;
   animation: 3s linear forwards flying;
+
+  background: white;
 }
 
 @keyframes flying {
@@ -638,6 +640,15 @@ function atlas(invokeType) {
   to {
     transform: translateY(-1000px) perspective(500px) translateZ(-3000px);
   }
+}
+
+.firehose-panel-3d {
+  background: linear-gradient(to bottom, #326dd5, #4178db, #98b7ed, #cd8500, #fde165);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
           ` })]
