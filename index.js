@@ -637,8 +637,12 @@ function atlas(invokeType) {
     transform: translateY(100%) perspective(500px) translateZ(400px);
   }
 
+  50% {
+    transform: translateY(-300px) perspective(500px) translateZ(-900px) rotateX(80deg);
+  }
+
   to {
-    transform: translateY(-1000px) perspective(500px) translateZ(-3000px);
+    transform: translateY(-800px) perspective(500px) translateZ(-2000px) rotateX(100deg);
   }
 }
 
