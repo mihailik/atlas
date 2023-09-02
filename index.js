@@ -593,8 +593,7 @@ function atlas(invokeType) {
     async function firehose3D() {
       const view = elem('div', {
         className: 'firehose-panel-3d', parent: document.body, children: [
-          elem('style', {
-            innerHTML: `
+          elem('style', { innerHTML: `
 .like-chip, .follow-chip {
   display: inline-block;
   border: solid 1px silver;
@@ -603,6 +602,7 @@ function atlas(invokeType) {
   padding-right: 0.36em;
   padding-bottom: 0.05em;
   margin: 0.2em;
+  background: white;
 }
 
 .user-handle {
@@ -618,6 +618,7 @@ function atlas(invokeType) {
   margin: 0.2em;
   padding-left: 0.25em;
   padding-bottom: 0.25em;
+  background: white;
 }
 
 .chip-block {
@@ -628,8 +629,6 @@ function atlas(invokeType) {
   position: fixed;
   bottom: 0; left: 0;
   animation: 3s linear forwards flying;
-
-  background: white;
 }
 
 @keyframes flying {
