@@ -251,8 +251,11 @@ function atlas(invokeType) {
       breakFeedUri,
       shortenDID,
       unwrapShortDID,
-      shortenHandle
+      shortenHandle,
+      calcCRC32
     };
+
+    // CRC32 source https://stackoverflow.com/a/18639999
 
     const uriRegex = /^at\:\/\/(did:plc:)?([a-z0-9]+)\/([a-z\.]+)\/?(.*)?$/;
 
@@ -278,6 +281,35 @@ function atlas(invokeType) {
     /** @param {string} handle */
     function shortenHandle(handle) {
       return handle.replace(/\.bsky\.social$/, '');
+    }
+
+    /**
+ * @param {string | null | undefined} str
+ */
+    function calcCRC32(str) {
+      if (!str) return 0;
+      if (!crcTable) crcTable = makeCRCTable();
+      var crc = 0 ^ (-1);
+
+      for (var i = 0; i < str.length; i++) {
+        crc = (crc >>> 8) ^ crcTable[(crc ^ str.charCodeAt(i)) & 0xFF];
+      }
+
+      return (crc ^ (-1)) >>> 0;
+    }
+
+    let crcTable;
+    function makeCRCTable() {
+      var c;
+      var crcTable = [];
+      for (var n = 0; n < 256; n++) {
+        c = n;
+        for (var k = 0; k < 8; k++) {
+          c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
+        }
+        crcTable[n] = c;
+      }
+      return crcTable;
     }
 
     function subscriptionAsyncIterator() {
@@ -469,7 +501,7 @@ function atlas(invokeType) {
         const introElement = addDOM();
         introElement.style.display = 'block';
         introElement.textContent = 'Loading user list...';
-        userList = await fetch('../atlas-db/users.json').then(response => response.json());
+        userList = await fetch('../atlas-db/users/hot.json').then(response => response.json());
       }
 
       for await (const value of shared.fallbackIterator(() => api.operationsFirehose(), () => shared.fallbackCachedFirehose())) {
@@ -663,7 +695,7 @@ function atlas(invokeType) {
       {
         const introElement = elem('div', { className: 'firehose-intro', textContent: 'Loading user list...', parentElement: view });
         const startIntroTime = Date.now();
-        userList = await fetch('../atlas-db/users.json').then(response => response.json());
+        userList = await fetch('../atlas-db/users/hot.json').then(response => response.json());
         introElement.textContent = 'Loaded ' + Object.keys(userList).length + ' users in ' + (Date.now() - startIntroTime)/1000 + 's.';
       }
 
@@ -772,7 +804,8 @@ function atlas(invokeType) {
         const shortDID = shared.shortenDID(did);
         const user = userList[shortDID];
         const handle = typeof user === 'string' ? user : user ? user[0] : undefined;
-        const displayName = user && typeof user !== 'string' ? user[1] : undefined;
+        let displayName = user && typeof user !== 'string' ? user[user.length - 1] : undefined;
+        if (typeof displayName !== 'string') displayName = '';
         const shortHandle = handle ? shared.shortenHandle(handle) : undefined;
 
         if (shortHandle) return elem('span', {
@@ -1063,10 +1096,11 @@ function atlas(invokeType) {
       return utils;
     })();
 
+    const cursorsJsonPath = require('path').resolve(__dirname, '../atlas-db/cursors.json');
+    const usersJsonPath = require('path').resolve(__dirname, '../atlas-db/users.json');
+
     const continueUpdateUsers = (function () {
 
-      const cursorsJsonPath = require('path').resolve(__dirname, '../atlas-db/cursors.json');
-      const usersJsonPath = require('path').resolve(__dirname, '../atlas-db/users.json');
       const reportEveryMsec = 30000;
 
       async function continueEnrichUsers(users) {
@@ -1287,12 +1321,6 @@ function atlas(invokeType) {
 
       }
 
-      async function writeUsers(users) {
-        const newUsersJsonContent = '{\n' + Object.entries(users).map(
-          ([did, entry]) => JSON.stringify(did) + ':' + JSON.stringify(entry)).join(',\n') + '\n}\n';
-        fs.writeFileSync(usersJsonPath, newUsersJsonContent, 'utf8');
-      }
-
       async function continueUpdateUsers() {
         const usersJsonPath = path.resolve(__dirname, '../atlas-db/users.json');
         const users = JSON.parse(fs.readFileSync(usersJsonPath, 'utf8'));
@@ -1318,6 +1346,13 @@ function atlas(invokeType) {
       return continueUpdateUsers;
 
     })();
+
+    async function writeUsers(users, filePath) {
+      const newUsersJsonContent = '{\n' + Object.entries(users).map(
+        ([did, entry]) => JSON.stringify(did) + ':' + JSON.stringify(entry)).join(',\n') + '\n}\n';
+      fs.writeFileSync(filePath || usersJsonPath, newUsersJsonContent, 'utf8');
+    }
+
 
     async function makeSmallFirehoseDump(count) {
       if (!count) count = 200;
@@ -1351,6 +1386,60 @@ function atlas(invokeType) {
       console.log(' ' + firehoses.length + ' saved.');
     }
 
+    async function sortHot() {
+      const users = JSON.parse(fs.readFileSync(usersJsonPath, 'utf8'));
+      const spatial = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../atlas-db/spatial.json'), 'utf8'));
+
+      console.log('Extracting hot users...');
+
+      const hot = {};
+      Object.entries(spatial).map(([shortDID, [x, y]]) => {
+        if (!shortDID || shortDID === 'undefined') return;
+        const user = users[shortDID];
+        const shortHandle = typeof user === 'string' ? user : user ? user[0] : undefined;
+        const displayName = typeof user === 'string' ? undefined : user[1];
+        hot[shortDID] =
+          displayName ? [shortHandle || '', x, y, displayName] : [shortHandle || '', x, y];
+      });
+
+      console.log('Extracted ' + Object.keys(hot).length + ' hot users, saving...');
+      const dir = path.resolve(__dirname, '../atlas-db/users/');
+      await utils.createDirectoryRecursive(dir);
+
+      const hotJsonPath = path.resolve(__dirname, '../atlas-db/users/hot.json');
+      fs.writeFileSync(hotJsonPath,
+        '{\n' +
+        Object.entries(hot).map(([shortDID, arr]) => JSON.stringify(shortDID) + ':' + JSON.stringify(arr)).join(',\n') +
+        '\n}\n', 'utf8');
+      
+      console.log('Grouping remaining users by first letter...');
+      const usersGroupedByFirstLetter = {};
+
+      for (const shortDID in users) {
+        if (!shortDID || shortDID === 'undefined') continue;
+        if (hot[shortDID]) continue;
+
+        const firstLetter = shortDID.charAt(0);
+        const bucket = (usersGroupedByFirstLetter[firstLetter] || (usersGroupedByFirstLetter[firstLetter] = {}));
+        bucket[shortDID] = users[shortDID];
+      }
+
+      console.log('Saving remaining users by first letter [' + Object.keys(usersGroupedByFirstLetter)[0] + '-' + Object.keys(usersGroupedByFirstLetter).slice(-1)[0] + ']...');
+
+      for (const firstLetter in usersGroupedByFirstLetter) {
+        const bucket = usersGroupedByFirstLetter[firstLetter];
+        if (!bucket || typeof bucket !== 'object') continue;
+
+        const fileName = 'store-' + firstLetter.toUpperCase() + '.json';
+
+        console.log(fileName + ' [' + Object.keys(bucket).length + ']...');
+        writeUsers(bucket, path.resolve(dir, fileName));
+      }
+
+      console.log('Done.');
+
+    }
+
 
     console.log('node: ', invokeType);
 
@@ -1361,7 +1450,8 @@ function atlas(invokeType) {
     patchLibExports();
     patchApi();
 
-    makeSmallFirehoseDump(2000);
+    // makeSmallFirehoseDump(2000);
+    sortHot();
 
   }
 
