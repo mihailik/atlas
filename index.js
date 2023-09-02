@@ -748,7 +748,7 @@ function atlas(invokeType) {
       const clock = new THREE.Clock();
 
       const camera = new THREE.PerspectiveCamera(
-        95,
+        45,
         window.innerWidth / window.innerHeight, 1, 10000);
       camera.position.set(- 500, 500, 2500);
 
