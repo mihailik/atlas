@@ -3,16 +3,7 @@
 
 function atlas(invokeType) {
 
-  /** @typedef {(
-   * ({$type: undefined}) |
-   * ({$type: 'app.bsky.feed.like'} & import ('@atproto/api').AppBskyFeedLike.Record) |
-   * ({$type: 'app.bsky.graph.follow'} & import ('@atproto/api').AppBskyGraphFollow.Record) |
-   * ({$type: 'app.bsky.feed.post'} & import ('@atproto/api').AppBskyFeedPost.Record) |
-   * ({$type: 'app.bsky.feed.repost'} & import ('@atproto/api').AppBskyFeedRepost.Record) |
-   * ({$type: 'app.bsky.graph.listitem'} & import ('@atproto/api').AppBskyGraphListitem.Record) |
-   * ({$type: 'app.bsky.graph.block'} & import ('@atproto/api').AppBskyGraphBlock.Record) |
-   * ({$type: 'app.bsky.actor.profile'} & import ('@atproto/api').AppBskyActorProfile.Record)
-   * ) & {
+  /** @typedef {{
    *  cid?: string;
    *  action?: string;
    *  path?: string;
@@ -21,7 +12,49 @@ function atlas(invokeType) {
   *   rev?: string;
   *   seq?: number;
   *   since?: string;
-   * }} FeedRecord */
+   * }} FeedRecordExtraDetails */
+
+  /**
+   * @typedef {{$type: 'app.bsky.feed.post'}
+   *  & import ('@atproto/api').AppBskyFeedPost.Record
+   *  & FeedRecordExtraDetails} FeedRecordPost
+   *
+   * @typedef {{$type: 'app.bsky.feed.repost'}
+   *  & import ('@atproto/api').AppBskyFeedRepost.Record
+   *  & FeedRecordExtraDetails} FeedRecordRepost
+   *
+   * @typedef {{$type: 'app.bsky.feed.like'}
+   *  & import ('@atproto/api').AppBskyFeedLike.Record
+   *  & FeedRecordExtraDetails} FeedRecordLike
+   *
+   * @typedef {{$type: 'app.bsky.graph.follow'}
+   *  & import ('@atproto/api').AppBskyGraphFollow.Record
+   *  & FeedRecordExtraDetails} FeedRecordFollow
+   *
+   * @typedef {{$type: 'app.bsky.graph.block'}
+   *  & import ('@atproto/api').AppBskyGraphBlock.Record
+   *  & FeedRecordExtraDetails} FeedRecordBlock
+   *
+   * @typedef {{$type: 'app.bsky.graph.listitem'}
+   *  & import ('@atproto/api').AppBskyGraphListitem.Record
+   *  & FeedRecordExtraDetails} FeedRecordListItem
+   *
+   * @typedef {{$type: 'app.bsky.actor.profile'}
+  *  & import ('@atproto/api').AppBskyActorProfile.Record
+   *  & FeedRecordExtraDetails} FeedRecordProfile
+   *
+   * @typedef {{$type: undefined}
+   *  & FeedRecordExtraDetails} FeedRecordOther
+   */
+
+  /** @typedef {FeedRecordOther |
+   * FeedRecordLike |
+   * FeedRecordFollow |
+   * FeedRecordPost |
+   * FeedRecordRepost |
+   * FeedRecordListItem |
+   * FeedRecordBlock |
+   * FeedRecordProfile} FeedRecord */
 
   // #region api
   const api = (function () {
@@ -473,7 +506,7 @@ function atlas(invokeType) {
   function runBrowser(invokeType) {
     console.log('browser: ', invokeType);
     if (invokeType === 'init') return;
-    if (invokeType === 'page') firehose3D();
+    if (invokeType === 'page') landscapeFirehose3D();
 
     /** @type {{ [shortDID: string]: string | [handle: string, displayName: string] }} */
     let userList;
@@ -515,7 +548,7 @@ function atlas(invokeType) {
       }
 
       /**
-       * @param {FeedRecord} record 
+       * @param {FeedRecord} record
        */
       function addFirehoseEntry(record) {
         const author = resolveUserHandle(record?.repo);
@@ -626,37 +659,6 @@ function atlas(invokeType) {
       const view = elem('div', {
         className: 'firehose-panel-3d', parent: document.body, children: [
           elem('style', { innerHTML: `
-.like-chip, .follow-chip {
-  display: inline-block;
-  border: solid 1px silver;
-  border-radius: 2em;
-  padding-left: 0.3em;
-  padding-right: 0.36em;
-  padding-bottom: 0.05em;
-  margin: 0.2em;
-  background: white;
-}
-
-.user-handle {
-  display: inline-block;
-  opacity: 0.6;
-  zoom: 0.8;
-  transform: scaleY(1.1) translateY(-0.1em);
-}
-
-.post-panel {
-  border: solid 1px silver;
-  border-radius: 0.7em;
-  margin: 0.2em;
-  padding-left: 0.25em;
-  padding-bottom: 0.25em;
-  background: white;
-}
-
-.chip-block {
-  text-align: right;
-}
-
 .flying {
   position: fixed;
   bottom: 0; left: 0;
@@ -723,7 +725,7 @@ function atlas(invokeType) {
       function addFlyingElement(flyingElem) {
         const flyDurationMsec = 2000;
         flyingElem.className += ' flying';
-        flyingElem.style.animationDuration = flyDurationMsec + 'ms';  
+        flyingElem.style.animationDuration = flyDurationMsec + 'ms';
         view.appendChild(flyingElem);
         setTimeout(() => {
           if (flyingElem.parentElement) flyingElem.parentElement.removeChild(flyingElem);
@@ -732,11 +734,222 @@ function atlas(invokeType) {
 
     }
 
+    async function landscapeFirehose3D() {
+
+
+      /** @type {{ [cid: string]: { post: FeedRecordPost } }} */
+      const flyingPosts = {};
+
+      const GUI = /** @type {*} */(THREE).GUI;
+      const OrbitControls = /** @type {*} */(THREE).OrbitControls;
+      const MapControls = /** @type {*} */(THREE).MapControls;
+      const Stats = /** @type {*} */(THREE).Stats;
+
+      const clock = new THREE.Clock();
+
+      const camera = new THREE.PerspectiveCamera(
+        95,
+        window.innerWidth / window.innerHeight, 1, 10000);
+      camera.position.set(- 500, 500, 2500);
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x050505);
+
+      const light = new THREE.DirectionalLight(0xffffff, 3);
+      light.position.set(0.5, 0.5, 1);
+      scene.add(light);
+
+      const pointLight = new THREE.PointLight(0xff7c00, 3, 0, 0);
+      pointLight.position.set(0, 0, 100);
+      scene.add(pointLight);
+
+      const ambientLight = new THREE.AmbientLight(0x323232, 3);
+      scene.add(ambientLight);
+
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.domElement.style.cssText = `position: fixed; left: 0; top: 0; width: 100%; height: 100%;`;
+      renderer.domElement.className = 'landscape-firehose-3d';
+      document.body.appendChild(renderer.domElement);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.minDistance = 500;
+      controls.maxDistance = 5000;
+
+      const stats = new Stats();
+      document.body.appendChild(stats.dom);
+
+      window.addEventListener('resize', onWindowResize);
+
+      const postMaterial = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+      const dorkyPostMaterial = new THREE.MeshLambertMaterial({ color: 0xff0000 });
+
+      let postAdded;
+
+      animate();
+      handleFirehose();
+
+      document.addEventListener('mousedown', event => {
+        var vector = new THREE.Vector3((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1, 0.5);
+        vector = vector.unproject(camera);
+
+        var raycaster = new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
+        for (const mesh of scene.children) {
+          if (!mesh.post) continue;
+          var intersects = raycaster.intersectObjects(mesh, true); // Circle element which you want to identify
+
+          if (intersects?.length > 0) {
+            if (postAdded) postAdded.parentElement.removeChild(postAdded);
+            postAdded = renderRecordHTML(mesh.post);
+            document.body.appendChild(postAdded);
+
+            break;
+          }
+        }
+      }, false);
+
+      async function handleFirehose() {
+        /** @type {{ [shortDID: string]: [shortHandle: string, x: number, y: number, displayName?: string] }} */
+        const hotUsers = await fetch('../atlas-db/users/hot.json').then(response => response.json());
+
+        for await (const record of shared.fallbackIterator(() => api.operationsFirehose(), () => shared.fallbackCachedFirehose())) {
+          switch (record?.$type) {
+            case 'app.bsky.feed.post':
+              addPost(record);
+              break;
+
+            case 'app.bsky.feed.like':
+              addLike(record);
+
+            case 'app.bsky.feed.repost':
+              addRepost(record);
+
+            default:
+              addMinorActivity(record);
+          }
+        }
+
+        function generateTemporaryUser(did) {
+          if (!did) return [,0, 0];
+          const crc = shared.calcCRC32(did);
+          return [, 1500 + crc % 10000, 20500 + Math.floor(crc / 10000) % 10000];
+        }
+
+        /**
+         * @param {FeedRecordPost} post
+         */
+        async function addPost(post) {
+          const [shortHandle, x, y, displayName] = resolveUser(post.repo) || generateTemporaryUser(post.repo);
+          if (!shortHandle) {
+            console.log('Unknown ', post.repo);
+          }
+
+          const replyToFlyingPost =
+            post.reply?.parent?.cid ? flyingPosts[post.reply.parent.cid] :
+              post.reply?.root?.cid ? flyingPosts[post.reply.root.cid] :
+                undefined;
+
+          const postPoint = new THREE.SphereGeometry(20, 20, 20, 20);
+          const postMesh = new THREE.Mesh(postPoint, shortHandle ? postMaterial : dorkyPostMaterial);
+          postMesh.position.set(x / 20, 0, y / 20);
+          
+          postMesh.post = post;
+
+          scene.add(postMesh);
+
+          for (let t = -1; t < 1; t+=0.01) {
+            await new Promise(resolve => setTimeout(resolve, 10));
+            postMesh.position.y = 100 - t * t * 100;
+          }
+
+          await new Promise(resolve => setTimeout(resolve, 3500));
+          for (let i = 0; i < 100; i++) {
+            postMesh.scale.x *= 0.97;
+            postMesh.scale.y *= 0.97;
+            postMesh.scale.z *= 0.97;
+            await new Promise(resolve => setTimeout(resolve, 10));
+          }
+
+          scene.remove(postMesh);
+        }
+
+        function addLike(like) {
+        }
+
+        function addRepost(repost) {
+        }
+
+        function addMinorActivity(record) {
+        }
+
+        /**
+         * @param {string | undefined | null} did
+         */
+        function resolveUser(did) {
+          const shortDID = did ? shared.shortenDID(did) : undefined;
+          const user = shortDID ? hotUsers[shortDID] : undefined;
+          return user;
+        }
+      }
+
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+        stats.update();
+      }
+    }
+
     /**
      * @param {FeedRecord} record
      */
     function renderRecordHTML(record) {
       if (record.action !== 'create') return;
+
+      if (!renderRecordHTML.injectedStyle) {
+        renderRecordHTML.injectedStyle = document.createElement('style');
+        renderRecordHTML.injectedStyle.innerHTML = `
+        .like-chip, .follow-chip {
+  display: inline-block;
+  border: solid 1px silver;
+  border-radius: 2em;
+  padding-left: 0.3em;
+  padding-right: 0.36em;
+  padding-bottom: 0.05em;
+  margin: 0.2em;
+  background: white;
+}
+
+.user-handle {
+  display: inline-block;
+  opacity: 0.6;
+  zoom: 0.8;
+  transform: scaleY(1.1) translateY(-0.1em);
+}
+
+.post-panel {
+  border: solid 1px silver;
+  border-radius: 0.7em;
+  margin: 0.2em;
+  padding-left: 0.25em;
+  padding-bottom: 0.25em;
+  background: white;
+}
+
+.chip-block {
+  text-align: right;
+}
+`;
+        document.body.appendChild(renderRecordHTML.injectedStyle);
+      }
+
       const authorElem = renderUserHandle(record?.repo);
       switch (record?.$type) {
         case 'app.bsky.feed.like':
@@ -1411,7 +1624,7 @@ function atlas(invokeType) {
         '{\n' +
         Object.entries(hot).map(([shortDID, arr]) => JSON.stringify(shortDID) + ':' + JSON.stringify(arr)).join(',\n') +
         '\n}\n', 'utf8');
-      
+
       console.log('Grouping remaining users by first letter...');
       const usersGroupedByFirstLetter = {};
 
@@ -1439,6 +1652,28 @@ function atlas(invokeType) {
       console.log('Done.');
 
     }
+    async function cloneJsonp() {
+      cloneDir('../atlas-db');
+      cloneDir('../atlas-db/users');
+      function cloneDir(baseDirPath) {
+        const allJson = fs
+          .readdirSync(path.resolve(__dirname, baseDirPath))
+          .filter(fileName => fileName.endsWith('.json'))
+          .map(filePath => path.resolve(__dirname, baseDirPath, filePath));
+
+
+        for (const jsonOrigPath of allJson) {
+          const relativePath = path.relative(path.resolve(__dirname, '../atlas-db'), jsonOrigPath);
+          process.stdout.write(relativePath + '...');
+          const shortName = path.basename(jsonOrigPath, '.json').replace(/[^a-z0-9]/gi, '');
+          const jsonOrigText = fs.readFileSync(jsonOrigPath, 'utf8');
+          const jsonpText = `var ${shortName}=(jsonp=>(typeof ${shortName}==='function'?${shortName}(jsonp):0,${shortName}=${shortName}))(${jsonOrigText})`;
+          const jsonpPath = path.resolve(__dirname, '../atlas-db-jsonp', relativePath.replace(/\.json$/, '.js'));
+          fs.writeFileSync(jsonpPath, jsonpText, 'utf8');
+          console.log(' OK');
+        }
+      }
+    }
 
 
     console.log('node: ', invokeType);
@@ -1451,7 +1686,7 @@ function atlas(invokeType) {
     patchApi();
 
     // makeSmallFirehoseDump(2000);
-    sortHot();
+    cloneJsonp();
 
   }
 
