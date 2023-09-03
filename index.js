@@ -45,16 +45,18 @@ function atlas(invokeType) {
    *
    * @typedef {{$type: undefined}
    *  & FeedRecordExtraDetails} FeedRecordOther
+   *
+   * @typedef {FeedRecordOther
+   * | FeedRecordLike
+   * | FeedRecordFollow
+   * | FeedRecordPost
+   * | FeedRecordRepost
+   * | FeedRecordListItem
+   * | FeedRecordBlock
+   * | FeedRecordProfile} FeedRecord
+   * 
+   * @typedef {[shortHandle: string, x: number, y: number, displayName?: string]} UserTuple
    */
-
-  /** @typedef {FeedRecordOther |
-   * FeedRecordLike |
-   * FeedRecordFollow |
-   * FeedRecordPost |
-   * FeedRecordRepost |
-   * FeedRecordListItem |
-   * FeedRecordBlock |
-   * FeedRecordProfile} FeedRecord */
 
   // #region api
   const api = (function () {
@@ -165,7 +167,7 @@ function atlas(invokeType) {
       ws.addEventListener('message', handleMessage);
       ws.addEventListener('error', error => handleError(error));
 
-      const subscription = shared.subscriptionAsyncIterator();
+      const subscription = subscriptionAsyncIterator();
       try {
         for await (const entry of subscription.iterator) {
           yield /** @type {import('@atproto/api').ComAtprotoSyncSubscribeRepos.Commit}*/(entry);
@@ -274,51 +276,370 @@ function atlas(invokeType) {
   // #endregion
 
   // #region shared
-  const shared = (function () {
 
-    const shared = {
-      debugDumpFirehose,
-      subscriptionAsyncIterator,
-      fallbackIterator,
-      fallbackCachedFirehose,
-      breakFeedUri,
-      shortenDID,
-      unwrapShortDID,
-      shortenHandle,
-      calcCRC32
+  /**
+   * @param {{
+   *  recentUsers: { [shortDID: string]: UserTuple },
+   *  resolveUser: (shortDID: string) => UserTuple | undefined | Promise<UserTuple | undefined>,
+   *  resolvePost: (shortDID: string, cid: string) => import ('@atproto/api').AppBskyFeedPost.Record | undefined | Promise<import ('@atproto/api').AppBskyFeedPost.Record | undefined>
+   * }} _
+   */
+  function recordMaper({ recentUsers, resolveUser, resolvePost }) {
+
+    let now = Date.now();
+
+    /**
+     * @typedef {{
+     *  handle: string;
+     *  x: number;
+     *  y: number;
+     *  displayName: string | undefined;
+     *  weight: number;
+     *  touched: number;
+     *  livePosts: [] | undefined;
+     *  fetchPromise: Promise | undefined;
+     * }} LiveUserDetails
+     * 
+     * @typedef {{
+     *  shortDID: string;
+     *  postID: string;
+     *  weight: number;
+     *  created: number;
+     *  touched: number;
+     *  post: FeedRecordPost | undefined;
+     * fetchPromise: Promise | undefined;
+     * }} LivePost
+     */
+
+    /** @type {{ [shortDID: string]: LiveUserDetails }} */
+    const liveUsers = {};
+
+    /** @type {{ [cid: string]: LivePost }} */
+    const livePosts = {};
+
+    const mapper = {
+      nextRecord,
+      getUserMap,
+      getStats
     };
 
-    // CRC32 source https://stackoverflow.com/a/18639999
+    const bounds = calcBounds(recentUsers);
 
-    const uriRegex = /^at\:\/\/(did:plc:)?([a-z0-9]+)\/([a-z\.]+)\/?(.*)?$/;
+    return mapper;
+
+    /** @param {FeedRecord} record */
+    function nextRecord(record) {
+      now = Date.now();
+      switch (record?.$type) {
+        case 'app.bsky.feed.like': return nextLike(record);
+
+        case 'app.bsky.graph.follow': return nextFollow(record);
+
+        case 'app.bsky.feed.post': return nextPost(record);
+
+        case 'app.bsky.feed.repost': return nextRepost(record);
+      }
+    }
+
+    /** @param {FeedRecordLike} record */
+    function nextLike(record) {
+      const who = getUser(record.repo);
+      const what = breakFeedUri(record.subject?.uri);
+      const whose = getUser(what?.shortDID);
+      highlightRecentPost(what?.shortDID, what?.id);
+      requestProximity(who, whose);
+    }
+
+    /** @param {FeedRecordFollow} record */
+    async function nextFollow(record) {
+      const who = getUser(record.repo);
+      const whom = getUser(record.subject);
+      requestProximity(who, whom);
+    }
+
+    /** @param {FeedRecordPost} record */
+    async function nextPost(record) {
+      const who = getUser(record.repo);
+      const replyTo = breakFeedUri(record.reply?.parent?.uri);
+      highlightRecentPost(replyTo?.shortDID, replyTo?.id);
+      const replyToWhom = getUser(replyTo?.shortDID);
+      const replyToThread = record.reply?.root?.uri === record.reply?.parent?.uri ? undefined : breakFeedUri(record.reply?.root?.uri);
+      highlightRecentPost(replyToThread?.shortDID, replyToThread?.id);
+      const replyToWhoseThread = getUser(replyToThread?.shortDID);
+      if (replyToWhom) requestProximity(who, replyToWhom);
+      if (replyToWhoseThread) requestProximity(who, replyToWhoseThread);
+
+      const postID = record.path ? record.path.split('/').pop() : undefined;
+
+      if (!postID) {
+        console.log('feed post record without postID in the path ', postID);
+        return;
+      }
+
+      if (!record.repo) {
+        console.log('feed post record without repo ', record);
+        return;
+      }
+
+      const livePost = livePosts[postID] = {
+        shortDID: shortenDID(record.repo),
+        postID,
+        weight: 1,
+        created: now,
+        touched: now,
+        post: record,
+        fetchPromise: undefined
+      };
+    }
+
+    /** @param {FeedRecordRepost} record */
+    function nextRepost(record) {
+      const who = getUser(record.repo);
+      const what = breakFeedUri(record.subject?.uri);
+      const whose = getUser(what?.shortDID);
+      requestProximity(who, whose);
+      if (record.repo)
+        highlightRecentPost(shortenDID(record.repo), what?.id);
+    }
+
+    /** @param {string | undefined} shortDID */
+    function getUser(shortDID) {
+      if (!shortDID) return;
+      const resolved = liveUsers[shortDID];
+      if (resolved) {
+        resolved.touched = now;
+        return resolved;
+      }
+
+      const recentUserTuple = recentUsers[shortDID];
+
+      /** @type {LiveUserDetails} */
+      const created = liveUsers[shortDID] = {
+        handle: recentUserTuple ? recentUserTuple[0] : shortDID,
+        x: recentUserTuple ? recentUserTuple[1] : NaN,
+        y: recentUserTuple ? recentUserTuple[2] : NaN,
+        displayName: recentUserTuple ? recentUserTuple[3] : undefined,
+        weight: recentUserTuple ? 2 : 1,
+        touched: now,
+        livePosts: undefined,
+        fetchPromise: undefined
+      };
+
+      if (!recentUserTuple) {
+        let resolveResult = resolveUser(shortDID);
+        if (resolveResult) {
+          if (Array.isArray(resolveResult)) {
+            created.handle = resolveResult[0];
+            created.x = resolveResult[1];
+            created.y = resolveResult[2];
+            created.displayName = resolveResult[3];
+          } else if (isPromise(resolveResult)) {
+            created.fetchPromise = resolveResult.then(userTuple => {
+              now = Date.now();
+              if (!userTuple) return;
+              created.handle = userTuple[0];
+              created.x = userTuple[1];
+              created.y = userTuple[2];
+              created.displayName = userTuple[3];
+            });
+          }
+        }
+      }
+
+      return created;
+    }
 
     /**
-     * @param {string=} uri
+     * @param {LiveUserDetails | undefined} who
+     * @param {LiveUserDetails | undefined} whom
      */
-    function breakFeedUri(uri) {
-      if (!uri) return;
-      const match = uriRegex.exec(uri);
-      if (!match) return;
-      return { shortDID: match[2], type: match[3], id: match[4] };
+    function requestProximity(who, whom) {
+      if (!who || !whom) return;
+
+      const whoIsDefined = Number.isFinite(who?.x) && !Number.isFinite(who?.y);
+      const whomIsDefined = Number.isFinite(whom?.x) && !Number.isFinite(whom?.y);
+
+      if (!whoIsDefined) {
+        if (!whomIsDefined) speculatePosition(whom);
+        setUserNear(who, whom);
+      } else if (!whomIsDefined) {
+        setUserNear(whom, who);
+      } else {
+        const SHIFT_WHO_RATIO = 0.1;
+        const SHIFT_WHOM_RATIO = 0.03;
+
+        const whoX = who.x + (whom.x - who.x) * SHIFT_WHO_RATIO;
+        const whomX = whom.x + (who.x - whom.x) * SHIFT_WHOM_RATIO;
+
+        who.x = whoX;
+        whom.x = whomX;
+      }
+
+      who.weight += 0.25;
+      whom.weight += 1;
     }
 
-    /** @param {string} did */
-    function shortenDID(did) {
-      return typeof did === 'string' ? did.replace(/^did\:plc\:/, '') : did;
+    /** @param {LiveUserDetails} user */
+    function speculatePosition(user) {
+      user.x = bounds.x[0] + (bounds.x[1] - bounds.x[0]) * Math.random();
+      user.y = bounds.y[0] + (bounds.y[1] - bounds.y[0]) * Math.random();
     }
 
-    function unwrapShortDID(shortDID) {
-      return shortDID.indexOf(':') < 0 ? 'did:plc:' + shortDID : shortDID;
+    /** @param {LiveUserDetails} who @param {LiveUserDetails} whom */
+    function setUserNear(who, whom) {
+      const whomRX = whom.x - (bounds.x[0] + bounds.x[1]) / 2;
+      const whomRY = whom.y - (bounds.y[0] + bounds.y[1]) / 2;
+      const whomR = Math.sqrt(whomRX * whomRX + whomRY * whomRY);
+      const boundsDiameter = Math.min(Math.abs(bounds.x[0] - bounds.x[1]), Math.abs(bounds.y[0] - bounds.y[1]))
+      if (whomR < boundsDiameter * 0.1) {
+        // whom is too close to centre to rotate
+        who.x = whom.x - boundsDiameter * 0.1;
+        who.y = whom.y - boundsDiameter * 0.1;
+        return;
+      }
+
+      const whomAngle = Math.atan2(whomRY, whomRX);
+
+      const whoAngle = whomAngle + 5 + Math.PI / 180;
+      const whoX = Math.cos(whoAngle) * whomR;
+      const whoY = Math.sin(whoAngle) * whomR;
+
+      who.x = whoX;
+      who.y = whoY;
     }
 
-    /** @param {string} handle */
-    function shortenHandle(handle) {
-      return handle.replace(/\.bsky\.social$/, '');
+    /** @param {string | undefined} shortDID @param {string | undefined} postID */
+    function highlightRecentPost(shortDID, postID) {
+      if (!shortDID || !postID) return;
+      let livePost = livePosts[postID];
+      if (!livePost) {
+        livePost = livePosts[postID] = {
+          shortDID,
+          postID,
+          weight: 1,
+          created: now,
+          touched: now,
+          fetchPromise: undefined,
+          post: undefined
+        };
+
+        loadMissingPost(livePost);
+      } else {
+        livePost.weight++;
+        livePost.touched = now;
+      }
     }
+
+    /** @param {LivePost | undefined} livePost */
+    async function loadMissingPost(livePost) {
+      if (livePost?.post || livePost?.fetchPromise || !livePost) return;
+
+      const resolvePostResult = resolvePost(livePost.shortDID, livePost.postID);
+      if (!resolvePostResult) return;
+      if (isPromise(resolvePostResult)) {
+        livePost.fetchPromise = resolvePostResult.then(record => {
+          now = Date.now();
+
+          const post = /** @type {FeedRecordPost} */(record);
+          post.repo = livePost.shortDID;
+          post.postID = livePost.postID;
+          post.timestamp = post?.createdAt ? Date.parse(post?.createdAt) : undefined;
+          if (!post) return;
+          livePost.post = post;
+        });
+      } else {
+        const post = /** @type {FeedRecordPost} */(resolvePostResult);
+        post.repo = livePost.shortDID;
+        post.postID = livePost.postID;
+        post.timestamp = post?.createdAt ? Date.parse(post?.createdAt) : undefined;
+        if (!post) return;
+        livePost.post = post;
+      }
+    }
+
+    function getUserMap() {
+      const users = Object.entries(liveUsers).map(([shortDID, user]) => {
+        return {
+          shortDID,
+          ...user,
+          livePosts: undefined
+        };
+      });
+
+      return users;
+    }
+
+    function getStats() {
+      let liveUsersCount = 0;
+      let fetchingUsersCount = 0;
+      for (const lv of Object.values(liveUsers)) {
+        liveUsersCount++;
+        if (lv.fetchPromise) fetchingUsersCount++;
+      }
+
+      let livePostsCount = 0;
+      let fetchingPostsCount = 0;
+      for (const lv of Object.values(livePosts)) {
+        livePostsCount++;
+        if (lv.fetchPromise) fetchingPostsCount++;
+      }
+
+      return { liveUsersCount, fetchingUsersCount, livePostsCount, fetchingPostsCount };
+    }
+
+    /** @param {{ [shortDID: string]: UserTuple }} users */
+    function calcBounds(users) {
+      /** @type {{x: [number, number], y: [number, number] }} */
+      const bounds = { x: [NaN, NaN], y: [NaN, NaN] };
+      for (const shortDID in users) {
+        const us = users[shortDID];
+        if (!us || !(us.length > 1)) continue;
+
+        const x = us[1];
+        const y = us[2];
+        if (x < bounds.x[0] || isNaN(bounds.x[0])) bounds.x[0] = x;
+        if (x > bounds.x[1] || isNaN(bounds.x[1])) bounds.x[1] = x;
+        if (y < bounds.y[0] || isNaN(bounds.y[0])) bounds.y[0] = y;
+        if (y > bounds.y[1] || isNaN(bounds.y[1])) bounds.y[1] = y;
+      }
+
+      return bounds;
+    }
+  }
+
+  // CRC32 source https://stackoverflow.com/a/18639999
+
+  const uriRegex = /^at\:\/\/(did:plc:)?([a-z0-9]+)\/([a-z\.]+)\/?(.*)?$/;
+
+  /**
+   * @param {string=} uri
+   */
+  function breakFeedUri(uri) {
+    if (!uri) return;
+    const match = uriRegex.exec(uri);
+    if (!match) return;
+    return { shortDID: match[2], type: match[3], id: match[4] };
+  }
+
+  /** @param {string} did */
+  function shortenDID(did) {
+    return typeof did === 'string' ? did.replace(/^did\:plc\:/, '') : did;
+  }
+
+  function unwrapShortDID(shortDID) {
+    return shortDID.indexOf(':') < 0 ? 'did:plc:' + shortDID : shortDID;
+  }
+
+  /** @param {string} handle */
+  function shortenHandle(handle) {
+    return handle.replace(/\.bsky\.social$/, '');
+  }
+
+  const calcCRC32 = (function () {
 
     /**
- * @param {string | null | undefined} str
- */
+   * @param {string | null | undefined} str
+   */
     function calcCRC32(str) {
       if (!str) return 0;
       if (!crcTable) crcTable = makeCRCTable();
@@ -344,163 +665,169 @@ function atlas(invokeType) {
       }
       return crcTable;
     }
-
-    function subscriptionAsyncIterator() {
-      const buffer = [];
-      var resolveNext, rejectNext;
-      var failed = false;
-      var stopped = false;
-
-      return {
-        iterator: iterate(),
-        stop,
-        next,
-        error
-      };
-
-      async function* iterate() {
-        try {
-          while (!stopped) {
-            let next;
-            if (buffer.length) {
-              next = buffer.shift();
-            } else {
-              next = await new Promise((resolve, reject) => {
-                resolveNext = resolve;
-                rejectNext = reject;
-              });
-            }
-
-            if (failed && !buffer.length)
-              throw next;
-            else
-              yield next;
-          }
-        } finally {
-          stopped = true;
-          buffer.length = 0;
-        }
-      }
-
-      function stop() {
-        if (failed || stopped) return;
-        stopped = true;
-      }
-
-      function next(item) {
-        if (failed || stopped) return;
-        if (resolveNext) {
-          const resolve = resolveNext;
-          resolveNext = undefined;
-          rejectNext = undefined;
-          resolve(item);
-        } else {
-          buffer.push(item);
-        }
-      }
-
-      function error(error) {
-        if (failed || stopped) return;
-        failed = true;
-        if (rejectNext) {
-          const reject = rejectNext;
-          resolveNext = undefined;
-          rejectNext = undefined;
-          reject(error);
-        } else {
-          buffer.push(error);
-        }
-      }
-
-    }
-
-    /**
-     * @param {() => AsyncIterable | Promise<AsyncIterable<T>>} mainIterate
-     * @param {() => AsyncIterable | Promise<AsyncIterable<T>>} fallbackIterate
-     * @template T
-     */
-    async function* fallbackIterator(mainIterate, fallbackIterate) {
-      let onePassed = false;
-      while (true) {
-        try {
-          for await (const value of await mainIterate()) {
-            onePassed = true;
-            yield value;
-          }
-        } catch (error) {
-          if (onePassed) throw error;
-          for await (const value of await fallbackIterate()) {
-            yield value;
-          }
-          break;
-        }
-      }
-    }
-
-    async function* fallbackCachedFirehose() {
-      /** @type {FeedRecord[]} */
-      const fakeFirehose = await fetch('../atlas-db/firehose.json').then(response => response.json());
-      console.log('fakeFirehose', fakeFirehose);
-      let lastTweetTime = 0;
-      for (const record of fakeFirehose) {
-        const delayTime = (record.timestamp || 0) - lastTweetTime;
-        if (delayTime > 0 && delayTime < 10000)
-          await new Promise(resolve => setTimeout(resolve, delayTime));
-
-        if (record.timestamp && delayTime > 0)
-          lastTweetTime = record.timestamp;
-
-        yield record;
-      }
-    }
-
-    async function debugDumpFirehose() {
-      const firehose = api.operationsFirehose();
-      for await (const record of firehose) {
-        switch (record?.$type) {
-          case 'app.bsky.feed.like':
-            console.log(record.action + ' ' + record.$type + '  ', record.subject?.uri);
-            break;
-
-          case 'app.bsky.graph.follow':
-            console.log(record.action + ' ' + record.$type + '  ', record.subject);
-            break;
-
-          case 'app.bsky.feed.post':
-            console.log(record.action + ' ' + record.$type + '  ', record.text.length < 20 ? record.text : record.text.slice(0, 20).replace(/\s+/g, ' ') + '...');
-            break;
-
-          case 'app.bsky.feed.repost':
-            console.log(record.action + ' ' + record.$type + '  ', record.subject?.uri);
-            break;
-
-          case 'app.bsky.graph.listitem':
-            console.log(record.action + ' ' + record.$type + '  ', record.subject, ' : ', record.list);
-            break;
-
-          case 'app.bsky.graph.block':
-            console.log(record.action + ' ' + record.$type + '  ', record.subject);
-            break;
-
-          case 'app.bsky.actor.profile':
-            console.log(record.action + ' ' + record.$type +
-              '  [', record.displayName, '] : "',
-              (record.description?.length || 0) < 20 ? record.description : (record.description || '').slice(0, 20).replace(/\s+/g, ' ') + '...',
-              '" : LABELS: ', record.labels ? JSON.stringify(record.labels) : record.labels);
-            break;
-
-          default:
-            if (record) {
-              console.log(/** @type {*} */(record).$type, '  RECORD????????????????????????\n\n');
-            } else {
-              console.log(/** @type {*} */(record).$type, '  COMMIT????????????????????????\n\n');
-            }
-        }
-      }
-    }
-
-    return shared;
+    
+    return calcCRC32;
   })();
+
+  /** @type {(arg: unknown) => arg is Promise } */
+  function isPromise(arg) {
+    return !!arg && typeof /** @type {*} */(arg).then === 'function';
+  }
+
+  function subscriptionAsyncIterator() {
+    const buffer = [];
+    var resolveNext, rejectNext;
+    var failed = false;
+    var stopped = false;
+
+    return {
+      iterator: iterate(),
+      stop,
+      next,
+      error
+    };
+
+    async function* iterate() {
+      try {
+        while (!stopped) {
+          let next;
+          if (buffer.length) {
+            next = buffer.shift();
+          } else {
+            next = await new Promise((resolve, reject) => {
+              resolveNext = resolve;
+              rejectNext = reject;
+            });
+          }
+
+          if (failed && !buffer.length)
+            throw next;
+          else
+            yield next;
+        }
+      } finally {
+        stopped = true;
+        buffer.length = 0;
+      }
+    }
+
+    function stop() {
+      if (failed || stopped) return;
+      stopped = true;
+    }
+
+    function next(item) {
+      if (failed || stopped) return;
+      if (resolveNext) {
+        const resolve = resolveNext;
+        resolveNext = undefined;
+        rejectNext = undefined;
+        resolve(item);
+      } else {
+        buffer.push(item);
+      }
+    }
+
+    function error(error) {
+      if (failed || stopped) return;
+      failed = true;
+      if (rejectNext) {
+        const reject = rejectNext;
+        resolveNext = undefined;
+        rejectNext = undefined;
+        reject(error);
+      } else {
+        buffer.push(error);
+      }
+    }
+
+  }
+
+  /**
+   * @param {() => AsyncIterable | Promise<AsyncIterable<T>>} mainIterate
+   * @param {() => AsyncIterable | Promise<AsyncIterable<T>>} fallbackIterate
+   * @template T
+   */
+  async function* fallbackIterator(mainIterate, fallbackIterate) {
+    let onePassed = false;
+    while (true) {
+      try {
+        for await (const value of await mainIterate()) {
+          onePassed = true;
+          yield value;
+        }
+      } catch (error) {
+        if (onePassed) throw error;
+        for await (const value of await fallbackIterate()) {
+          yield value;
+        }
+        break;
+      }
+    }
+  }
+
+  async function* fallbackCachedFirehose() {
+    /** @type {FeedRecord[]} */
+    const fakeFirehose = await fetch('../atlas-db/firehose.json').then(response => response.json());
+    console.log('fakeFirehose', fakeFirehose);
+    let lastTweetTime = 0;
+    for (const record of fakeFirehose) {
+      const delayTime = (record.timestamp || 0) - lastTweetTime;
+      if (delayTime > 0 && delayTime < 10000)
+        await new Promise(resolve => setTimeout(resolve, delayTime));
+
+      if (record.timestamp && delayTime > 0)
+        lastTweetTime = record.timestamp;
+
+      yield record;
+    }
+  }
+
+  async function debugDumpFirehose() {
+    const firehose = api.operationsFirehose();
+    for await (const record of firehose) {
+      switch (record?.$type) {
+        case 'app.bsky.feed.like':
+          console.log(record.action + ' ' + record.$type + '  ', record.subject?.uri);
+          break;
+
+        case 'app.bsky.graph.follow':
+          console.log(record.action + ' ' + record.$type + '  ', record.subject);
+          break;
+
+        case 'app.bsky.feed.post':
+          console.log(record.action + ' ' + record.$type + '  ', record.text.length < 20 ? record.text : record.text.slice(0, 20).replace(/\s+/g, ' ') + '...');
+          break;
+
+        case 'app.bsky.feed.repost':
+          console.log(record.action + ' ' + record.$type + '  ', record.subject?.uri);
+          break;
+
+        case 'app.bsky.graph.listitem':
+          console.log(record.action + ' ' + record.$type + '  ', record.subject, ' : ', record.list);
+          break;
+
+        case 'app.bsky.graph.block':
+          console.log(record.action + ' ' + record.$type + '  ', record.subject);
+          break;
+
+        case 'app.bsky.actor.profile':
+          console.log(record.action + ' ' + record.$type +
+            '  [', record.displayName, '] : "',
+            (record.description?.length || 0) < 20 ? record.description : (record.description || '').slice(0, 20).replace(/\s+/g, ' ') + '...',
+            '" : LABELS: ', record.labels ? JSON.stringify(record.labels) : record.labels);
+          break;
+
+        default:
+          if (record) {
+            console.log(/** @type {*} */(record).$type, '  RECORD????????????????????????\n\n');
+          } else {
+            console.log(/** @type {*} */(record).$type, '  COMMIT????????????????????????\n\n');
+          }
+      }
+    }
+  }
+ 
   // #endregion
 
   function runBrowser(invokeType) {
@@ -537,14 +864,14 @@ function atlas(invokeType) {
         userList = await fetch('../atlas-db/users/hot.json').then(response => response.json());
       }
 
-      for await (const value of shared.fallbackIterator(() => api.operationsFirehose(), () => shared.fallbackCachedFirehose())) {
+      for await (const value of fallbackIterator(() => api.operationsFirehose(), () => fallbackCachedFirehose())) {
         addFirehoseEntry(value);
       }
 
       function resolveUserHandle(did) {
-        const shortDID = shared.shortenDID(did);
+        const shortDID = shortenDID(did);
         const user = userList[shortDID];
-        return typeof user === 'string' ? '@' + shared.shortenHandle(user) : user ? '@' + shared.shortenHandle(user[0]) : shortDID ? '#' + shortDID.slice(0, 4) : shortDID;
+        return typeof user === 'string' ? '@' + shortenHandle(user) : user ? '@' + shortenHandle(user[0]) : shortDID ? '#' + shortDID.slice(0, 4) : shortDID;
       }
 
       /**
@@ -701,7 +1028,7 @@ function atlas(invokeType) {
         introElement.textContent = 'Loaded ' + Object.keys(userList).length + ' users in ' + (Date.now() - startIntroTime)/1000 + 's.';
       }
 
-      for await (const record of shared.fallbackIterator(() => api.operationsFirehose(), () => shared.fallbackCachedFirehose())) {
+      for await (const record of fallbackIterator(() => api.operationsFirehose(), () => fallbackCachedFirehose())) {
         const renderRecord = renderRecordHTML(record);
         if (!renderRecord) continue;
         if ((renderRecord.tagName || '').toUpperCase() === 'SPAN') {
@@ -813,7 +1140,7 @@ function atlas(invokeType) {
         /** @type {{ [shortDID: string]: [shortHandle: string, x: number, y: number, displayName?: string] }} */
         const hotUsers = await fetch('../atlas-db/users/hot.json').then(response => response.json());
 
-        for await (const record of shared.fallbackIterator(() => api.operationsFirehose(), () => shared.fallbackCachedFirehose())) {
+        for await (const record of fallbackIterator(() => api.operationsFirehose(), () => fallbackCachedFirehose())) {
           switch (record?.$type) {
             case 'app.bsky.feed.post':
               addPost(record);
@@ -832,7 +1159,7 @@ function atlas(invokeType) {
 
         function generateTemporaryUser(did) {
           if (!did) return [,0, 0];
-          const crc = shared.calcCRC32(did);
+          const crc = calcCRC32(did);
           return [, 1500 + crc % 10000, 20500 + Math.floor(crc / 10000) % 10000];
         }
 
@@ -887,7 +1214,7 @@ function atlas(invokeType) {
          * @param {string | undefined | null} did
          */
         function resolveUser(did) {
-          const shortDID = did ? shared.shortenDID(did) : undefined;
+          const shortDID = did ? shortenDID(did) : undefined;
           const user = shortDID ? hotUsers[shortDID] : undefined;
           return user;
         }
@@ -953,7 +1280,7 @@ function atlas(invokeType) {
       const authorElem = renderUserHandle(record?.repo);
       switch (record?.$type) {
         case 'app.bsky.feed.like':
-          const post = shared.breakFeedUri(record.subject?.uri);
+          const post = breakFeedUri(record.subject?.uri);
           const postAuthorElem = renderUserHandle(post?.shortDID);
           // TODO: lookup post
           return elem('span', {
@@ -985,7 +1312,7 @@ function atlas(invokeType) {
           });
 
         case 'app.bsky.feed.repost':
-          const origPost = shared.breakFeedUri(record.subject?.uri);
+          const origPost = breakFeedUri(record.subject?.uri);
           const origPostAuthorElem = renderUserHandle(origPost?.shortDID);
           // TODO: lookup post
           return elem('span', {
@@ -1014,12 +1341,12 @@ function atlas(invokeType) {
        */
       function renderUserHandle(did) {
         if (!did) return did;
-        const shortDID = shared.shortenDID(did);
+        const shortDID = shortenDID(did);
         const user = userList[shortDID];
         const handle = typeof user === 'string' ? user : user ? user[0] : undefined;
         let displayName = user && typeof user !== 'string' ? user[user.length - 1] : undefined;
         if (typeof displayName !== 'string') displayName = '';
-        const shortHandle = handle ? shared.shortenHandle(handle) : undefined;
+        const shortHandle = handle ? shortenHandle(handle) : undefined;
 
         if (shortHandle) return elem('span', {
           className: 'user-handle', title: displayName, children: [
@@ -1348,7 +1675,7 @@ function atlas(invokeType) {
           if (users[shortDID]) continue;
 
           const startEntryTime = Date.now();
-          const did = shared.unwrapShortDID(shortDID);
+          const did = unwrapShortDID(shortDID);
           //const followRecords = await agent.com.atproto.repo.listRecords({ repo: did, collection: 'app.bsky.graph.follow' });
           const describeProfilePromise = agent.com.atproto.repo.describeRepo({ repo: did })
             .catch(err => console.log('    \x1b[31mcom.atproto.repo.describeRepo ', shortDID, ' ' + err.message + '\x1b[39m'));
@@ -1368,7 +1695,7 @@ function atlas(invokeType) {
           }
 
           const handle = describeProfile.data.handle;
-          const shortHandle = shared.shortenHandle(handle);
+          const shortHandle = shortenHandle(handle);
           const displayName = /** @type {*} */(profileRecords.data.records[0]?.value)?.displayName;
 
           if (users[shortDID]) {
@@ -1430,7 +1757,7 @@ function atlas(invokeType) {
         for await (const batchEntry of api.listReposStreaming(listRepos)) {
           batchWholeSize += batchEntry.repos.length;
           for (const actor of batchEntry.repos) {
-            const shortDID = shared.shortenDID(actor.did);
+            const shortDID = shortenDID(actor.did);
             if (!(shortDID in users) || typeof users[shortDID] !== 'undefined') continue;
             users[shortDID] = 0;
             batchAddedUsers++;
@@ -1451,7 +1778,7 @@ function atlas(invokeType) {
 
             console.log(
               '\x1b[36mLISTREPOS ',
-              '[' + (batchAddedUsers === batchWholeSize ? batchAddedUsers : batchAddedUsers + ' of ' + batchWholeSize) + '] ...' + shared.shortenDID(batchEntry.repos[batchEntry.repos.length - 1].did),
+              '[' + (batchAddedUsers === batchWholeSize ? batchAddedUsers : batchAddedUsers + ' of ' + batchWholeSize) + '] ...' + shortenDID(batchEntry.repos[batchEntry.repos.length - 1].did),
               ' in ' + (now - startBatchTime) / 1000 + 's (' +
               totalAddedUsers + ' in ' + (now - startTime) / 1000 + 's, ' + (totalAddedUsers / (now - startTime) * 1000).toFixed(1).replace(/\.?0+$/, '') + ' per second)' +
               '\x1b[39m'
@@ -1497,9 +1824,9 @@ function atlas(invokeType) {
         for await (const batchEntry of api.searchActorsStreaming({ cursor: searchActors, term: searchTerm })) {
           batchWholeSize += batchEntry.actors.length;
           for (const actor of batchEntry.actors) {
-            const shortDID = shared.shortenDID(actor.did);
+            const shortDID = shortenDID(actor.did);
             if (users[shortDID]) continue;
-            const shortHandle = shared.shortenHandle(actor.handle);
+            const shortHandle = shortenHandle(actor.handle);
             users[shortDID] = actor.displayName ? [shortHandle, actor.displayName] : shortHandle;
             batchAddedUsers++;
             totalAddedUsers++;
@@ -1520,7 +1847,7 @@ function atlas(invokeType) {
             console.log(
               'SEARCHACTORS ',
               '[' + (batchAddedUsers === batchWholeSize ? batchAddedUsers : batchAddedUsers + ' of ' + batchWholeSize) + '] ...' +
-              shared.shortenDID(batchEntry.actors[batchEntry.actors.length - 1].did) + '/' + shared.shortenHandle(batchEntry.actors[batchEntry.actors.length - 1].handle),
+              shortenDID(batchEntry.actors[batchEntry.actors.length - 1].did) + '/' + shortenHandle(batchEntry.actors[batchEntry.actors.length - 1].handle),
               ' in ' + (now - startBatchTime) / 1000 + 's (' +
               totalAddedUsers + ' in ' + (now - startTime) / 1000 + 's, ' + (totalAddedUsers / (now - startTime) * 1000).toFixed(1).replace(/\.0+$/, '') + ' per second)'
             );
@@ -1652,6 +1979,7 @@ function atlas(invokeType) {
       console.log('Done.');
 
     }
+
     async function cloneJsonp() {
       cloneDir('../atlas-db');
       cloneDir('../atlas-db/users');
@@ -1675,6 +2003,46 @@ function atlas(invokeType) {
       }
     }
 
+    async function monitorFirehose() {
+      const agent = api.unauthenticatedAgent();
+      const mapper = recordMaper({
+        recentUsers: JSON.parse(fs.readFileSync(path.resolve(__dirname, '../atlas-db/users/hot.json'), 'utf8')),
+        resolveUser: async (shortDID) => {
+          const did = unwrapShortDID(shortDID);
+          const profilePromise = agent.com.atproto.repo.listRecords({ repo: did, collection: 'app.bsky.actor.profile' });
+          const repoDesc = await agent.com.atproto.repo.describeRepo({ repo: did });
+          const profile = await profilePromise;
+          return [repoDesc.data.handle, NaN, NaN, /** @type {*} */(profile.data?.records[0]?.value).displayName];
+        },
+        resolvePost: async (shortDID, postID) => {
+          const did = unwrapShortDID(shortDID);
+          const post = await agent.com.atproto.repo.getRecord({ repo: did, collection: 'app.bsky.graph.post', rkey: postID });
+          const record = /** @type {import ('@atproto/api').AppBskyFeedPost.Record} */(post.data?.value);
+          return record;
+        }
+      });
+
+      process.stdout.write('Connecting to firehose for monitoring');
+      let connected = false;
+      let reportLast = Date.now();
+      for await (const record of api.operationsFirehose()) {
+        if (!connected) {
+          console.log(' OK');
+          connected = true;
+        }
+
+        mapper.nextRecord(record);
+
+        const now = Date.now();
+        if (now - reportLast > 5000) {
+          const stats = mapper.getStats();
+          const users = mapper.getUserMap();
+          console.log('mapper ', stats);
+          reportLast = now;
+        }
+      }
+    }
+
 
     console.log('node: ', invokeType);
 
@@ -1686,7 +2054,8 @@ function atlas(invokeType) {
     patchApi();
 
     // makeSmallFirehoseDump(2000);
-    cloneJsonp();
+    // cloneJsonp();
+    monitorFirehose();
 
   }
 
