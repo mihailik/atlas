@@ -284,7 +284,7 @@ function atlas(invokeType) {
    *  resolvePost: (shortDID: string, cid: string) => import ('@atproto/api').AppBskyFeedPost.Record | undefined | Promise<import ('@atproto/api').AppBskyFeedPost.Record | undefined>
    * }} _
    */
-  function recordMaper({ recentUsers, resolveUser, resolvePost }) {
+  function recordMapper({ recentUsers, resolveUser, resolvePost }) {
 
     let now = Date.now();
 
@@ -310,6 +310,9 @@ function atlas(invokeType) {
      * fetchPromise: Promise | undefined;
      * }} LivePost
      */
+
+    let newlyResolvedUserCount = 0;
+    let newlyResolvedPostCount = 0;
 
     /** @type {{ [shortDID: string]: LiveUserDetails }} */
     const liveUsers = {};
@@ -402,9 +405,10 @@ function atlas(invokeType) {
         highlightRecentPost(shortenDID(record.repo), what?.id);
     }
 
-    /** @param {string | undefined} shortDID */
-    function getUser(shortDID) {
-      if (!shortDID) return;
+    /** @param {string | undefined} didOrShortDID */
+    function getUser(didOrShortDID) {
+      if (!didOrShortDID) return;
+      const shortDID = shortenDID(didOrShortDID);
       const resolved = liveUsers[shortDID];
       if (resolved) {
         resolved.touched = now;
@@ -426,21 +430,32 @@ function atlas(invokeType) {
       };
 
       if (!recentUserTuple) {
-        let resolveResult = resolveUser(shortDID);
+        let resolveResult;
+        try { resolveResult = resolveUser(shortDID); }
+        catch (error) { console.log('    ..Resolving ' + shortDID + ' ' + error.message); }
+
         if (resolveResult) {
           if (Array.isArray(resolveResult)) {
             created.handle = resolveResult[0];
             created.x = resolveResult[1];
             created.y = resolveResult[2];
             created.displayName = resolveResult[3];
+            newlyResolvedUserCount++;
           } else if (isPromise(resolveResult)) {
             created.fetchPromise = resolveResult.then(userTuple => {
               now = Date.now();
+              created.fetchPromise = undefined;
               if (!userTuple) return;
               created.handle = userTuple[0];
               created.x = userTuple[1];
               created.y = userTuple[2];
               created.displayName = userTuple[3];
+              newlyResolvedUserCount++;
+            },
+            error => {
+              now = Date.now();
+              created.fetchPromise = undefined;
+              console.log('    ..Resolving ' + shortDID + ' ' + error.message);
             });
           }
         }
@@ -534,11 +549,15 @@ function atlas(invokeType) {
     async function loadMissingPost(livePost) {
       if (livePost?.post || livePost?.fetchPromise || !livePost) return;
 
-      const resolvePostResult = resolvePost(livePost.shortDID, livePost.postID);
+      let resolvePostResult;
+      try { resolvePostResult = resolvePost(livePost.shortDID, livePost.postID); }
+      catch (error) { console.log('    ..Resolving post ' + livePost.shortDID + '/' + livePost.postID + ' ' + error.message); }
       if (!resolvePostResult) return;
       if (isPromise(resolvePostResult)) {
         livePost.fetchPromise = resolvePostResult.then(record => {
           now = Date.now();
+          livePost.fetchPromise = undefined;
+          if (!record) return;
 
           const post = /** @type {FeedRecordPost} */(record);
           post.repo = livePost.shortDID;
@@ -546,6 +565,12 @@ function atlas(invokeType) {
           post.timestamp = post?.createdAt ? Date.parse(post?.createdAt) : undefined;
           if (!post) return;
           livePost.post = post;
+          newlyResolvedPostCount++;
+        },
+        error => {
+          now = Date.now();
+          livePost.fetchPromise = undefined;
+          console.log('    ..Resolving post ' + livePost.shortDID + '/' + livePost.postID + ' ' + error.message);
         });
       } else {
         const post = /** @type {FeedRecordPost} */(resolvePostResult);
@@ -554,6 +579,7 @@ function atlas(invokeType) {
         post.timestamp = post?.createdAt ? Date.parse(post?.createdAt) : undefined;
         if (!post) return;
         livePost.post = post;
+        newlyResolvedPostCount++;
       }
     }
 
@@ -584,7 +610,14 @@ function atlas(invokeType) {
         if (lv.fetchPromise) fetchingPostsCount++;
       }
 
-      return { liveUsersCount, fetchingUsersCount, livePostsCount, fetchingPostsCount };
+      return {
+        liveUsersCount,
+        fetchingUsersCount,
+        newlyResolvedUserCount,
+        livePostsCount,
+        fetchingPostsCount,
+        newlyResolvedPostCount
+      };
     }
 
     /** @param {{ [shortDID: string]: UserTuple }} users */
@@ -606,6 +639,114 @@ function atlas(invokeType) {
       return bounds;
     }
   }
+
+  /**
+   * @param {number} maxCount
+   * @returns {{ <T>(call: () => Promise<T>): Promise<T>, buffer: number }}
+   */
+  function throttleRequests(maxCount) {
+    /** @type {Set<Promise>} */
+    const running = new Set();
+    invoke.buffer = 0;
+    return invoke;
+
+    async function invoke(call) {
+      while (running.size > maxCount) {
+        const pick = [...running][0 | (running.size * Math.random())];
+        await pick.catch(() => { });
+      }
+
+      const promise = call().finally(() => {
+        invoke.buffer--;
+        running.delete(promise);
+      });
+      invoke.buffer++;
+      running.add(promise);
+      return await promise;
+    };
+  }
+
+  /**
+   * @param {Parameters<typeof recordMapper>[0]['recentUsers']} recentUsers
+   * @param {() => void=} onlog
+   */
+  async function monitorFirehose(recentUsers, onlog) {
+    const agent = api.unauthenticatedAgent();
+    const throttled = throttleRequests(4);
+    const mapper = recordMapper({
+      recentUsers,
+      resolveUser: (shortDID) => throttled(async () => {
+          const did = unwrapShortDID(shortDID);
+          const profilePromise = agent.com.atproto.repo.listRecords({ repo: did, collection: 'app.bsky.actor.profile' });
+          const repoDesc = await agent.com.atproto.repo.describeRepo({ repo: did });
+          const profile = await profilePromise;
+          if (repoDesc?.data?.handle && profile?.data?.records?.length)
+            return /** @type {UserTuple} */([shortenHandle(repoDesc.data.handle), NaN, NaN, /** @type {*} */(profile.data.records[0]?.value).displayName]);
+        }),
+      resolvePost: (shortDID, postID) => throttled(async () => {
+          const did = unwrapShortDID(shortDID);
+          const post = await agent.com.atproto.repo.getRecord({ repo: did, collection: 'app.bsky.feed.post', rkey: postID });
+          const record = /** @type {import ('@atproto/api').AppBskyFeedPost.Record} */(post?.data?.value);
+          return record;
+        })
+    });
+
+    console.log('Connecting to firehose for monitoring');
+    let connected = false;
+    let reportLast = Date.now();
+    for await (const record of api.operationsFirehose()) {
+      if (!connected) {
+        console.log(' OK');
+        connected = true;
+      }
+
+      mapper.nextRecord(record);
+
+      const now = Date.now();
+      if (now - reportLast > 5000) {
+        const stats = mapper.getStats();
+        console.log('throttled ', throttled.buffer);
+        console.log('mapper ', stats);
+        const users = mapper.getUserMap();
+        let appendedUsers = [];
+        let shiftedUsers = [];
+        let locatedUsers = [];
+        for (const us of users) {
+          const rec = recentUsers[us.shortDID];
+          if (us.handle && !us.fetchPromise && us.handle !== us.shortDID && !rec) {
+            appendedUsers.push(us.handle);
+            recentUsers[us.shortDID] = [us.handle, us.x, us.y, us.displayName];
+          } else if (rec && Number.isFinite(us.x) && Number.isFinite(us.y) && us.x !== rec[1] && us.y !== rec[2]) {
+            if (Array.isArray(rec)) {
+              if (Number.isFinite(rec[1]) && Number.isFinite(rec[2])) shiftedUsers.push(us.handle || rec[0]);
+              else locatedUsers.push(us.handle || rec[0]);
+
+              rec[1] = us.x;
+              rec[2] = us.y;
+            } else if (rec) {
+              recentUsers[us.shortDID] = [us.handle || rec, us.x, us.y, us.displayName];
+              locatedUsers.push(us.handle || rec);
+            }
+          }
+        }
+
+        if (locatedUsers.length) {
+          console.log('  located ' + locatedUsers.length + ' users like ' + locatedUsers[locatedUsers.length - 1]);
+        }
+        if (shiftedUsers.length) {
+          console.log('  shifted ' + shiftedUsers.length + ' users like ' + shiftedUsers[shiftedUsers.length - 1]);
+        }
+
+        if (appendedUsers.length) {
+          console.log(appendedUsers.length + ' new saved into hot user database like ' + appendedUsers[appendedUsers.length - 1]);
+          if (typeof onlog === 'function') onlog();
+        }
+
+        reportLast = now;
+      }
+    }
+  }
+
 
   // CRC32 source https://stackoverflow.com/a/18639999
 
@@ -830,13 +971,17 @@ function atlas(invokeType) {
  
   // #endregion
 
-  function runBrowser(invokeType) {
+  async function runBrowser(invokeType) {
+    /** @type {{ [shortDID: string]: UserTuple }} */
+    let userList;
+
     console.log('browser: ', invokeType);
     if (invokeType === 'init') return;
-    if (invokeType === 'page') landscapeFirehose3D();
+    if (invokeType === 'page')
+    //   monitorFirehose(userList = await fetch('../atlas-db/users/hot.json').then(response => response.json()));
+    // return;
 
-    /** @type {{ [shortDID: string]: string | [handle: string, displayName: string] }} */
-    let userList;
+      landscapeFirehose3D();
 
     async function showFirehoseConsole() {
       let recycledLast = Date.now();
@@ -1637,7 +1782,7 @@ function atlas(invokeType) {
     })();
 
     const cursorsJsonPath = require('path').resolve(__dirname, '../atlas-db/cursors.json');
-    const usersJsonPath = require('path').resolve(__dirname, '../atlas-db/users.json');
+    const hotUsersJsonPath = require('path').resolve(__dirname, '../atlas-db/users/hot.json');
 
     const continueUpdateUsers = (function () {
 
@@ -1647,7 +1792,7 @@ function atlas(invokeType) {
         let { users: { oneByOne, timestamp } } = JSON.parse(fs.readFileSync(cursorsJsonPath, 'utf8'));
 
         if (!users)
-          users = JSON.parse(fs.readFileSync(usersJsonPath, 'utf8'));
+          users = JSON.parse(fs.readFileSync(hotUsersJsonPath, 'utf8'));
 
         console.log('\x1b[31m', { oneByOne }, '\x1b[39m');
 
@@ -1724,7 +1869,7 @@ function atlas(invokeType) {
               currentCursorsJson.users.timestamp = now;
               fs.writeFileSync(cursorsJsonPath, JSON.stringify(currentCursorsJson, null, 2), 'utf8');
 
-              writeUsers(users);
+              writeHotUsers(users);
 
               lastReport = now;
               addedSinceLastReport = 0;
@@ -1743,7 +1888,7 @@ function atlas(invokeType) {
       async function continueDumpAllUsers(users) {
         let { users: { listRepos, timestamp } } = JSON.parse(fs.readFileSync(cursorsJsonPath, 'utf8'));
         if (!users)
-          users = JSON.parse(fs.readFileSync(usersJsonPath, 'utf8'));
+          users = JSON.parse(fs.readFileSync(hotUsersJsonPath, 'utf8'));
 
         const startTime = Date.now();
         let startBatchTime = Date.now();
@@ -1769,7 +1914,7 @@ function atlas(invokeType) {
           const now = Date.now();
 
           if (now - lastReport > reportEveryMsec) {
-            writeUsers(users);
+            writeHotUsers(users);
 
             const currentCursorsJson = JSON.parse(fs.readFileSync(cursorsJsonPath, 'utf8'));
             currentCursorsJson.users.listRepos = listRepos;
@@ -1808,7 +1953,7 @@ function atlas(invokeType) {
       async function continueDumpUserDetails(users) {
         let { users: { searchActors, timestamp } } = JSON.parse(fs.readFileSync(cursorsJsonPath, 'utf8'));
         if (!users)
-          users = JSON.parse(fs.readFileSync(usersJsonPath, 'utf8'));
+          users = JSON.parse(fs.readFileSync(hotUsersJsonPath, 'utf8'));
 
         const startTime = Date.now();
         let startBatchTime = Date.now();
@@ -1836,7 +1981,7 @@ function atlas(invokeType) {
 
           const now = Date.now();
           if (now - lastReport > reportEveryMsec) {
-            writeUsers(users);
+            writeHotUsers(users);
 
             const currentCursorsJson = JSON.parse(fs.readFileSync(cursorsJsonPath, 'utf8'));
             currentCursorsJson.users.searchActors = searchActors;
@@ -1887,10 +2032,10 @@ function atlas(invokeType) {
 
     })();
 
-    async function writeUsers(users, filePath) {
+    async function writeHotUsers(users, filePath) {
       const newUsersJsonContent = '{\n' + Object.entries(users).map(
         ([did, entry]) => JSON.stringify(did) + ':' + JSON.stringify(entry)).join(',\n') + '\n}\n';
-      fs.writeFileSync(filePath || usersJsonPath, newUsersJsonContent, 'utf8');
+      fs.writeFileSync(filePath || hotUsersJsonPath, newUsersJsonContent, 'utf8');
     }
 
 
@@ -1927,7 +2072,7 @@ function atlas(invokeType) {
     }
 
     async function sortHot() {
-      const users = JSON.parse(fs.readFileSync(usersJsonPath, 'utf8'));
+      const users = JSON.parse(fs.readFileSync(hotUsersJsonPath, 'utf8'));
       const spatial = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../atlas-db/spatial.json'), 'utf8'));
 
       console.log('Extracting hot users...');
@@ -1973,7 +2118,7 @@ function atlas(invokeType) {
         const fileName = 'store-' + firstLetter.toUpperCase() + '.json';
 
         console.log(fileName + ' [' + Object.keys(bucket).length + ']...');
-        writeUsers(bucket, path.resolve(dir, fileName));
+        writeHotUsers(bucket, path.resolve(dir, fileName));
       }
 
       console.log('Done.');
@@ -2003,47 +2148,6 @@ function atlas(invokeType) {
       }
     }
 
-    async function monitorFirehose() {
-      const agent = api.unauthenticatedAgent();
-      const mapper = recordMaper({
-        recentUsers: JSON.parse(fs.readFileSync(path.resolve(__dirname, '../atlas-db/users/hot.json'), 'utf8')),
-        resolveUser: async (shortDID) => {
-          const did = unwrapShortDID(shortDID);
-          const profilePromise = agent.com.atproto.repo.listRecords({ repo: did, collection: 'app.bsky.actor.profile' });
-          const repoDesc = await agent.com.atproto.repo.describeRepo({ repo: did });
-          const profile = await profilePromise;
-          return [repoDesc.data.handle, NaN, NaN, /** @type {*} */(profile.data?.records[0]?.value).displayName];
-        },
-        resolvePost: async (shortDID, postID) => {
-          const did = unwrapShortDID(shortDID);
-          const post = await agent.com.atproto.repo.getRecord({ repo: did, collection: 'app.bsky.graph.post', rkey: postID });
-          const record = /** @type {import ('@atproto/api').AppBskyFeedPost.Record} */(post.data?.value);
-          return record;
-        }
-      });
-
-      process.stdout.write('Connecting to firehose for monitoring');
-      let connected = false;
-      let reportLast = Date.now();
-      for await (const record of api.operationsFirehose()) {
-        if (!connected) {
-          console.log(' OK');
-          connected = true;
-        }
-
-        mapper.nextRecord(record);
-
-        const now = Date.now();
-        if (now - reportLast > 5000) {
-          const stats = mapper.getStats();
-          const users = mapper.getUserMap();
-          console.log('mapper ', stats);
-          reportLast = now;
-        }
-      }
-    }
-
-
     console.log('node: ', invokeType);
 
     atproto_api = require('@atproto/api');
@@ -2055,7 +2159,12 @@ function atlas(invokeType) {
 
     // makeSmallFirehoseDump(2000);
     // cloneJsonp();
-    monitorFirehose();
+    const hotUsers = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../atlas-db/users/hot.json'), 'utf8'));
+    monitorFirehose(
+      hotUsers,
+      () => {
+        writeHotUsers(hotUsers);
+      });
 
   }
 
