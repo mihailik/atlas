@@ -371,10 +371,11 @@ function atlas(invokeType) {
         renderer.domElement.className = 'atlas-3d';
         root.appendChild(renderer.domElement);
         stats.domElement.style.position = 'relative';
+        stats.domElement.style.pointerEvents = 'all';
 
         let title, rightStatus;
         const titleBar = elem('div', {
-          style: ` position: fixed; left: 0; top: 0; width: 100%; height: auto; background: rgba(0,0,0,0.5); color: gold; display: grid; grid-template-rows: auto; grid-template-columns: auto 1fr auto; max-height: 5em;`,
+          style: ` position: fixed; left: 0; top: 0; width: 100%; height: auto; background: rgba(0,0,0,0.5); color: gold; display: grid; grid-template-rows: auto; grid-template-columns: auto 1fr auto; max-height: 5em; pointer-events: none;`,
           parent: root,
           children: [
             stats.domElement,
