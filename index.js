@@ -374,12 +374,12 @@ function atlas(invokeType) {
 
         let title, rightStatus;
         const titleBar = elem('div', {
-          style: ` position: fixed; left: 0; top: 0; width: 100%; height: auto; background: rgba(0,0,0,0.5); color: gold; display: grid; grid-template-rows: auto; grid-template-columns: auto 1fr auto; `,
+          style: ` position: fixed; left: 0; top: 0; width: 100%; height: auto; background: rgba(0,0,0,0.5); color: gold; display: grid; grid-template-rows: auto; grid-template-columns: auto 1fr auto; max-height: 5em;`,
           parent: root,
           children: [
             stats.domElement,
             title = elem('h3', { textContent: 'Atlas 3D', style: 'text-align: center; font-weight: 100; margin-left: -29px' }),
-            rightStatus = elem('div', { textContent: '*' })
+            rightStatus = elem('div', { innerHTML: String(Object.keys(users).length) + '<br>users', fontSize: '80%', alignSelf: 'center', paddingRight: '1em', textAlign: 'center' })
           ]
         });
 
@@ -425,8 +425,6 @@ function atlas(invokeType) {
       function webgl_buffergeometry_instancing_demo() {
         const vector = new THREE.Vector4();
 
-        const instances = 100000;
-
         const positions = [];
         const offsets = [];
         const colors = [];
@@ -437,10 +435,26 @@ function atlas(invokeType) {
         positions.push(- 0.025, 0.025, 0);
         positions.push(0, 0, 0.025);
 
+        const bounds = { x: { min: NaN, max: NaN }, y: { min: NaN, max: NaN } };
+        for (const shortDID in users) {
+          const [shortHandle, x, y] = users[shortDID];
+          if (!Number.isFinite(bounds.x.min) || x < bounds.x.min) bounds.x.min = x;
+          if (!Number.isFinite(bounds.x.max) || x > bounds.x.max) bounds.x.max = x;
+          if (!Number.isFinite(bounds.y.min) || y < bounds.y.min) bounds.y.min = y;
+          if (!Number.isFinite(bounds.y.max) || y > bounds.y.max) bounds.y.max = y;
+        }
+
         // instanced attributes
-        for (let i = 0; i < instances; i++) {
+        let instanceCount = 0;
+        for (const shortDID in users) {
+          instanceCount++;
+          const [shortHandle, x, y] = users[shortDID];
+
           // offsets
-          offsets.push(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
+          const xRatiod = x - bounds.x.min / (bounds.x.max - bounds.x.min);
+          const yRatiod = y - bounds.y.min / (bounds.y.max - bounds.y.min);
+          const r = Math.sqrt(xRatiod * xRatiod + yRatiod * yRatiod);
+          offsets.push(xRatiod - 0.5, yRatiod, 1 - r * r);
 
           // colors
           colors.push(Math.random(), Math.random(), Math.random(), Math.random());
@@ -459,7 +473,7 @@ function atlas(invokeType) {
         }
 
         const geometry = new THREE.InstancedBufferGeometry();
-        geometry.instanceCount = instances; // set so its initalized for dat.GUI, will be set in first draw otherwise
+        geometry.instanceCount = instanceCount;
 
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
 
