@@ -231,8 +231,8 @@ function atlas(invokeType) {
     const users = await boot();
     /** @type {typeof import('three')} */
     const THREE = /** @type {*} */(atlas).imports['three'];
-    const Stats = /** @type {*} */(atlas).imports['three/addons/libs/stats.module.js'].default;
-    const { OrbitControls } = /** @type {*} */(atlas).imports['three/addons/controls/OrbitControls.js'];
+    const Stats = /** @type {*} */(atlas).imports['three/addons/libs/stats.module.js'];
+    const OrbitControls = /** @type {*} */(atlas).imports['three/addons/controls/OrbitControls.js'];
 
     console.log('Users: ', users);
     threedshell();
