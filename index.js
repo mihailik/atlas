@@ -265,13 +265,13 @@ function atlas(invokeType) {
       if (timedout === 'timedout') {
         const initUI = createInitUI();
         await waitForUsersLoaded;
-
         await waitForRunBrowserNext;
+        console.log(1234);
         initUI.style.opacity = '0';
         initUI.style.pointerEvents = 'none';
         setTimeout(() => {
           initUI.remove();
-        }, INIT_UI_FADE_MSEC);
+        }, INIT_UI_FADE_MSEC * 1.5);
       }
 
       /** @type {{ [shortDID: string]: UserTuple}} */
@@ -286,7 +286,9 @@ function atlas(invokeType) {
           position: fixed;
           bottom: 0; left: 0; width: 100%;
           text-align: center;
-          transition: opacity: ${INIT_UI_FADE_MSEC}ms;
+          opacity: 0;
+          transition: opacity ${INIT_UI_FADE_MSEC}ms;
+          z-index: 100;
         }
       `});
 
