@@ -323,7 +323,7 @@ function atlas(invokeType) {
       startAnimation();
 
       function setups() {
-        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.01, 1000);
         camera.position.z = 2;
 
         // const camera = new THREE.PerspectiveCamera(
@@ -531,11 +531,15 @@ function atlas(invokeType) {
 			vPosition = offset * max( abs( sineTime * 2.0 + 1.0 ), 0.5 ) + position;
 			vec4 orientation = normalize( mix( orientationStart, orientationEnd, sineTime ) );
 			vec3 vcV = cross( orientation.xyz, vPosition );
-			vPosition = vcV * ( 2.0 * orientation.w ) + ( cross( orientation.xyz, vcV ) * 3.0 + vPosition );
+			vPosition = vcV * ( 2.0 * orientation.w ) + ( cross( orientation.xyz, vcV ) * 1.5 + vPosition );
 
 			vColor = color;
 
-			gl_Position = projectionMatrix * modelViewMatrix * vec4( vPosition, 0.2 );
+			gl_Position = projectionMatrix * modelViewMatrix * vec4( vPosition, 0.7 );
+
+      // gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 0.2 );
+        //vec4(position, 1) * 0.2;
+        //mix(gl_Position, vec4(position, 1) * 0.2, 0.999);
 
 		}
           `,
@@ -550,7 +554,7 @@ function atlas(invokeType) {
 		void main() {
 
 			vec4 color = vec4( vColor );
-			color.r += sin( vPosition.x * 10.0 + time ) * 0.1;
+			color.r += sin( vPosition.x * 10.0 + time ) * 0.5;
 
 			gl_FragColor = color;
     }
