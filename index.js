@@ -243,7 +243,20 @@ function atlas(invokeType) {
       const waitForRunBrowserNext = new Promise(resolve => runBrowser = resolve);
 
         // @ts-ignore
-      const waitForUsersLoaded = new Promise(resolve => typeof hot !== 'undefined' ? resolve(hot) : hot = resolve);
+      let waitForUsersLoaded = new Promise((resolve, reject) => typeof hot !== 'undefined' ? resolve(hot) :
+        hot = value =>
+          value.message ? reject(value) : resolve(value))
+        .catch(() => {
+          return new Promise((resolve, reject) => {
+            const loadAbsoluteScript = document.createElement('script');
+            loadAbsoluteScript.onerror = reject;
+            hot = resolve;
+            loadAbsoluteScript.src = 'https://mihailik.github.io/atlas-db-jsonp/users/hot.js';
+            loadAbsoluteScript.defer = true;
+            loadAbsoluteScript.async = true;
+            document.body.appendChild(loadAbsoluteScript);
+          });
+        });
 
       let timedout = await Promise.race([
         Promise.all([waitForUsersLoaded, waitForRunBrowserNext]),
@@ -252,6 +265,7 @@ function atlas(invokeType) {
       if (timedout === 'timedout') {
         const initUI = createInitUI();
         await waitForUsersLoaded;
+
         await waitForRunBrowserNext;
         initUI.style.opacity = '0';
         initUI.style.pointerEvents = 'none';
@@ -309,7 +323,7 @@ function atlas(invokeType) {
       startAnimation();
 
       function setups() {
-        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 10);
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.z = 2;
 
         // const camera = new THREE.PerspectiveCamera(
@@ -452,27 +466,31 @@ function atlas(invokeType) {
           const [shortHandle, x, y] = users[shortDID];
 
           // offsets
-          const xRatiod = x - bounds.x.min / (bounds.x.max - bounds.x.min);
-          const yRatiod = y - bounds.y.min / (bounds.y.max - bounds.y.min);
+          const xRatiod = (x - bounds.x.min) / (bounds.x.max - bounds.x.min);
+          const yRatiod = (y - bounds.y.min) / (bounds.y.max - bounds.y.min);
           const r = Math.sqrt(xRatiod * xRatiod + yRatiod * yRatiod);
-          //offsets.push(xRatiod - 0.5, yRatiod, 1 - r * r);
-          offsets.push(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
+          offsets.push(xRatiod - 0.5, yRatiod - 0.5, 1 - r * r);
+          //offsets.push(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
 
 
           // colors
           colors.push(Math.random(), Math.random(), Math.random(), Math.random());
 
           // orientation start
-          vector.set(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1);
+          //vector.set(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1);
+          vector.set(0, 0, 0, 0);
           vector.normalize();
 
           orientationsStart.push(vector.x, vector.y, vector.z, vector.w);
 
           // orientation end
-          vector.set(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1);
+          //vector.set(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1);
+          vector.set(0.01, 0.01, 0.01, 0);
           vector.normalize();
 
           orientationsEnd.push(vector.x, vector.y, vector.z, vector.w);
+
+          //if (instanceCount > 20) break;
         }
 
         const geometry = new THREE.InstancedBufferGeometry();
@@ -487,7 +505,6 @@ function atlas(invokeType) {
 
         // material
         const material = new THREE.RawShaderMaterial({
-
           uniforms: {
             'time': { value: 1.0 },
             'sineTime': { value: 1.0 }
@@ -514,11 +531,11 @@ function atlas(invokeType) {
 			vPosition = offset * max( abs( sineTime * 2.0 + 1.0 ), 0.5 ) + position;
 			vec4 orientation = normalize( mix( orientationStart, orientationEnd, sineTime ) );
 			vec3 vcV = cross( orientation.xyz, vPosition );
-			vPosition = vcV * ( 2.0 * orientation.w ) + ( cross( orientation.xyz, vcV ) * 2.0 + vPosition );
+			vPosition = vcV * ( 2.0 * orientation.w ) + ( cross( orientation.xyz, vcV ) * 3.0 + vPosition );
 
 			vColor = color;
 
-			gl_Position = projectionMatrix * modelViewMatrix * vec4( vPosition, 1.0 );
+			gl_Position = projectionMatrix * modelViewMatrix * vec4( vPosition, 0.2 );
 
 		}
           `,
@@ -533,7 +550,7 @@ function atlas(invokeType) {
 		void main() {
 
 			vec4 color = vec4( vColor );
-			color.r += sin( vPosition.x * 10.0 + time ) * 0.5;
+			color.r += sin( vPosition.x * 10.0 + time ) * 0.1;
 
 			gl_FragColor = color;
     }
