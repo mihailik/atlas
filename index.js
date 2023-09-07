@@ -448,9 +448,9 @@ function atlas(invokeType) {
         const orientationsStart = [];
         const orientationsEnd = [];
 
-        positions.push(0.025, - 0.025, 0);
-        positions.push(- 0.025, 0.025, 0);
-        positions.push(0, 0, 0.025);
+        positions.push(0.025, - 0.025, -0.01);
+        positions.push(- 0.025, 0.025, -0.01);
+        positions.push(0, 0, 0.03);
 
         const bounds = { x: { min: NaN, max: NaN }, y: { min: NaN, max: NaN } };
         for (const shortDID in users) {
@@ -471,7 +471,8 @@ function atlas(invokeType) {
           const xRatiod = (x - bounds.x.min) / (bounds.x.max - bounds.x.min);
           const yRatiod = (y - bounds.y.min) / (bounds.y.max - bounds.y.min);
           const r = Math.sqrt(xRatiod * xRatiod + yRatiod * yRatiod);
-          offsets.push(xRatiod - 0.5, yRatiod - 0.5, 1 - r * r);
+
+          offsets.push(xRatiod - 0.5, (1 - r * r) * 0.6, yRatiod - 0.5);
           //offsets.push(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
 
 
@@ -496,7 +497,7 @@ function atlas(invokeType) {
         }
 
         const geometry = new THREE.InstancedBufferGeometry();
-        geometry.instanceCount = instanceCount;
+        //geometry.instanceCount = instanceCount;
 
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
 
@@ -506,7 +507,7 @@ function atlas(invokeType) {
         geometry.setAttribute('orientationEnd', new THREE.InstancedBufferAttribute(new Float32Array(orientationsEnd), 4));
 
         // material
-        const material = new THREE.RawShaderMaterial({
+        const material = new THREE.ShaderMaterial({
           uniforms: {
             'time': { value: 1.0 },
             'sineTime': { value: 1.0 }
@@ -516,10 +517,6 @@ function atlas(invokeType) {
 
 		uniform float sineTime;
 
-		uniform mat4 modelViewMatrix;
-		uniform mat4 projectionMatrix;
-
-		attribute vec3 position;
 		attribute vec3 offset;
 		attribute vec4 color;
 		attribute vec4 orientationStart;
@@ -537,7 +534,7 @@ function atlas(invokeType) {
 
 			vColor = color;
 
-			gl_Position = projectionMatrix * modelViewMatrix * vec4( vPosition, 0.7 );
+			gl_Position = projectionMatrix * modelViewMatrix * vec4( mix(vPosition, offset, 0.9), 0.7 );
 
       // gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 0.2 );
         //vec4(position, 1) * 0.2;
