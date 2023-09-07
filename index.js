@@ -182,7 +182,7 @@ function atlas(invokeType) {
 
       function post(author, postID, text, replyTo, replyToThread) {
       }
-      
+
       function repost(who, whose, postID) {
       }
     }
@@ -239,10 +239,10 @@ function atlas(invokeType) {
 
     async function boot() {
       const INIT_UI_FADE_MSEC = 2000;
-        // @ts-ignore
+      // @ts-ignore
       const waitForRunBrowserNext = new Promise(resolve => runBrowser = resolve);
 
-        // @ts-ignore
+      // @ts-ignore
       let waitForUsersLoaded = new Promise((resolve, reject) => typeof hot !== 'undefined' ? resolve(hot) :
         hot = value =>
           value.message ? reject(value) : resolve(value))
@@ -325,14 +325,14 @@ function atlas(invokeType) {
       startAnimation();
 
       function setups() {
-        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.01, 1000);
-        camera.position.z = 2;
+        const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100000);
+        camera.position.z = 300;
 
         // const camera = new THREE.PerspectiveCamera(
         //   15,
         //   window.innerWidth / window.innerHeight, 1, 10 * 1000 * 1000);
         // camera.position.set(-10500, 10500, 1500);
-      // TODO: restore camera position from window.name
+        // TODO: restore camera position from window.name
 
         const scene = new THREE.Scene();
         //scene.background = new THREE.Color(0xA0A0A0);
@@ -428,10 +428,9 @@ function atlas(invokeType) {
 
           const time = performance.now();
           const object = scene.children.find(child => child.material);
-
-          object.rotation.y = time * 0.0005;
-          object.material.uniforms['time'].value = time * 0.005;
-          object.material.uniforms['sineTime'].value = Math.sin(object.material.uniforms['time'].value * 0.05);
+          object.rotation.y = time * 0.00005;
+          // object.material.uniforms['time'].value = time * 0.005;
+          // object.material.uniforms['sineTime'].value = Math.sin(object.material.uniforms['time'].value * 0.05);
 
           renderer.render(scene, camera);
           controls.update(delta);
@@ -440,20 +439,11 @@ function atlas(invokeType) {
       }
 
       function webgl_buffergeometry_instancing_demo() {
-        const vector = new THREE.Vector4();
 
-        const positions = [];
-        const offsets = [];
-        const colors = [];
-        const orientationsStart = [];
-        const orientationsEnd = [];
-
-        positions.push(0.025, - 0.025, 0);
-        positions.push(- 0.025, 0.025, 0);
-        positions.push(0, 0, 0.025);
-
+        let userCount = 0;
         const bounds = { x: { min: NaN, max: NaN }, y: { min: NaN, max: NaN } };
         for (const shortDID in users) {
+          userCount++;
           const [shortHandle, x, y] = users[shortDID];
           if (!Number.isFinite(bounds.x.min) || x < bounds.x.min) bounds.x.min = x;
           if (!Number.isFinite(bounds.x.max) || x > bounds.x.max) bounds.x.max = x;
@@ -461,116 +451,87 @@ function atlas(invokeType) {
           if (!Number.isFinite(bounds.y.max) || y > bounds.y.max) bounds.y.max = y;
         }
 
-        // instanced attributes
-        let instanceCount = 0;
+        const radius = 200;
+
+        const positions = [];
+        const colors = [];
+        const sizes = [];
+
+        const geometry = new THREE.BufferGeometry();
+        const color = new THREE.Color();
+
         for (const shortDID in users) {
-          instanceCount++;
-          const [shortHandle, x, y] = users[shortDID];
+          const usrTuple = users[shortDID];
+          const weight = usrTuple[3] || 1;
+          const x = usrTuple[1] / (bounds.x.max - bounds.x.min);
+          const y = usrTuple[2] / (bounds.y.max - bounds.y.min);
+          const r = Math.sqrt(x * x + y * y);
+          const z = 1 - r * r;
+          positions.push(x * radius);
+          positions.push((z - 1) * 0.3 * radius);
+          positions.push(y * radius);
 
-          // offsets
-          const xRatiod = (x - bounds.x.min) / (bounds.x.max - bounds.x.min);
-          const yRatiod = (y - bounds.y.min) / (bounds.y.max - bounds.y.min);
-          const r = Math.sqrt(xRatiod * xRatiod + yRatiod * yRatiod);
-          offsets.push(xRatiod - 0.5, yRatiod - 0.5, 1 - r * r);
-          //offsets.push(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
+          color.setHSL(Math.random(), 1.0, 0.5);
+          colors.push(color.r, color.g, color.b);
 
-
-          // colors
-          colors.push(Math.random(), Math.random(), Math.random(), Math.random());
-
-          // orientation start
-          //vector.set(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1);
-          vector.set(0, 0, 0, 0);
-          vector.normalize();
-
-          orientationsStart.push(vector.x, vector.y, vector.z, vector.w);
-
-          // orientation end
-          //vector.set(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1);
-          vector.set(0.01, 0.01, 0.01, 0);
-          vector.normalize();
-
-          orientationsEnd.push(vector.x, vector.y, vector.z, vector.w);
-
-          //if (instanceCount > 20) break;
+          sizes.push(10 * weight);
         }
 
-        const geometry = new THREE.InstancedBufferGeometry();
-        geometry.instanceCount = instanceCount;
+        const shaderMaterial = new THREE.ShaderMaterial({
 
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-
-        geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(new Float32Array(offsets), 3));
-        geometry.setAttribute('color', new THREE.InstancedBufferAttribute(new Float32Array(colors), 4));
-        geometry.setAttribute('orientationStart', new THREE.InstancedBufferAttribute(new Float32Array(orientationsStart), 4));
-        geometry.setAttribute('orientationEnd', new THREE.InstancedBufferAttribute(new Float32Array(orientationsEnd), 4));
-
-        // material
-        const material = new THREE.RawShaderMaterial({
           uniforms: {
-            'time': { value: 1.0 },
-            'sineTime': { value: 1.0 }
+            pointTexture: { value: new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/spark1.png') }
           },
           vertexShader: `
-		precision highp float;
 
-		uniform float sineTime;
+			attribute float size;
 
-		uniform mat4 modelViewMatrix;
-		uniform mat4 projectionMatrix;
+			varying vec3 vColor;
 
-		attribute vec3 position;
-		attribute vec3 offset;
-		attribute vec4 color;
-		attribute vec4 orientationStart;
-		attribute vec4 orientationEnd;
+			void main() {
 
-		varying vec3 vPosition;
-		varying vec4 vColor;
+				vColor = color;
 
-		void main(){
+				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
 
-			vPosition = offset * max( abs( sineTime * 2.0 + 1.0 ), 0.5 ) + position;
-			vec4 orientation = normalize( mix( orientationStart, orientationEnd, sineTime ) );
-			vec3 vcV = cross( orientation.xyz, vPosition );
-			vPosition = vcV * ( 2.0 * orientation.w ) + ( cross( orientation.xyz, vcV ) * 1.5 + vPosition );
+				gl_PointSize = size;// * 300.0; // ( 300.0 / -mvPosition.z );
 
-			vColor = color;
+				gl_Position = projectionMatrix * mvPosition;
 
-			gl_Position = projectionMatrix * modelViewMatrix * vec4( vPosition, 0.7 );
+			}
 
-      // gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 0.2 );
-        //vec4(position, 1) * 0.2;
-        //mix(gl_Position, vec4(position, 1) * 0.2, 0.999);
-
-		}
           `,
           fragmentShader: `
-    precision highp float;
 
-		uniform float time;
+			uniform sampler2D pointTexture;
 
-		varying vec3 vPosition;
-		varying vec4 vColor;
+			varying vec3 vColor;
 
-		void main() {
+			void main() {
 
-			vec4 color = vec4( vColor );
-			color.r += sin( vPosition.x * 10.0 + time ) * 0.5;
+				gl_FragColor = vec4( vColor, 1.0 );
 
-			gl_FragColor = color;
-    }
+				gl_FragColor = gl_FragColor * texture2D( pointTexture, gl_PointCoord );
+
+			}
+
           `,
-          side: THREE.DoubleSide,
-          forceSinglePass: true,
-          transparent: true
+
+          blending: THREE.AdditiveBlending,
+          depthTest: false,
+          transparent: true,
+          vertexColors: true
 
         });
 
-        //
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1).setUsage(THREE.DynamicDrawUsage));
 
-        const mesh = new THREE.Mesh(geometry, material);
-        scene.add(mesh);
+        const particleSystem = new THREE.Points(geometry, shaderMaterial);
+
+        scene.add(particleSystem);
+
       }
     }
 
