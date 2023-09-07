@@ -427,7 +427,8 @@ function atlas(invokeType) {
           const delta = clock.getDelta();
 
           const time = performance.now();
-          const object = scene.children.find(child => child.material);
+          /** @type {*} */
+          const object = scene.children.find(child => /** @type {*} */(child).material);
           object.rotation.y = time * 0.00005;
           // object.material.uniforms['time'].value = time * 0.005;
           // object.material.uniforms['sineTime'].value = Math.sin(object.material.uniforms['time'].value * 0.05);
