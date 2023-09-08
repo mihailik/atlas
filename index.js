@@ -589,16 +589,8 @@ function atlas(invokeType) {
 		void main(){
 
 			vColor = color;
-      //vec3 intendedPosition = position.x > 1000.0 ? position - vec3(10000.0) : position;
       vec4 targetPosition = projectionMatrix * modelViewMatrix * vec4( position * 0.01 + offset, 1.0 );
-      //vec4 nonePosition = targetPosition * (0.0/0.0);
-      //float distanceToCamera = distance(targetPosition.xyz, camera);
-
 			gl_Position = targetPosition;
-       // (position.x > 1000.0 ? targetPosition : nonePosition );
-        // distanceToCamera > 0.001 ?
-        //   (position.x > 1000.0 ? targetPosition : nonePosition ) :
-        //   (position.x > 1000.0 ? nonePosition : targetPosition );
 
 		}
           `,
