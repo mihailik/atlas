@@ -429,6 +429,7 @@ function atlas(invokeType) {
         }
 
         let cameraStatus;
+        let lastCameraUpdate;
         function renderFrame() {
           stats.begin();
           const delta = clock.getDelta();
@@ -450,7 +451,10 @@ function atlas(invokeType) {
 
           renderer.render(scene, camera);
           stats.end();
-          if (!cameraStatus) {
+
+          const now = clock.getElapsedTime() / 1000;
+          if (!cameraStatus && !(now < lastCameraUpdate + 100)) {
+            lastCameraUpdate = now;
             cameraStatus = {
               elem: elem('div', { parent: domElements.rightStatus, fontSize: '80%', opacity: '0.7' }),
               lastPos: { x: NaN, y: NaN, z: NaN }
@@ -467,13 +471,12 @@ function atlas(invokeType) {
             cameraStatus.lastPos.y = camera.position.y;
             cameraStatus.lastPos.z = camera.position.z;
             cameraStatus.elem.textContent = camera.position.x.toFixed(2) + ', ' + camera.position.y.toFixed(2) + ', ' + camera.position.z.toFixed(2) +
-              '[' +
-              Math.sqrt(
-                camera.position.x * camera.position.x +
-                camera.position.y * camera.position.y +
-                camera.position.z * camera.position.z
-              ).toFixed(3) +
-              ']';
+              ' [' + shaderState.instanceCount + ']';
+              // Math.sqrt(
+              //   camera.position.x * camera.position.x +
+              //   camera.position.y * camera.position.y +
+              //   camera.position.z * camera.position.z
+              // ).toFixed(3) +
           }
         }
       }
@@ -522,7 +525,9 @@ function atlas(invokeType) {
 
         // instanced attributes
         let instanceCount = 0;
+        const limitSmall = location.search && parseInt(location.search.replace(/^\?/, ''));
         for (const shortDID in users) {
+          if (limitSmall && instanceCount >= limitSmall) break;
           instanceCount++;
           const [shortHandle, x, y] = users[shortDID];
 
@@ -572,7 +577,7 @@ function atlas(invokeType) {
       //vec3 intendedPosition = position.x > 1000.0 ? position - vec3(10000.0) : position;
       vec4 targetPosition = projectionMatrix * modelViewMatrix * vec4( position * 0.01 + offset, 1.0 );
       //vec4 nonePosition = targetPosition * (0.0/0.0);
-      float distanceToCamera = distance(targetPosition.xyz, camera);
+      //float distanceToCamera = distance(targetPosition.xyz, camera);
 
 			gl_Position = targetPosition;
        // (position.x > 1000.0 ? targetPosition : nonePosition );
@@ -610,7 +615,8 @@ function atlas(invokeType) {
         return {
           mesh,
           geometry,
-          material
+          material,
+          instanceCount
         };
       }
     }
