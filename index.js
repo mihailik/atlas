@@ -327,7 +327,7 @@ function atlas(invokeType) {
       startAnimation();
 
       function setupScene() {
-        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.01, 1000);
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.0001, 1000);
         camera.position.x = 0.18;
         camera.position.y = 0.49;
         camera.position.z = 0.88;
@@ -432,6 +432,9 @@ function atlas(invokeType) {
         function renderFrame() {
           stats.begin();
           const delta = clock.getDelta();
+          controls.update(delta);
+          camera.updateProjectionMatrix();
+          camera.updateMatrix();
           shaderState.material.uniforms['time'].value = clock.elapsedTime;
           shaderState.material.uniforms['camera'].value = camera.position;
           // const cameraDistanceXZ = Math.sqrt(
@@ -446,11 +449,10 @@ function atlas(invokeType) {
           // camera.updateMatrixWorld(true);
 
           renderer.render(scene, camera);
-          controls.update(delta);
           stats.end();
           if (!cameraStatus) {
             cameraStatus = {
-              elem: elem('div', { parent: domElements.rightStatus, fontSize: '80%', opacity: 0.7 }),
+              elem: elem('div', { parent: domElements.rightStatus, fontSize: '80%', opacity: '0.7' }),
               lastPos: { x: NaN, y: NaN, z: NaN }
             };
           }
@@ -460,11 +462,18 @@ function atlas(invokeType) {
             (camera.position.y - cameraStatus.lastPos.y) * (camera.position.y - cameraStatus.lastPos.y) +
             (camera.position.z - cameraStatus.lastPos.z) * (camera.position.z - cameraStatus.lastPos.z));
 
-          if (!(dist < 0.001)) {
+          if (!(dist < 0.0001)) {
             cameraStatus.lastPos.x = camera.position.x;
             cameraStatus.lastPos.y = camera.position.y;
             cameraStatus.lastPos.z = camera.position.z;
-            cameraStatus.elem.textContent = camera.position.x.toFixed(2) + ', ' + camera.position.y.toFixed(2) + ', ' + camera.position.z.toFixed(2) + '[' + dist.toFixed(3) + ']';
+            cameraStatus.elem.textContent = camera.position.x.toFixed(2) + ', ' + camera.position.y.toFixed(2) + ', ' + camera.position.z.toFixed(2) +
+              '[' +
+              Math.sqrt(
+                camera.position.x * camera.position.x +
+                camera.position.y * camera.position.y +
+                camera.position.z * camera.position.z
+              ).toFixed(3) +
+              ']';
           }
         }
       }
@@ -497,11 +506,7 @@ function atlas(invokeType) {
 
       function webgl_buffergeometry_instancing_demo() {
 
-        let positions = geometryVertices(new THREE.TetrahedronGeometry(0.01, 2));
-        let detailedPositions = geometryVertices(
-          new THREE.TetrahedronGeometry(0.01, 5)
-          // new THREE.SphereGeometry(0.01, 16, 10)
-        ).map(x => x + 10000);
+        let positions = geometryVertices(new THREE.TetrahedronGeometry(0.01, 1));
 
         const offsets = [];
         const colors = [];
@@ -540,7 +545,7 @@ function atlas(invokeType) {
         geometry.instanceCount = instanceCount;
         // geometry.copy(new THREE.BoxGeometry(1, 1, 1));
         // geometry.instanceCount = instanceCount;
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions.concat(detailedPositions), 3));
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
         geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(new Float32Array(offsets), 3));
         geometry.setAttribute('color', new THREE.InstancedBufferAttribute(new Float32Array(colors), 4));
 
@@ -564,15 +569,16 @@ function atlas(invokeType) {
 		void main(){
 
 			vColor = color;
-      vec3 intendedPosition = position.x > 1000.0 ? position - vec3(10000.0) : position;
-      vec4 targetPosition = projectionMatrix * modelViewMatrix * vec4( intendedPosition * 0.01 + offset, 1.0 );
-      vec4 nonePosition = targetPosition * (0.0/0.0);
+      //vec3 intendedPosition = position.x > 1000.0 ? position - vec3(10000.0) : position;
+      vec4 targetPosition = projectionMatrix * modelViewMatrix * vec4( position * 0.01 + offset, 1.0 );
+      //vec4 nonePosition = targetPosition * (0.0/0.0);
       float distanceToCamera = distance(targetPosition.xyz, camera);
 
-			gl_Position = // (position.x > 1000.0 ? targetPosition : nonePosition );
-        distanceToCamera > 0.001 ?
-          (position.x > 1000.0 ? targetPosition : nonePosition ) :
-          (position.x > 1000.0 ? nonePosition : targetPosition );
+			gl_Position = targetPosition;
+       // (position.x > 1000.0 ? targetPosition : nonePosition );
+        // distanceToCamera > 0.001 ?
+        //   (position.x > 1000.0 ? targetPosition : nonePosition ) :
+        //   (position.x > 1000.0 ? nonePosition : targetPosition );
 
 		}
           `,
