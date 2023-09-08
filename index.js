@@ -509,7 +509,16 @@ function atlas(invokeType) {
 
       function webgl_buffergeometry_instancing_demo() {
 
-        let positions = geometryVertices(new THREE.TetrahedronGeometry(0.01, 1));
+        let positions =
+          [
+            -0.01, 0.01, -0.01,
+            -0.01, 0, 0.01,
+            0.01, 0.01, 0.01,
+            -0.01, 0.01, -0.01,
+            0.01, 0, -0.01,
+            0.01, 0.01, 0.01,
+          ];
+          // geometryVertices(new THREE.TetrahedronGeometry(0.01, 1));
 
         const offsets = [];
         const colors = [];
