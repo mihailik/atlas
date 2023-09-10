@@ -252,7 +252,7 @@ function atlas(invokeType) {
     return ~m;
   }
 
-  /** @param {{ [shortDID: string ]: UserTuple }} */
+  /** @param {{ [shortDID: string ]: UserTuple }} users */
   function getUserCoordBounds(users) {
     const bounds = { x: { min: NaN, max: NaN }, y: { min: NaN, max: NaN } };
     for (const shortDID in users) {
@@ -264,6 +264,20 @@ function atlas(invokeType) {
     }
     return bounds;
   }
+
+  /**
+ * @param {number} x
+ * @param {number} y
+ * @param {{x: { min: number, max: number}, y: { min: number, max: number }}} bounds
+ */
+  function mapUserCoordsToAtlas(x, y, bounds) {
+    const xRatiod = (x - bounds.x.min) / (bounds.x.max - bounds.x.min) - 0.5;
+    const yRatiod = (y - bounds.y.min) / (bounds.y.max - bounds.y.min) - 0.5;
+    const r = Math.sqrt(xRatiod * xRatiod + yRatiod * yRatiod);
+    let h = (1 - r * r) * 0.3 - 0.265;
+    return { x: xRatiod, h, y: yRatiod };
+  }
+
 
   /**
    * @param {{ [shortDID: string]: UserTuple}} users
@@ -328,7 +342,7 @@ function atlas(invokeType) {
     const Stats = /** @type {*} */(atlas).imports['three/addons/libs/stats.module.js'];
     const OrbitControls = /** @type {*} */(atlas).imports['three/addons/controls/OrbitControls.js'];
 
-    console.log('Users: ', users);
+    console.log('Users: ', typeof users, Object.keys(users).length);
     threedshell();
 
     async function boot() {
@@ -417,7 +431,36 @@ function atlas(invokeType) {
 
       const domElements = appendToDOM();
       handleWindowResizes();
-      const shaderState = webgl_buffergeometry_instancing_demo();
+
+      //const shaderState = webgl_buffergeometry_instancing_demo();
+
+      const userBounds = getUserCoordBounds(users);
+      const farUsersMesh = farUsersRenderer({
+        positions: (() => {
+          const b = 0.0002;
+          return new Float32Array([
+            -b, b, -b,
+            -b, 0, b,
+            b, b, b,
+            -b, b, -b,
+            b, 0, -b,
+            b, b, b,
+          ]);
+        })(),
+        userKeys: Object.keys(users),
+        userMapper: (shortDID, pos) => {
+          const [, xSpace, ySpace] = users[shortDID];
+          const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, userBounds);
+          pos[0] = x;
+          pos[1] = h;
+          pos[2] = y;
+        },
+        userColorer: (shortDID) => {
+          const crc32 = calcCRC32(shortDID) & 0x808080FF;
+          return crc32;
+        }
+      });
+      scene.add(farUsersMesh);
       startAnimation();
 
       function setupScene() {
@@ -426,14 +469,7 @@ function atlas(invokeType) {
         camera.position.y = 0.49;
         camera.position.z = 0.88;
 
-        // const camera = new THREE.PerspectiveCamera(
-        //   15,
-        //   window.innerWidth / window.innerHeight, 1, 10 * 1000 * 1000);
-        // camera.position.set(-10500, 10500, 1500);
-      // TODO: restore camera position from window.name
-
         const scene = new THREE.Scene();
-        //scene.background = new THREE.Color(0xA0A0A0);
 
         const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.7);
         dirLight1.position.set(3000, 1500, -3000);
@@ -442,14 +478,6 @@ function atlas(invokeType) {
         const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.7);
         dirLight2.position.set(-3000, 1500, -3000);
         scene.add(dirLight2);
-
-        // const pointLight = new THREE.PointLight(0xffffff, 3, 0, 0);
-        // pointLight.position.set(0, 2000, 4000);
-        // // scene.add(pointLight);
-
-        // const pointLight2 = new THREE.PointLight(0xffffff, 3, 0, 0);
-        // pointLight2.position.set(2000, 0, 4000);
-        // // scene.add(pointLight2);
 
         const ambientLight = new THREE.AmbientLight(0x101010, 3);
         scene.add(ambientLight);
@@ -547,7 +575,7 @@ function atlas(invokeType) {
           stats.begin();
           const delta = clock.getDelta();
           controls.update(delta);
-          shaderState.updateOnFrame(rareMoved);
+          // shaderState.updateOnFrame(rareMoved);
 
           renderer.render(scene, camera);
           stats.end();
@@ -592,6 +620,79 @@ function atlas(invokeType) {
         }
       }
 
+      /**
+       * @param {{
+       *  positions: Float32Array;
+       *  userKeys: K[];
+       *  userMapper(i: K, pos: [x: number, y: number, z: number]): void;
+       *  userColorer(i: K): number;
+       * }} _ 
+       * @template K
+       */
+      function farUsersRenderer({ positions, userKeys, userMapper, userColorer }) {
+        const userOffsets = new Float32Array(userKeys.length * 3);
+        const userColors = new Uint32Array(userKeys.length);
+
+        /** @type {[x: number, y: number, z: number]} */
+        const userPos = [NaN, NaN, NaN];
+
+        for (let i = 0; i < userKeys.length; i++)  {
+          const user = userKeys[i];
+          userMapper(user, userPos);
+          userOffsets[i * 3 + 0] = userPos[0];
+          userOffsets[i * 3 + 1] = userPos[1];
+          userOffsets[i * 3 + 2] = userPos[2];
+          userColors[i] = userColorer(user);
+        }
+
+        const geometry = new THREE.InstancedBufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(userOffsets, 3));
+        geometry.setAttribute('color', new THREE.InstancedBufferAttribute(userColors, 1));
+
+        const material = new THREE.ShaderMaterial({
+          uniforms: { },
+          vertexShader: `
+            precision highp float;
+
+            attribute vec3 offset;
+            attribute uint color;
+
+            varying vec3 vPosition;
+            varying vec4 vColor;
+
+            void main(){
+              vec4 targetPosition = projectionMatrix * modelViewMatrix * vec4( position + offset, 1.0 );
+              gl_Position =
+                targetPosition;
+
+              uint rInt = (color / uint(256 * 256 * 256)) % uint(256);
+              uint gInt = (color / uint(256 * 256)) % uint(256);
+              uint bInt = (color / uint(256)) % uint(256);
+              uint aInt = (color) % uint(256);
+
+              // https://stackoverflow.com/a/22899161/140739
+              vColor = vec4(float(rInt) / 255.0f, float(gInt) / 255.0f, float(bInt) / 255.0f, float(aInt) / 255.0f);
+            }
+          `,
+          fragmentShader: `
+            precision highp float;
+
+            varying vec3 vPosition;
+            varying vec4 vColor;
+
+            void main() {
+              gl_FragColor = vColor;
+            }
+          `,
+          side: THREE.DoubleSide,
+          forceSinglePass: true,
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        return mesh;
+      }
+
       function webgl_buffergeometry_instancing_demo() {
         const proximityThreshold = 0.1;
         const highDetailThreshold = 0.05;
@@ -606,7 +707,6 @@ function atlas(invokeType) {
             b, 0, -b,
             b, b, b,
           ];
-          // geometryVertices(new THREE.TetrahedronGeometry(b, 1));
 
         const offsets = [];
         const colors = [];
@@ -621,21 +721,13 @@ function atlas(invokeType) {
           const [shortHandle, xSpace, ySpace] = users[shortDID];
 
           // offsets
-          var { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace);
-          //if (r > 0.7 && h < 0.9) h = 1;
-
+          var { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, bounds);
           offsets.push(x, h, y);
-
-          // colors
           colors.push(Math.random(), Math.random(), Math.random(), 1);
-
-          //if (instanceCount > 20) break;
         }
 
         const geometry = new THREE.InstancedBufferGeometry();
         geometry.instanceCount = instanceCount;
-        // geometry.copy(new THREE.BoxGeometry(1, 1, 1));
-        // geometry.instanceCount = instanceCount;
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
         geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(new Float32Array(offsets), 3));
         geometry.setAttribute('color', new THREE.InstancedBufferAttribute(new Float32Array(colors), 4));
@@ -663,16 +755,12 @@ function atlas(invokeType) {
       vec4 targetPosition = projectionMatrix * modelViewMatrix * vec4( position + offset, 1.0 );
       float proximityThreshold = ${proximityThreshold};
 			gl_Position =
-        // // hide near entries
-        // abs(targetPosition.x - camera.x) < proximityThreshold &&
-        // abs(targetPosition.y - camera.z) < proximityThreshold
-        // ? targetPosition * (0.0 / 0.0) :
         targetPosition;
 
         vColor = distance(targetPosition.xyz, camera) < proximityThreshold
           ? vec4(1,0,0,1) :
           color;
-        vColor = color;
+        //vColor = color;
 
 		}
           `,
@@ -716,18 +804,6 @@ function atlas(invokeType) {
         /** @type {THREE.Mesh[]} */
         var proximityBalls;
 
-        /**
-         * @param {number} x
-         * @param {number} y
-         */
-        function mapUserCoordsToAtlas(x, y) {
-          const xRatiod = (x - bounds.x.min) / (bounds.x.max - bounds.x.min) - 0.5;
-          const yRatiod = (y - bounds.y.min) / (bounds.y.max - bounds.y.min) - 0.5;
-          const r = Math.sqrt(xRatiod * xRatiod + yRatiod * yRatiod);
-          let h = (1 - r * r) * 0.3 - 0.265;
-          return { x: xRatiod, h, y: yRatiod };
-        }
-
         function updateOnFrame(rareMoved) {
           material.uniforms['time'].value = clock.elapsedTime;
           material.uniforms['camera'].value = camera.position;
@@ -745,7 +821,7 @@ function atlas(invokeType) {
                 if (!tile) continue;
                 for (const shortDID of tile) {
                   const [, xSpace, ySpace] = users[shortDID];
-                  const {x, y, h} = mapUserCoordsToAtlas(xSpace, ySpace);
+                  const {x, y, h} = mapUserCoordsToAtlas(xSpace, ySpace, bounds);
                   const xDist = Math.abs(x - camera.position.x);
                   const yDist = Math.abs(y - camera.position.z);
                   const zDist = Math.abs(h - camera.position.y);
