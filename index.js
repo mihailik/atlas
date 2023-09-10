@@ -284,7 +284,7 @@ function atlas(invokeType) {
       else tile.push(shortDID);
     }
 
-    return { tiles, findTiles };
+    return { tiles, findTiles, tileIndexXY };
 
     /**
      * @param {number} x
@@ -301,15 +301,23 @@ function atlas(invokeType) {
       let shortDID;
 
       let xLowIndex = Math.max(0, xCenterIndex - 1);
-      while ((xLowIndex - 1) > 0 && check(shortDID = tiles[xLowIndex][0], users[shortDID])) xLowIndex--;
+      while ((xLowIndex - 1) > 0 && check(shortDID = tiles[tileIndexXY(xLowIndex, yCenterIndex)]?.[0], users[shortDID])) xLowIndex--;
       let xHighIndex = Math.min(tileAxisCount - 1, xCenterIndex + 1);
-      while ((xHighIndex + 1) < tileAxisCount && check(shortDID = tiles[xHighIndex][0], users[shortDID])) xHighIndex++;
+      while ((xHighIndex + 1) < tileAxisCount && check(shortDID = tiles[tileIndexXY(xHighIndex, yCenterIndex)]?.[0], users[shortDID])) xHighIndex++;
       let yLowIndex = Math.max(0, yCenterIndex - 1);
-      while ((yLowIndex - 1) > 0 && check(shortDID = tiles[yLowIndex * tileAxisCount][0], users[shortDID])) yLowIndex--;
+      while ((yLowIndex - 1) > 0 && check(shortDID = tiles[tileIndexXY(xCenterIndex, yLowIndex)]?.[0], users[shortDID])) yLowIndex--;
       let yHighIndex = Math.min(tileAxisCount - 1, yCenterIndex + 1);
-      while ((yHighIndex + 1) < tileAxisCount && check(shortDID = tiles[yHighIndex * tileAxisCount][0], users[shortDID])) yHighIndex++;
+      while ((yHighIndex + 1) < tileAxisCount && check(shortDID = tiles[tileIndexXY(xCenterIndex, yHighIndex)]?.[0], users[shortDID])) yHighIndex++;
 
       return [xLowIndex, xHighIndex, yLowIndex, yHighIndex];
+    }
+
+    /**
+     * @param {number} xTileIndex
+     * @param {number} yTileIndex
+     */
+    function tileIndexXY(xTileIndex, yTileIndex) {
+      return xTileIndex + yTileIndex * tileAxisCount;
     }
   }
 
@@ -413,7 +421,7 @@ function atlas(invokeType) {
       startAnimation();
 
       function setupScene() {
-        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.0001, 1000);
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.00001, 1000);
         camera.position.x = 0.18;
         camera.position.y = 0.49;
         camera.position.z = 0.88;
@@ -453,9 +461,11 @@ function atlas(invokeType) {
         const stats = new Stats();
 
         const clock = new THREE.Clock();
-        const controls = new OrbitControls(camera, renderer.domElement);
+        const controls = new OrbitControls(camera, document.body);
         controls.maxDistance = 40 * 1000;
         controls.enableDamping = true;
+        controls.autoRotate = true;
+        controls.listenToKeyEvents(window);
 
         scene.add(new THREE.AxesHelper(1000));
 
@@ -491,29 +501,6 @@ function atlas(invokeType) {
             rightStatus = elem('div', { innerHTML: String(Object.keys(users).length) + '<br>users', fontSize: '80%', alignSelf: 'center', paddingRight: '1em', textAlign: 'center' })
           ]
         });
-
-        elem(
-          'button',
-          {
-            textContent: '⬆',
-            parent: rightStatus,
-            pointerEvents: 'all'
-          }
-        ).onclick = () => {
-          const mult = 0.9;
-          camera.position.set(camera.position.x * mult, camera.position.y * mult, camera.position.z * mult);
-        };
-        elem(
-          'button',
-          {
-            textContent: '⬇',
-            parent: rightStatus,
-            pointerEvents: 'all'
-          }
-        ).onclick = () => {
-          const mult = 1 / 0.9;
-          camera.position.set(camera.position.x * mult, camera.position.y * mult, camera.position.z * mult);
-        };
 
         return { root, titleBar, title, rightStatus };
       }
@@ -606,18 +593,10 @@ function atlas(invokeType) {
       }
 
       function webgl_buffergeometry_instancing_demo() {
-        const proximityThreshold = 0.2;
+        const proximityThreshold = 0.1;
+        const highDetailThreshold = 0.05;
 
-        const boxWire = new THREE.BoxGeometry(1, 1, 1);
-        const wireframe = new THREE.WireframeGeometry(boxWire);
-
-        const line = new THREE.LineSegments(wireframe);
-        // @ts-ignore
-        line.material.depthTest = false; line.material.opacity = 1; line.material.transparent = true;
-
-        scene.add(line);
-
-        const b = 0.02;
+        const b = 0.0002;
         let positions =
           [
             -b, b, -b,
@@ -639,13 +618,13 @@ function atlas(invokeType) {
         for (const shortDID in users) {
           if (limitSmall && instanceCount >= limitSmall) break;
           instanceCount++;
-          const [shortHandle, x, y] = users[shortDID];
+          const [shortHandle, xSpace, ySpace] = users[shortDID];
 
           // offsets
-          var { xRatiod, h, yRatiod } = mapUserCoordsToAtlas(x, y);
+          var { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace);
           //if (r > 0.7 && h < 0.9) h = 1;
 
-          offsets.push(xRatiod, h, yRatiod);
+          offsets.push(x, h, y);
 
           // colors
           colors.push(Math.random(), Math.random(), Math.random(), 1);
@@ -681,14 +660,19 @@ function atlas(invokeType) {
 		void main(){
 
 			vColor = color;
-      vec4 targetPosition = projectionMatrix * modelViewMatrix * vec4( position * 0.01 + offset, 1.0 );
+      vec4 targetPosition = projectionMatrix * modelViewMatrix * vec4( position + offset, 1.0 );
       float proximityThreshold = ${proximityThreshold};
 			gl_Position =
         // // hide near entries
         // abs(targetPosition.x - camera.x) < proximityThreshold &&
-        // abs(targetPosition.z - camera.z) < proximityThreshold
+        // abs(targetPosition.y - camera.z) < proximityThreshold
         // ? targetPosition * (0.0 / 0.0) :
         targetPosition;
+
+        vColor = distance(targetPosition.xyz, camera) < proximityThreshold
+          ? vec4(1,0,0,1) :
+          color;
+        vColor = color;
 
 		}
           `,
@@ -705,7 +689,7 @@ function atlas(invokeType) {
 			vec4 color = vec4( vColor );
 			color.r += sin( vPosition.x * 10.0 + time ) * 0.5;
 
-			gl_FragColor = vec4(1,1,1,1);
+			gl_FragColor = vec4(vColor);
     }
           `,
           side: THREE.DoubleSide,
@@ -740,8 +724,8 @@ function atlas(invokeType) {
           const xRatiod = (x - bounds.x.min) / (bounds.x.max - bounds.x.min) - 0.5;
           const yRatiod = (y - bounds.y.min) / (bounds.y.max - bounds.y.min) - 0.5;
           const r = Math.sqrt(xRatiod * xRatiod + yRatiod * yRatiod);
-          let h = (1 - r * r) * 0.3 - 0.2;
-          return { xRatiod, h, yRatiod };
+          let h = (1 - r * r) * 0.3 - 0.265;
+          return { x: xRatiod, h, y: yRatiod };
         }
 
         function updateOnFrame(rareMoved) {
@@ -757,14 +741,15 @@ function atlas(invokeType) {
             let nextProximityBallIndex = 0;
             for (let xIndex = xLowIndex; xIndex <= xHighIndex; xIndex++) {
               for (let yIndex = yLowIndex; yIndex <= yHighIndex; yIndex++) {
-                const tile = tileProximityIndex.tiles[xIndex + yIndex * tileDimension];
+                const tile = tileProximityIndex.tiles[tileProximityIndex.tileIndexXY(xIndex, yIndex)];
                 if (!tile) continue;
                 for (const shortDID of tile) {
-                  const [, x, y] = users[shortDID];
-                  const {xRatiod, yRatiod, h} = mapUserCoordsToAtlas(x, y);
-                  const xDist = Math.abs(xRatiod - camera.position.x);
-                  const yDist = Math.abs(yRatiod - camera.position.z);
-                  const dist = Math.sqrt(xDist * xDist + yDist * yDist);
+                  const [, xSpace, ySpace] = users[shortDID];
+                  const {x, y, h} = mapUserCoordsToAtlas(xSpace, ySpace);
+                  const xDist = Math.abs(x - camera.position.x);
+                  const yDist = Math.abs(y - camera.position.z);
+                  const zDist = Math.abs(h - camera.position.y);
+                  const dist = Math.sqrt(xDist * xDist + yDist * yDist + zDist * zDist);
 
                   if (dist < proximityThreshold) {
                     if (!proximityBalls) proximityBalls = [];
@@ -772,14 +757,14 @@ function atlas(invokeType) {
                     let ball = proximityBalls[nextProximityBallIndex];
                     if (!ball) {
                       ball = new THREE.Mesh(
-                        proximityBalls[0]?.geometry || new THREE.SphereGeometry(0.0004, 16, 12),
+                        proximityBalls[0]?.geometry || new THREE.TetrahedronGeometry(0.0004, 2),
                         proximityBalls[0]?.material || new THREE.MeshLambertMaterial({ color: 0xffffff }));
 
-                      ball.position.set(xRatiod, h, yRatiod);
+                      ball.position.set(x, h, y);
                       proximityBalls[nextProximityBallIndex] = ball;
                       scene.add(ball);
                     } else {
-                      ball.position.set(xRatiod, h, yRatiod);
+                      ball.position.set(x, h, y);
                       ball.visible = true;
                     }
                     nextProximityBallIndex++;
@@ -788,7 +773,9 @@ function atlas(invokeType) {
               }
             }
 
-            console.log(nextProximityBallIndex + ' near users in ' + (Date.now() - startSearchForNearUsers) + 'ms ', proximityBalls);
+            console.log(
+              nextProximityBallIndex + ' near users in ' + (Date.now() - startSearchForNearUsers) + 'ms ', proximityBalls,
+              { xLowIndex, xHighIndex, yLowIndex, yHighIndex });
 
             for (let i = nextProximityBallIndex; i < proximityBalls?.length; i++) {
               proximityBalls[i].visible = false;
