@@ -466,39 +466,16 @@ function atlas(invokeType) {
         controls.maxDistance = 40 * 1000;
         controls.enableDamping = true;
         controls.autoRotate = true;
+        controls.autoRotateSpeed = 1;
         controls.listenToKeyEvents(window);
 
         scene.add(new THREE.AxesHelper(1000));
 
-
         const userBounds = getUserCoordBounds(users);
+        const proximityTiles = makeProximityTiles(users, 16);
 
-        const { mesh: farUsersMesh, updateUserSet } = farUsersRenderer({
-          positions: (() => {
-            const b = 0.0002;
-            return new Float32Array([
-              -b, b, -b,
-              -b, 0, b,
-              b, b, b,
-              -b, b, -b,
-              b, 0, -b,
-              b, b, b,
-            ]);
-          })(),
-          userKeys: Object.keys(users),
-          userMapper: (shortDID, pos) => {
-            const [, xSpace, ySpace] = users[shortDID];
-            const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, userBounds);
-            pos[0] = x;
-            pos[1] = h;
-            pos[2] = y;
-          },
-          userColorer: (shortDID) => {
-            const crc32 = calcCRC32(shortDID) & 0x808080FF;
-            return crc32;
-          }
-        });
-        scene.add(farUsersMesh);
+        const farUsersMesh = createFarUsersMesh();
+        const nearUsersMesh = createNearUsersMesh();
 
         return {
           scene,
@@ -506,11 +483,72 @@ function atlas(invokeType) {
           lights: { dirLight1, dirLight2, ambientLight },
           renderer,
           stats,
-          clock,
           userBounds,
           farUsersMesh,
           controls
         };
+
+        function createFarUsersMesh() {
+          const { mesh: farUsersMesh } = repeatRenderer({
+            positions: (() => {
+              const b = 0.0002;
+              return new Float32Array([
+                -b, b, -b,
+                -b, 0, b,
+                b, b, b,
+                -b, b, -b,
+                b, 0, -b,
+                b, b, b,
+              ]);
+            })(),
+            userKeys: Object.keys(users),
+            userMapper: (shortDID, pos) => {
+              const [, xSpace, ySpace] = users[shortDID];
+              const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, userBounds);
+              pos[0] = x;
+              pos[1] = h;
+              pos[2] = y;
+            },
+            userColorer: (shortDID) => {
+              const crc32 = calcCRC32(shortDID) & 0x808080FF;
+              return crc32;
+            }
+          });
+          scene.add(farUsersMesh);
+          return farUsersMesh;
+        }
+
+        function createNearUsersMesh() {
+          const { mesh: nearUsersMesh } = repeatRenderer({
+            positions: new Float32Array(geometryVertices(new THREE.SphereGeometry(0.0003, 16, 12))),
+            userKeys: Object.keys(users).sort((shortDID1, shortDID2) => {
+              const [, x1, y1] = users[shortDID1];
+              const [, x2, y2] = users[shortDID2];
+              const centerX = (userBounds.x.min + userBounds.x.max) / 2;
+              const centerY = (userBounds.y.min + userBounds.y.max) / 2;
+              const dist1 = Math.sqrt((x1 - centerX) * (x1 - centerX) + (y1 - centerY) * (y1 - centerY));
+              const dist2 = Math.sqrt((x2 - centerX) * (x2 - centerX) + (y2 - centerY) * (y2 - centerY));
+              return dist1 - dist2;
+            }).slice(0,1000),
+            userMapper: (shortDID, pos) => {
+              const [, xSpace, ySpace] = users[shortDID];
+              const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, userBounds);
+              pos[0] = x;
+              pos[1] = h;
+              pos[2] = y;
+            },
+            userColorer: (shortDID) => {
+              const crc32 = calcCRC32(shortDID) & 0x808080FF;
+              return crc32;
+            }
+          });
+          scene.add(nearUsersMesh);
+          return nearUsersMesh;
+
+          function updateCamera() {
+
+          }
+        }
       }
 
       function appendToDOM() {
@@ -559,8 +597,9 @@ function atlas(invokeType) {
 
         let cameraStatus;
         let lastCameraUpdate;
+        let lastRender;
         function renderFrame() {
-          const now = clock.getElapsedTime() * 1000;
+          const now = Date.now();
           let rareMoved = false;
           if (!cameraStatus || !(now < lastCameraUpdate + 200)) {
             lastCameraUpdate = now;
@@ -578,8 +617,9 @@ function atlas(invokeType) {
           }
 
           stats.begin();
-          const delta = clock.getDelta();
-          controls.update(delta);
+          const delta = lastRender ? now - lastRender : 0;
+          lastRender = now;
+          controls.update(delta / 1000);
           // shaderState.updateOnFrame(rareMoved);
 
           renderer.render(scene, camera);
@@ -590,11 +630,6 @@ function atlas(invokeType) {
             cameraStatus.lastPos.y = camera.position.y;
             cameraStatus.lastPos.z = camera.position.z;
             cameraStatus.elem.textContent = camera.position.x.toFixed(2) + ', ' + camera.position.y.toFixed(2) + ', ' + camera.position.z.toFixed(2);
-              // Math.sqrt(
-              //   camera.position.x * camera.position.x +
-              //   camera.position.y * camera.position.y +
-              //   camera.position.z * camera.position.z
-              // ).toFixed(3) +
           }
         }
       }
@@ -634,7 +669,7 @@ function atlas(invokeType) {
        * }} _ 
        * @template K
        */
-      function farUsersRenderer({ positions, userKeys, userMapper, userColorer }) {
+      function repeatRenderer({ positions, userKeys, userMapper, userColorer }) {
         let userOffsets = new Float32Array(userKeys.length * 3);
         let userColors = new Uint32Array(userKeys.length);
 
