@@ -493,6 +493,7 @@ function atlas(invokeType) {
         };
 
         function createFarUsersMesh() {
+          const rgb = new THREE.Color();
           const { mesh } = repeatRenderer({
             positions: (() => {
               const b = 0.0002;
@@ -511,7 +512,9 @@ function atlas(invokeType) {
               pos[2] = y;
             },
             userColorer: (shortDID) => {
-              const crc32 = calcCRC32(shortDID) & 0x808080FF;
+              rgb.set(0, 0, 0);
+              const crc32 = calcCRC32(shortDID);
+              rgb.offsetHSL((Math.abs(crc32) % 2000) / 2000, 1, 0.85);
               return crc32;
             }
           });
@@ -779,8 +782,8 @@ function atlas(invokeType) {
             void main() {
               gl_FragColor = vColor;
               float dist = distance(vPosition, vec3(0.0));
-              float rad = 0.00005;
-              float areola = rad * 1.1;
+              float rad = 0.00004;
+              float areola = rad * 1.4;
               gl_FragColor.a =
                 dist < rad ? 1.0 :
                 dist > areola ? 0.0 :
