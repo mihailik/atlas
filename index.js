@@ -629,7 +629,7 @@ function atlas(invokeType) {
 
           /** @param {number} timePassedSec */
           function tick(timePassedSec) {
-            weight -= timePassedSec * 0.5;
+            weight -= timePassedSec * 0.4;
             if (weight < ballBaseSize) {
               scene.remove(ballMesh);
               delete activeUsers[shortDID];
