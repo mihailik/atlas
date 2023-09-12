@@ -900,6 +900,8 @@ function atlas(invokeType) {
   async function runNode(invokeType) {
     const fs = require('fs');
     const path = require('path');
+
+    debugDumpFirehose();
   }
 
 
