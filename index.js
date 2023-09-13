@@ -620,6 +620,19 @@ function atlas(invokeType) {
         const stats = new Stats();
 
         const controls = new OrbitControls(camera, document.body);
+        let autorotateTimeout;
+        controls.addEventListener('start', function () {
+          clearTimeout(autorotateTimeout);
+          controls.autoRotate = false;
+        });
+
+        // restart autorotate after the last interaction & an idle time has passed
+        controls.addEventListener('end', function () {
+          autorotateTimeout = setTimeout(function () {
+            controls.autoRotate = true;
+          }, 5000);
+        });
+
         controls.maxDistance = 40 * 1000;
         controls.enableDamping = true;
         controls.autoRotate = true;
