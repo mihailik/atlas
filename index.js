@@ -147,6 +147,129 @@ function atlas(invokeType) {
     }
   }
 
+  /** @type {typeof firehose} */
+  function firehoseWithFallback(callbacks) {
+    var stopInner;
+    let { stop: stopWebSocket } = firehose({
+      ...callbacks,
+      error: (errorWebSocket) => {
+        stopWebSocket();
+        stopWebSocket = undefined;
+        stopInner = firehoseWithFallback.fallbackFirehose(callbacks).stop;
+      }
+    });
+
+    return { stop };
+
+    function stop() {
+      stopWebSocket?.();
+      stopInner?.();
+    }
+  }
+
+  firehoseWithFallback.fallbackFirehose = (function () {
+    var firehoseJsonObj;
+    return fallbackFirehose;
+
+    /** @type {typeof firehose} */
+    function fallbackFirehose(callbacks) {
+      var waitingTimeout, stopped;
+      loadAndStartFirehose();
+
+      return { stop };
+
+      async function loadAndStartFirehose() {
+        if (!firehoseJsonObj) {
+          firehoseJsonObj = loadRelativeScriptJsonp('../atlas-db-jsonp/firehose.js');
+        }
+
+        if (typeof firehoseJsonObj?.then === 'function') {
+          firehoseJsonObj = await firehoseJsonObj;
+        }
+
+        let lastTimestamp = 0;
+        for (const entry of firehoseJsonObj) {
+          if (!lastTimestamp)
+            await new Promise(resolve => setTimeout(resolve, entry.timestamp - lastTimestamp));
+          if (stopped) return;
+          lastTimestamp = entry.timestamp;
+
+          handleMessage(entry);
+        }
+
+        function handleMessage(entry) {
+          const who = shortenDID(entry.repo);
+          switch (entry.$type) {
+            case 'app.bsky.feed.like':
+              const likeUri = breakFeedUri(entry.subject?.uri);
+              if (who && likeUri?.shortDID && likeUri?.postID)
+                callbacks?.like?.(who, likeUri.shortDID, likeUri.postID);
+              break;
+
+            case 'app.bsky.graph.follow':
+              const followWhom = shortenDID(entry.subject);
+              if (who && followWhom)
+                callbacks?.follow?.(who, followWhom);
+              break;
+
+            case 'app.bsky.feed.post':
+              const postUri = breakFeedUri(entry.subject?.uri);
+              if (who && postUri?.shortDID && postUri?.postID)
+                callbacks?.post?.(who, postUri.shortDID, postUri.postID);
+              break;
+            
+            case 'app.bsky.feed.repost':
+              const repostUri = breakFeedUri(entry.subject?.uri);
+              if (who && repostUri?.shortDID && repostUri?.postID)
+                callbacks?.repost?.(who, repostUri.shortDID, repostUri.postID);
+              break;
+
+            default:
+              break;
+          }
+        }
+
+        
+      }
+
+      function stop() {
+        stopped = true;
+        clearTimeout(waitingTimeout);
+      }
+    }
+  })();
+
+  /**
+   * @param {string} relativePath
+   * @returns {Promise<{}> | {}}
+   */
+  function loadRelativeScriptJsonp(relativePath) {
+    const funcName = /** @type {string} */(relativePath.replace(/\.js$/, '').split('/').pop());
+    if (typeof require === 'function' && typeof require.resolve === 'function') {
+      const scriptText = require('fs').readFileSync(require('path').resolve(__dirname, relativePath), 'utf8');
+      var fn = eval('function() { ' + scriptText + ' return ' + funcName + '; }');
+      return fn();
+    } else {
+      return new Promise((resolve, reject) => {
+        /** @type {*} */(window)[funcName] = (data) => {
+          delete window[funcName];
+          resolve(data);
+        };
+        const script = document.createElement('script');
+        script.onerror = (error) => {
+          delete window[funcName];
+          reject(error);
+        };
+        script.onload = function () {
+          setTimeout(() => {
+            delete window[funcName];
+            reject(new Error('jsonp script loaded but no data received'));
+          }, 300);
+        };
+      });
+    }
+  }
+
   /** @param {string | null | undefined} did */
   function shortenDID(did) {
     return typeof did === 'string' ? did.replace(/^did\:plc\:/, '') : did;
@@ -542,7 +665,7 @@ function atlas(invokeType) {
       function trackFirehose(bounds) {
         const activeUsers = {};
 
-        firehose({
+        firehoseWithFallback({
           post(author, postID, text, replyTo, replyToThread) {
             addActiveUser(author, 1);
           },
