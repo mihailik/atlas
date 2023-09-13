@@ -950,8 +950,8 @@ function atlas(invokeType) {
             void main() {
               gl_FragColor = vColor;
               float dist = distance(vPosition, vec3(0.0));
-              float rad = 0.00015;
-              float areola = rad * 1.7;
+              float rad = 0.000134;
+              float areola = rad * 2.0;
               gl_FragColor.a =
                 dist < rad ? 1.0 :
                 dist > areola ? 0.0 :
@@ -965,7 +965,8 @@ function atlas(invokeType) {
           `,
           side: THREE.BackSide,
           // forceSinglePass: true,
-          transparent: true
+          transparent: true,
+          depthWrite: false
         });
 
         const mesh = new THREE.Mesh(geometry, material);
