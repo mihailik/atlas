@@ -509,7 +509,6 @@ function atlas(invokeType) {
         const initUI = createInitUI();
         await waitForUsersLoaded;
         await waitForRunBrowserNext;
-        console.log(1234);
         initUI.style.opacity = '0';
         initUI.style.pointerEvents = 'none';
         setTimeout(() => {
@@ -625,7 +624,6 @@ function atlas(invokeType) {
         const proximityTiles = makeProximityTiles(users, 16);
 
         const farUsersMesh = createFarUsersMesh();
-        // const nearUsersMesh = createNearUsersMesh({ proximityTiles, proximityThreshold: 0.1 });
 
         return {
           scene,
@@ -635,22 +633,14 @@ function atlas(invokeType) {
           stats,
           userBounds,
           farUsersMesh,
-          // nearUsersMesh: nearUsersMesh.mesh,
-          // updateCamera: nearUsersMesh.updateCamera,
           proximityTiles,
           controls
         };
 
         function createFarUsersMesh() {
-          const { mesh } = repeatRenderer({
-            positions: (() => {
-              const b = 0.0008;
-              return new Float32Array([
-                -b/2, 0, -b/3,
-                0, 0, b * 2/3,
-                b/2, 0, -b/3
-              ]);
-            })(),
+          const { mesh } = billboardShaderRenderer({
+            fragmentShader: `
+            `,
             userKeys: Object.keys(users),
             userMapper: (shortDID, pos) => {
               const [, xSpace, ySpace] = users[shortDID];
@@ -658,9 +648,10 @@ function atlas(invokeType) {
               pos[0] = x;
               pos[1] = h;
               pos[2] = y;
+              pos[3] = 1;
             },
             userColorer: defaultUserColorer
-          });
+          })
           scene.add(mesh);
           return mesh;
         }
@@ -885,30 +876,42 @@ function atlas(invokeType) {
 
       /**
        * @param {{
-       *  positions: Float32Array;
        *  userKeys: K[];
-       *  userMapper(i: K, pos: [x: number, y: number, z: number]): void;
+       *  userMapper(i: K, pos: [x: number, y: number, z: number, diameter: number]): void;
        *  userColorer(i: K): number;
+       *  fragmentShader: string;
        * }} _ 
        * @template K
        */
-      function repeatRenderer({ positions, userKeys, userMapper, userColorer }) {
+      function billboardShaderRenderer({ userKeys, userMapper, userColorer, fragmentShader }) {
+        const b = 0.0008;
+        let positions = new Float32Array([
+          -b / 2, 0, -b / 3,
+          0, 0, b * 2 / 3,
+          b / 2, 0, -b / 3
+        ]);
         let userOffsets = new Float32Array(userKeys.length * 3);
+        let userSizes = new Float32Array(userKeys.length);
         let userColors = new Uint32Array(userKeys.length);
+        let offsetsChanged = false;
+        let sizesChanged = false;
+        let colorsChanged = false;
 
         populateAttributes(userKeys);
 
         const geometry = new THREE.InstancedBufferGeometry();
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geometry.setAttribute('size', new THREE.InstancedBufferAttribute(userSizes, 1));
         geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(userOffsets, 3));
         geometry.setAttribute('color', new THREE.InstancedBufferAttribute(userColors, 1));
 
         const material = new THREE.ShaderMaterial({
-          uniforms: { },
+          uniforms: {},
           vertexShader: `
             precision highp float;
 
             attribute vec3 offset;
+            attribute float size;
             attribute uint color;
 
             varying vec3 vPosition;
@@ -916,12 +919,8 @@ function atlas(invokeType) {
             varying vec4 vColor;
 
             void main(){
-              vec4 billbPosition = projectionMatrix *
-              (modelViewMatrix * vec4(offset, 1) +
-               vec4(position.xz, 0, 0));
-              vec4 targetPosition = projectionMatrix * modelViewMatrix * vec4( position + offset, 1.0 );
-              gl_Position = billbPosition;
-                // targetPosition;
+              // multiply position.xy by size to scale the billboard
+              gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1) + vec4(position.xz, 0, 0));
 
               vPosition = position;
 
@@ -952,7 +951,7 @@ function atlas(invokeType) {
               float dist = distance(vPosition, vec3(0.0));
               float rad = 0.000134;
               float areola = rad * 2.0;
-              gl_FragColor.a =
+              float radiusRatio =
                 dist < rad ? 1.0 :
                 dist > areola ? 0.0 :
                 (areola - dist) / (areola - rad);
@@ -960,7 +959,11 @@ function atlas(invokeType) {
               float fogStart = 0.5;
               float fogGray = 1.0;
               float fogRatio = vFogDist < fogStart ? 0.0 : vFogDist > fogGray ? 1.0 : (vFogDist - fogStart) / (fogGray - fogStart);
+
+              gl_FragColor.a =radiusRatio;
               gl_FragColor = mix(gl_FragColor, vec4(1,1,1,0.7), fogRatio);
+
+              ${fragmentShader}
             }
           `,
           side: THREE.BackSide,
@@ -977,16 +980,30 @@ function atlas(invokeType) {
          * @param {Parameters<typeof userColorer>[0][]} userKeys
          */
         function populateAttributes(userKeys) {
-          /** @type {[x: number, y: number, z: number]} */
-          const userPos = [NaN, NaN, NaN];
+          /** @type {[x: number, y: number, z: number, size: number]} */
+          const userPos = [NaN, NaN, NaN, NaN];
 
           for (let i = 0; i < userKeys.length; i++) {
             const user = userKeys[i];
             userMapper(user, userPos);
+            const oldX = userOffsets[i * 3 + 0];
+            const oldY = userOffsets[i * 3 + 1];
+            const oldZ = userOffsets[i * 3 + 2];
+            const oldSize = userSizes[i];
+            const oldColor = userColors[i];
+
             userOffsets[i * 3 + 0] = userPos[0];
             userOffsets[i * 3 + 1] = userPos[1];
             userOffsets[i * 3 + 2] = userPos[2];
+            userSizes[i] = userPos[3];
             userColors[i] = userColorer(user);
+
+            if (userOffsets[i * 3 + 0] !== oldX || userOffsets[i * 3 + 1] !== oldY || userOffsets[i * 3 + 2] !== oldZ)
+              offsetsChanged = true;
+            if (userSizes[i] !== oldSize)
+              sizesChanged = true;
+            if (userColors[i] !== oldColor)
+              colorsChanged = true;
           }
         }
 
@@ -994,17 +1011,27 @@ function atlas(invokeType) {
          * @param {Parameters<typeof userColorer>[0][]} userKeys
          */
         function updateUserSet(userKeys) {
-          if (userKeys.length !== userColors.length) {
-            userOffsets = new Float32Array(userKeys.length * 3);
+          if (userKeys.length > userColors.length) {
+            const newSize = Math.max(userColors.length * 2, userKeys.length);
+            userOffsets = new Float32Array(newSize * 3);
+            userSizes = new Float32Array(newSize);
             userColors = new Uint32Array(userKeys.length);
+
+            geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(userOffsets, 3));
+            geometry.attributes['offset'].needsUpdate = true;
+            geometry.setAttribute('color', new THREE.InstancedBufferAttribute(userColors, 1));
+            geometry.attributes['color'].needsUpdate = true;
+            geometry.setAttribute('size', new THREE.InstancedBufferAttribute(userSizes, 1));
+            geometry.attributes['size'].needsUpdate = true;
           }
 
           populateAttributes(userKeys);
+          if (offsetsChanged) geometry.attributes['offset'].needsUpdate = true;
+          if (sizesChanged) geometry.attributes['size'].needsUpdate = true;
+          if (colorsChanged) geometry.attributes['color'].needsUpdate = true;
 
-          geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(userOffsets, 3));
-          geometry.attributes['offset'].needsUpdate = true;
-          geometry.setAttribute('color', new THREE.InstancedBufferAttribute(userColors, 1));
-          geometry.attributes['color'].needsUpdate = true;
+          offsetsChanged = sizesChanged = colorsChanged = false;
+
           geometry.instanceCount = userKeys.length;
         }
       }
@@ -1070,21 +1097,6 @@ function atlas(invokeType) {
     debugDumpFirehose();
   }
 
-
-  /** @param {{ [shortDID: string]: UserTuple }} users */
-  function firehoseSpatialAdjustments(users) {
-    // have axis orders, to make it easier to find users near each other
-
-    const horizontalOrderedShortDIDs = Object.keys(users).sort((shortDID1, shortDID2) =>
-      users[shortDID1][1] - users[shortDID2][1]);
-
-    const verticalOrderedShortDIDs = horizontalOrderedShortDIDs.slice().sort((shortDID1, shortDID2) =>
-      users[shortDID1][2] - users[shortDID2][2]);
-
-    const massCenter = getMassCenter(users);
-
-
-  }
 
   function getMassCenter(users) {
     let xTotal = 0, yTotal = 0, count = 0;
