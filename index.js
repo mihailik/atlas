@@ -661,7 +661,6 @@ function atlas(invokeType) {
             },
             userColorer: defaultUserColorer
           });
-          mesh.frustrumCulled = false;
           scene.add(mesh);
           return mesh;
         }
@@ -970,6 +969,7 @@ function atlas(invokeType) {
         });
 
         const mesh = new THREE.Mesh(geometry, material);
+        mesh.frustumCulled = false;
         return { mesh, updateUserSet };
 
         /**
