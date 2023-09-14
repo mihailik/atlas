@@ -614,6 +614,8 @@ function atlas(invokeType) {
     }
 
     async function threedshell() {
+      const worldStartTime = Date.now();
+
       const {
         scene,
         camera,
@@ -704,7 +706,7 @@ function atlas(invokeType) {
         controls.autoRotateSpeed = 0.2;
         controls.listenToKeyEvents(window);
 
-        scene.add(new THREE.AxesHelper(1000));
+        //scene.add(new THREE.AxesHelper(1000));
 
         const userBounds = getUserCoordBounds(users);
         const proximityTiles = makeProximityTiles(users, 16);
@@ -744,7 +746,7 @@ function atlas(invokeType) {
       function trackFirehose(bounds) {
 
         const MAX_WEIGHT = 0.1;
-        const FADE_TIME_MSEC = 1000;
+        const FADE_TIME_MSEC = 2000;
         /** @type {{ [shortDID: string]: { x: number, y: number, h: number, weight: number, color: number, startAtMsec: number, fadeAtMsec: number } }} */
         const activeUsers = {};
         const rend = flashesRenderer();
@@ -775,20 +777,39 @@ function atlas(invokeType) {
 
         function flashesRenderer() {
           const rend = billboardShaderRenderer({
-            fragmentShader: `
+            fragmentShader: /* glsl */`
             gl_FragColor = tintColor;
 
-            float timeRatio = (timeSec - extra.x) / (extra.y - extra.x);
+            float startTime = min(extra.x, extra.y);
+            float endTime = max(extra.x, extra.y);
+            float timeRatio = (time - startTime) / (endTime - startTime);
 
             gl_FragColor = tintColor;
 
-              // timeRatio > 1.0 ? vec4(1.0, 0.0, 1.0, tintColor.a) :
-              // timeRatio > 0.0 ? vec4(0.0, 0.5, 0.5, tintColor.a) :
-              // timeRatio == 0.0 ? vec4(0.0, 0.0, 1.0, tintColor.a) :
-              // timeRatio < 0.0 ? vec4(1.0, 0.0, 0.0, tintColor.a) :
-              // vec4(1.0, 1.0, 0.0, tintColor.a);
+            float step = 0.1;
 
-            gl_FragColor.a = gl_FragColor.a * gl_FragColor.a; //(timeRatio < 0.2 ? timeRatio * 5.0 : 1.0);
+            gl_FragColor.a = gl_FragColor.a * (timeRatio < step ? timeRatio / step : 1.0 - (timeRatio - step) * (1.0 - step) );
+            // gl_FragColor.a = gl_FragColor.a * gl_FragColor.a;
+            // gl_FragColor.a = gl_FragColor.a * gl_FragColor.a;
+
+            //gl_FragColor.a *= timeRatio;
+
+            // gl_FragColor =
+            //   timeRatio > 1000.0 ? vec4(1.0, 0.7, 1.0, tintColor.a) :
+            //   timeRatio > 1.0 ? vec4(1.0, 0.0, 1.0, tintColor.a) :
+            //   timeRatio > 0.0 ? vec4(0.0, 0.5, 0.5, tintColor.a) :
+            //   timeRatio == 0.0 ? vec4(0.0, 0.0, 1.0, tintColor.a) :
+            //   timeRatio < 0.0 ? vec4(1.0, 0.0, 0.0, tintColor.a) :
+            //   vec4(1.0, 1.0, 0.0, tintColor.a);
+
+            // gl_FragColor =
+            //   time > endTime ? vec4(1.0, 0.0, 1.0, tintColor.a) :
+            //   time > startTime ? vec4(1.0, 0.0, 1.0, tintColor.a) :
+            //   // timeRatio > 0.0 ? vec4(0.0, 0.5, 0.5, tintColor.a) :
+            //   // timeRatio == 0.0 ? vec4(0.0, 0.0, 1.0, tintColor.a) :
+            //   // timeRatio < 0.0 ? vec4(1.0, 0.0, 0.0, tintColor.a) :
+            //   vec4(1.0, 1.0, 0.0, tintColor.a);
+
             gl_FragColor.a = gl_FragColor.a * gl_FragColor.a;
             gl_FragColor.a = gl_FragColor.a * gl_FragColor.a;
 
@@ -798,8 +819,8 @@ function atlas(invokeType) {
               const usr = activeUsers[shortDID];
               if (!usr) return;
               pos.set(usr.x, usr.h, usr.y, usr.weight);
-              extra.x = usr.startAtMsec / 1000;
-              extra.y = usr.fadeAtMsec / 1000;
+              extra.x = (usr.startAtMsec - worldStartTime) / 1000;
+              extra.y = (usr.fadeAtMsec - worldStartTime) / 1000;
             },
             userColorer: (shortDID) => activeUsers[shortDID]?.color
           });
@@ -826,14 +847,15 @@ function atlas(invokeType) {
         /**
          * @param {string} shortDID
          * @param {number} weight
-         * @param {number} timestampMsec
+         * @param {number} _unused
          */
-        function addActiveUser(shortDID, weight, timestampMsec) {
+        function addActiveUser(shortDID, weight, _unused) {
+          const now = Date.now();
           let existingUser = activeUsers[shortDID];
           if (existingUser) {
             updateUsers = true;
             existingUser.weight = Math.min(MAX_WEIGHT, weight * 0.2 + existingUser.weight);
-            existingUser.fadeAtMsec = timestampMsec + FADE_TIME_MSEC;
+            existingUser.fadeAtMsec = now + FADE_TIME_MSEC;
             return;
           }
 
@@ -842,7 +864,7 @@ function atlas(invokeType) {
           const { x, y, h } = mapUserCoordsToAtlas(usrTuple[1], usrTuple[2], userBounds);
           const color = defaultUserColorer(shortDID);
 
-          activeUsers[shortDID] = { x, y, h, weight: weight * 0.2, color, startAtMsec: timestampMsec, fadeAtMsec: timestampMsec + FADE_TIME_MSEC };
+          activeUsers[shortDID] = { x, y, h, weight: weight * 0.2, color, startAtMsec: now, fadeAtMsec: now + FADE_TIME_MSEC };
           updateUsers = true;
         }
       }
@@ -975,10 +997,10 @@ function atlas(invokeType) {
           0, 0, 1,
           baseHalf, 0, -0.5
         ]);
-        let userOffsets = new Float32Array(userKeys.length * 4);
-        let userDiameters = new Float32Array(userKeys.length);
-        let userExtras = new Float32Array(userKeys.length * 4);
-        let userColors = new Uint32Array(userKeys.length);
+        let offsetBuf = new Float32Array(userKeys.length * 4);
+        let diameterBuf = new Float32Array(userKeys.length);
+        let extraBuf = new Float32Array(userKeys.length * 4);
+        let colorBuf = new Uint32Array(userKeys.length);
         let offsetsChanged = false;
         let diametersChanged = false;
         let colorsChanged = false;
@@ -988,17 +1010,17 @@ function atlas(invokeType) {
 
         const geometry = new THREE.InstancedBufferGeometry();
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-        geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(userOffsets, 3));
-        geometry.setAttribute('diameter', new THREE.InstancedBufferAttribute(userDiameters, 1));
-        geometry.setAttribute('extra', new THREE.InstancedBufferAttribute(userExtras, 4));
-        geometry.setAttribute('color', new THREE.InstancedBufferAttribute(userColors, 1));
+        geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(offsetBuf, 3));
+        geometry.setAttribute('diameter', new THREE.InstancedBufferAttribute(diameterBuf, 1));
+        geometry.setAttribute('extra', new THREE.InstancedBufferAttribute(extraBuf, 4));
+        geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colorBuf, 1));
         geometry.instanceCount = userKeys.length;
 
         const material = new THREE.ShaderMaterial({
           uniforms: {
-            timeSec: { value: Date.now() }
+            time: { value: Date.now() / 1000.0 }
           },
-          vertexShader: `
+          vertexShader: /* glsl */`
             precision highp float;
 
             attribute vec3 offset;
@@ -1006,13 +1028,12 @@ function atlas(invokeType) {
             attribute vec4 extra;
             attribute uint color;
 
-            uniform float timeSec;
+            uniform float time;
 
             varying vec3 vPosition;
             varying vec3 vOffset;
             varying float vDiameter;
             varying vec4 vExtra;
-            varying float vTimeSec;
 
             varying float vFogDist;
             varying vec4 vColor;
@@ -1022,7 +1043,6 @@ function atlas(invokeType) {
               vOffset = offset;
               vDiameter = diameter;
               vExtra = extra;
-              vTimeSec = timeSec;
 
               gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1) + vec4(position.xz * diameter, 0, 0));
 
@@ -1036,8 +1056,10 @@ function atlas(invokeType) {
               vFogDist = distance(cameraPosition, offset);
             }
           `,
-          fragmentShader: `
+          fragmentShader: /* glsl */`
             precision highp float;
+
+            uniform float time;
 
             varying vec4 vColor;
             varying float vFogDist;
@@ -1046,7 +1068,6 @@ function atlas(invokeType) {
             varying vec3 vOffset;
             varying float vDiameter;
             varying vec4 vExtra;
-            varying float vTimeSec;
 
             void main() {
               gl_FragColor = vColor;
@@ -1073,7 +1094,6 @@ function atlas(invokeType) {
               vec3 offset = vOffset;
               float diameter = vDiameter;
               vec4 extra = vExtra;
-              float timeSec = vTimeSec;
 
               ${fragmentShader}
             }
@@ -1087,7 +1107,7 @@ function atlas(invokeType) {
         const mesh = new THREE.Mesh(geometry, material);
         mesh.frustumCulled = false;
         mesh.onBeforeRender = () => {
-          material.uniforms['timeSec'].value = Date.now() / 1000;
+          material.uniforms['time'].value = (Date.now() - worldStartTime) / 1000;
         };
         return { mesh, updateUserSet };
 
@@ -1105,39 +1125,39 @@ function atlas(invokeType) {
             userExtra.copy(userPos.set(NaN, NaN, NaN, NaN));
             userMapper(user, userPos, userExtra);
             oldUserPos.set(
-              userOffsets[i * 3 + 0],
-              userOffsets[i * 3 + 1],
-              userOffsets[i * 3 + 2],
-              userDiameters[i]);
+              offsetBuf[i * 3 + 0],
+              offsetBuf[i * 3 + 1],
+              offsetBuf[i * 3 + 2],
+              diameterBuf[i]);
             oldUserExtra.set(
-              userExtra[i * 4 + 0],
-              userExtra[i * 4 + 1],
-              userExtra[i * 4 + 2],
-              userExtra[i * 4 + 3]);
-            const oldColor = userColors[i];
+              extraBuf[i * 4 + 0],
+              extraBuf[i * 4 + 1],
+              extraBuf[i * 4 + 2],
+              extraBuf[i * 4 + 3]);
+            const oldColor = colorBuf[i];
 
-            userOffsets[i * 3 + 0] = userPos.x;
-            userOffsets[i * 3 + 1] = userPos.y;
-            userOffsets[i * 3 + 2] = userPos.z;
-            userDiameters[i] = userPos.w;
-            userColors[i] = userColorer(user);
-            userExtra[i * 4 + 0] = userExtra.x;
-            userExtra[i * 4 + 1] = userExtra.y;
-            userExtra[i * 4 + 2] = userExtra.z;
-            userExtra[i * 4 + 3] = userExtra.w;
+            offsetBuf[i * 3 + 0] = userPos.x;
+            offsetBuf[i * 3 + 1] = userPos.y;
+            offsetBuf[i * 3 + 2] = userPos.z;
+            diameterBuf[i] = userPos.w;
+            colorBuf[i] = userColorer(user);
+            extraBuf[i * 4 + 0] = userExtra.x;
+            extraBuf[i * 4 + 1] = userExtra.y;
+            extraBuf[i * 4 + 2] = userExtra.z;
+            extraBuf[i * 4 + 3] = userExtra.w;
 
-            if (userOffsets[i * 3 + 0] !== oldUserPos.x
-              || userOffsets[i * 3 + 1] !== oldUserPos.y
-              || userOffsets[i * 3 + 2] !== oldUserPos.z)
+            if (offsetBuf[i * 3 + 0] !== oldUserPos.x
+              || offsetBuf[i * 3 + 1] !== oldUserPos.y
+              || offsetBuf[i * 3 + 2] !== oldUserPos.z)
               offsetsChanged = true;
-            if (userDiameters[i] !== oldUserPos.w)
+            if (diameterBuf[i] !== oldUserPos.w)
               diametersChanged = true;
-            if (userExtra[i * 4 + 0] !== oldUserExtra.x ||
-              userExtra[i * 4 + 1] !== oldUserExtra.y ||
-              userExtra[i * 4 + 2] !== oldUserExtra.z ||
-              userExtra[i * 4 + 3] !== oldUserExtra.w)
+            if (extraBuf[i * 4 + 0] !== oldUserExtra.x ||
+              extraBuf[i * 4 + 1] !== oldUserExtra.y ||
+              extraBuf[i * 4 + 2] !== oldUserExtra.z ||
+              extraBuf[i * 4 + 3] !== oldUserExtra.w)
               extrasChanged = true;
-            if (userColors[i] !== oldColor)
+            if (colorBuf[i] !== oldColor)
               colorsChanged = true;
           }
         }
@@ -1146,20 +1166,20 @@ function atlas(invokeType) {
          * @param {Parameters<typeof userColorer>[0][]} userKeys
          */
         function updateUserSet(userKeys) {
-          if (userKeys.length > userColors.length) {
-            const newSize = Math.max(userColors.length * 2, userKeys.length);
-            userOffsets = new Float32Array(newSize * 3);
-            userDiameters = new Float32Array(newSize);
-            userColors = new Uint32Array(newSize);
-            userExtras = new Float32Array(newSize * 4);
+          if (userKeys.length > colorBuf.length) {
+            const newSize = Math.max(colorBuf.length * 2, userKeys.length);
+            offsetBuf = new Float32Array(newSize * 3);
+            diameterBuf = new Float32Array(newSize);
+            colorBuf = new Uint32Array(newSize);
+            extraBuf = new Float32Array(newSize * 4);
 
-            geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(userOffsets, 3));
+            geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(offsetBuf, 3));
             geometry.attributes['offset'].needsUpdate = true;
-            geometry.setAttribute('color', new THREE.InstancedBufferAttribute(userColors, 1));
+            geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colorBuf, 1));
             geometry.attributes['color'].needsUpdate = true;
-            geometry.setAttribute('diameter', new THREE.InstancedBufferAttribute(userDiameters, 1));
+            geometry.setAttribute('diameter', new THREE.InstancedBufferAttribute(diameterBuf, 1));
             geometry.attributes['diameter'].needsUpdate = true;
-            geometry.setAttribute('extra', new THREE.InstancedBufferAttribute(userExtras, 4));
+            geometry.setAttribute('extra', new THREE.InstancedBufferAttribute(extraBuf, 4));
             geometry.attributes['extra'].needsUpdate = true;
           }
 
