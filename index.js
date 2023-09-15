@@ -623,12 +623,13 @@ function atlas(invokeType) {
         renderer,
         stats,
         clock,
-        controls,
         updateCamera,
         userBounds
       } = setupScene();
 
       const domElements = appendToDOM();
+      const controls = setupOrbitControls(camera, domElements.touchElement);
+
       handleWindowResizes();
 
       //const shaderState = webgl_buffergeometry_instancing_demo();
@@ -677,6 +678,44 @@ function atlas(invokeType) {
 
         const stats = new Stats();
 
+        const userBounds = getUserCoordBounds(users);
+        const proximityTiles = makeProximityTiles(users, 16);
+
+        const farUsersMesh = createFarUsersMesh();
+
+        return {
+          scene,
+          camera,
+          lights: { dirLight1, dirLight2, ambientLight },
+          renderer,
+          stats,
+          userBounds,
+          farUsersMesh,
+          proximityTiles
+        };
+
+        function createFarUsersMesh() {
+          const { mesh } = billboardShaderRenderer({
+            fragmentShader: `
+            `,
+            userKeys: Object.keys(users),
+            userMapper: (shortDID, pos) => {
+              const [, xSpace, ySpace] = users[shortDID];
+              const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, userBounds);
+              pos.set(x, h, y, 0.001);
+            },
+            userColorer: defaultUserColorer
+          })
+          scene.add(mesh);
+          return mesh;
+        }
+      }
+
+      /**
+       * @param {THREE.Camera} camera
+       * @param {HTMLElement} touchElement
+       */
+      function setupOrbitControls(camera, touchElement) {
         const controls = new OrbitControls(camera, document.body);
         let autorotateTimeout1, autorotateTimeout2, autorotateTimeout3;
         controls.addEventListener('start', function () {
@@ -704,41 +743,51 @@ function atlas(invokeType) {
         controls.enableDamping = true;
         controls.autoRotate = true;
         controls.autoRotateSpeed = 0.2;
-        controls.listenToKeyEvents(window);
+        controls.listenToKeyEvents(touchElement);
+        touchElement.addEventListener('touchstart', handleTouch);
+        touchElement.addEventListener('touchend', handleTouch);
+        touchElement.addEventListener('touchmove', handleTouch);
+        touchElement.addEventListener('mousedown', handleMouse);
+        touchElement.addEventListener('mousemove', handleMouse);
+        touchElement.addEventListener('mouseup', handleMouse);
 
-        //scene.add(new THREE.AxesHelper(1000));
+        return controls;
 
-        const userBounds = getUserCoordBounds(users);
-        const proximityTiles = makeProximityTiles(users, 16);
+        /** @type {{ x: number, y: number} | undefined} */
+        var touchCoords;
+        var touchTimeout;
 
-        const farUsersMesh = createFarUsersMesh();
+        /**@param {TouchEvent} event */
+        function handleTouch(event) {
+          const touches = event.changedTouches || event.targetTouches || event.touches;
+          if (touches?.length) {
+            for (const t of touches) {
+              touchCoords = { x: t.pageX || t.clientX, y: t.pageY || t.clientY };
+              break;
+            }
+          }
 
-        return {
-          scene,
-          camera,
-          lights: { dirLight1, dirLight2, ambientLight },
-          renderer,
-          stats,
-          userBounds,
-          farUsersMesh,
-          proximityTiles,
-          controls
-        };
+          event.preventDefault();
+          if (!touchTimeout) {
+            touchTimeout = setTimeout(processTouch, 100);
+          }
+        }
 
-        function createFarUsersMesh() {
-          const { mesh } = billboardShaderRenderer({
-            fragmentShader: `
-            `,
-            userKeys: Object.keys(users),
-            userMapper: (shortDID, pos) => {
-              const [, xSpace, ySpace] = users[shortDID];
-              const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, userBounds);
-              pos.set(x, h, y, 0.001);
-            },
-            userColorer: defaultUserColorer
-          })
-          scene.add(mesh);
-          return mesh;
+        /**@param {MouseEvent} event */
+        function handleMouse(event) {
+          touchCoords = { x: event.pageX ?? event.clientX, y: event.pageY ?? event.clientY };
+          event.preventDefault();
+          if (!touchTimeout) {
+            touchTimeout = setTimeout(processTouch, 100);
+          }
+        }
+
+        function processTouch() {
+          touchTimeout = undefined;
+          if (!touchCoords) return;
+
+          console.log('touch ', touchCoords);
+          touchCoords = undefined;
         }
       }
 
@@ -876,20 +925,33 @@ function atlas(invokeType) {
         renderer.domElement.className = 'atlas-3d';
         root.appendChild(renderer.domElement);
         stats.domElement.style.position = 'relative';
-        stats.domElement.style.pointerEvents = 'all';
 
-        let title, rightStatus;
-        const titleBar = elem('div', {
-          style: ` position: fixed; left: 0; top: 0; width: 100%; height: auto; background: rgba(0,0,0,0.5); color: gold; display: grid; grid-template-rows: auto; grid-template-columns: auto 1fr auto; max-height: 5em; pointer-events: none;`,
+        let title, titleBar, rightStatus, touchElement;
+        const container = elem('div', {
           parent: root,
+          style: `
+          position: fixed; left: 0; top: 0; width: 100%; height: 100%;
+          display: grid; grid-template-rows: auto 1fr; grid-template-columns: 1fr;`,
           children: [
-            stats.domElement,
-            title = elem('h3', { textContent: 'Atlas 3D', style: 'text-align: center; font-weight: 100; margin-left: -29px' }),
-            rightStatus = elem('div', { innerHTML: String(Object.keys(users).length) + '<br>users', fontSize: '80%', alignSelf: 'center', paddingRight: '1em', textAlign: 'center' })
+            titleBar = elem('div', {
+              style: `
+              background: rgba(0,0,0,0.5); color: gold;
+              display: grid; grid-template-rows: auto; grid-template-columns: auto 1fr auto;
+              max-height: 5em;`,
+              children: [
+                stats.domElement,
+                title = elem('h3', { textContent: 'Atlas 3D', style: 'text-align: center; font-weight: 100; margin-left: -29px' }),
+                rightStatus = elem('div', { innerHTML: String(Object.keys(users).length) + '<br>users', fontSize: '80%', alignSelf: 'center', paddingRight: '1em', textAlign: 'center' })
+              ]
+            }),
+            touchElement = elem('div', {
+              style: `
+              background: transparent;`
+            })
           ]
         });
 
-        return { root, titleBar, title, rightStatus };
+        return { root, titleBar, title, rightStatus, touchElement };
       }
 
       function handleWindowResizes() {
