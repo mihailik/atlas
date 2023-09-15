@@ -752,7 +752,7 @@ function atlas(invokeType) {
         controls.enableDamping = true;
         controls.autoRotate = true;
         controls.autoRotateSpeed = 0.2;
-        controls.listenToKeyEvents(renderer.domElement);
+        controls.listenToKeyEvents(window);
 
         return controls;
       }
