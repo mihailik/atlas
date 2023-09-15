@@ -746,7 +746,7 @@ function atlas(invokeType) {
       function trackFirehose(bounds) {
 
         const MAX_WEIGHT = 0.1;
-        const FADE_TIME_MSEC = 3000;
+        const FADE_TIME_MSEC = 4000;
         /** @type {{ [shortDID: string]: { x: number, y: number, h: number, weight: number, color: number, startAtMsec: number, fadeAtMsec: number } }} */
         const activeUsers = {};
         const rend = flashesRenderer();
@@ -788,11 +788,9 @@ function atlas(invokeType) {
 
             float step = 0.1;
 
-            gl_FragColor.a = gl_FragColor.a * (timeRatio < step ? timeRatio / step : 1.0 - (timeRatio - step) * (1.0 - step) );
-            // gl_FragColor.a = gl_FragColor.a * gl_FragColor.a;
-            // gl_FragColor.a = gl_FragColor.a * gl_FragColor.a;
+            float timeFunction = timeRatio < step ? timeRatio / step : 1.0 - (timeRatio - step) * (1.0 - step);
 
-            //gl_FragColor.a *= timeRatio;
+            gl_FragColor.a *= timeFunction * timeFunction * timeFunction;
 
             // gl_FragColor =
             //   timeRatio > 1000.0 ? vec4(1.0, 0.7, 1.0, tintColor.a) :
@@ -802,16 +800,9 @@ function atlas(invokeType) {
             //   timeRatio < 0.0 ? vec4(1.0, 0.0, 0.0, tintColor.a) :
             //   vec4(1.0, 1.0, 0.0, tintColor.a);
 
-            // gl_FragColor =
-            //   time > endTime ? vec4(1.0, 0.0, 1.0, tintColor.a) :
-            //   time > startTime ? vec4(1.0, 0.0, 1.0, tintColor.a) :
-            //   // timeRatio > 0.0 ? vec4(0.0, 0.5, 0.5, tintColor.a) :
-            //   // timeRatio == 0.0 ? vec4(0.0, 0.0, 1.0, tintColor.a) :
-            //   // timeRatio < 0.0 ? vec4(1.0, 0.0, 0.0, tintColor.a) :
-            //   vec4(1.0, 1.0, 0.0, tintColor.a);
-
-            gl_FragColor.a = gl_FragColor.a * gl_FragColor.a;
-            gl_FragColor.a = gl_FragColor.a * gl_FragColor.a;
+            float diagBias = 1.0 - max(abs(vPosition.x), abs(vPosition.z));
+            float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
+            gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra * diagBiasUltra;
 
             `,
             userKeys: Object.keys(users).slice(0, 10* 1000),
@@ -937,7 +928,7 @@ function atlas(invokeType) {
           stats.begin();
           const delta = lastRender ? now - lastRender : 0;
           lastRender = now;
-          controls.update(delta / 1000);
+          controls.update(Math.min(delta / 1000, 0.2));
           fh.tickAll(delta / 1000);
           // shaderState.updateOnFrame(rareMoved);
 
