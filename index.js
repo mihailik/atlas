@@ -1168,6 +1168,7 @@ function atlas(invokeType) {
                 const match = searchWordRegExp.exec(displayName);
                 if (!match) break;
                 matchRank += match[0].length * 2;
+                if (match.index === 0) matchRank += 10;
               }
             }
 
@@ -1175,14 +1176,15 @@ function atlas(invokeType) {
             while (true) {
               const match = searchWordRegExp.exec(shortHandle);
               if (!match) break;
-              matchRank += match[0].length * 2;
+              matchRank += match[0].length * 4;
+              if (match.index === 0) matchRank += 20;
             }
 
             if (matchRank) matches.push([shortDID, matchRank]);
           }
 
           matches.sort((m1, m2) => m2[1] - m1[1]);
-          if (!matches) {
+          if (!matches?.length) {
             reportNoMatches();
           } else {
             reportMatches(matches);
@@ -1190,7 +1192,7 @@ function atlas(invokeType) {
         }
 
         function reportNoMatches() {
-          subtitleArea.textContent = 'No matches.';
+          subtitleArea.innerHTML = '<div style="font-style: italic; font-size: 80%; text-align: center; opacity: 0.6;">No matches.</div>';
         }
 
         /**
