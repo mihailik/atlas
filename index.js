@@ -423,6 +423,10 @@ function atlas(invokeType) {
     return calcCRC32;
   })();
 
+  function dampenPhase(phase) {
+    return (1 - Math.cos(phase * Math.PI)) / 2;
+  }
+
   /**
    * https://stackoverflow.com/a/29018745/140739
    * @param {T[]} arr
@@ -782,21 +786,31 @@ function atlas(invokeType) {
             }
 
             const phase = (passedTime - resumeAfterWait) / SPEED_UP_WITHIN_MSEC;
-            const dampenedPhase = phase * phase;
-            controls.autoRotateSpeed = 0.2 * dampenedPhase;
+            controls.autoRotateSpeed = 0.2 * dampenPhase(phase);
           }
         }
 
         /** @param {{x: number, y: number, h: number }} xyh */
         function moveAndPauseRotation(xyh) {
-          const MOVE_WITHIN_MSEC = 4000;
+          const MOVE_WITHIN_MSEC = 5000;
           const WAIT_AFTER_MOVEMENT_BEFORE_RESUMING_ROTATION_MSEC = 30000;
+          const MIDDLE_AT_PHASE = 0.7;
+          const RAISE_MIDDLE_WITH = 0.25;
+
           pauseRotation();
           const startMoving = Date.now();
           const startCameraPosition = camera.position.clone();
+
+          const r = Math.sqrt(xyh.x * xyh.x + xyh.y * xyh.y);
+          const angle = Math.atan2(xyh.y, xyh.x);
+          const xMiddle = (r + 0.6) * Math.cos(angle);
+          const yMiddle = (r + 0.6) * Math.sin(angle);
+          const hMiddle = xyh.h + RAISE_MIDDLE_WITH;
+
           changingRotationInterval = setInterval(continueMoving, 10);
 
           function continueMoving() {
+
             const passedTime = Date.now() - startMoving;
             if (passedTime > MOVE_WITHIN_MSEC) {
               clearInterval(changingRotationInterval);
@@ -805,19 +819,20 @@ function atlas(invokeType) {
             }
 
             const phase = passedTime / MOVE_WITHIN_MSEC;
-            const dampenedPhase = (1 - Math.cos(phase * Math.PI)) / 2;
 
-            const RAISE_MIDDLE = 0.2;
-
-
-            const height = passedTime < MOVE_WITHIN_MSEC / 2 ?
-              startCameraPosition.y + (RAISE_MIDDLE - startCameraPosition.y) * (1 - Math.cos(phase * 2 * Math.PI)) / 2 :
-              RAISE_MIDDLE + (xyh.h - RAISE_MIDDLE) * (1 - Math.cos((phase - 0.5) * 2 * Math.PI)) / 2;
-
-            camera.position.set(
-              startCameraPosition.x + (xyh.x - startCameraPosition.x) * dampenedPhase,
-              height,
-              startCameraPosition.z + (xyh.y - startCameraPosition.z) * dampenedPhase);
+            if (passedTime < MOVE_WITHIN_MSEC * MIDDLE_AT_PHASE) {
+              const dampenedPhase = dampenPhase(phase / MIDDLE_AT_PHASE);
+              camera.position.set(
+                startCameraPosition.x + (xMiddle - startCameraPosition.x) * dampenedPhase,
+                startCameraPosition.y + (hMiddle - startCameraPosition.y) * dampenedPhase,
+                startCameraPosition.z + (yMiddle - startCameraPosition.z) * dampenedPhase);
+            } else {
+              const dampenedPhase = dampenPhase((phase - MIDDLE_AT_PHASE) / (1 - MIDDLE_AT_PHASE));
+              camera.position.set(
+                xMiddle + (xyh.x - xMiddle) * dampenedPhase,
+                hMiddle + (xyh.h - hMiddle) * dampenedPhase,
+                yMiddle + (xyh.y - yMiddle) * dampenedPhase);
+            }
           }
         }
       }
@@ -1192,6 +1207,7 @@ function atlas(invokeType) {
             height: 2em;
             overflow: hidden;
             font-size: 80%;
+            margin-top: 0.5em;
             `,
             children: [scroller = elem('div', {
               parent: subtitleArea,
@@ -1218,7 +1234,7 @@ function atlas(invokeType) {
               parent: scroller,
               style: `
                 margin-left: 0.3em;
-                padding: 0px 0.2em 0.1em;
+                padding: 0 0.4em 0.2em 0.2em;
                 cursor: pointer;
                 display: -webkit-inline-box;
                 border: 1px solid rgb(255 215 0 / 28%);
@@ -1227,9 +1243,10 @@ function atlas(invokeType) {
               `,
               children: [
                 elem('span', {
-                  textContent: shortHandle,
-                  children: !displayName ? undefined : [
-                    elem('span', {
+                  children: [
+                    elem('span', { textContent: '@', style: 'opacity: 0.5; display: inline-block; transform: scale(0.8) translateY(0.05em);' }),
+                    shortHandle,
+                    !displayName ? undefined : elem('span', {
                       textContent: ' ' + displayName,
                       style: `
                       opacity: 0.6;
