@@ -901,12 +901,44 @@ function atlas(invokeType) {
               children: [
                 stats.domElement,
                 title = elem('h3', {
-                  textContent: 'Atlas 3D',
-                  style: 'text-align: center; font-weight: 100; margin-left: -29px'
+                  style: 'text-align: center; font-weight: 100; margin-left: -29px',
+                  children: [
+                    elem('span', 'display: inline-block; width: 2.2em;'),
+                    elem('span', { textContent: 'Atlas 3D' }),
+                    elem('span', {
+                      className: 'search-icon',
+                      innerHTML: `<style>
+                        .search-icon {
+                          display: inline-block;
+                          transform: rotate(314deg);
+                          cursor: pointer;
+                        }
+                        .search-icon:before {
+                          content: '';
+                          display: inline-block;
+                          border-top: solid 1px currentColor;
+                          width: 0.3em;
+                          height: 0.25em;
+                        }
+                        .search-icon:after {
+                          content: '';
+                          display: inline-block;
+                          border: solid 1.3px currentColor;
+                          border-radius: 1em;
+                          width: 0.5em;
+                          height: 0.5em;
+                        }
+                        </style>` }),
+                  ]
                 }),
                 rightStatus = elem('div', {
-                  innerHTML: String(Object.keys(users).length) + '<br>users',
-                  fontSize: '80%', alignSelf: 'center', paddingRight: '1em', textAlign: 'center'
+                  style: `
+                    font-size: 80%;
+                    align-self: center;
+                    padding-right: 0.3em;
+                    text-align: center;
+                    line-height: 1;
+                  `
                 })
               ]
             })
@@ -918,42 +950,51 @@ function atlas(invokeType) {
         `;
         renderer.domElement.className = 'atlas-3d';
         stats.domElement.style.position = 'relative';
-        return { root, titleBar, title, rightStatus };
-      }
 
-      /** @param {HTMLElement} rightStatus */
-      function statusRenderer(rightStatus) {
-        let userThousand, userDigits, cameraPos, cameraMovementIcon, searchIcon;
+        const status = createStatusRenderer(rightStatus);
+        return { root, titleBar, title, rightStatus, status };
 
-        rightStatus.innerHTML = '';
-        elem('div', {
-          parent: rightStatus,
-          children: [
-            userThousand = elem('span', { textContent: '0' }),
-            elem('span', { style: 'width: 0.25em' }),
-            userDigits = elem('span', { textContent: '000' }),
-          ]
-        });
+        /** @param {HTMLElement} rightStatus */
+        function createStatusRenderer(rightStatus) {
+          let cameraPos, cameraMovementIcon;
 
-        elem('div', {
-          parent: rightStatus,
-          style: `font-size: 80%; opacity: 0.7; transition: opacity 2s;`,
-          children: [
-            cameraPos = elem('span', { textContent: '0.00, 0.00, 0.00' }),
-            elem('span', { style: 'width: 0.25em' }),
-            cameraMovementIcon = elem('span', { textContent: '>' }),
-          ]
-        });
+          const usersCountStr = Object.keys(users).length.toString();
+          elem('div', {
+            parent: rightStatus,
+            children: [
+              elem('div', {
+                innerHTML:
+                  usersCountStr.slice(0, 3) +
+                  '<span style="display: inline-block; width: 0.1em;"></span>' +
+                  usersCountStr.slice(3)
+              }),
+              elem('div', { innerHTML: 'users' }),
+            ]
+          });
 
-        update();
+          const cameraStatusLine = elem('div', {
+            parent: rightStatus,
+            style: `font-size: 80%; opacity: 0.7; margin-top: 0.3em; transition: opacity 2s;`,
+            children: [
+              cameraPos = elem('span', { textContent: '0.00, 0.00, 0.00' }),
+              elem('span', { style: 'display: inline-block; width: 0.25em;' }),
+              cameraMovementIcon = elem('span', { textContent: '>' }),
+            ]
+          });
 
-        return {
-          update
-        };
+          return {
+            update
+          };
 
-        function update() {
+          function update() {
+            cameraPos.textContent =
+              camera.position.x.toFixed(2) + ', ' + camera.position.y.toFixed(2) + ', ' + camera.position.z.toFixed(2);
+            cameraMovementIcon.textContent = controls.autoRotate ? '>' : '||';
+            cameraStatusLine.style.opacity = controls.autoRotate ? '0.4' : '0.7';
+          }
         }
       }
+
 
       /**
        * @param {HTMLElement} touchElement
@@ -1045,23 +1086,23 @@ function atlas(invokeType) {
           renderFrame();
         }
 
-        let cameraStatus;
         let lastCameraUpdate;
+        /** @type {{ x: number, y: number, z: number }} */
+        let lastCameraPos;
         let lastRender;
         function renderFrame() {
           const now = Date.now();
           let rareMoved = false;
-          if (!cameraStatus || !(now < lastCameraUpdate + 200)) {
+          if (!lastCameraPos || !(now < lastCameraUpdate + 200)) {
             lastCameraUpdate = now;
-            if (!cameraStatus) cameraStatus = {
-              elem: elem('div', { parent: domElements.rightStatus, fontSize: '80%', opacity: '0.7', transition: 'opacity 2s' }),
-              lastPos: { x: NaN, y: NaN, z: NaN }
+            if (!lastCameraPos) lastCameraPos = {
+              x: NaN, y: NaN, z: NaN
             };
 
             const dist = Math.sqrt(
-              (camera.position.x - cameraStatus.lastPos.x) * (camera.position.x - cameraStatus.lastPos.x) +
-              (camera.position.y - cameraStatus.lastPos.y) * (camera.position.y - cameraStatus.lastPos.y) +
-              (camera.position.z - cameraStatus.lastPos.z) * (camera.position.z - cameraStatus.lastPos.z));
+              (camera.position.x - lastCameraPos.x) * (camera.position.x - lastCameraPos.x) +
+              (camera.position.y - lastCameraPos.y) * (camera.position.y - lastCameraPos.y) +
+              (camera.position.z - lastCameraPos.z) * (camera.position.z - lastCameraPos.z));
             
             if (!(dist < 0.0001)) rareMoved = true;
           }
@@ -1077,16 +1118,11 @@ function atlas(invokeType) {
           stats.end();
 
           if (rareMoved) {
-            cameraStatus.lastPos.x = camera.position.x;
-            cameraStatus.lastPos.y = camera.position.y;
-            cameraStatus.lastPos.z = camera.position.z;
-            cameraStatus.elem.textContent =
-              camera.position.x.toFixed(2) + ', ' + camera.position.y.toFixed(2) + ', ' + camera.position.z.toFixed(2) +
-              ' ' + (controls.autoRotate ? '>' : '||');
-            cameraStatus.elem.style.opacity = controls.autoRotate ? '0.4' : '0.7';
+            lastCameraPos.x = camera.position.x;
+            lastCameraPos.y = camera.position.y;
+            lastCameraPos.z = camera.position.z;
+            domElements.status.update();
             location.hash = '#' + camera.position.x.toFixed(2) + ',' + camera.position.y.toFixed(2) + ',' + camera.position.z.toFixed(2);
-
-            //updateCamera(camera.position);
           }
         }
       }
