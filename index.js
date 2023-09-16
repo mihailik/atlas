@@ -628,7 +628,7 @@ function atlas(invokeType) {
       } = setupScene();
 
       const domElements = appendToDOM();
-      const controls = setupOrbitControls(camera);
+      const orbit = setupOrbitControls(camera);
       if (location.hash?.length > 3) {
         const hasCommaParts = location.hash.replace(/^#/, '').split(',');
         if (hasCommaParts.length === 3) {
@@ -725,36 +725,101 @@ function atlas(invokeType) {
        * @param {THREE.Camera} camera
        */
       function setupOrbitControls(camera) {
+        const STEADY_ROTATION_SPEED = 0.2;
+
         const controls = new OrbitControls(camera, renderer.domElement);
         let autorotateTimeout1, autorotateTimeout2, autorotateTimeout3;
         controls.addEventListener('start', function () {
-          clearTimeout(autorotateTimeout1);
-          clearTimeout(autorotateTimeout2);
-          clearTimeout(autorotateTimeout3);
-          controls.autoRotate = false;
+          pauseRotation();
         });
 
         // restart autorotate after the last interaction & an idle time has passed
         controls.addEventListener('end', function () {
-          autorotateTimeout1 = setTimeout(function () {
-            controls.autoRotateSpeed = 0.01;
-            controls.autoRotate = true;
-            autorotateTimeout2 = setTimeout(function () {
-              controls.autoRotateSpeed = 0.05;
-              autorotateTimeout3 = setTimeout(function () {
-                controls.autoRotateSpeed = 0.2;
-              }, 2000);
-            }, 3000);
-          }, 5000);
+          waitAndResumeRotation();
         });
 
         controls.maxDistance = 40 * 1000;
         controls.enableDamping = true;
         controls.autoRotate = true;
-        controls.autoRotateSpeed = 0.2;
+        controls.autoRotateSpeed = STEADY_ROTATION_SPEED;
         controls.listenToKeyEvents(window);
 
-        return controls;
+        return {
+          controls,
+          pauseRotation,
+          waitAndResumeRotation,
+          moveAndPauseRotation
+        };
+
+        var changingRotationInterval;
+
+        function pauseRotation() {
+          controls.autoRotate = false;
+          clearInterval(changingRotationInterval);
+        }
+
+        function waitAndResumeRotation(resumeAfterWait) {
+          const WAIT_BEFORE_RESUMING_MSEC = 10000;
+          const SPEED_UP_WITHIN_MSEC = 10000;
+
+          if (!resumeAfterWait) resumeAfterWait = WAIT_BEFORE_RESUMING_MSEC;
+
+          clearInterval(changingRotationInterval);
+          const startResumingRotation = Date.now();
+          changingRotationInterval = setInterval(continueResumingRotation, 100);
+
+          controls.autoRotateSpeed = 0.0001;
+          controls.autoRotate = true;
+
+          function continueResumingRotation() {
+            const passedTime = Date.now() - startResumingRotation;
+            if (passedTime < resumeAfterWait) return;
+            if (passedTime > resumeAfterWait + SPEED_UP_WITHIN_MSEC) {
+              controls.autoRotateSpeed = STEADY_ROTATION_SPEED;
+              controls.autoRotate = true;
+              clearInterval(changingRotationInterval);
+              return;
+            }
+
+            const phase = (passedTime - resumeAfterWait) / SPEED_UP_WITHIN_MSEC;
+            const dampenedPhase = phase * phase;
+            controls.autoRotateSpeed = 0.2 * dampenedPhase;
+          }
+        }
+
+        /** @param {{x: number, y: number, h: number }} xyh */
+        function moveAndPauseRotation(xyh) {
+          const MOVE_WITHIN_MSEC = 4000;
+          const WAIT_AFTER_MOVEMENT_BEFORE_RESUMING_ROTATION_MSEC = 30000;
+          pauseRotation();
+          const startMoving = Date.now();
+          const startCameraPosition = camera.position.clone();
+          changingRotationInterval = setInterval(continueMoving, 10);
+
+          function continueMoving() {
+            const passedTime = Date.now() - startMoving;
+            if (passedTime > MOVE_WITHIN_MSEC) {
+              clearInterval(changingRotationInterval);
+              waitAndResumeRotation(WAIT_AFTER_MOVEMENT_BEFORE_RESUMING_ROTATION_MSEC);
+              return;
+            }
+
+            const phase = passedTime / MOVE_WITHIN_MSEC;
+            const dampenedPhase = (1 - Math.cos(phase * Math.PI)) / 2;
+
+            const RAISE_MIDDLE = 0.2;
+
+
+            const height = passedTime < MOVE_WITHIN_MSEC / 2 ?
+              startCameraPosition.y + (RAISE_MIDDLE - startCameraPosition.y) * (1 - Math.cos(phase * 2 * Math.PI)) / 2 :
+              RAISE_MIDDLE + (xyh.h - RAISE_MIDDLE) * (1 - Math.cos((phase - 0.5) * 2 * Math.PI)) / 2;
+
+            camera.position.set(
+              startCameraPosition.x + (xyh.x - startCameraPosition.x) * dampenedPhase,
+              height,
+              startCameraPosition.z + (xyh.y - startCameraPosition.z) * dampenedPhase);
+          }
+        }
       }
 
       /** @param {{x: { min: number, max: number}, y: { min: number, max: number }}} bounds */
@@ -996,8 +1061,8 @@ function atlas(invokeType) {
           function update() {
             cameraPos.textContent =
               camera.position.x.toFixed(2) + ', ' + camera.position.y.toFixed(2) + ', ' + camera.position.z.toFixed(2);
-            cameraMovementIcon.textContent = controls.autoRotate ? '>' : '||';
-            cameraStatusLine.style.opacity = controls.autoRotate ? '0.4' : '0.7';
+            cameraMovementIcon.textContent = orbit.controls.autoRotate ? '>' : '||';
+            cameraStatusLine.style.opacity = orbit.controls.autoRotate ? '0.4' : '0.7';
           }
         }
 
@@ -1172,18 +1237,17 @@ function atlas(invokeType) {
                     })
                   ]
                 })
-              ]
+              ],
+              onclick: () => {
+                const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, userBounds);
+                const r = Math.sqrt(x * x + y * y);
+                const angle = Math.atan2(y, x);
+                const xPlus = (r + 0.002) * Math.cos(angle);
+                const yPlus = (r + 0.002) * Math.sin(angle);
+                orbit.moveAndPauseRotation({ x: xPlus, y: yPlus, h: h + 0.0005 });
+              }
             });
 
-            matchElem.addEventListener('click', () => {
-              const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, userBounds);
-              const r = Math.sqrt(x * x + y * y);
-              const angle = Math.atan2(y, x);
-              const xPlus = (r + 0.001) * Math.cos(angle);
-              const yPlus = (r + 0.001) * Math.sin(angle);
-              camera.position.set(xPlus, h + 0.0005, yPlus);
-              switchToSearch();
-            });
           }
         }
 
@@ -1304,7 +1368,7 @@ function atlas(invokeType) {
           stats.begin();
           const delta = lastRender ? now - lastRender : 0;
           lastRender = now;
-          controls.update(Math.min(delta / 1000, 0.2));
+          orbit.controls.update(Math.min(delta / 1000, 0.2));
           fh.tickAll(delta / 1000);
           // shaderState.updateOnFrame(rareMoved);
 
