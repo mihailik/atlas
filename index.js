@@ -883,7 +883,7 @@ function atlas(invokeType) {
       }
 
       function appendToDOM() {
-        let title, titleBar, rightStatus;
+        let title, titleBar, rightStatus, searchMode;
         const root = elem('div', {
           parent: document.body,
           style: `
@@ -898,6 +898,7 @@ function atlas(invokeType) {
               display: grid; grid-template-rows: auto; grid-template-columns: auto 1fr auto;
               z-index: 10;
               max-height: 5em;`,
+              onclick: () => { if (!searchMode) switchToSearch(); },
               children: [
                 stats.domElement,
                 title = elem('h3', {
@@ -993,6 +994,11 @@ function atlas(invokeType) {
             cameraStatusLine.style.opacity = controls.autoRotate ? '0.4' : '0.7';
           }
         }
+
+        function switchToSearch() {
+
+        }
+
       }
 
 
