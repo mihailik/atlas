@@ -792,9 +792,9 @@ function atlas(invokeType) {
 
         /** @param {{x: number, y: number, h: number }} xyh */
         function moveAndPauseRotation(xyh) {
-          const MOVE_WITHIN_MSEC = 5000;
+          const MOVE_WITHIN_MSEC = 6000;
           const WAIT_AFTER_MOVEMENT_BEFORE_RESUMING_ROTATION_MSEC = 30000;
-          const MIDDLE_AT_PHASE = 0.7;
+          const MIDDLE_AT_PHASE = 0.6;
           const RAISE_MIDDLE_WITH = 0.25;
 
           pauseRotation();
@@ -1204,7 +1204,7 @@ function atlas(invokeType) {
             style: `
             position: absolute;
             width: 100%;
-            height: 2em;
+            height: 2.5em;
             overflow: hidden;
             font-size: 80%;
             margin-top: 0.5em;
@@ -1216,7 +1216,8 @@ function atlas(invokeType) {
             overflow: auto;
             white-space: nowrap;
             width: 100%;
-            height: 3.5em;
+            height: 3.3em;
+            padding-top: 0.2em;
             `
             })
             ]
@@ -1234,12 +1235,15 @@ function atlas(invokeType) {
               parent: scroller,
               style: `
                 margin-left: 0.3em;
-                padding: 0 0.4em 0.2em 0.2em;
+                padding: 0px 0.4em 0.2em 0.2em;
                 cursor: pointer;
-                display: -webkit-inline-box;
-                border: 1px solid rgb(255 215 0 / 28%);
+                display: inline-box;
+                border: 1px solid rgba(255, 215, 0, 0.28);
                 border-radius: 1em;
-                background: #ffd70029;
+                background: rgb(88 74 0 / 78%);
+                text-shadow: 1px 1px 2px #0000004f;
+                box-shadow: 2px 2px 7px #000000a8;
+              }
               `,
               children: [
                 elem('span', {
