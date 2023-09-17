@@ -541,6 +541,8 @@ function atlas(invokeType) {
     const THREE = /** @type {*} */(atlas).imports['three'];
     const Stats = /** @type {*} */(atlas).imports['three/addons/libs/stats.module.js'];
     const OrbitControls = /** @type {*} */(atlas).imports['three/addons/controls/OrbitControls.js'];
+    /** @type {typeof import('troika-three-text')} */
+    const troika_three_text = /** @type {*} */(atlas).imports['troika-three-text'];
 
     console.log('Users: ', typeof users, Object.keys(users).length);
     threedshell();
@@ -815,6 +817,7 @@ function atlas(invokeType) {
             if (passedTime > MOVE_WITHIN_MSEC) {
               clearInterval(changingRotationInterval);
               waitAndResumeRotation(WAIT_AFTER_MOVEMENT_BEFORE_RESUMING_ROTATION_MSEC);
+              // controls.target.set(xyh.x, xyh.h, xyh.y);
               return;
             }
 
@@ -1327,8 +1330,6 @@ function atlas(invokeType) {
             const usrTuple = users[shortDID];
             const shortHandle = usrTuple[0];
             const displayName = usrTuple[4];
-            const xSpace = usrTuple[1];
-            const ySpace = usrTuple[2];
 
             const matchElem = elem('span', {
               parent: scroller,
@@ -1366,18 +1367,82 @@ function atlas(invokeType) {
                 })
               ],
               onclick: () => {
-                const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, userBounds);
-                const r = Math.sqrt(x * x + y * y);
-                const angle = Math.atan2(y, x);
-                const xPlus = (r + 0.002) * Math.cos(angle);
-                const yPlus = (r + 0.002) * Math.sin(angle);
-                orbit.moveAndPauseRotation({ x: xPlus, y: yPlus, h: h + 0.0005 });
+                focusAndHighlightUser(shortDID);
               }
             });
 
           }
         }
 
+      }
+
+      /** @type {Function[]} */
+      var higlightUserStack;
+      /** @param {string} shortDID */
+      function focusAndHighlightUser(shortDID) {
+        const MAX_HIGHLIGHT_COUNT = 10;
+        while (higlightUserStack?.length > MAX_HIGHLIGHT_COUNT) {
+          const dispose = higlightUserStack.pop();
+          dispose?.();
+        }
+
+        const usrTuple = users[shortDID];
+        const shortHandle = usrTuple[0];
+        const displayName = usrTuple[4];
+        const xSpace = usrTuple[1];
+        const ySpace = usrTuple[2];
+
+        //troika_three_text
+        const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, userBounds);
+        const r = Math.sqrt(x * x + y * y);
+        const angle = Math.atan2(y, x);
+        const xPlus = (r + 0.09) * Math.cos(angle);
+        const yPlus = (r + 0.09) * Math.sin(angle);
+        const hPlus = h + 0.04;
+        orbit.moveAndPauseRotation({ x: xPlus, y: yPlus, h: hPlus });
+
+        const userColor = defaultUserColorer(shortDID);
+
+        const material = new THREE.MeshLambertMaterial({
+          color: userColor,
+          transparent: true,
+          opacity: 0.9,
+          // emissive: userColor,
+        });
+        const stem = new THREE.CylinderGeometry(0.0005, 0.00001, 0.001);
+        const ball = new THREE.SphereGeometry(0.003);
+        const stemMesh = new THREE.Mesh(stem, material);
+        const ballMesh = new THREE.Mesh(ball, material);
+        stemMesh.position.set(x, h + 0.005, y);
+        stemMesh.scale.set(1, 10, 1);
+
+        ballMesh.position.set(x, h + 0.0125, y);
+        scene.add(stemMesh);
+        scene.add(ballMesh);
+
+        const text = new troika_three_text.Text();
+        text.text = '@' + shortHandle;
+        text.fontSize = 0.01;
+        text.position.set(x, h + 0.03, y);
+        text.color = userColor;
+        scene.add(/** @type {*} */(text));
+        text.sync();
+
+        if (!higlightUserStack) higlightUserStack = [unhighlightUser];
+        else higlightUserStack.push(unhighlightUser);
+
+        function unhighlightUser() {
+          scene.remove(/** @type {*} */(text));
+          text.dispose();
+
+          scene.remove(stemMesh);
+          scene.remove(ballMesh);
+          material.dispose();
+          stem.dispose();
+          ball.dispose();
+
+          /** @type {*} */(focusAndHighlightUser).unhighlightUser = undefined;
+        }
       }
 
 
