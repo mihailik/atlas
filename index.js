@@ -1257,7 +1257,7 @@ function atlas(invokeType) {
               while (true) {
                 const match = searchWordRegExp.exec(displayName);
                 if (!match) break;
-                matchRank += match[0].length * 2;
+                matchRank += (match[0].length / displayName.length) * 20;
                 if (match.index === 0) matchRank += 30;
               }
 
@@ -1269,7 +1269,7 @@ function atlas(invokeType) {
             while (true) {
               const match = searchWordRegExp.exec(shortHandle);
               if (!match) break;
-              matchRank += match[0].length * 4;
+              matchRank += (match[0].length / shortHandle.length) * 30;
               if (match.index === 0) matchRank += 40;
             }
 
