@@ -1052,15 +1052,7 @@ function atlas(invokeType) {
               ]
             }),
             subtitleArea = elem('div', 'color: gold; z-index: 200; position: relative;'),
-            bottomStatusLine = elem('div', {
-              style: `
-                grid-row: 5;
-                color: #90b8ff;
-                z-index: 10;
-                font-size: 80%;
-                text-shadow: 6px -2px 7px black, -3px -6px 7px black, 5px 4px 7px black;`,
-              textContent: 'bottom status line'
-            })
+            bottomStatusLine = createBottomStatusLine()
           ]
         });
         renderer.domElement.style.cssText = `
@@ -1111,6 +1103,60 @@ function atlas(invokeType) {
             cameraMovementIcon.textContent = orbit.controls.autoRotate ? '>' : '||';
             cameraStatusLine.style.opacity = orbit.controls.autoRotate ? '0.4' : '0.7';
           }
+        }
+
+        function createBottomStatusLine() {
+          let likesElem, postsElem, repostsElem, followsElem, unknownsElem;
+
+          const bottomStatusLine = /** @type {HTMLDivElement & { update(outcome) }} */(elem('div', {
+            style: `
+                grid-row: 5;
+                color: #cc903b;
+                z-index: 10;
+                font-size: 80%;
+                text-shadow: 6px -2px 7px black, -3px -6px 7px black, 5px 4px 7px black;
+                padding: 0.25em;
+                padding-right: 0.5em;
+                text-align: right;
+                line-height: 1.5;`,
+            children: [
+              elem('div', {
+                children: [elem('a', {
+                  href: 'https://bsky.app/profile/oyin.bo', innerHTML: 'created by <b>@oyin.bo</b>',
+                  style: 'color: gray; text-decoration: none; font-weight: 100;'
+                })]
+              }),
+              elem('div', {
+                children: [elem('a', {
+                  href: 'https://bsky.jazco.dev/', innerHTML: 'exploiting geo-spatial data from <b>@jaz.bsky.social</b>',
+                  style: 'color: gray; text-decoration: none; font-weight: 100;'
+                })]
+              }),
+              elem('div', { height: '0.5em'}),
+              'likes: ',
+              likesElem = elem('span', { color: 'gold' }),
+              ', posts: ',
+              postsElem = elem('span', { color: 'gold' }),
+              ', reposts: ',
+              repostsElem = elem('span', { color: 'gold' }),
+              ', follows: ',
+              followsElem = elem('span', { color: 'gold' }),
+              ', ',
+              elem('span', { textContent: 'unknown users: ', color: '#1ca1a1' }),
+              unknownsElem = elem('span', { color: 'cyan' })
+            ]
+          }));
+          bottomStatusLine.update = update;
+          return bottomStatusLine;
+
+          function update(outcome) {
+            likesElem.textContent = outcome.likes.toString();
+            postsElem.textContent = outcome.posts.toString();
+            repostsElem.textContent = outcome.reposts.toString();
+            followsElem.textContent = outcome.follows.toString();
+            unknownsElem.textContent = outcome.unknowns.toString();
+          }
+
         }
 
         /** @type {HTMLElement} */
@@ -1346,6 +1392,7 @@ function atlas(invokeType) {
           while (testElem && testElem !== document.body) {
             if (testElem === domElements.titleBar) return true;
             if (testElem === domElements.subtitleArea) return true;
+            if (testElem === domElements.bottomStatusLine) return true;
             if (testElem === renderer.domElement) return false;
             if (testElem === domElements.root) return false;
             testElem = testElem.parentElement;
@@ -1456,8 +1503,7 @@ function atlas(invokeType) {
 
           if (!(now - lastBottomStatsUpdate < 1000) && domElements.bottomStatusLine) {
             lastBottomStatsUpdate = now;
-            domElements.bottomStatusLine.textContent =
-              'likes: ' + fh.likes + ' posts: ' + fh.posts + ' reposts: ' + fh.reposts + ' follows: ' + fh.follows + ' unknowns: ' + fh.unknowns;
+            domElements.bottomStatusLine.update(fh);
           }
         }
       }
