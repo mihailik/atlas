@@ -847,28 +847,43 @@ function atlas(invokeType) {
         const rend = flashesRenderer();
         let updateUsers = false;
 
+        const unknownsSet = new Set();
+
         firehoseWithFallback({
           post(author, postID, text, replyTo, replyToThread, timeMsec) {
             addActiveUser(author, 1, timeMsec);
+            replyTo?.shortDID ? addActiveUser(replyTo.shortDID, 1, timeMsec) : undefined;
+            replyToThread?.shortDID ? addActiveUser(replyToThread.shortDID, 0.5, timeMsec) : undefined;
+            outcome.posts++;
           },
           repost(who, whose, postID, timeMsec) {
             addActiveUser(who, 0.6, timeMsec);
             addActiveUser(whose, 0.7, timeMsec);
+            outcome.reposts++;
           },
           like(who, whose, postID, timeMsec) {
             addActiveUser(who, 0.1, timeMsec);
             addActiveUser(whose, 0.4, timeMsec);
+            outcome.likes++;
           },
           follow(who, whom, timeMsec) {
             addActiveUser(who, 0.1, timeMsec);
             addActiveUser(whom, 1.5, timeMsec);
+            outcome.follows++;
           }
         });
 
-        return {
+        const outcome = {
+          posts: 0,
+          reposts: 0,
+          likes: 0,
+          follows: 0,
+          unknowns: 0,
           mesh: rend.mesh,
           tickAll
         };
+
+        return outcome;
 
         function flashesRenderer() {
           const rend = billboardShaderRenderer({
@@ -949,26 +964,34 @@ function atlas(invokeType) {
             updateUsers = true;
             existingUser.weight = Math.min(MAX_WEIGHT, weight * 0.2 + existingUser.weight);
             existingUser.fadeAtMsec = now + FADE_TIME_MSEC;
-            return;
+            return 2;
           }
 
           const usrTuple = users[shortDID];
-          if (!usrTuple) return;
+          if (!usrTuple) {
+            if (!outcome.unknowns && unknownsSet.size)
+              unknownsSet.clear();
+            unknownsSet.add(shortDID);
+            outcome.unknowns = unknownsSet.size;
+            return;
+          }
+
           const { x, y, h } = mapUserCoordsToAtlas(usrTuple[1], usrTuple[2], userBounds);
           const color = defaultUserColorer(shortDID);
 
           activeUsers[shortDID] = { x, y, h, weight: weight * 0.2, color, startAtMsec: now, fadeAtMsec: now + FADE_TIME_MSEC };
           updateUsers = true;
+          return 1;
         }
       }
 
       function appendToDOM() {
-        let title, titleBar, subtitleArea, rightStatus, searchMode;
+        let title, titleBar, subtitleArea, rightStatus, searchMode, bottomStatusLine;
         const root = elem('div', {
           parent: document.body,
           style: `
           position: fixed; left: 0; top: 0; width: 100%; height: 100%;
-          display: grid; grid-template-rows: auto auto 1fr; grid-template-columns: 1fr;
+          display: grid; grid-template-rows: auto auto 1fr auto; grid-template-columns: 1fr;
           `,
           children: [
             renderer.domElement,
@@ -1028,7 +1051,16 @@ function atlas(invokeType) {
                 })
               ]
             }),
-            subtitleArea = elem('div', 'color: gold; z-index: 200; position: relative;')
+            subtitleArea = elem('div', 'color: gold; z-index: 200; position: relative;'),
+            bottomStatusLine = elem('div', {
+              style: `
+                grid-row: 5;
+                color: #90b8ff;
+                z-index: 10;
+                font-size: 80%;
+                text-shadow: 6px -2px 7px black, -3px -6px 7px black, 5px 4px 7px black;`,
+              textContent: 'bottom status line'
+            })
           ]
         });
         renderer.domElement.style.cssText = `
@@ -1039,7 +1071,7 @@ function atlas(invokeType) {
         stats.domElement.style.position = 'relative';
 
         const status = createStatusRenderer(rightStatus);
-        return { root, titleBar, subtitleArea, title, rightStatus, status };
+        return { root, titleBar, subtitleArea, title, rightStatus, status, bottomStatusLine };
 
         /** @param {HTMLElement} rightStatus */
         function createStatusRenderer(rightStatus) {
@@ -1386,6 +1418,7 @@ function atlas(invokeType) {
         /** @type {{ x: number, y: number, z: number }} */
         let lastCameraPos;
         let lastRender;
+        let lastBottomStatsUpdate;
         function renderFrame() {
           const now = Date.now();
           let rareMoved = false;
@@ -1419,6 +1452,12 @@ function atlas(invokeType) {
             lastCameraPos.z = camera.position.z;
             domElements.status.update();
             location.hash = '#' + camera.position.x.toFixed(2) + ',' + camera.position.y.toFixed(2) + ',' + camera.position.z.toFixed(2);
+          }
+
+          if (!(now - lastBottomStatsUpdate < 1000) && domElements.bottomStatusLine) {
+            lastBottomStatsUpdate = now;
+            domElements.bottomStatusLine.textContent =
+              'likes: ' + fh.likes + ' posts: ' + fh.posts + ' reposts: ' + fh.reposts + ' follows: ' + fh.follows + ' unknowns: ' + fh.unknowns;
           }
         }
       }
@@ -1543,6 +1582,7 @@ function atlas(invokeType) {
             void main() {
               gl_FragColor = vColor;
               float dist = distance(vPosition, vec3(0.0));
+              dist = vDiameter < 0.0 ? dist * 2.0 : dist;
               float rad = 0.25;
               float areola = rad * 2.0;
               float bodyRatio =
@@ -1559,7 +1599,7 @@ function atlas(invokeType) {
               vec4 tintColor = vColor;
               tintColor.a = radiusRatio;
               gl_FragColor = mix(gl_FragColor, vec4(1.0,1.0,1.0,0.7), fogRatio);
-              gl_FragColor = vDiameter < 0.0 ? vec4(1.0,0.0,0.0,1.0) : gl_FragColor;
+              gl_FragColor = vDiameter < 0.0 ? vec4(0.6,0.0,0.0,1.0) : gl_FragColor;
               gl_FragColor.a = bodyRatio;
 
               vec3 position = vPosition;
