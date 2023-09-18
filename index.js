@@ -1399,7 +1399,7 @@ function atlas(invokeType) {
       var higlightUserStack;
       /** @param {string} shortDID */
       function focusAndHighlightUser(shortDID) {
-        const MAX_HIGHLIGHT_COUNT = 10;
+        const MAX_HIGHLIGHT_COUNT = 25;
         while (higlightUserStack?.length > MAX_HIGHLIGHT_COUNT) {
           const dispose = higlightUserStack.pop();
           dispose?.();
