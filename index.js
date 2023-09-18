@@ -1195,7 +1195,10 @@ function atlas(invokeType) {
                   border: none;
                   outline: none;
                   `,
-                  onkeydown: handleInputEventQueue,
+                  onkeydown: (event) => {
+                    if (event.keyCode === 27) closeSearch();
+                    handleInputEventQueue(event);
+                  },
                   onkeyup: handleInputEventQueue,
                   onkeypress: handleInputEventQueue,
                   onmousedown: handleInputEventQueue,
@@ -1213,13 +1216,9 @@ function atlas(invokeType) {
                     cursor: pointer;
                     `,
                   textContent: '×',
-                  onclick: () => {
-                    setTimeout(() => {
-                      searchBar.style.display = 'none';
-                      searchInput.value = '';
-                      subtitleArea.innerHTML = '';
-                      clearTimeout(debounceTimeoutSearchInput);
-                    }, 100);
+                  onclick: (event) => {
+                    event.preventDefault();
+                    closeSearch();
                   }
                 })
               ]
@@ -1227,6 +1226,15 @@ function atlas(invokeType) {
           }
           searchBar.style.display = 'block';
           searchInput.focus();
+        }
+
+        function closeSearch() {
+          setTimeout(() => {
+            searchBar.style.display = 'none';
+            searchInput.value = '';
+            subtitleArea.innerHTML = '';
+            clearTimeout(debounceTimeoutSearchInput);
+          }, 100);
         }
 
         var debounceTimeoutSearchInput;
