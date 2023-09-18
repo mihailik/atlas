@@ -1410,7 +1410,7 @@ function atlas(invokeType) {
       function focusAndHighlightUser(shortDID) {
         const MAX_HIGHLIGHT_COUNT = 25;
         while (higlightUserStack?.length > MAX_HIGHLIGHT_COUNT) {
-          const dispose = higlightUserStack.pop();
+          const dispose = higlightUserStack.shift();
           dispose?.();
         }
 
