@@ -1609,7 +1609,7 @@ function atlas(invokeType) {
                 if (vib > 1) {
                   try {
                     if (typeof navigator.vibrate === 'function') {
-                      navigator.vibrate(Math.floor(vib) * 30);
+                      navigator.vibrate(30);
                     }
                   } catch (bibErr) {}
                 }
