@@ -677,15 +677,15 @@ function atlas(invokeType) {
 
         const scene = new THREE.Scene();
 
-        const dirLight1 = new THREE.DirectionalLight(0xffffff, 5);
-        dirLight1.position.set(3000, 1500, -3000);
+        const dirLight1 = new THREE.DirectionalLight(0xffffff, 7);
+        dirLight1.position.set(0.5, 1, -0.5);
         scene.add(dirLight1);
 
-        const dirLight2 = new THREE.DirectionalLight(0xffffff, 5);
-        dirLight2.position.set(-3000, 1500, -3000);
+        const dirLight2 = new THREE.DirectionalLight(0xffffff, 2);
+        dirLight2.position.set(-0.5, -0.5, 0.5);
         scene.add(dirLight2);
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
         scene.add(ambientLight);
 
         const renderer = new THREE.WebGLRenderer();
@@ -1383,7 +1383,8 @@ function atlas(invokeType) {
                         opacity: 0.6;
                         display: inline-block;
                         zoom: 0.7;
-                        transform: scaleY(1.3) translateY(0.05em);
+                        transform: scaleY(1.3) translateY(0.15em);
+                        transform-origin: center;
                         max-width: 6em;
                         overflow: hidden;
                         white-space: nowrap;
@@ -1450,7 +1451,7 @@ function atlas(invokeType) {
         const text = new troika_three_text.Text();
         text.text = '@' + shortHandle;
         text.fontSize = 0.01;
-        text.position.set(x, h + 0.03, y);
+        text.position.set(x - 0.005, h + 0.03, y);
         text.color = userColor;
         scene.add(/** @type {*} */(text));
         text.sync();
