@@ -1451,16 +1451,33 @@ function atlas(invokeType) {
         const text = new troika_three_text.Text();
         text.text = '@' + shortHandle;
         text.fontSize = 0.01;
-        text.position.set(x - 0.005, h + 0.03, y);
         text.color = userColor;
-        scene.add(/** @type {*} */(text));
+        // text.outlineWidth = 0.0005;
+        // text.outlineBlur = 0.005;
+        text.position.set(-0.005, 0.03, 0);
+        //text.depthOffset = 0.001;
+        const group = new THREE.Group();
+        group.position.set(x, h, y);
+        group.add(/** @type {*} */(text));
+        group.rotation.y = 0.001;
+        ballMesh.onBeforeRender = applyTextBillboarding;
+        //text.geometry.onBeforeRender = applyTextBillboarding;
+        //group.onBeforeRender = applyTextBillboarding;
+        scene.add(group);
         text.sync();
 
         if (!higlightUserStack) higlightUserStack = [unhighlightUser];
         else higlightUserStack.push(unhighlightUser);
 
+        function applyTextBillboarding() {
+          group.rotation.y = Math.atan2(
+            (camera.position.x - group.position.x),
+            (camera.position.z - group.position.z));
+          text.sync();
+        }
+
         function unhighlightUser() {
-          scene.remove(/** @type {*} */(text));
+          scene.remove(group);
           text.dispose();
 
           scene.remove(stemMesh);
@@ -1585,7 +1602,19 @@ function atlas(invokeType) {
               (camera.position.y - lastCameraPos.y) * (camera.position.y - lastCameraPos.y) +
               (camera.position.z - lastCameraPos.z) * (camera.position.z - lastCameraPos.z));
             
-            if (!(dist < 0.0001)) rareMoved = true;
+            if (!(dist < 0.0001)) {
+              rareMoved = true;
+              if (Number.isFinite(dist)) {
+                const vib = dist / 0.1;
+                if (vib > 1) {
+                  try {
+                    if (typeof navigator.vibrate === 'function') {
+                      navigator.vibrate(Math.floor(vib) * 30);
+                    }
+                  } catch (bibErr) {}
+                }
+              }
+            }
           }
 
           stats.begin();
