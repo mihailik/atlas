@@ -1588,6 +1588,7 @@ function atlas(invokeType) {
         let lastCameraPos;
         let lastRender;
         let lastBottomStatsUpdate;
+        let lastVibeCameraPos;
         function renderFrame() {
           const now = Date.now();
           let rareMoved = false;
@@ -1604,17 +1605,25 @@ function atlas(invokeType) {
             
             if (!(dist < 0.0001)) {
               rareMoved = true;
-              if (Number.isFinite(dist)) {
-                const vib = dist / 0.1;
-                if (vib > 1) {
-                  try {
-                    if (typeof navigator.vibrate === 'function') {
-                      navigator.vibrate(30);
-                    }
-                  } catch (bibErr) {}
-                }
-              }
             }
+          }
+
+          if (!lastVibeCameraPos) {
+            lastVibeCameraPos = camera.position.clone();
+          } else {
+            const vibeDist = Math.sqrt(
+              (camera.position.x - lastVibeCameraPos.x) * (camera.position.x - lastVibeCameraPos.x) +
+              (camera.position.y - lastVibeCameraPos.y) * (camera.position.y - lastVibeCameraPos.y) +
+              (camera.position.z - lastVibeCameraPos.z) * (camera.position.z - lastVibeCameraPos.z));
+            if (Number.isFinite(vibeDist) && vibeDist > 0.1) {
+              lastVibeCameraPos.copy(camera.position);
+              try {
+                if (typeof navigator.vibrate === 'function') {
+                  navigator.vibrate(30);
+                }
+              } catch (bibErr) { }
+            }
+
           }
 
           stats.begin();
