@@ -1178,6 +1178,8 @@ function atlas(invokeType) {
         var searchBar;
         /** @type {HTMLInputElement} */
         var searchInput;
+        /** @type {HTMLButtonElement} */
+        var closeButton;
         function switchToSearch() {
           if (!searchBar) {
             searchBar = elem('div', {
@@ -1202,6 +1204,23 @@ function atlas(invokeType) {
                   onchange: handleInputEventQueue,
                   oninput: handleInputEventQueue,
                   placeholder: '    find accounts...'
+                }),
+                closeButton = elem('button', {
+                  style: `
+                    position: absolute; right: 0; top: 0; width: 2em; height: 100%;
+                    background: transparent; border: none; outline: none;
+                    color: gold; font-size: 80%;
+                    cursor: pointer;
+                    `,
+                  textContent: '×',
+                  onclick: () => {
+                    setTimeout(() => {
+                      searchBar.style.display = 'none';
+                      searchInput.value = '';
+                      subtitleArea.innerHTML = '';
+                      clearTimeout(debounceTimeoutSearchInput);
+                    }, 100);
+                  }
                 })
               ]
             });
