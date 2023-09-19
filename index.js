@@ -622,40 +622,139 @@ function atlas(invokeType) {
     }
 
     async function threedshell() {
-      const worldStartTime = Date.now();
+      run();
 
-      const {
-        scene,
-        camera,
-        lights,
-        renderer,
-        stats,
-        clock,
-        updateCamera,
-        userBounds
-      } = setupScene();
+      function run() {
+        const worldStartTime = Date.now();
 
-      const domElements = appendToDOM();
-      const orbit = setupOrbitControls(camera);
-      if (location.hash?.length > 3) {
-        const hasCommaParts = location.hash.replace(/^#/, '').split(',');
-        if (hasCommaParts.length === 3) {
-          const [cameraX, cameraY, cameraZ] = hasCommaParts.map(parseFloat);
-          camera.position.set(cameraX, cameraY, cameraZ);
+        const {
+          scene,
+          camera,
+          lights,
+          renderer,
+          stats,
+          clock,
+          updateCamera,
+          usersBounds
+        } = setupScene(worldStartTime);
+
+        const orbit = setupOrbitControls(camera, renderer.domElement);
+
+        const domElements = appendToDOM({
+          camera,
+          canvas3D: renderer.domElement,
+          orbit: orbit.controls,
+          moveAndPauseRotation: orbit.moveAndPauseRotation,
+          statsElem: stats.domElement,
+          scene,
+          usersBounds
+        });
+        if (location.hash?.length > 3) {
+          const hasCommaParts = location.hash.replace(/^#/, '').split(',');
+          if (hasCommaParts.length === 3) {
+            const [cameraX, cameraY, cameraZ] = hasCommaParts.map(parseFloat);
+            camera.position.set(cameraX, cameraY, cameraZ);
+          }
+        }
+
+        handleWindowResizes(camera, renderer);
+
+        handleTouch({
+          touchElement: document.body,
+          uxElements: [domElements.titleBar, domElements.subtitleArea, domElements.bottomStatusLine],
+          renderElements: [renderer.domElement, domElements.root],
+          touchCallback: (xy) => {
+            console.log('touch ', xy);
+          }
+        });
+
+        //const shaderState = webgl_buffergeometry_instancing_demo();
+
+        const fh = trackFirehose(usersBounds, worldStartTime);
+        scene.add(fh.mesh);
+
+        startAnimation();
+
+        function startAnimation() {
+
+          requestAnimationFrame(continueAnimating);
+
+          function continueAnimating() {
+            requestAnimationFrame(continueAnimating);
+            renderFrame();
+          }
+
+          let lastCameraUpdate;
+          /** @type {{ x: number, y: number, z: number }} */
+          let lastCameraPos;
+          let lastRender;
+          let lastBottomStatsUpdate;
+          let lastVibeCameraPos;
+          let lastVibeTime;
+          function renderFrame() {
+            const now = Date.now();
+            let rareMoved = false;
+            if (!lastCameraPos || !(now < lastCameraUpdate + 200)) {
+              lastCameraUpdate = now;
+              if (!lastCameraPos) lastCameraPos = {
+                x: NaN, y: NaN, z: NaN
+              };
+
+              const dist = Math.sqrt(
+                (camera.position.x - lastCameraPos.x) * (camera.position.x - lastCameraPos.x) +
+                (camera.position.y - lastCameraPos.y) * (camera.position.y - lastCameraPos.y) +
+                (camera.position.z - lastCameraPos.z) * (camera.position.z - lastCameraPos.z));
+
+              if (!(dist < 0.0001)) {
+                rareMoved = true;
+              }
+            }
+
+            if (!lastVibeCameraPos) {
+              lastVibeCameraPos = camera.position.clone();
+              lastVibeTime = now;
+            } else {
+              const vibeDist = Math.sqrt(
+                (camera.position.x - lastVibeCameraPos.x) * (camera.position.x - lastVibeCameraPos.x) +
+                (camera.position.y - lastVibeCameraPos.y) * (camera.position.y - lastVibeCameraPos.y) +
+                (camera.position.z - lastVibeCameraPos.z) * (camera.position.z - lastVibeCameraPos.z));
+              if (Number.isFinite(vibeDist) && vibeDist > 0.1 && (now - lastVibeTime) > 200) {
+                lastVibeCameraPos.copy(camera.position);
+                lastVibeTime = now;
+                try {
+                  if (typeof navigator.vibrate === 'function') {
+                    navigator.vibrate(30);
+                  }
+                } catch (bibErr) { }
+              }
+
+            }
+
+            stats.begin();
+            const delta = lastRender ? now - lastRender : 0;
+            lastRender = now;
+            orbit.controls.update(Math.min(delta / 1000, 0.2));
+            fh.tickAll(delta / 1000);
+            // shaderState.updateOnFrame(rareMoved);
+
+            renderer.render(scene, camera);
+            stats.end();
+
+            if (rareMoved) {
+              lastCameraPos.x = camera.position.x;
+              lastCameraPos.y = camera.position.y;
+              lastCameraPos.z = camera.position.z;
+              domElements.status.update();
+              location.hash = '#' + camera.position.x.toFixed(2) + ',' + camera.position.y.toFixed(2) + ',' + camera.position.z.toFixed(2);
+            }
+
+            if (!(now - lastBottomStatsUpdate < 1000) && domElements.bottomStatusLine) {
+              lastBottomStatsUpdate = now;
+              domElements.bottomStatusLine.update(fh);
+            }
+          }
         }
       }
-
-      handleWindowResizes();
-      handleTouch(document.body, (xy) => {
-        console.log('touch ', xy);
-      });
-
-      //const shaderState = webgl_buffergeometry_instancing_demo();
-
-      const fh = trackFirehose(userBounds);
-      scene.add(fh.mesh);
-
-      startAnimation();
 
       /** @param {string} shortDID */
       function defaultUserColorer(shortDID) {
@@ -671,7 +770,8 @@ function atlas(invokeType) {
         return hexColor;
       }
 
-      function setupScene() {
+      /** @param {number} worldStartTime */
+      function setupScene(worldStartTime) {
         const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.00001, 10000);
         camera.position.x = 0.18;
         camera.position.y = 0.49;
@@ -696,7 +796,7 @@ function atlas(invokeType) {
 
         const stats = new Stats();
 
-        const userBounds = getUserCoordBounds(users);
+        const usersBounds = getUserCoordBounds(users);
         const proximityTiles = makeProximityTiles(users, 16);
 
         const farUsersMesh = createFarUsersMesh();
@@ -707,7 +807,7 @@ function atlas(invokeType) {
           lights: { dirLight1, dirLight2, ambientLight },
           renderer,
           stats,
-          userBounds,
+          usersBounds,
           farUsersMesh,
           proximityTiles
         };
@@ -720,8 +820,8 @@ function atlas(invokeType) {
             userKeys: Object.keys(users),
             userMapper: (shortDID, pos) => {
               const [, xSpace, ySpace, weight] = users[shortDID];
-              const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, userBounds);
-              pos.set(x, h, y, weight ? 0.003 * (weight / userBounds.weight.max) : -0.0005);
+              const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, usersBounds);
+              pos.set(x, h, y, weight ? 0.003 * (weight / usersBounds.weight.max) : -0.0005);
             },
             userColorer: defaultUserColorer
           })
@@ -732,11 +832,12 @@ function atlas(invokeType) {
 
       /**
        * @param {THREE.Camera} camera
+       * @param {HTMLElement} host
        */
-      function setupOrbitControls(camera) {
+      function setupOrbitControls(camera, host) {
         const STEADY_ROTATION_SPEED = 0.2;
 
-        const controls = new OrbitControls(camera, renderer.domElement);
+        const controls = new OrbitControls(camera, host);
         let autorotateTimeout1, autorotateTimeout2, autorotateTimeout3;
         controls.addEventListener('start', function () {
           pauseRotation();
@@ -843,8 +944,11 @@ function atlas(invokeType) {
         }
       }
 
-      /** @param {{x: { min: number, max: number}, y: { min: number, max: number }}} bounds */
-      function trackFirehose(bounds) {
+      /**
+       * @param {{x: { min: number, max: number}, y: { min: number, max: number }}} usersBounds
+       * @param {number} worldStartTime
+       */
+      function trackFirehose(usersBounds, worldStartTime) {
 
         const MAX_WEIGHT = 0.1;
         const FADE_TIME_MSEC = 4000;
@@ -987,7 +1091,7 @@ function atlas(invokeType) {
             return;
           }
 
-          const { x, y, h } = mapUserCoordsToAtlas(usrTuple[1], usrTuple[2], userBounds);
+          const { x, y, h } = mapUserCoordsToAtlas(usrTuple[1], usrTuple[2], usersBounds);
           const color = defaultUserColorer(shortDID);
 
           activeUsers[shortDID] = { x, y, h, weight: weight * 0.2, color, startAtMsec: now, fadeAtMsec: now + FADE_TIME_MSEC };
@@ -996,7 +1100,18 @@ function atlas(invokeType) {
         }
       }
 
-      function appendToDOM() {
+      /**
+       * @param {{
+       *  canvas3D: HTMLElement,
+       *  statsElem: HTMLElement,
+       *  usersBounds: {x: { min: number, max: number}, y: { min: number, max: number }},
+       *  camera: THREE.Camera,
+       *  orbit: { autoRotate: boolean, autoRotateSpeed: number },
+       *  moveAndPauseRotation: (xyh: {x: number, y: number, h: number }) => void,
+       *  scene: THREE.Scene
+       * }} _
+       */
+      function appendToDOM({ canvas3D, statsElem, usersBounds, camera, orbit, moveAndPauseRotation, scene }) {
         let title, titleBar, subtitleArea, rightStatus, searchMode, bottomStatusLine;
         const root = elem('div', {
           parent: document.body,
@@ -1005,7 +1120,7 @@ function atlas(invokeType) {
           display: grid; grid-template-rows: auto auto 1fr auto; grid-template-columns: 1fr;
           `,
           children: [
-            renderer.domElement,
+            canvas3D,
             titleBar = elem('div', {
               style: `
               background: rgba(0,0,0,0.5); color: gold;
@@ -1014,7 +1129,7 @@ function atlas(invokeType) {
               max-height: 5em;`,
               onclick: () => { if (!searchMode) switchToSearch(); },
               children: [
-                stats.domElement,
+                statsElem,
                 title = elem('h3', {
                   style: `
                   text-align: center;
@@ -1066,12 +1181,12 @@ function atlas(invokeType) {
             bottomStatusLine = createBottomStatusLine()
           ]
         });
-        renderer.domElement.style.cssText = `
+        canvas3D.style.cssText = `
         position: fixed;
         left: 0; top: 0; width: 100%; height: 100%;
         `;
-        renderer.domElement.className = 'atlas-3d';
-        stats.domElement.style.position = 'relative';
+        canvas3D.className = 'atlas-3d';
+        statsElem.style.position = 'relative';
 
         const status = createStatusRenderer(rightStatus);
         return { root, titleBar, subtitleArea, title, rightStatus, status, bottomStatusLine };
@@ -1111,8 +1226,8 @@ function atlas(invokeType) {
           function update() {
             cameraPos.textContent =
               camera.position.x.toFixed(2) + ', ' + camera.position.y.toFixed(2) + ', ' + camera.position.z.toFixed(2);
-            cameraMovementIcon.textContent = orbit.controls.autoRotate ? '>' : '||';
-            cameraStatusLine.style.opacity = orbit.controls.autoRotate ? '0.4' : '0.7';
+            cameraMovementIcon.textContent = orbit.autoRotate ? '>' : '||';
+            cameraStatusLine.style.opacity = orbit.autoRotate ? '0.4' : '0.7';
           }
         }
 
@@ -1399,7 +1514,13 @@ function atlas(invokeType) {
                 })
               ],
               onclick: () => {
-                focusAndHighlightUser(shortDID);
+                focusAndHighlightUser({
+                  shortDID,
+                  usersBounds,
+                  scene,
+                  camera,
+                  moveAndPauseRotation
+                });
               }
             });
 
@@ -1410,8 +1531,16 @@ function atlas(invokeType) {
 
       /** @type {{ highlight(), dispose(), shortDID: string }[]} */
       var higlightUserStack;
-      /** @param {string} shortDID */
-      function focusAndHighlightUser(shortDID) {
+      /**
+       * @param {{
+       *  shortDID: string,
+       *  usersBounds: {x: { min: number, max: number}, y: { min: number, max: number }},
+       *  scene: THREE.Scene,
+       *  camera: THREE.Camera,
+       *  moveAndPauseRotation: (coord: {x: number, y: number, h: number}) => void
+       * }} _param
+       */
+      function focusAndHighlightUser({ shortDID, usersBounds, scene, camera, moveAndPauseRotation }) {
         const MAX_HIGHLIGHT_COUNT = 25;
         while (higlightUserStack?.length > MAX_HIGHLIGHT_COUNT) {
           const early = higlightUserStack.shift();
@@ -1431,7 +1560,7 @@ function atlas(invokeType) {
         const ySpace = usrTuple[2];
 
         //troika_three_text
-        const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, userBounds);
+        const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, usersBounds);
         const r = Math.sqrt(x * x + y * y);
         const angle = Math.atan2(y, x);
         const xPlus = (r + 0.09) * Math.cos(angle);
@@ -1502,7 +1631,7 @@ function atlas(invokeType) {
         }
 
         function highlightUser() {
-          orbit.moveAndPauseRotation({ x: xPlus, y: yPlus, h: hPlus });
+          moveAndPauseRotation({ x: xPlus, y: yPlus, h: hPlus });
         }
 
         function unhighlightUser() {
@@ -1521,10 +1650,14 @@ function atlas(invokeType) {
 
 
       /**
-       * @param {HTMLElement} touchElement
-       * @param {(xy: { x: number, y: number }) => void} touchCallback
+       * @param {{
+       *  touchElement: HTMLElement,
+       *  uxElements: Element[],
+       *  renderElements: Element[],
+       *  touchCallback: (xy: { x: number, y: number }) => void
+       * }} _
        */
-      function handleTouch(touchElement, touchCallback) {
+      function handleTouch({ touchElement, uxElements, renderElements, touchCallback }) {
         touchElement.addEventListener('touchstart', handleTouch);
         touchElement.addEventListener('touchend', handleTouch);
         touchElement.addEventListener('touchmove', handleTouch);
@@ -1538,14 +1671,10 @@ function atlas(invokeType) {
 
         /** @param {Event} event */
         function genuineUX(event) {
-          /** @typedef {{ parentElement?: El | null }} El */
-          var testElem = /** @type {El | null | undefined} */(event.target);
+          var testElem = /** @type {Element | null | undefined} */(event.target);
           while (testElem && testElem !== document.body) {
-            if (testElem === domElements.titleBar) return true;
-            if (testElem === domElements.subtitleArea) return true;
-            if (testElem === domElements.bottomStatusLine) return true;
-            if (testElem === renderer.domElement) return false;
-            if (testElem === domElements.root) return false;
+            if (uxElements.indexOf(testElem) >= 0) return true;
+            if (renderElements.indexOf(testElem) >= 0) return false;
             testElem = testElem.parentElement;
           }
           return true;
@@ -1593,7 +1722,12 @@ function atlas(invokeType) {
         }
       }
 
-      function handleWindowResizes() {
+
+      /**
+       * @param {THREE.PerspectiveCamera} camera
+       * @param {THREE.WebGLRenderer} renderer
+       */
+      function handleWindowResizes(camera, renderer) {
         window.addEventListener('resize', onWindowResize);
 
         function onWindowResize() {
@@ -1602,87 +1736,6 @@ function atlas(invokeType) {
           renderer.setSize(window.innerWidth, window.innerHeight);
         }
       }
-
-      function startAnimation() {
-
-        requestAnimationFrame(continueAnimating);
-
-        function continueAnimating() {
-          requestAnimationFrame(continueAnimating);
-          renderFrame();
-        }
-
-        let lastCameraUpdate;
-        /** @type {{ x: number, y: number, z: number }} */
-        let lastCameraPos;
-        let lastRender;
-        let lastBottomStatsUpdate;
-        let lastVibeCameraPos;
-        let lastVibeTime;
-        function renderFrame() {
-          const now = Date.now();
-          let rareMoved = false;
-          if (!lastCameraPos || !(now < lastCameraUpdate + 200)) {
-            lastCameraUpdate = now;
-            if (!lastCameraPos) lastCameraPos = {
-              x: NaN, y: NaN, z: NaN
-            };
-
-            const dist = Math.sqrt(
-              (camera.position.x - lastCameraPos.x) * (camera.position.x - lastCameraPos.x) +
-              (camera.position.y - lastCameraPos.y) * (camera.position.y - lastCameraPos.y) +
-              (camera.position.z - lastCameraPos.z) * (camera.position.z - lastCameraPos.z));
-            
-            if (!(dist < 0.0001)) {
-              rareMoved = true;
-            }
-          }
-
-          if (!lastVibeCameraPos) {
-            lastVibeCameraPos = camera.position.clone();
-            lastVibeTime = now;
-          } else {
-            const vibeDist = Math.sqrt(
-              (camera.position.x - lastVibeCameraPos.x) * (camera.position.x - lastVibeCameraPos.x) +
-              (camera.position.y - lastVibeCameraPos.y) * (camera.position.y - lastVibeCameraPos.y) +
-              (camera.position.z - lastVibeCameraPos.z) * (camera.position.z - lastVibeCameraPos.z));
-            if (Number.isFinite(vibeDist) && vibeDist > 0.1 && (now - lastVibeTime) > 200) {
-              lastVibeCameraPos.copy(camera.position);
-              lastVibeTime = now;
-              try {
-                if (typeof navigator.vibrate === 'function') {
-                  navigator.vibrate(30);
-                }
-              } catch (bibErr) { }
-            }
-
-          }
-
-          stats.begin();
-          const delta = lastRender ? now - lastRender : 0;
-          lastRender = now;
-          orbit.controls.update(Math.min(delta / 1000, 0.2));
-          fh.tickAll(delta / 1000);
-          // shaderState.updateOnFrame(rareMoved);
-
-          renderer.render(scene, camera);
-          stats.end();
-
-          if (rareMoved) {
-            lastCameraPos.x = camera.position.x;
-            lastCameraPos.y = camera.position.y;
-            lastCameraPos.z = camera.position.z;
-            domElements.status.update();
-            location.hash = '#' + camera.position.x.toFixed(2) + ',' + camera.position.y.toFixed(2) + ',' + camera.position.z.toFixed(2);
-          }
-
-          if (!(now - lastBottomStatsUpdate < 1000) && domElements.bottomStatusLine) {
-            lastBottomStatsUpdate = now;
-            domElements.bottomStatusLine.update(fh);
-          }
-        }
-      }
-
     }
 
     /** @param {THREE.BufferGeometry} geometry */
