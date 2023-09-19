@@ -1455,23 +1455,35 @@ function atlas(invokeType) {
         scene.add(stemMesh);
         scene.add(ballMesh);
 
-        const text = new troika_three_text.Text();
-        text.text = '@' + shortHandle;
-        text.fontSize = 0.01;
-        text.color = userColor;
-        text.outlineWidth = 0.0005;
-        text.outlineBlur = 0.005;
-        text.position.set(-0.005, 0.03, 0);
-        //text.depthOffset = 0.001;
+        const handleText = new troika_three_text.Text();
+        handleText.text = '@' + shortHandle;
+        handleText.fontSize = 0.01;
+        handleText.color = userColor;
+        handleText.outlineWidth = 0.0005;
+        handleText.outlineBlur = 0.005;
+        handleText.position.set(-0.005, 0.03, 0);
+
         const group = new THREE.Group();
         group.position.set(x, h, y);
-        group.add(/** @type {*} */(text));
-        group.rotation.y = 0.001;
+        group.add(/** @type {*} */(handleText));
+
+          const displayNameText = displayName ? new troika_three_text.Text() : undefined;
+        if (displayNameText) {
+          displayNameText.text = /** @type {string} */(displayName);
+          displayNameText.fontSize = 0.005;
+          displayNameText.color = userColor;
+          displayNameText.outlineWidth = 0.0003;
+          displayNameText.outlineBlur = 0.005;
+          displayNameText.position.set(0.005, 0.017, 0.0001);
+          displayNameText.fillOpacity = 0.9;
+          displayNameText.fontWeight = /** @type {*} */(200);
+          group.add(/** @type {*} */(displayNameText));
+        }
+
         ballMesh.onBeforeRender = applyTextBillboarding;
-        //text.geometry.onBeforeRender = applyTextBillboarding;
-        //group.onBeforeRender = applyTextBillboarding;
         scene.add(group);
-        text.sync();
+        handleText.sync();
+        if (displayNameText) displayNameText.sync();
 
         highlightUser();
 
@@ -1482,7 +1494,7 @@ function atlas(invokeType) {
           group.rotation.y = Math.atan2(
             (camera.position.x - group.position.x),
             (camera.position.z - group.position.z));
-          text.sync();
+          handleText.sync();
         }
 
         function highlightUser() {
@@ -1491,7 +1503,7 @@ function atlas(invokeType) {
 
         function unhighlightUser() {
           scene.remove(group);
-          text.dispose();
+          handleText.dispose();
 
           scene.remove(stemMesh);
           scene.remove(ballMesh);
