@@ -1470,12 +1470,14 @@ function atlas(invokeType) {
           const displayNameText = displayName ? new troika_three_text.Text() : undefined;
         if (displayNameText) {
           displayNameText.text = /** @type {string} */(displayName);
-          displayNameText.fontSize = 0.005;
-          displayNameText.color = userColor;
+          displayNameText.fontSize = 0.004;
+          const co = new THREE.Color(userColor);
+          co.offsetHSL(0, 0, 0.15);
+          displayNameText.color = co.getHex();
           displayNameText.outlineWidth = 0.0003;
           displayNameText.outlineBlur = 0.005;
           displayNameText.position.set(0.005, 0.017, 0.0001);
-          displayNameText.fillOpacity = 0.9;
+          // displayNameText.fillOpacity = 0.9;
           displayNameText.fontWeight = /** @type {*} */(200);
           group.add(/** @type {*} */(displayNameText));
         }
