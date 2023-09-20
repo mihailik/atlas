@@ -635,7 +635,7 @@ function atlas(invokeType) {
           usersBounds
         } = setupScene(clock);
 
-        const orbit = setupOrbitControls(camera, renderer.domElement);
+        const orbit = setupOrbitControls({ camera, host: renderer.domElement, clock });
 
         const domElements = appendToDOM({
           camera,
@@ -733,7 +733,6 @@ function atlas(invokeType) {
             lastRender = clock.nowMSec;
             orbit.controls.update(Math.min(delta / 1000, 0.2));
             fh.tickAll(delta / 1000);
-            // shaderState.updateOnFrame(rareMoved);
 
             renderer.render(scene, camera);
             stats.end();
@@ -829,10 +828,13 @@ function atlas(invokeType) {
       }
 
       /**
-       * @param {THREE.Camera} camera
-       * @param {HTMLElement} host
+       * @param {{
+       *  camera: THREE.Camera,
+       *  host: HTMLElement,
+       *  clock: ReturnType<typeof makeClock>
+       * }} _
        */
-      function setupOrbitControls(camera, host) {
+      function setupOrbitControls({ camera, host, clock }) {
         const STEADY_ROTATION_SPEED = 0.2;
 
         const controls = new OrbitControls(camera, host);
@@ -873,14 +875,14 @@ function atlas(invokeType) {
           if (!resumeAfterWait) resumeAfterWait = WAIT_BEFORE_RESUMING_MSEC;
 
           clearInterval(changingRotationInterval);
-          const startResumingRotation = Date.now();
+          const startResumingRotation = clock.nowMSec;
           changingRotationInterval = setInterval(continueResumingRotation, 100);
 
           controls.autoRotateSpeed = 0.0001;
           controls.autoRotate = true;
 
           function continueResumingRotation() {
-            const passedTime = Date.now() - startResumingRotation;
+            const passedTime = clock.nowMSec - startResumingRotation;
             if (passedTime < resumeAfterWait) return;
             if (passedTime > resumeAfterWait + SPEED_UP_WITHIN_MSEC) {
               controls.autoRotateSpeed = STEADY_ROTATION_SPEED;
@@ -902,7 +904,7 @@ function atlas(invokeType) {
           const RAISE_MIDDLE_WITH = 0.25;
 
           pauseRotation();
-          const startMoving = Date.now();
+          const startMoving = clock.nowMSec;
           const startCameraPosition = camera.position.clone();
 
           const r = Math.sqrt(xyh.x * xyh.x + xyh.y * xyh.y);
@@ -915,7 +917,7 @@ function atlas(invokeType) {
 
           function continueMoving() {
 
-            const passedTime = Date.now() - startMoving;
+            const passedTime = clock.nowMSec - startMoving;
             if (passedTime > MOVE_WITHIN_MSEC) {
               clearInterval(changingRotationInterval);
               waitAndResumeRotation(WAIT_AFTER_MOVEMENT_BEFORE_RESUMING_ROTATION_MSEC);
