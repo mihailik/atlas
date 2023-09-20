@@ -735,15 +735,13 @@ function atlas(invokeType) {
           proximityTiles
         } = setupScene(users, clock);
 
-        const orbit = setupOrbitControls({ camera, host: renderer.domElement, clock });
-
-        const domElements = crateDOMLayout({
-          camera,
+        const domElements = createDOMLayout({
           canvas3D: renderer.domElement,
-          orbit: orbit.controls,
           statsElem: stats.domElement,
           users
         });
+
+        const orbit = setupOrbitControls({ camera, host: renderer.domElement, clock });
 
         domElements.rightStatus.addEventListener('click', () => {
           orbit.flipControlType();
@@ -1326,11 +1324,9 @@ function atlas(invokeType) {
        *  canvas3D: HTMLElement,
        *  statsElem: HTMLElement,
        *  users: { [shortDID: string]: UserTuple },
-       *  camera: THREE.Camera,
-       *  orbit: { autoRotate: boolean, autoRotateSpeed: number }
        * }} _
        */
-      function crateDOMLayout({ canvas3D, statsElem, users, camera, orbit }) {
+      function createDOMLayout({ canvas3D, statsElem, users }) {
         let title, titleBar, subtitleArea, rightStatus, searchMode, bottomStatusLine;
         const root = elem('div', {
           parent: document.body,
