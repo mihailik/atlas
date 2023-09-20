@@ -547,7 +547,7 @@ function atlas(invokeType) {
     const troika_three_text = /** @type {*} */(atlas).imports['troika-three-text'];
 
     console.log('Users: ', typeof users, Object.keys(users).length);
-    threedshell();
+    runWebglGalaxy();
 
     async function boot() {
       const INIT_UI_FADE_MSEC = 2000;
@@ -621,22 +621,19 @@ function atlas(invokeType) {
       }
     }
 
-    async function threedshell() {
-      run();
+    async function runWebglGalaxy() {
+      constructStateAndRun();
 
-      function run() {
-        const worldStartTime = Date.now();
+      function constructStateAndRun() {
+        const clock = makeClock();
 
         const {
           scene,
           camera,
-          lights,
           renderer,
           stats,
-          clock,
-          updateCamera,
           usersBounds
-        } = setupScene(worldStartTime);
+        } = setupScene(clock);
 
         const orbit = setupOrbitControls(camera, renderer.domElement);
 
@@ -670,7 +667,7 @@ function atlas(invokeType) {
 
         //const shaderState = webgl_buffergeometry_instancing_demo();
 
-        const fh = trackFirehose(usersBounds, worldStartTime);
+        const fh = trackFirehose(usersBounds, clock);
         scene.add(fh.mesh);
 
         startAnimation();
@@ -692,6 +689,8 @@ function atlas(invokeType) {
           let lastVibeCameraPos;
           let lastVibeTime;
           function renderFrame() {
+            clock.update();
+
             const now = Date.now();
             let rareMoved = false;
             if (!lastCameraPos || !(now < lastCameraUpdate + 200)) {
@@ -770,8 +769,8 @@ function atlas(invokeType) {
         return hexColor;
       }
 
-      /** @param {number} worldStartTime */
-      function setupScene(worldStartTime) {
+      /** @param {ReturnType<typeof makeClock>} clock */
+      function setupScene(clock) {
         const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.00001, 10000);
         camera.position.x = 0.18;
         camera.position.y = 0.49;
@@ -814,7 +813,7 @@ function atlas(invokeType) {
 
         function createFarUsersMesh() {
           const { mesh } = billboardShaderRenderer({
-            worldStartTime,
+            clock,
             fragmentShader: `
             `,
             userKeys: Object.keys(users),
@@ -946,15 +945,15 @@ function atlas(invokeType) {
 
       /**
        * @param {{x: { min: number, max: number}, y: { min: number, max: number }}} usersBounds
-       * @param {number} worldStartTime
+       * @param {ReturnType<typeof makeClock>} clock
        */
-      function trackFirehose(usersBounds, worldStartTime) {
+      function trackFirehose(usersBounds, clock) {
 
         const MAX_WEIGHT = 0.1;
         const FADE_TIME_MSEC = 4000;
         /** @type {{ [shortDID: string]: { x: number, y: number, h: number, weight: number, color: number, startAtMsec: number, fadeAtMsec: number } }} */
         const activeUsers = {};
-        const rend = flashesRenderer();
+        const rend = flashesRenderer(clock);
         let updateUsers = false;
 
         const unknownsLastSet = new Set();
@@ -962,22 +961,26 @@ function atlas(invokeType) {
 
         firehoseWithFallback({
           post(author, postID, text, replyTo, replyToThread, timeMsec) {
+            clock.update();
             addActiveUser(author, 1, timeMsec);
             replyTo?.shortDID ? addActiveUser(replyTo.shortDID, 1, timeMsec) : undefined;
             replyToThread?.shortDID ? addActiveUser(replyToThread.shortDID, 0.5, timeMsec) : undefined;
             outcome.posts++;
           },
           repost(who, whose, postID, timeMsec) {
+            clock.update();
             addActiveUser(who, 0.6, timeMsec);
             addActiveUser(whose, 0.7, timeMsec);
             outcome.reposts++;
           },
           like(who, whose, postID, timeMsec) {
+            clock.update();
             addActiveUser(who, 0.1, timeMsec);
             addActiveUser(whose, 0.4, timeMsec);
             outcome.likes++;
           },
           follow(who, whom, timeMsec) {
+            clock.update();
             addActiveUser(who, 0.1, timeMsec);
             addActiveUser(whom, 1.5, timeMsec);
             outcome.follows++;
@@ -997,9 +1000,10 @@ function atlas(invokeType) {
 
         return outcome;
 
-        function flashesRenderer() {
+        /** @param {ReturnType<typeof makeClock>} clock */
+        function flashesRenderer(clock) {
           const rend = billboardShaderRenderer({
-            worldStartTime,
+            clock,
             vertexShader: /* glsl */`
             float startTime = min(extra.x, extra.y);
             float endTime = max(extra.x, extra.y);
@@ -1040,8 +1044,8 @@ function atlas(invokeType) {
               const usr = activeUsers[shortDID];
               if (!usr) return;
               pos.set(usr.x, usr.h, usr.y, usr.weight);
-              extra.x = (usr.startAtMsec - worldStartTime) / 1000;
-              extra.y = (usr.fadeAtMsec - worldStartTime) / 1000;
+              extra.x = (usr.startAtMsec - clock.worldStartTime) / 1000;
+              extra.y = (usr.fadeAtMsec - clock.worldStartTime) / 1000;
             },
             userColorer: (shortDID) => activeUsers[shortDID]?.color
           });
@@ -1738,6 +1742,23 @@ function atlas(invokeType) {
       }
     }
 
+    function makeClock() {
+      const clock = {
+        worldStartTime: Date.now(),
+        nowMSec: 0,
+        nowSeconds: 0,
+        update
+      };
+
+      return clock;
+
+      function update() {
+        clock.nowSeconds =
+          (clock.nowMSec = Date.now() - clock.worldStartTime)
+          / 1000;
+      }
+    }
+
     /** @param {THREE.BufferGeometry} geometry */
     function geometryVertices(geometry) {
       const geoPos = geometry.getAttribute('position');
@@ -1764,7 +1785,7 @@ function atlas(invokeType) {
 
     /**
      * @param {{
-     *  worldStartTime: number;
+     *  clock: ReturnType<typeof makeClock>;
      *  userKeys: K[];
      *  userMapper(i: K, pos: THREE.Vector4, extra: THREE.Vector4): void;
      *  userColorer(i: K): number;
@@ -1773,7 +1794,7 @@ function atlas(invokeType) {
      * }} _ 
      * @template K
      */
-    function billboardShaderRenderer({ worldStartTime, userKeys, userMapper, userColorer, fragmentShader, vertexShader }) {
+    function billboardShaderRenderer({ clock, userKeys, userMapper, userColorer, fragmentShader, vertexShader }) {
       const baseHalf = 1.5 * Math.tan(Math.PI / 6);
       let positions = new Float32Array([
         -baseHalf, 0, -0.5,
@@ -1894,7 +1915,7 @@ function atlas(invokeType) {
       const mesh = new THREE.Mesh(geometry, material);
       mesh.frustumCulled = false;
       mesh.onBeforeRender = () => {
-        material.uniforms['time'].value = (Date.now() - worldStartTime) / 1000;
+        material.uniforms['time'].value = (Date.now() - clock.worldStartTime) / 1000;
       };
       return { mesh, updateUserSet };
 
