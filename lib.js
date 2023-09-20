@@ -32474,6 +32474,23 @@
     }
   });
 
+  // node_modules/three/examples/jsm/controls/MapControls.js
+  var MapControls;
+  var init_MapControls = __esm({
+    "node_modules/three/examples/jsm/controls/MapControls.js"() {
+      init_three_module();
+      init_OrbitControls();
+      MapControls = class extends OrbitControls {
+        constructor(object, domElement) {
+          super(object, domElement);
+          this.screenSpacePanning = false;
+          this.mouseButtons = { LEFT: MOUSE.PAN, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.ROTATE };
+          this.touches = { ONE: TOUCH.PAN, TWO: TOUCH.DOLLY_ROTATE };
+        }
+      };
+    }
+  });
+
   // node_modules/troika-worker-utils/dist/troika-worker-utils.esm.js
   function workerBootstrap() {
     var modules = /* @__PURE__ */ Object.create(null);
@@ -73285,6 +73302,7 @@ You can use close({ resize: true }) to resize header`);
       init_three_module();
       init_stats_module();
       init_OrbitControls();
+      init_MapControls();
       init_troika_three_text_esm();
       if (typeof atlas === "function") {
         if (atlas.imports)
@@ -73313,6 +73331,7 @@ You can use close({ resize: true }) to resize header`);
           exports2["three"] = three_module_exports;
           exports2["three/addons/libs/stats.module.js"] = stats_module_default;
           exports2["three/addons/controls/OrbitControls.js"] = OrbitControls;
+          exports2["three/addons/controls/MapControls.js"] = MapControls;
           exports2["troika-three-text"] = troika_three_text_esm_exports;
         }
         if (!exportToGlobal.__logOnce) {
