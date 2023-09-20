@@ -150,8 +150,8 @@ function atlas(invokeType) {
     }
   }
 
-  /** @type {typeof firehose} */
-  function firehoseWithFallback(callbacks) {
+  /** @type {(callbacks: Parameters<typeof firehose>[0], onFallback?: () => void) => ReturnType<typeof firehose>} */
+  function firehoseWithFallback(callbacks, onFallback) {
     let websocketLikesProcessed = 0;
     /** @type {ReturnType<typeof firehose> | undefined} */
     let fallbackHose;
@@ -190,6 +190,7 @@ function atlas(invokeType) {
           } else {
             websocketHose?.stop();
             websocketHose = undefined;
+            if (typeof onFallback === 'function') onFallback();
             fallbackHose = firehoseWithFallback.fallbackFirehose(callbacks);
           }
         }
@@ -483,13 +484,16 @@ function atlas(invokeType) {
  * @param {number} x
  * @param {number} y
  * @param {{x: { min: number, max: number}, y: { min: number, max: number }}} bounds
+ * @param {{ x: number, y: number, h: number }} result
  */
-  function mapUserCoordsToAtlas(x, y, bounds) {
+  function mapUserCoordsToAtlas(x, y, bounds, result) {
     const xRatiod = (x - bounds.x.min) / (bounds.x.max - bounds.x.min) - 0.5;
     const yRatiod = (y - bounds.y.min) / (bounds.y.max - bounds.y.min) - 0.5;
     const r = Math.sqrt(xRatiod * xRatiod + yRatiod * yRatiod);
     let h = (1 - r * r) * 0.3 - 0.265;
-    return { x: xRatiod, h, y: -yRatiod };
+    result.x = xRatiod;
+    result.y = -yRatiod;
+    result.h = h;
   }
 
   /**
@@ -498,13 +502,13 @@ function atlas(invokeType) {
    */
   function makeProximityTiles(users, tileAxisCount) {
     // break users into tileAxisCount x tileAxisCount tiles
-    const bounds = getUserCoordBounds(users);
+    const usersBounds = getUserCoordBounds(users);
     /** @type {string[][]} */
     const tiles = [];
     for (const shortDID in users) {
       const [, x, y] = users[shortDID];
-      const xTileIndex = Math.floor((x - bounds.x.min) / (bounds.x.max - bounds.x.min) * tileAxisCount);
-      const yTileIndex = Math.floor((y - bounds.y.min) / (bounds.y.max - bounds.y.min) * tileAxisCount);
+      const xTileIndex = Math.floor((x - usersBounds.x.min) / (usersBounds.x.max - usersBounds.x.min) * tileAxisCount);
+      const yTileIndex = Math.floor((y - usersBounds.y.min) / (usersBounds.y.max - usersBounds.y.min) * tileAxisCount);
       const tileIndex = xTileIndex + yTileIndex * tileAxisCount;
       const tile = tiles[tileIndex];
       if (!tile) tiles[tileIndex] = [shortDID];
@@ -514,29 +518,49 @@ function atlas(invokeType) {
     return { tiles, findTiles, tileIndexXY };
 
     /**
-     * @param {number} x
-     * @param {number} y
-     * @param {(shortDID: string, usrTuple: UserTuple) => boolean | null | undefined} check
+     * @param {{ userX: number, userY: number} | {spaceX: number, spaceY: number}} coords
+     * @param {(shortDID: string, usrTuple: UserTuple, spaceX: number, spaceY: number, spaceH: number) => boolean | null | undefined} check
      * @returns {[xLowIndex: number, xHighIndex: number, yLowIndex: number, yHighIndex: number]}
      */
-    function findTiles(x, y, check) {
-      const xCenterIndex = Math.floor((x - bounds.x.min) / (bounds.x.max - bounds.x.min) * tileAxisCount);
-      const yCenterIndex = Math.floor((y - bounds.y.min) / (bounds.y.max - bounds.y.min) * tileAxisCount);
+    function findTiles(coords, check) {
+      const spaceX = Number.isFinite(/** @type {*} */(coords).spaceX) ?
+        /** @type {*} */(coords).spaceX :
+        (/** @type {*} */(coords).userX - usersBounds.x.min) / (usersBounds.x.max - usersBounds.x.min);
+
+      const spaceY = Number.isFinite(/** @type {*} */(coords).spaceY) ?
+        /** @type {*} */(coords).spaceY :
+        (/** @type {*} */(coords).userY - usersBounds.y.min) / (usersBounds.y.max - usersBounds.y.min);
+
+      const xCenterIndex = Math.floor(spaceX * tileAxisCount);
+      const yCenterIndex = Math.floor(spaceY * tileAxisCount);
       const tileIndex = xCenterIndex + yCenterIndex * tileAxisCount;
 
-      /** @type {string} */
-      let shortDID;
-
       let xLowIndex = Math.max(0, xCenterIndex - 1);
-      while ((xLowIndex - 1) > 0 && check(shortDID = tiles[tileIndexXY(xLowIndex, yCenterIndex)]?.[0], users[shortDID])) xLowIndex--;
+      const xyhBuf = { x: 0, y: 0, h: 0 };
+      while ((xLowIndex - 1) > 0 && probeTile(tileIndexXY(xLowIndex, yCenterIndex))) xLowIndex--;
+
       let xHighIndex = Math.min(tileAxisCount - 1, xCenterIndex + 1);
-      while ((xHighIndex + 1) < tileAxisCount && check(shortDID = tiles[tileIndexXY(xHighIndex, yCenterIndex)]?.[0], users[shortDID])) xHighIndex++;
+      while ((xHighIndex + 1) < tileAxisCount && probeTile(tileIndexXY(xHighIndex, yCenterIndex))) xHighIndex++;
+
       let yLowIndex = Math.max(0, yCenterIndex - 1);
-      while ((yLowIndex - 1) > 0 && check(shortDID = tiles[tileIndexXY(xCenterIndex, yLowIndex)]?.[0], users[shortDID])) yLowIndex--;
+      while ((yLowIndex - 1) > 0 && probeTile(tileIndexXY(xCenterIndex, yLowIndex))) yLowIndex--;
+
       let yHighIndex = Math.min(tileAxisCount - 1, yCenterIndex + 1);
-      while ((yHighIndex + 1) < tileAxisCount && check(shortDID = tiles[tileIndexXY(xCenterIndex, yHighIndex)]?.[0], users[shortDID])) yHighIndex++;
+      while ((yHighIndex + 1) < tileAxisCount && probeTile(tileIndexXY(xCenterIndex, yHighIndex))) yHighIndex++;
 
       return [xLowIndex, xHighIndex, yLowIndex, yHighIndex];
+
+      /** @param {number} tileIndex */
+      function probeTile(tileIndex) {
+        const shortDID = tiles[tileIndex]?.[0];
+        const usrTuple = shortDID && users[shortDID];
+        let checked = !!usrTuple;
+        if (!!usrTuple) {
+          mapUserCoordsToAtlas(usrTuple[1], usrTuple[2], usersBounds, xyhBuf);
+          checked = !!check(shortDID, usrTuple, xyhBuf.x, xyhBuf.y, xyhBuf.h);
+        }
+        return checked;
+      }
     }
 
     /**
@@ -706,7 +730,8 @@ function atlas(invokeType) {
           camera,
           renderer,
           stats,
-          usersBounds
+          usersBounds,
+          proximityTiles
         } = setupScene(users, clock);
 
         const orbit = setupOrbitControls({ camera, host: renderer.domElement, clock });
@@ -837,7 +862,11 @@ function atlas(invokeType) {
               lastCameraPos.x = camera.position.x;
               lastCameraPos.y = camera.position.y;
               lastCameraPos.z = camera.position.z;
-              domElements.status.update();
+              domElements.status.update(
+                camera,
+                orbit.rotating,
+                firehoseTrackingRenderer.fallback
+              );
               location.hash = '#' + camera.position.x.toFixed(2) + ',' + camera.position.y.toFixed(2) + ',' + camera.position.z.toFixed(2);
             }
 
@@ -909,6 +938,7 @@ function atlas(invokeType) {
         };
 
         function createFarUsersMesh() {
+          const xyhBuf = { x: 0, y: 0, h: 0 };
           const { mesh } = billboardShaderRenderer({
             clock,
             fragmentShader: `
@@ -916,9 +946,9 @@ function atlas(invokeType) {
             userKeys: Object.keys(users),
             userMapper: (shortDID, pos) => {
               const [, xSpace, ySpace, weight] = users[shortDID];
-              const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, usersBounds);
+              mapUserCoordsToAtlas(xSpace, ySpace, usersBounds, xyhBuf);
               const weightRatio = weight / usersBounds.weight.max;
-              pos.set(x, h, y, weight ? 0.01 * weightRatio * Math.sqrt(weightRatio) : -0.0005);
+              pos.set(xyhBuf.x, xyhBuf.h, xyhBuf.y, weight ? 0.01 * weightRatio * Math.sqrt(weightRatio) : -0.0005);
             },
             userColorer: defaultUserColorer
           })
@@ -954,17 +984,21 @@ function atlas(invokeType) {
         controls.autoRotateSpeed = STEADY_ROTATION_SPEED;
         controls.listenToKeyEvents(window);
 
-        return {
+        const outcome = {
           controls,
+          rotating: !!controls.autoRotate,
           pauseRotation,
           waitAndResumeRotation,
           moveAndPauseRotation
         };
 
+        return outcome;
+
         var changingRotationInterval;
 
         function pauseRotation() {
           controls.autoRotate = false;
+          outcome.rotating = false;
           clearInterval(changingRotationInterval);
         }
 
@@ -978,8 +1012,6 @@ function atlas(invokeType) {
           const startResumingRotation = clock.nowMSec;
           changingRotationInterval = setInterval(continueResumingRotation, 100);
 
-          controls.autoRotateSpeed = 0.0001;
-          controls.autoRotate = true;
 
           function continueResumingRotation() {
             const passedTime = clock.nowMSec - startResumingRotation;
@@ -987,11 +1019,14 @@ function atlas(invokeType) {
             if (passedTime > resumeAfterWait + SPEED_UP_WITHIN_MSEC) {
               controls.autoRotateSpeed = STEADY_ROTATION_SPEED;
               controls.autoRotate = true;
+              outcome.rotating = true;
               clearInterval(changingRotationInterval);
               return;
             }
 
             const phase = (passedTime - resumeAfterWait) / SPEED_UP_WITHIN_MSEC;
+            controls.autoRotate = true;
+            outcome.rotating = true;
             controls.autoRotateSpeed = 0.2 * dampenPhase(phase);
           }
         }
@@ -1063,6 +1098,19 @@ function atlas(invokeType) {
         const unknownsLastSet = new Set();
         const unknownsTotalSet = new Set();
 
+        const outcome = {
+          posts: 0,
+          reposts: 0,
+          likes: 0,
+          follows: 0,
+          flashes: 0,
+          unknowns: 0,
+          unknownsTotal: 0,
+          mesh: rend.mesh,
+          tickAll,
+          fallback: false
+        };
+
         firehoseWithFallback({
           post(author, postID, text, replyTo, replyToThread, timeMsec) {
             clock.update();
@@ -1089,18 +1137,9 @@ function atlas(invokeType) {
             addActiveUser(whom, 1.5, timeMsec);
             outcome.follows++;
           }
+        }, () => {
+          outcome.fallback = true;
         });
-
-        const outcome = {
-          posts: 0,
-          reposts: 0,
-          likes: 0,
-          follows: 0,
-          unknowns: 0,
-          unknownsTotal: 0,
-          mesh: rend.mesh,
-          tickAll
-        };
 
         return outcome;
 
@@ -1163,6 +1202,7 @@ function atlas(invokeType) {
             const ball = activeUsers[shortDID];
             if (ball.fadeAtMsec < current) {
               delete activeUsers[shortDID];
+              outcome.flashes--;
               updateUsers = true;
             }
           }
@@ -1199,10 +1239,17 @@ function atlas(invokeType) {
             return;
           }
 
-          const { x, y, h } = mapUserCoordsToAtlas(usrTuple[1], usrTuple[2], usersBounds);
+          const xyhBuf = { x: 0, y: 0, h: 0 };
+          mapUserCoordsToAtlas(usrTuple[1], usrTuple[2], usersBounds, xyhBuf);
           const color = defaultUserColorer(shortDID);
 
-          activeUsers[shortDID] = { x, y, h, weight: weight * 0.2, color, startAtMsec: now, fadeAtMsec: now + FADE_TIME_MSEC };
+          activeUsers[shortDID] = {
+            x: xyhBuf.x, y: xyhBuf.y, h: xyhBuf.h,
+            weight: weight * 0.2,
+            color,
+            startAtMsec: now, fadeAtMsec: now + FADE_TIME_MSEC
+          };
+          outcome.flashes++;
           updateUsers = true;
           return 1;
         }
@@ -1328,17 +1375,23 @@ function atlas(invokeType) {
             update
           };
 
-          function update() {
+          /**
+           * @param {THREE.PerspectiveCamera} camera
+           * @param {boolean} rotating
+           * @param {boolean} fallbackFirehoseMode
+           */
+          function update(camera, rotating, fallbackFirehoseMode) {
             cameraPos.textContent =
               camera.position.x.toFixed(2) + ', ' + camera.position.y.toFixed(2) + ', ' + camera.position.z.toFixed(2);
-            cameraMovementIcon.textContent = orbit.autoRotate ? '>' : '||';
-            cameraStatusLine.style.opacity = orbit.autoRotate ? '0.4' : '0.7';
+            cameraMovementIcon.textContent = rotating ? (fallbackFirehoseMode ? '>>' : '>') : (fallbackFirehoseMode ? '|||' : '||');
+            cameraStatusLine.style.opacity = rotating ? '0.4' : '0.7';
           }
         }
 
         function createBottomStatusLine() {
-          let likesElem, postsElem, repostsElem, followsElem, unknownsPerSecElem, unknownsTotalElem;
+          let flashesSection, flashesElem, likesElem, postsElem, repostsElem, followsElem, unknownsPerSecElem, unknownsTotalElem;
 
+          let flashStatsHidden = true;
           const bottomStatusLine = /** @type {HTMLDivElement & { update(outcome) }} */(elem('div', {
             style: `
                 grid-row: 5;
@@ -1364,6 +1417,11 @@ function atlas(invokeType) {
                 })]
               }),
               elem('div', { height: '0.5em' }),
+              flashesSection = elem('span', {
+                children: ['*', flashesElem = elem('span', '0'), ' '],
+                display: flashStatsHidden ? 'none' : 'inline',
+                color: 'cornflowerblue'
+              }),
               'posts+',
               postsElem = elem('span', { color: 'gold' }),
               ' ♡+',
@@ -1379,10 +1437,16 @@ function atlas(invokeType) {
               unknownsTotalElem = elem('span', { color: 'cyan' })
             ]
           }));
+          bottomStatusLine.addEventListener('click', () => {
+            flashStatsHidden = !flashStatsHidden;
+            flashesSection.style.display = flashStatsHidden ? 'none' : 'inline';
+          });
+
           bottomStatusLine.update = update;
           return bottomStatusLine;
 
           function update(outcome) {
+            flashesElem.textContent = outcome.flashes.toString();
             likesElem.textContent = outcome.likes.toString();
             postsElem.textContent = outcome.posts.toString();
             repostsElem.textContent = outcome.reposts.toString();
@@ -1637,12 +1701,13 @@ function atlas(invokeType) {
         const ySpace = usrTuple[2];
 
         //troika_three_text
-        const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, usersBounds);
-        const r = Math.sqrt(x * x + y * y);
-        const angle = Math.atan2(y, x);
+        const xyhBuf = { x: 0, y: 0, h: 0 };
+        mapUserCoordsToAtlas(xSpace, ySpace, usersBounds, xyhBuf);
+        const r = Math.sqrt(xyhBuf.x * xyhBuf.x + xyhBuf.y * xyhBuf.y);
+        const angle = Math.atan2(xyhBuf.y, xyhBuf.x);
         const xPlus = (r + 0.09) * Math.cos(angle);
         const yPlus = (r + 0.09) * Math.sin(angle);
-        const hPlus = h + 0.04;
+        const hPlus = xyhBuf.h + 0.04;
 
         const userColor = defaultUserColorer(shortDID) >> 8;
 
@@ -1656,10 +1721,10 @@ function atlas(invokeType) {
         const ball = new THREE.SphereGeometry(0.003);
         const stemMesh = new THREE.Mesh(stem, material);
         const ballMesh = new THREE.Mesh(ball, material);
-        stemMesh.position.set(x, h + 0.005, y);
+        stemMesh.position.set(xyhBuf.x, xyhBuf.h + 0.005, xyhBuf.y);
         stemMesh.scale.set(1, 10, 1);
 
-        ballMesh.position.set(x, h + 0.0125, y);
+        ballMesh.position.set(xyhBuf.x, xyhBuf.h + 0.0125, xyhBuf.y);
         scene.add(stemMesh);
         scene.add(ballMesh);
 
@@ -1670,9 +1735,12 @@ function atlas(invokeType) {
         handleText.outlineWidth = 0.0005;
         handleText.outlineBlur = 0.005;
         handleText.position.set(-0.005, 0.03, 0);
+        handleText.onAfterRender = () => {
+          applyTextBillboarding();
+        };
 
         const group = new THREE.Group();
-        group.position.set(x, h, y);
+        group.position.set(xyhBuf.x, xyhBuf.h, xyhBuf.y);
         group.add(/** @type {*} */(handleText));
 
         const displayNameText = displayName ? new troika_three_text.Text() : undefined;
@@ -1690,7 +1758,6 @@ function atlas(invokeType) {
           group.add(/** @type {*} */(displayNameText));
         }
 
-        ballMesh.onBeforeRender = applyTextBillboarding;
         scene.add(group);
         handleText.sync();
         if (displayNameText) displayNameText.sync();
@@ -1798,6 +1865,38 @@ function atlas(invokeType) {
         }
       }
 
+      /**
+       * @param {{
+       *  users: { [shortDID: string]: UserTuple },
+       *  usersBounds: {x: { min: number, max: number}, y: { min: number, max: number }},
+       *  userTiles: ReturnType<typeof makeProximityTiles>,
+       *  clock: ReturnType<typeof makeClock>
+       * }} _
+       */
+      function renderLargeUsersCaptions({ users, usersBounds, userTiles, clock }) {
+        /**
+         * @typedef {{
+         *  shortDID: string;
+         *  addedTime: number;
+         * }} LabelInfo
+         */
+
+        /** @type {Set<LabelInfo>} */
+        const labels = new Set();
+
+        return {
+          updateWithCamera
+        };
+
+        /** @param {THREE.Vector3} cameraPos */
+        function updateWithCamera(cameraPos) {
+          // const tiles = userTiles.findTiles(
+          //   { spaceX: cameraPos.x, spaceY: cameraPos.y },
+          //   (shortDID, usrTuple, usrSpaceX, usrSpaceY) => {
+
+          //   });
+        }
+      }
 
       /**
        * @param {THREE.PerspectiveCamera} camera
@@ -2130,11 +2229,16 @@ function atlas(invokeType) {
         /** @type {Element[] | undefined} */
         let appendChildren;
         for (const key in style) {
-          if (key === 'parent' || key === 'parentElement')
+          if (key === 'parent' || key === 'parentElement') {
             setParent = /** @type {*} */(style[key]);
-          else if (key === 'children')
+            continue;
+          }
+          else if (key === 'children') {
             appendChildren = /** @type {*} */(style[key]);
+            continue;
+          }
           else if (style[key] == null || (typeof style[key] === 'function' && !(key in el))) continue;
+
           if (key in el.style) el.style[key] = /** @type {*} */(style[key]);
           else if (key in el) el[key] = style[key];
         }
