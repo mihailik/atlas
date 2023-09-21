@@ -1811,13 +1811,13 @@ function atlas(invokeType) {
           // emissive: userColor,
         });
         const stem = new THREE.CylinderGeometry(0.0005, 0.00001, 0.001);
-        const ball = new THREE.SphereGeometry(0.003);
+        const ball = new THREE.SphereGeometry(0.002);
         const stemMesh = new THREE.Mesh(stem, material);
         const ballMesh = new THREE.Mesh(ball, material);
-        stemMesh.position.set(xyhBuf.x, xyhBuf.h + 0.005, xyhBuf.y);
-        stemMesh.scale.set(1, 10, 1);
+        stemMesh.position.set(xyhBuf.x, xyhBuf.h + 0.0062, xyhBuf.y);
+        stemMesh.scale.set(1, 11.5, 1);
 
-        ballMesh.position.set(xyhBuf.x, xyhBuf.h + 0.0125, xyhBuf.y);
+        ballMesh.position.set(xyhBuf.x, xyhBuf.h + 0.0136, xyhBuf.y);
         scene.add(stemMesh);
         scene.add(ballMesh);
 
@@ -2569,7 +2569,7 @@ function atlas(invokeType) {
             await loadUser(shortDID, proximityTo);
           } catch (error) {
             if (/rate/i.test(error.message) && /limit/i.test(error.message)) {
-              const waitForMsec = 10 * 1000 + 5000 * Math.random();
+              const waitForMsec = 20 * 1000 + 10 * 1000 * Math.random();
               console.log('  ' + shortDID + ' failed ', error.message +
                 ' (pausing for ' + Math.round(waitForMsec / 1000) + ' sec)');
               await new Promise(resolve => setTimeout(resolve, waitForMsec));
