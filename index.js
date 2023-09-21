@@ -163,6 +163,7 @@ function atlas(invokeType) {
     return { stop };
 
     function restartFirehoseOnQuiet() {
+      console.log('reconnecting to Firehose websocket due to suspicious quiet...');
       websocketHose?.stop();
       websocketHose = undefined;
       setTimeout(() => {
@@ -171,7 +172,9 @@ function atlas(invokeType) {
     }
 
     function startWebsocketHose() {
+      console.log('connecting to Firehose websocket...');
       return firehose({
+        ...callbacks,
         like: (who, whose, postID, timeMsec) => {
           const result = callbacks.like?.(who, whose, postID, timeMsec);
           websocketLikesProcessed++;
@@ -179,15 +182,16 @@ function atlas(invokeType) {
           restartFirehoseOnQuietTimeout = setTimeout(restartFirehoseOnQuiet, QUIET_TIMEOUT_FIREHOSE_RESTART_MSEC)
           return result;
         },
-        ...callbacks,
         error: (errorWebSocket) => {
           if (websocketLikesProcessed) {
+            console.log('reconnecting to Firehose websocket due to network error...');
             websocketHose?.stop();
             websocketHose = undefined;
             setTimeout(() => {
               websocketHose = startWebsocketHose();
             }, 400 + Math.random() * 500);
           } else {
+            console.log('connecting to fallback Firehose dummy data...');
             websocketHose?.stop();
             websocketHose = undefined;
             if (typeof onFallback === 'function') onFallback();
@@ -289,10 +293,13 @@ function atlas(invokeType) {
    * @returns {Promise<{}> | {}}
    */
   function loadRelativeScriptJsonp(relativePath) {
-    const funcName = /** @type {string} */(relativePath.replace(/\.js$/, '').split('/').pop());
+    const funcName = jsonpFuncName(relativePath);
     if (typeof require === 'function' && typeof require.resolve === 'function') {
       const scriptText = require('fs').readFileSync(require('path').resolve(__dirname, relativePath), 'utf8');
-      var fn = eval('function() { ' + scriptText + ' return ' + funcName + '; }');
+      var fn = eval('(function() { ' + scriptText.replace(funcName + '=' + funcName, funcName + '=jsonp') + ' \n; return ' +
+        (/^store/.test(funcName) ? ' typeof ' + funcName + ' === "undefined" ? store : ' + funcName :
+          funcName) +
+        '; })');
       return fn();
     } else {
       return new Promise((resolve, reject) => {
@@ -351,6 +358,13 @@ function atlas(invokeType) {
     }
   }
 
+  /** @param {string} path */
+  function jsonpFuncName(path) {
+    return /** @type {string} */(path.split(/[/\\]/g).pop())
+      .replace(/\.js$/, '')
+      .replace(/[^a-z0-9]/ig, '');
+  }
+
   /** @param {string | null | undefined} did */
   function shortenDID(did) {
     return typeof did === 'string' ? did.replace(/^did\:plc\:/, '') : did;
@@ -362,7 +376,7 @@ function atlas(invokeType) {
 
   /** @param {string} handle */
   function shortenHandle(handle) {
-    return handle.replace(_shortenHandle_Regex, '');
+    return handle && handle.replace(_shortenHandle_Regex, '');
   }
   const _shortenHandle_Regex = /\.bsky\.social$/;
 
@@ -494,6 +508,23 @@ function atlas(invokeType) {
     result.x = xRatiod;
     result.y = -yRatiod;
     result.h = h;
+  }
+
+  /** @param {{ [shortDID: string]: [unknown, x: number, y: number, weight?: number, ...unknown[]] }} users */
+  function getMassCenter(users) {
+    let xTotal = 0, yTotal = 0, count = 0;
+    for (const shortDID in users) {
+      const usrTuple = users[shortDID];
+      if (!Array.isArray(usrTuple)) continue;
+      const x = usrTuple[1];
+      const y = usrTuple[2];
+      const weight = usrTuple[3] || 1;
+
+      count += weight;
+      xTotal += x * weight;
+      yTotal += y * weight;
+    }
+    return { x: xTotal / count, y: yTotal / count };
   }
 
   /**
@@ -2329,25 +2360,320 @@ function atlas(invokeType) {
     const fs = require('fs');
     const path = require('path');
 
-    debugDumpFirehose();
-  }
+    // debugDumpFirehose();
+    // syncAllJsonp();
 
+    updateHotFromFirehose();
 
-  /** @param {{ [shortDID: string]: [unknown, x: number, y: number] }} users */
-  function getMassCenter(users) {
-    let xTotal = 0, yTotal = 0, count = 0;
-    for (const shortDID in users) {
-      const usrTuple = users[shortDID];
-      if (!Array.isArray(usrTuple)) continue;
-      const x = usrTuple[1];
-      const y = usrTuple[2];
-
-      count++;
-      xTotal += x;
-      yTotal += y;
+    /**
+     * @param {string} filePath
+     * @param {*} obj
+     */
+    function saveJsonp(filePath, obj) {
+      const funcName = jsonpFuncName(filePath);
+      const json = typeof obj === 'string' ? obj : JSON.stringify(obj);
+      const jsonpWrapped =
+        "var cursors=(function(jsonp){ if (typeof cursors==='function')cursors(jsonp); return cursors=jsonp })(".replace(
+          /cursors/g,
+          funcName
+        ) +
+        json +
+        ') // ' + new Date().toISOString() + ' ' + process.platform + process.arch + ' node-' + process.versions.node + ' v8-' + process.versions.v8 + '\n';
+      fs.writeFileSync(filePath, jsonpWrapped);
     }
-    return { x: xTotal / count, y: yTotal / count };
+
+    async function syncAllJsonp() {
+      const jsonDir = path.resolve(__dirname, '../atlas-db');
+      const jsonpDir = path.resolve(__dirname, '../atlas-db-jsonp');
+
+      const jsonFiles = /** @type {string[]} */(fs.readdirSync(jsonDir, { recursive: true })).filter(f =>
+        !/node_modules/i.test(f) &&
+        /\.json$/i.test(f)).map(f => path.relative(jsonDir, path.resolve(jsonDir, f)));
+
+      const jsonpFiles = /** @type {string[]} */(fs.readdirSync(jsonpDir, { recursive: true })).filter(f =>
+        !/node_modules/i.test(f) &&
+        /\.js$/i.test(f)).map(f => path.relative(jsonpDir, path.resolve(jsonpDir, f)));
+
+      /**
+       * @type {{ [relativePath: string]: {
+       *  json?: { modified: number, contentModified?: number, data: any, jsonText: string },
+       *  jsonp?: { modified: number, contentModified?: number, data: any, jsonText: string }
+       * }}} */
+      const pairs = {};
+      for (const jsonFile of jsonFiles) {
+        const rawText = fs.readFileSync(path.resolve(jsonDir, jsonFile), 'utf8');
+        const contentModified = fishForContentModifiedDate(rawText);
+        const jsonData = JSON.parse(rawText);
+        const modified = fs.statSync(path.resolve(jsonDir, jsonFile)).mtimeMs;
+
+        const key = jsonFile.replace(/\.json$/i, '');
+
+        pairs[key] = {
+          json: { modified, contentModified, data: jsonData, jsonText: rawText },
+        }
+      }
+
+      for (const jsonpFile of jsonpFiles) {
+        const modified = fs.statSync(path.resolve(jsonpDir, jsonpFile)).mtimeMs;
+        const rawText = fs.readFileSync(path.resolve(jsonpDir, jsonpFile), 'utf8');
+        const jsonText = stripRawJsonFromJsonp(rawText);
+        const key = jsonpFile.replace(/\.js$/i, '');
+        if (!pairs[key]) {
+          if (jsonText) {
+            pairs[key] = { jsonp: { modified, contentModified: undefined, data: {}, jsonText: '' } };
+          }
+          continue;
+        }
+        if (!jsonText) {
+          console.log('Cannot strip JSONP decoration from ' + jsonpFile);
+          continue;
+        }
+
+        const contentModified = fishForContentModifiedDate(rawText);
+
+        const jsonpData = await loadRelativeScriptJsonp(path.join('../atlas-db-jsonp', jsonpFile));
+
+        const jsonpEntry = { modified, contentModified, data: jsonpData, jsonText };
+
+        const existing = pairs[key];
+        if (existing) existing.jsonp = jsonpEntry;
+        else pairs[key] = { jsonp: jsonpEntry };
+      }
+
+      for (const relativePath in pairs) {
+        const pairEntry = pairs[relativePath];
+        if (pairEntry.json && !pairEntry.jsonp) {
+          console.log(relativePath + ' has no JSONP counterparty');
+          continue;
+        }
+        if (!pairEntry.json && pairEntry.jsonp) {
+          console.log(relativePath + ' has no JSON counterparty');
+          continue;
+        }
+        if (!pairEntry.json && !pairEntry.jsonp) continue;
+
+        if (/** @type {*} */(pairEntry).json.contentModified > /** @type {*} */(pairEntry).jsonp.contentModified) {
+          console.log(relativePath + ' json overwrites jsonP');
+          saveJsonp(path.resolve(jsonpDir, relativePath + '.js'), pairEntry.json?.jsonText);
+        } else {
+          console.log(relativePath + ' jsonP overwrites json');
+          fs.writeFileSync(path.resolve(jsonDir, relativePath + '.json'), /** @type {string} */(pairEntry.jsonp?.jsonText));
+        }
+      }
+
+      /** @param {string} rawText */
+      function fishForContentModifiedDate(rawText) {
+        const leadLines = rawText.slice(0, 300).trim().split('\n').filter(ln => ln).slice(0, 2);
+        const trailLines = rawText.slice(-300).trim().split('\n').filter(ln => ln).slice(-2);
+        const anyLinesWithContentModifiedCaption = leadLines.concat(trailLines).filter(ln =>
+          /\bcontent\s*Modified\b/i.test(ln));
+
+        const contentModified = anyLinesWithContentModifiedCaption.map(ln => ln.split(/\s+/).map(w => {
+          if (/^20\d\d\-[01]\d\-[0123]\d/.test(w)) {
+            const dt = new Date(w);
+            if (dt.getTime() > 0) return dt.getTime();
+          }
+        }).filter(dt => dt)[0]).filter(dt => dt)[0];
+
+        return contentModified;
+      }
+
+      /** @param {string} jsonpText */
+      function stripRawJsonFromJsonp(jsonpText) {
+        const leadLine = jsonpText.slice(0, 300).trim().split('\n').filter(ln => ln)[0];
+
+        const lastOpeningBracketPos = leadLine.lastIndexOf('(');
+        if (lastOpeningBracketPos < 0) return undefined;
+        const leadLength = jsonpText.indexOf(leadLine.slice(0, lastOpeningBracketPos + 1)) + lastOpeningBracketPos + 1;
+
+        let trailChunk = jsonpText.slice(Math.max(leadLength + 1, jsonpText.length - 300));
+        const trailTrimmed = trailChunk.trimEnd();
+        const trailLastNewlinePos = trailTrimmed.lastIndexOf('\n');
+        if (trailLastNewlinePos >= 0) trailChunk = trailTrimmed.slice(trailLastNewlinePos + 1);
+
+        const firstClosingBracketPos = trailChunk.indexOf(')');
+        if (firstClosingBracketPos < 0) return undefined;
+        const trailLength = trailChunk.length - firstClosingBracketPos;
+        const jsonText = jsonpText.slice(leadLength, -trailLength);
+        return jsonText;
+      }
+    }
+
+    async function updateHotFromFirehose() {
+      console.log('Loading existing hot users...');
+
+      /** @type {{ [shortDID: string]: UserTuple }} */
+      const hotUsers = await loadRelativeScriptJsonp('../atlas-db-jsonp/users/hot.js');
+      console.log('  ' + Object.keys(hotUsers).length + ' hot users');
+
+      /** @type {typeof hotUsers} */
+      const addedUsers = {};
+
+      /** @type {{ [shortDID: string]: Promise | undefined}} */
+      const handlingUsers = {};
+
+      const fhManager = firehose({
+        post(author, postID, text, replyTo, replyToThread, timeMsec) {
+          checkUser(author, [replyTo?.shortDID, replyToThread?.shortDID]);
+          if (replyTo?.shortDID) checkUser(replyTo.shortDID);
+          if (replyToThread?.shortDID) checkUser(replyToThread.shortDID);
+        },
+        repost(who, whose, postID, timeMsec) {
+          checkUser(who, [whose]);
+          checkUser(whose, [who]);
+        },
+        like(who, whose, postID, timeMsec) {
+          checkUser(who, [whose]);
+          checkUser(whose, [who]);
+        },
+        follow(who, whom, timeMsec) {
+          checkUser(who, [whom]);
+          checkUser(whom, [who]);
+        },
+        error: (err) => {
+          console.log('firehose error', err);
+        }
+      });
+
+      var lastSaveAdded;
+
+      /** @param {string} shortDID @param {(string | undefined)[]=} proximityTo */
+      function checkUser(shortDID, proximityTo) {
+        const now = Date.now();
+        if (!lastSaveAdded) lastSaveAdded = now;
+        else if (now - lastSaveAdded > 5000) {
+          lastSaveAdded = now;
+          console.log('Saving added users [' + Object.keys(addedUsers).length + ']...');
+          const combined = { ...hotUsers, ...addedUsers };
+          saveJsonp(path.resolve(__dirname, '../atlas-db-jsonp/users/hot.js'),
+            '{\n' +
+            Object.keys(combined).sort().map(shortDID =>
+              JSON.stringify(shortDID) + ': ' + JSON.stringify(combined[shortDID])
+            ).join(',\n') +
+            '\n}'
+          );
+        }
+
+        if (hotUsers[shortDID] || addedUsers[shortDID] || handlingUsers[shortDID]) return;
+
+        handlingUsers[shortDID] = (async () => {
+          await enterQueue();
+          try {
+            await loadUser(shortDID, proximityTo);
+          } catch (error) {
+            console.log('  ' + shortDID + ' failed ', error.message);
+          }
+          delete handlingUsers[shortDID];
+          exitQueue();
+        })();
+      }
+
+      var running, queued;
+      function enterQueue() {
+        const MAX_CONCURRENCY = 2;
+        if ((running || 0) <= MAX_CONCURRENCY) {
+          running = (running || 0) + 1;
+          return;
+        }
+
+        return new Promise(resolve => {
+          if (!queued) queued = [];
+          queued.push(resolve);
+        });
+      }
+
+      function exitQueue() {
+        running--;
+        if (queued && queued.length) {
+          running++;
+          queued.shift()();
+        }
+      }
+
+      /** @param {string} shortDID @param {(string | undefined)[]=} proximityTo */
+      async function loadUser(shortDID, proximityTo) {
+        console.log('Resolving ' + shortDID + '...');
+
+        const shortHandlePromise = getDidHandle(shortDID);
+        const displayNamePromise = getDidDisplayName(shortDID);
+        const followsPromise = getUserFollows(shortDID);
+
+        const [shortHandle, displayName, follows] = await Promise.all([shortHandlePromise, displayNamePromise, followsPromise]);
+        console.log('  ' + shortDID + ' resolved to ' + shortHandle + ' placing it...');
+
+        /** @type {typeof hotUsers} */
+        const knownUserFollows = {};
+        for (const proximityShortDID of proximityTo || []) {
+          if (!proximityShortDID) continue;
+          const usrTuple = hotUsers[proximityShortDID];
+          if (usrTuple) knownUserFollows[proximityShortDID] = usrTuple;
+        }
+
+        for (const followShortDID of follows) {
+          const usrTuple = hotUsers[followShortDID];
+          if (usrTuple) knownUserFollows[followShortDID] = usrTuple;
+        }
+
+        if (!Object.keys(knownUserFollows).length) {
+          console.log('  abandoning ' + shortDID + ' due to no of follows');
+          return;
+        }
+
+        if (Object.keys(knownUserFollows).length < 3) {
+          console.log('  abandoning ' + shortDID + ' due to insufficient follows: ',
+            Object.values(knownUserFollows).map(usr => usr[0]));
+          return;
+        }
+
+        const centre = getMassCenter(knownUserFollows);
+
+        const x = parseFloat(centre.x.toFixed(2));
+        const y = parseFloat(centre.y.toFixed(2));
+
+        /** @type {UserTuple} */
+        const userTuple = displayName ?
+          [shortHandle, x, y, 0.5, displayName] :
+          [shortHandle, x, y, 0.5];
+
+        addedUsers[shortDID] = userTuple;
+
+        console.log('  ' + shortDID + ' resolved to ' + shortHandle + '    [' + x + ',' + y + ']');
+      }
+
+      function getDidHandle(shortDID) {
+        return fetch(
+          'https://bsky.social/xrpc/com.atproto.repo.describeRepo?repo=' + unwrapShortDID(shortDID)
+        ).then(x => x.json()).then(x => shortenHandle(x.handle));
+      }
+
+      async function getDidDisplayName(shortDID) {
+        try {
+          const reply = await fetch(
+            'https://bsky.social/xrpc/com.atproto.repo.listRecords?collection=app.bsky.actor.profile&repo=' + unwrapShortDID(shortDID)
+          ).then(x => x.json());
+          const displayName = reply.records.map(rec => rec.value.displayName).filter(d => d)[0];
+          return displayName;
+        } catch (error) {
+          console.log('  ' + shortDID + ' no displayName: ' + error.message);
+          return;
+        }
+      }
+
+      async function getUserFollows(shortDID) {
+        try {
+          const reply = await fetch(
+            'https://bsky.social/xrpc/com.atproto.repo.listRecords?collection=app.bsky.graph.follow&repo=' + unwrapShortDID(shortDID)
+          ).then(x => x.json());
+          const followShortDIDs = reply.records.map(rec => shortenDID(rec.value.subject));
+          return followShortDIDs;
+        } catch (error) {
+          console.log('  ' + shortDID + ' no follows: ' + error.message);
+          return;
+        }
+      }
+    }
   }
+
 
   function debugDumpFirehose() {
     let likes = 0;
