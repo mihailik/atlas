@@ -2363,9 +2363,9 @@ function atlas(invokeType) {
     const aptorotooo = require('@atproto/repo');
 
     // debugDumpFirehose();
-    // syncAllJsonp();
+    syncAllJsonp();
 
-    updateHotFromFirehose();
+    //updateHotFromFirehose();
 
     /**
      * @param {string} filePath
@@ -2547,7 +2547,7 @@ function atlas(invokeType) {
       function checkUser(shortDID, proximityTo) {
         const now = Date.now();
         if (!lastSaveAdded) lastSaveAdded = now;
-        else if (now - lastSaveAdded > 5000) {
+        else if (now - lastSaveAdded > 10000) {
           lastSaveAdded = now;
           console.log('Saving added users [' + Object.keys(addedUsers).length + ']...');
           const combined = { ...hotUsers, ...addedUsers };
@@ -2558,6 +2558,7 @@ function atlas(invokeType) {
             ).join(',\n') +
             '\n}'
           );
+          console.log('  saved, ' + Object.keys(handlingUsers).length + ' in the queue\n\n');
         }
 
         if (hotUsers[shortDID] || addedUsers[shortDID] || handlingUsers[shortDID]) return;
@@ -2576,7 +2577,7 @@ function atlas(invokeType) {
 
       var running, queued;
       function enterQueue() {
-        const MAX_CONCURRENCY = 2;
+        const MAX_CONCURRENCY = 3;
         if ((running || 0) <= MAX_CONCURRENCY) {
           running = (running || 0) + 1;
           return;
@@ -2598,7 +2599,7 @@ function atlas(invokeType) {
 
       /** @param {string} shortDID @param {(string | undefined)[]=} proximityTo */
       async function loadUser(shortDID, proximityTo) {
-        await new Promise(resolve => setTimeout(resolve, 400 + 500 * Math.random()));
+        await new Promise(resolve => setTimeout(resolve, 300 + 350 * Math.random()));
         console.log('Resolving ' + shortDID + '...');
 
         const shortHandlePromise = getDidHandle(shortDID);
@@ -2642,7 +2643,7 @@ function atlas(invokeType) {
 
         addedUsers[shortDID] = userTuple;
 
-        console.log('  ' + shortDID + ' resolved to ' + shortHandle + '    [' + x + ',' + y + ']');
+        console.log('  ' + shortDID + ' resolved to ' + shortHandle + '    ' + Object.keys(knownUserNeighbours).length + ' neighbours  for [' + x + ',' + y + ']');
 
         /** @param {(string | null | undefined)[] | undefined} neighbours @param {number} coef */
         function addUserNeightbours(neighbours, coef) {
@@ -2663,7 +2664,7 @@ function atlas(invokeType) {
 
 
       function getDidHandle(shortDID) {
-        return atClient.com.atproto.repo.describeRepo(unwrapShortDID(shortDID)).then(x => shortenHandle(x.data.handle));
+        return atClient.com.atproto.repo.describeRepo({ repo: unwrapShortDID(shortDID) }).then(x => shortenHandle(x.data.handle));
       }
 
       async function getDidDisplayName(shortDID) {
