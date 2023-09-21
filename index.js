@@ -2359,6 +2359,8 @@ function atlas(invokeType) {
   async function runNode(invokeType) {
     const fs = require('fs');
     const path = require('path');
+    const atproto = require('@atproto/api');
+    const aptorotooo = require('@atproto/repo');
 
     // debugDumpFirehose();
     // syncAllJsonp();
@@ -2500,6 +2502,10 @@ function atlas(invokeType) {
     }
 
     async function updateHotFromFirehose() {
+      const atClient = new atproto.BskyAgent({
+        service: 'https://bsky.social/xrpc'
+      });
+
       console.log('Loading existing hot users...');
 
       /** @type {{ [shortDID: string]: UserTuple }} */
@@ -2592,40 +2598,39 @@ function atlas(invokeType) {
 
       /** @param {string} shortDID @param {(string | undefined)[]=} proximityTo */
       async function loadUser(shortDID, proximityTo) {
+        await new Promise(resolve => setTimeout(resolve, 400 + 500 * Math.random()));
         console.log('Resolving ' + shortDID + '...');
 
         const shortHandlePromise = getDidHandle(shortDID);
         const displayNamePromise = getDidDisplayName(shortDID);
         const followsPromise = getUserFollows(shortDID);
+        const likesPromise = getUserLikes(shortDID);
 
-        const [shortHandle, displayName, follows] = await Promise.all([shortHandlePromise, displayNamePromise, followsPromise]);
+        const [shortHandle, displayName, follows, likes] = await Promise.all([
+          shortHandlePromise,
+          displayNamePromise,
+          followsPromise,
+          likesPromise]);
         console.log('  ' + shortDID + ' resolved to ' + shortHandle + ' placing it...');
 
         /** @type {typeof hotUsers} */
-        const knownUserFollows = {};
-        for (const proximityShortDID of proximityTo || []) {
-          if (!proximityShortDID) continue;
-          const usrTuple = hotUsers[proximityShortDID];
-          if (usrTuple) knownUserFollows[proximityShortDID] = usrTuple;
-        }
+        const knownUserNeighbours = {};
+        addUserNeightbours(proximityTo, 0.2);
+        addUserNeightbours(follows, 1);
+        addUserNeightbours(likes, 0.1);
 
-        for (const followShortDID of follows) {
-          const usrTuple = hotUsers[followShortDID];
-          if (usrTuple) knownUserFollows[followShortDID] = usrTuple;
-        }
-
-        if (!Object.keys(knownUserFollows).length) {
+        if (!Object.keys(knownUserNeighbours).length) {
           console.log('  abandoning ' + shortDID + ' due to no of follows');
           return;
         }
 
-        if (Object.keys(knownUserFollows).length < 3) {
+        if (Object.keys(knownUserNeighbours).length < 3) {
           console.log('  abandoning ' + shortDID + ' due to insufficient follows: ',
-            Object.values(knownUserFollows).map(usr => usr[0]));
+            Object.values(knownUserNeighbours).map(usr => usr[0]));
           return;
         }
 
-        const centre = getMassCenter(knownUserFollows);
+        const centre = getMassCenter(knownUserNeighbours);
 
         const x = parseFloat(centre.x.toFixed(2));
         const y = parseFloat(centre.y.toFixed(2));
@@ -2638,20 +2643,36 @@ function atlas(invokeType) {
         addedUsers[shortDID] = userTuple;
 
         console.log('  ' + shortDID + ' resolved to ' + shortHandle + '    [' + x + ',' + y + ']');
+
+        /** @param {(string | null | undefined)[] | undefined} neighbours @param {number} coef */
+        function addUserNeightbours(neighbours, coef) {
+          if (!neighbours) return;
+
+          for (const shortDID of neighbours) {
+            if (!shortDID) continue;
+            const neighbourTuple = hotUsers[shortDID];
+            if (!neighbourTuple) continue;
+            let matchTuple = knownUserNeighbours[shortDID];
+            if (!matchTuple) {
+              matchTuple = knownUserNeighbours[shortDID] = [...neighbourTuple];
+            }
+            matchTuple[3] *= (1 + coef);
+          }
+        }
       }
 
+
       function getDidHandle(shortDID) {
-        return fetch(
-          'https://bsky.social/xrpc/com.atproto.repo.describeRepo?repo=' + unwrapShortDID(shortDID)
-        ).then(x => x.json()).then(x => shortenHandle(x.handle));
+        return atClient.com.atproto.repo.describeRepo(unwrapShortDID(shortDID)).then(x => shortenHandle(x.data.handle));
       }
 
       async function getDidDisplayName(shortDID) {
         try {
-          const reply = await fetch(
-            'https://bsky.social/xrpc/com.atproto.repo.listRecords?collection=app.bsky.actor.profile&repo=' + unwrapShortDID(shortDID)
-          ).then(x => x.json());
-          const displayName = reply.records.map(rec => rec.value.displayName).filter(d => d)[0];
+          const reply = await atClient.com.atproto.repo.listRecords({
+            collection: 'app.bsky.actor.profile',
+            repo: unwrapShortDID(shortDID)
+          });
+          const displayName = reply.data.records.map(rec => /** @type {*} */(rec.value).displayName).filter(d => d)[0];
           return displayName;
         } catch (error) {
           console.log('  ' + shortDID + ' no displayName: ' + error.message);
@@ -2661,11 +2682,26 @@ function atlas(invokeType) {
 
       async function getUserFollows(shortDID) {
         try {
-          const reply = await fetch(
-            'https://bsky.social/xrpc/com.atproto.repo.listRecords?collection=app.bsky.graph.follow&repo=' + unwrapShortDID(shortDID)
-          ).then(x => x.json());
-          const followShortDIDs = reply.records.map(rec => shortenDID(rec.value.subject));
+          const reply = await atClient.com.atproto.repo.listRecords({
+            collection: 'app.bsky.graph.follow',
+            repo: unwrapShortDID(shortDID)
+          });
+          const followShortDIDs = reply.data.records.map(rec => shortenDID(/** @type {*} */(rec.value).subject));
           return followShortDIDs;
+        } catch (error) {
+          console.log('  ' + shortDID + ' no follows: ' + error.message);
+          return;
+        }
+      }
+
+      async function getUserLikes(shortDID) {
+        try {
+          const reply = await atClient.com.atproto.repo.listRecords({
+            collection: 'app.bsky.feed.like',
+            repo: unwrapShortDID(shortDID)
+          });
+          const likedDIDs = reply.data.records.map(rec => breakFeedUri(/** @type {*} */(rec.value).subject.uri)?.shortDID);
+          return likedDIDs;
         } catch (error) {
           console.log('  ' + shortDID + ' no follows: ' + error.message);
           return;
