@@ -2363,7 +2363,7 @@ function atlas(invokeType) {
     const aptorotooo = require('@atproto/repo');
 
     // debugDumpFirehose();
-    syncAllJsonp();
+    // syncAllJsonp();
 
     updateHotFromFirehose();
 
@@ -2565,10 +2565,16 @@ function atlas(invokeType) {
           console.log('  saved, ' + Object.keys(handlingUsers).length + ' in the queue\n\n');
         }
 
-        if (hotUsers[shortDID] || addedUsers[shortDID] || handlingUsers[shortDID]) return;
+        if (hotUsers[shortDID] || addedUsers[shortDID]) return;
+        const existingWork = handlingUsers[shortDID];
+        if (existingWork) {
+          /** @type {{count?:number}} */(existingWork).count =
+            (/** @type {{count?:number}} */(existingWork).count || 0) + 1;
+          return;
+        }
 
         handlingUsers[shortDID] = (async () => {
-          await enterQueue();
+          await enterQueue(shortDID);
           try {
             await loadUser(shortDID, proximityTo);
           } catch (error) {
@@ -2587,7 +2593,7 @@ function atlas(invokeType) {
       }
 
       var running, queued;
-      function enterQueue() {
+      function enterQueue(shortDID) {
         const MAX_CONCURRENCY = 4;
         if ((running || 0) <= MAX_CONCURRENCY) {
           running = (running || 0) + 1;
@@ -2596,6 +2602,7 @@ function atlas(invokeType) {
 
         return new Promise(resolve => {
           if (!queued) queued = [];
+          /** @type {{ shortDID?: string}} */(resolve).shortDID = shortDID;
           queued.push(resolve);
         });
       }
@@ -2604,7 +2611,15 @@ function atlas(invokeType) {
         running--;
         if (queued && queued.length) {
           running++;
-          queued.shift()();
+          queued.sort((q1, q2) => {
+            const c1 = /** @type {{ count?: number }} */(handlingUsers[q1.shortDID])?.count || 0;
+            const c2 = /** @type {{ count?: number }} */(handlingUsers[q2.shortDID])?.count || 0;
+            return c2 - c1;
+          });
+          const topUnqueue = queued.shift();
+          // const priority = /** @type {{ count?: number }} */(handlingUsers[topUnqueue.shortDID])?.count;
+          // priority?.toString();
+          topUnqueue();
         }
       }
 
