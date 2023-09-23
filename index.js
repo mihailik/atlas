@@ -869,7 +869,7 @@ function atlas(invokeType) {
         const firehoseTrackingRenderer = trackFirehose({ users, usersBounds, clock });
         scene.add(firehoseTrackingRenderer.mesh);
 
-        const geoLayer = renderGeoLabels({ users, usersBounds, clock, userTiles: proximityTiles });
+        const geoLayer = renderGeoLabels({ users, usersBounds, clock });
         scene.add(geoLayer.layerGroup);
 
         startAnimation();
@@ -2022,11 +2022,10 @@ function atlas(invokeType) {
        * @param {{
        *  users: { [shortDID: string]: UserTuple },
        *  usersBounds: {x: { min: number, max: number}, y: { min: number, max: number }},
-       *  userTiles: ReturnType<typeof makeProximityTiles>,
        *  clock: ReturnType<typeof makeClock>
        * }} _
        */
-      function renderGeoLabels({ users, usersBounds, userTiles, clock }) {
+      function renderGeoLabels({ users, usersBounds, clock }) {
         /**
          * @typedef {{
          *  shortDID: string;
@@ -2035,35 +2034,93 @@ function atlas(invokeType) {
          * }} LabelInfo
          */
 
-        const NUMBER_OF_LARGEST = 35;
-        const fixedUsers = Object.keys(users).sort((a, b) => users[b][3] - users[a][3]).slice(0, NUMBER_OF_LARGEST);
-        const suppressUserLabel = ['dougchu'];
-        for (const shortHandle of [
-          'oyin.bo', 'africanceleb', 'kafui', 'jaz', 'kite.black', 'mathan.dev', 'tressie', 'theferocity', 'reniadeb', 'kevinlikesmaps',
-          'twoscooters', 'finokoye', 'teetotaller', 'hystericalblkns', 'faytak', 'xkcd.com']) {
-          const matches = findUserMatches(shortHandle, users);
-          if (matches?.length) {
-            if (fixedUsers.indexOf(matches[0][0]) <0) fixedUsers.push(matches[0][0])
-          }
-        }
 
         const layerGroup = new THREE.Group();
 
         /** @type {ReturnType<typeof createLabel>[]} */
         const textEntries = [];
-        for (const shortDID of fixedUsers) {
-          const [shortHandle] = users[shortDID];
-          if (suppressUserLabel[shortHandle]) continue;
-          const label = createLabel(shortDID);
-          textEntries.push(label);
-          layerGroup.add(label.group);
-        }
+
+        addFixedUsers();
 
         return {
           layerGroup,
           labels: textEntries.map(label => label.labelInfo),
           updateWithCamera
         };
+
+        function addFixedUsers() {
+          const fixedUsers = getFixedUsers();
+          for (const shortDID of fixedUsers) {
+            const label = createLabel(shortDID);
+            textEntries.push(label);
+            layerGroup.add(label.group);
+          }
+        }
+
+        function getFixedUsers() {
+          const include = [
+            'oyin.bo', 'africanceleb', 'ohkafuimykafui', 'jaz', 'kite.black', 'mathan.dev', 'tressie', 'theferocity', 'reniadeb', 'kevinlikesmaps',
+            'twoscooters', 'finokoye', 'teetotaller', 'hystericalblkns', 'faytak', 'xkcd.com'];
+          const exclude = ['dougchu'];
+          const MAX_NUMBER_OF_LARGEST = 300;
+          const MIN_DISTANCE = 0.1;
+
+          const fixedUsers = [];
+
+          /** @type {{ shortDID: string, x: number, y: number, weight: number }[]} */
+          const largestUsers = [];
+          const xyhBuf = { x: 0, y: 0, h: 0 };
+
+          for (const shortDID in users) {
+            const [shortHandle, xSpace, ySpace, weight] = users[shortDID];
+            const userTooSmall = largestUsers.length === MAX_NUMBER_OF_LARGEST && weight <= largestUsers[largestUsers.length - 1].weight;
+
+            if (userTooSmall && fixedUsers.length === include.length) continue;
+
+            if (exclude.indexOf(shortHandle) >= 0) continue;
+            if (include.indexOf(shortHandle) >= 0) {
+              fixedUsers.push(shortDID);
+              continue;
+            }
+
+            if (userTooSmall) continue;
+
+            mapUserCoordsToAtlas(xSpace, ySpace, usersBounds, xyhBuf);
+            const insertUser = { shortDID, x: xyhBuf.x, y: xyhBuf.y, weight };
+            if (largestUsers.length < MAX_NUMBER_OF_LARGEST) {
+              largestUsers.push(insertUser);
+              if (largestUsers.length === MAX_NUMBER_OF_LARGEST) {
+                largestUsers.sort((a, b) => b.weight - a.weight);
+              }
+              continue;
+            }
+
+            let insertionIndex = binarySearch(largestUsers, insertUser, (a, b) => b.weight - a.weight);
+            if (insertionIndex < 0) insertionIndex = ~insertionIndex;
+            largestUsers.splice(insertionIndex, 0, insertUser);
+            largestUsers.pop();
+          }
+
+          pruneCrowdedNeighbours(largestUsers);
+
+          return fixedUsers.concat(largestUsers.map(u => u.shortDID));
+
+          /** @param {{ shortDID: string, x: number, y: number, weight: number }[]} largestUsers */
+          function pruneCrowdedNeighbours(largestUsers) {
+            for (let i = 1; i < largestUsers.length; i++) {
+              const current = largestUsers[i];
+              for (let j = 0; j < i; j++) {
+                const prev = largestUsers[j];
+                const dist = distance2D(prev.x, prev.y, current.x, current.y);
+                if (dist < MIN_DISTANCE) {
+                  largestUsers.splice(i, 1);
+                  i--;
+                  break;
+                }
+              }
+            }
+          }
+        }
 
         /** @param {string} shortDID */
         function createLabel(shortDID) {
