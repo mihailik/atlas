@@ -2037,6 +2037,7 @@ function atlas(invokeType) {
 
         const NUMBER_OF_LARGEST = 35;
         const fixedUsers = Object.keys(users).sort((a, b) => users[b][3] - users[a][3]).slice(0, NUMBER_OF_LARGEST);
+        const suppressUserLabel = ['dougchu'];
         for (const shortHandle of [
           'oyin.bo', 'africanceleb', 'kafui', 'jaz', 'kite.black', 'mathan.dev', 'tressie', 'theferocity', 'reniadeb', 'kevinlikesmaps',
           'twoscooters', 'finokoye', 'teetotaller', 'hystericalblkns', 'faytak', 'xkcd.com']) {
@@ -2051,6 +2052,8 @@ function atlas(invokeType) {
         /** @type {ReturnType<typeof createLabel>[]} */
         const textEntries = [];
         for (const shortDID of fixedUsers) {
+          const [shortHandle] = users[shortDID];
+          if (suppressUserLabel[shortHandle])) continue;
           const label = createLabel(shortDID);
           textEntries.push(label);
           layerGroup.add(label.group);
