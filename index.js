@@ -870,7 +870,7 @@ function atlas(invokeType) {
         scene.add(firehoseTrackingRenderer.mesh);
 
         const geoLayer = renderGeoLabels({ users, usersBounds, clock, userTiles: proximityTiles });
-        for (const geoLabel of geoLayer.textEntries) scene.add(geoLabel);
+        scene.add(geoLayer.layerGroup);
 
         startAnimation();
 
@@ -1362,7 +1362,7 @@ function atlas(invokeType) {
             float step = 0.1;
             float timeFunction = timeRatio < step ? timeRatio / step : 1.0 - (timeRatio - step) * (1.0 - step);
 
-            gl_Position.y += timeFunction * timeFunction * timeFunction * 0.01;
+            //gl_Position.y += timeFunction * timeFunction * timeFunction * 0.001;
             `,
           fragmentShader: /* glsl */`
             gl_FragColor = tintColor;
@@ -1394,7 +1394,7 @@ function atlas(invokeType) {
           userMapper: (shortDID, pos, extra) => {
             const usr = activeUsers[shortDID];
             if (!usr) return;
-            pos.set(usr.x, usr.h, usr.y, usr.weight / 5);
+            pos.set(usr.x, usr.h, usr.y, usr.weight / 3);
             extra.x = usr.startAtMsec / 1000;
             extra.y = usr.fadeAtMsec / 1000;
           },
@@ -2024,58 +2024,97 @@ function atlas(invokeType) {
         /**
          * @typedef {{
          *  shortDID: string;
-         *  addedTime: number;
+         *  position: THREE.Vector3;
+         *  visible: boolean;
          * }} LabelInfo
          */
 
-        // /** @type {Set<LabelInfo>} */
-        // const labels = new Set();
+        const NUMBER_OF_LARGEST = 35;
+        const fixedUsers = Object.keys(users).sort((a, b) => users[b][3] - users[a][3]).slice(0, NUMBER_OF_LARGEST);
+        for (const shortHandle of [
+          'oyin.bo', 'africanceleb', 'kafui', 'jaz', 'kite.black', 'mathan.dev', 'tressie', 'theferocity', 'reniadeb', 'kevinlikesmaps',
+          'twoscooters', 'finokoye', 'teetotaller', 'hystericalblkns', 'faytak', 'xkcd.com']) {
+          const matches = findUserMatches(shortHandle, users);
+          if (matches?.length) {
+            if (fixedUsers.indexOf(matches[0][0]) <0) fixedUsers.push(matches[0][0])
+          }
+        }
 
-        const NUMBER_OF_LARGEST = 100;
-        const largestUsers = Object.keys(users).sort((a, b) => users[b][3] - users[a][3]).slice(0, NUMBER_OF_LARGEST);
+        const layerGroup = new THREE.Group();
 
-        /** @type {(THREE.Group & { handleText: import('troika-three-text').Text })[]} */
+        /** @type {ReturnType<typeof createLabel>[]} */
         const textEntries = [];
-        for (const shortDID of largestUsers) {
+        for (const shortDID of fixedUsers) {
+          const label = createLabel(shortDID);
+          textEntries.push(label);
+          layerGroup.add(label.group);
+        }
+
+        return {
+          layerGroup,
+          labels: textEntries.map(label => label.labelInfo),
+          updateWithCamera
+        };
+
+        /** @param {string} shortDID */
+        function createLabel(shortDID) {
           const [shortHandle, xSpace, ySpace, weight] = users[shortDID];
           const xyhBuf = { x: 0, y: 0, h: 0 };
           mapUserCoordsToAtlas(xSpace, ySpace, usersBounds, xyhBuf);
 
           const userColor = defaultUserColorer(shortDID) >> 8;
 
-          const handleText = new troika_three_text.Text();
-          handleText.text = '@' + shortHandle;
-          handleText.fontSize = 0.002;
-          handleText.color = userColor;
-          handleText.outlineWidth = 0.0002;
-          handleText.outlineBlur = 0.0005;
-          handleText.position.set(-0.001, 0.005, 0);
-          handleText.sync(() => {
-            var info = handleText.textRenderInfo;
+          const text = new troika_three_text.Text();
+          text.text = '@' + shortHandle;
+          text.fontSize = 0.004;
+          text.color = userColor;
+          text.outlineWidth = 0.0002;
+          text.outlineBlur = 0.0005;
+          text.position.set(0.003, 0.004, 0);
+          text.sync(() => {
+            var info = text.textRenderInfo;
           });
 
           const group = /** @type {THREE.Group & { handleText: import('troika-three-text').Text }} */(new THREE.Group());
           group.position.set(xyhBuf.x, xyhBuf.h, xyhBuf.y);
-          group.add(/** @type {*} */(handleText));
-          group.handleText = handleText;
+          group.add(/** @type {*} */(text));
+          group.rotation.z = 0.3;
+          group.handleText = text;
           //group.scale.set(10, 10, 10);
 
-          textEntries.push(group);
-        }
+          const label = {
+            labelInfo: {
+              shortDID,
+              position: group.position,
+              visible: true
+            },
+            group,
+            text,
+            updateWithCamera
+          };
 
-        return {
-          textEntries,
-          updateWithCamera
-        };
+          return label;
+
+          /** @param {THREE.Vector3} cameraPos */
+          function updateWithCamera(cameraPos) {
+            if (label.labelInfo.visible) {
+              group.visible = true;
+              group.rotation.y = Math.atan2(
+                (cameraPos.x - group.position.x),
+                (cameraPos.z - group.position.z));
+              group.handleText.sync();
+            } else {
+              group.visible = false;
+            }
+          }
+
+        }
 
         /** @param {THREE.Vector3} cameraPos */
         function updateWithCamera(cameraPos) {
 
-          for (const group of textEntries) {
-            group.rotation.y = Math.atan2(
-              (cameraPos.x - group.position.x),
-              (cameraPos.z - group.position.z));
-            group.handleText.sync();
+          for (const label of textEntries) {
+            label.updateWithCamera(cameraPos);
           }
 
           // const tiles = userTiles.findTiles(
