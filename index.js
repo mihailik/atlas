@@ -13,7 +13,79 @@ function atlas(invokeType) {
    * }} FeedRecordTypeMap
    */
 
+  /** @typedef {{ shortDID: string, shortHandle: string, x: number, y: number, h: number, weight: number, displayName?: string, colorRGB: number }} UserEntry */
   /** @typedef {[handle: string, x: number, y: number, weight: number, displayName?: string]} UserTuple */
+
+  /**
+   * @param {{
+   *  users: { [shortDID: string]: UserTuple },
+   *  dimensionCount: number,
+   *  sleep?: () => Promise
+   * }} _
+   */
+  async function processUsersToTiles({ users, dimensionCount, sleep }) {
+    const usersBounds = getUserCoordBounds(users);
+
+    /** @type {{ shortDID: string, usrTuple: UserTuple }[][]} */
+    const tilePrototypes = [];
+    for (const shortDID in users) {
+      const usrTuple = users[shortDID];
+      const tileX = Math.floor((usrTuple[1] - usersBounds.x.min) / (usersBounds.x.max - usersBounds.x.min) * dimensionCount);
+      const tileY = Math.floor((usrTuple[2] - usersBounds.y.min) / (usersBounds.y.max - usersBounds.y.min) * dimensionCount);
+      const tileIndex = tileX + tileY * dimensionCount;
+      const tileBucket = tilePrototypes[tileIndex] || (tilePrototypes[tileIndex] = []);
+
+      if (tilePrototypes.length % 10000 === 9999 && typeof sleep === 'function') await sleep();
+      tileBucket.push({ shortDID, usrTuple });
+    }
+
+    let processedBuckets = 0;
+    for (const tileBucket of tilePrototypes) {
+      if (!tileBucket) continue;
+      if (processedBuckets % 100 === 99 && typeof sleep === 'function') await sleep();
+
+      tileBucket.sort((a, b) => b.usrTuple[3] - a.usrTuple[3]);
+
+      processedBuckets++;
+    }
+
+    const xyhBuf = { x: 0, y: 0, h: 0 };
+
+    const byShortDID = {};
+    const byShortHandle = {};
+    const all = [];
+
+    /** @type {UserEntry[][]} */
+    const tiles = [];
+    processedBuckets = 0;
+    for (let iBucket = 0; iBucket < tilePrototypes.length; iBucket++) {
+      const tileBucket = tilePrototypes[iBucket];
+      if (!tileBucket) continue;
+      if (processedBuckets % 100 === 99 && typeof sleep === 'function') await sleep();
+
+      tiles[iBucket] = tileBucket.map(entry => {
+        mapUserCoordsToAtlas(entry.usrTuple[1], entry.usrTuple[2], usersBounds, xyhBuf);
+        const userEntry = {
+          shortDID: entry.shortDID,
+          shortHandle: entry.usrTuple[0],
+          x: xyhBuf.x,
+          y: xyhBuf.y,
+          h: xyhBuf.h,
+          weight: entry.usrTuple[3] && (entry.usrTuple[3] - usersBounds.weight.min) / (usersBounds.weight.max - usersBounds.weight.min),
+          displayName: entry.usrTuple[4],
+          colorRGB: rndUserColorer(entry.shortDID)
+        };
+        byShortDID[entry.shortDID] = userEntry;
+        byShortHandle[userEntry.shortHandle] = userEntry;
+        all.push(userEntry);
+        return userEntry;
+      });
+
+      processedBuckets++;
+    }
+
+    return { byShortDID, byShortHandle, all, tiles, dimensionCount };
+  }
 
   /** @param {{
    *  post?(author: string, postID: string, text: string, replyTo: { shortDID: string, postID: string } | undefined, replyToThread: { shortDID: string, postID: string } | undefined, timeMsec: number);
@@ -287,6 +359,14 @@ function atlas(invokeType) {
       }
     }
   })();
+
+  /** @param {string} shortDID */
+  function rndUserColorer(shortDID) {
+    const crc32 = calcCRC32(shortDID);
+    const color = (crc32 | 0x808080) & 0xFFFFFF;
+    return color;
+  }
+
 
   /**
    * @param {string} relativePath
@@ -799,6 +879,9 @@ function atlas(invokeType) {
 
       async function constructStateAndRun() {
         const users = await loadUsersPromise;
+        const startProcessToTiles = Date.now();
+        const usersAndTiles = await processUsersToTiles({ users, dimensionCount: 32, sleep: () => new Promise(resolve => setTimeout(resolve, 1)) });
+        console.log('Processed users to tiles in ', Date.now() - startProcessToTiles, ' msec');
         const clock = makeClock();
 
         const {
@@ -808,7 +891,7 @@ function atlas(invokeType) {
           stats,
           usersBounds,
           proximityTiles
-        } = setupScene(users, clock);
+        } = setupScene(users, usersAndTiles.all, clock);
 
         const domElements = createDOMLayout({
           canvas3D: renderer.domElement,
@@ -869,8 +952,8 @@ function atlas(invokeType) {
         const firehoseTrackingRenderer = trackFirehose({ users, usersBounds, clock });
         scene.add(firehoseTrackingRenderer.mesh);
 
-        const geoLayer = renderGeoLabels({ users, usersBounds, clock });
-        scene.add(geoLayer.layerGroup);
+        // const geoLayer = renderGeoLabels({ users, usersBounds, clock });
+        // scene.add(geoLayer.layerGroup);
 
         startAnimation();
 
@@ -893,7 +976,7 @@ function atlas(invokeType) {
           function renderFrame() {
             clock.update();
 
-            geoLayer.updateWithCamera(camera.position);
+            // geoLayer.updateWithCamera(camera);
 
             let rareMoved = false;
             if (!lastCameraPos || !(clock.nowMSec < lastCameraUpdate + 200)) {
@@ -959,25 +1042,12 @@ function atlas(invokeType) {
         }
       }
 
-      /** @param {string} shortDID */
-      function defaultUserColorer(shortDID) {
-        /** @type {THREE.Color} */
-        let rgb;
-        if (!/** @type {*} */(defaultUserColorer).rgb) /** @type {*} */(defaultUserColorer).rgb = rgb = new THREE.Color();
-        else (rgb = /** @type {*} */(defaultUserColorer).rgb).set(0, 0, 0);
-
-        const crc32 = calcCRC32(shortDID);
-        const hue = (Math.abs(crc32) % 2000) / 2000;
-        rgb.offsetHSL(hue, 3, 0.6);
-        const hexColor = rgb.getHex() * 256 + 0xFF;
-        return hexColor;
-      }
-
       /**
-       * @param {{ [shortDID: string]: UserTuple }} users
+       * @param {{ [shortDID: string]: UserTuple }} rawUsers
+       * @param {UserEntry[]} users
        * @param {ReturnType<typeof makeClock>} clock
        */
-      function setupScene(users, clock) {
+      function setupScene(rawUsers, users, clock) {
         const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.00001, 10000);
         camera.position.x = 0.18;
         camera.position.y = 0.49;
@@ -1002,11 +1072,12 @@ function atlas(invokeType) {
 
         const stats = new Stats();
 
-        const usersBounds = getUserCoordBounds(users);
-        const proximityTiles = makeProximityTiles(users, 16);
+        const usersBounds = getUserCoordBounds(rawUsers);
 
-        const farUsersMesh = createFarUsersMesh({ clock, users, usersBounds });
+        const farUsersMesh = massShaderRenderer({ clock, users: users.slice(0, 1000) });
         scene.add(farUsersMesh);
+        // const farUsersMesh = createFarUsersMesh({ clock, users: rawUsers, usersBounds });
+        // scene.add(farUsersMesh);
 
         return {
           scene,
@@ -1015,8 +1086,6 @@ function atlas(invokeType) {
           renderer,
           stats,
           usersBounds,
-          farUsersMesh,
-          proximityTiles
         };
       }
 
@@ -1040,10 +1109,12 @@ function atlas(invokeType) {
             const weightRatio = weight / usersBounds.weight.max;
             pos.set(xyhBuf.x, xyhBuf.h, xyhBuf.y, weight ? Math.max(0.0007, 0.01 * weightRatio * Math.sqrt(weightRatio)) : 0.0005);
           },
-          userColorer: defaultUserColorer
+          userColorer: rndUserColorer
         })
         return mesh;
       }
+
+
 
 
       /**
@@ -1331,7 +1402,7 @@ function atlas(invokeType) {
 
           const xyhBuf = { x: 0, y: 0, h: 0 };
           mapUserCoordsToAtlas(usrTuple[1], usrTuple[2], usersBounds, xyhBuf);
-          const color = defaultUserColorer(shortDID);
+          const color = rndUserColorer(shortDID);
 
           activeUsers[shortDID] = {
             x: xyhBuf.x, y: xyhBuf.y, h: xyhBuf.h,
@@ -1404,7 +1475,7 @@ function atlas(invokeType) {
             extra.x = usr.startAtMsec / 1000;
             extra.y = usr.fadeAtMsec / 1000;
           },
-          userColorer: (shortDID) => activeUsers[shortDID]?.color
+          userColorer: (shortDID) => activeUsers[shortDID]?.color * 256 | 0xFF
         });
         return rend;
       }
@@ -1861,7 +1932,7 @@ function atlas(invokeType) {
         const yPlus = (r + 0.09) * Math.sin(angle);
         const hPlus = xyhBuf.h + 0.04;
 
-        const userColor = defaultUserColorer(shortDID) >> 8;
+        const userColor = rndUserColorer(shortDID) >> 8;
 
         const material = new THREE.MeshLambertMaterial({
           color: userColor,
@@ -2034,17 +2105,23 @@ function atlas(invokeType) {
          * }} LabelInfo
          */
 
+        const TILE_DIMENSION_COUNT = 32;
+        const sizedTiles = createSizedTiles(TILE_DIMENSION_COUNT);
 
         const layerGroup = new THREE.Group();
 
         /** @type {ReturnType<typeof createLabel>[]} */
-        const textEntries = [];
+        const fixedTextEntries = [];
+
+        /** @type {{ [shortDID: string]: ReturnType<typeof createLabel> }} */
+        const variableTextEntries = {};
+        const pBuf = new THREE.Vector3();
 
         addFixedUsers();
 
         return {
           layerGroup,
-          labels: textEntries.map(label => label.labelInfo),
+          labels: fixedTextEntries.map(label => label.labelInfo),
           updateWithCamera
         };
 
@@ -2052,14 +2129,45 @@ function atlas(invokeType) {
           const fixedUsers = getFixedUsers();
           for (const shortDID of fixedUsers) {
             const label = createLabel(shortDID);
-            textEntries.push(label);
+            fixedTextEntries.push(label);
             layerGroup.add(label.group);
           }
         }
 
+        /** @typedef {{ shortDID: string, x: number, y: number, h: number, weight: number }} TileUserEntry */
+
+        /** @param {number} dimensionCount */
+        function createSizedTiles(dimensionCount) {
+          /** @type {{ shortDID: string, usrTuple: UserTuple }[][]} */
+          const tilePrototypes = [];
+          const xyhBuf = { x: 0, y: 0, h: 0 };
+          for (const shortDID in users) {
+            const usrTuple = users[shortDID];
+            mapUserCoordsToAtlas(usrTuple[1], usrTuple[2], usersBounds, xyhBuf);
+            const tileX = Math.floor((xyhBuf.x + 1) / 2 * dimensionCount);
+            const tileY = Math.floor((xyhBuf.y + 1) / 2 * dimensionCount);
+            const tileIndex = tileX + tileY * dimensionCount;
+            const tileBucket = tilePrototypes[tileIndex] || (tilePrototypes[tileIndex] = []);
+            tileBucket.push({ shortDID, usrTuple });
+          }
+
+          /** @type {TileUserEntry[][]} */
+          const tiles = tilePrototypes.map(tileBucket =>
+            tileBucket.map(entry => ({
+              shortDID: entry.shortDID,
+              x: entry.usrTuple[1],
+              y: entry.usrTuple[2],
+              weight: entry.usrTuple[3]
+            })).sort((a, b) => b.weight - a.weight)
+          );
+
+          return tiles;
+        }
+
         function getFixedUsers() {
           const include = [
-            'oyin.bo', 'africanceleb', 'ohkafuimykafui', 'jaz', 'kite.black', 'mathan.dev', 'tressie', 'theferocity', 'reniadeb', 'kevinlikesmaps',
+            'oyin.bo', 'africanceleb', 'ohkafuimykafui', 'jaz', 'kite.black', 'mathan.dev', 'wolfigelkott.crimea.ua',
+            'tressiemcphd', 'theferocity', 'reniadeb', 'kevinlikesmaps', 'rasmansa',
             'twoscooters', 'finokoye', 'teetotaller', 'hystericalblkns', 'faytak', 'xkcd.com'];
           const exclude = ['dougchu'];
           const MAX_NUMBER_OF_LARGEST = 300;
@@ -2082,6 +2190,8 @@ function atlas(invokeType) {
               fixedUsers.push(shortDID);
               continue;
             }
+
+            continue;
 
             if (userTooSmall) continue;
 
@@ -2128,7 +2238,7 @@ function atlas(invokeType) {
           const xyhBuf = { x: 0, y: 0, h: 0 };
           mapUserCoordsToAtlas(xSpace, ySpace, usersBounds, xyhBuf);
 
-          const userColor = defaultUserColorer(shortDID) >> 8;
+          const userColor = rndUserColorer(shortDID) >> 8;
 
           const text = new troika_three_text.Text();
           text.text = '@' + shortHandle;
@@ -2154,12 +2264,19 @@ function atlas(invokeType) {
               position: group.position,
               visible: true
             },
+            addedAtMsec: clock.nowMSec,
             group,
             text,
-            updateWithCamera
+            updateWithCamera,
+            dispose
           };
 
           return label;
+
+          function dispose() {
+            group.remove(/** @type {*} */(text));
+            text.dispose();
+          }
 
           /** @param {THREE.Vector3} cameraPos */
           function updateWithCamera(cameraPos) {
@@ -2173,22 +2290,93 @@ function atlas(invokeType) {
               group.visible = false;
             }
           }
-
         }
 
-        /** @param {THREE.Vector3} cameraPos */
-        function updateWithCamera(cameraPos) {
+        var lastUpdateTextLabelsMsec;
 
-          for (const label of textEntries) {
+        /** @param {THREE.PerspectiveCamera} camera */
+        function updateWithCamera(camera) {
+          const UPDATE_TEXT_LABELS_INTERVAL_MSEC = 500;
+
+          const cameraPos = camera.position;
+          camera.updateMatrixWorld();
+
+          for (const label of fixedTextEntries) {
             label.updateWithCamera(cameraPos);
           }
 
-          // const tiles = userTiles.findTiles(
-          //   { spaceX: cameraPos.x, spaceY: cameraPos.y },
-          //   (shortDID, usrTuple, usrSpaceX, usrSpaceY) => {
-          //     const cameraDistance = distance2D(cameraPos.x, cameraPos.y, usrSpaceX, usrSpaceY);
-          //     return cameraDistance < 0.1;
-          //   });
+          for (const shortDID in variableTextEntries) {
+            const label = variableTextEntries[shortDID];
+            label.updateWithCamera(cameraPos);
+          }
+
+          if (!lastUpdateTextLabelsMsec || clock.nowMSec - lastUpdateTextLabelsMsec > UPDATE_TEXT_LABELS_INTERVAL_MSEC) {
+            lastUpdateTextLabelsMsec = clock.nowMSec;
+
+            updateDynamicLabels(camera, sizedTiles);
+          }
+
+        }
+
+        /**
+         * @param {THREE.PerspectiveCamera} camera
+         * @param {TileUserEntry[][]} sizedTiles
+         */
+        function updateDynamicLabels(camera, sizedTiles) {
+          for (let xIndex = 0; xIndex < TILE_DIMENSION_COUNT; xIndex++) {
+            for (let yIndex = 0; yIndex < TILE_DIMENSION_COUNT; yIndex++) {
+              const tileIndex = xIndex + yIndex * TILE_DIMENSION_COUNT;
+              const tileDiameter = getTileDiameter(camera, xIndex, yIndex);
+              const tile = sizedTiles[tileIndex];
+
+              const tileUsersToAdd = [];
+              if (tile) {
+                for (const tileEntry of tile) {
+                  pBuf.set(tileEntry.x, tileEntry.h, tileEntry.y);
+                  pBuf.project(camera);
+
+                  let canBeAdded = true;
+                  for (const alreadySelected of tileUsersToAdd) {
+
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        /**
+         * @param {THREE.PerspectiveCamera} camera
+         * @param {number} xIndex
+         * @param {number} yIndex
+         */
+        function getTileDiameter(camera, xIndex, yIndex) {
+          let tileDiameter = 1 / TILE_DIMENSION_COUNT;
+          pBuf.set(tileDiameter * xIndex * 2 - 1, 0, tileDiameter * yIndex * 2 - 1);
+
+          // pBuf.applyMatrix4(camera.matrixWorldInverse);
+          pBuf.project(camera);
+          let minX, minY, maxX, maxY;
+          minX = maxX = pBuf.x;
+          minY = maxY = pBuf.y;
+
+          pBuf.set((tileDiameter * xIndex + 1) * 2 - 1, 0, tileDiameter * yIndex * 2 - 1);
+          pBuf.project(camera);
+          minX = Math.min(minX, pBuf.x); maxX = Math.max(maxX, pBuf.x);
+          minY = Math.min(minY, pBuf.y); maxY = Math.max(maxY, pBuf.y);
+
+          pBuf.set((tileDiameter * xIndex + 1) * 2 - 1, 0, (tileDiameter * yIndex + 1) * 2 - 1);
+          pBuf.project(camera);
+          minX = Math.min(minX, pBuf.x); maxX = Math.max(maxX, pBuf.x);
+          minY = Math.min(minY, pBuf.y); maxY = Math.max(maxY, pBuf.y);
+
+          pBuf.set(tileDiameter * xIndex * 2 - 1, 0, (tileDiameter * yIndex + 1) * 2 - 1);
+          pBuf.project(camera);
+          minX = Math.min(minX, pBuf.x); maxX = Math.max(maxX, pBuf.x);
+          minY = Math.min(minY, pBuf.y); maxY = Math.max(maxY, pBuf.y);
+
+          tileDiameter = distance2D(minX, minY, maxX, maxY);
+          return tileDiameter;
         }
       }
 
@@ -2469,6 +2657,123 @@ function atlas(invokeType) {
           geometry.instanceCount = userKeys.length;
         }
       }
+
+      /**
+       * @param {{
+       *  clock: ReturnType<typeof makeClock>;
+       *  users: UserEntry[];
+       * }} _ 
+       */
+      function massShaderRenderer({ clock, users }) {
+        const baseHalf = 1.5 * Math.tan(Math.PI / 6);
+        let positions = new Float32Array([
+          -baseHalf, 0, -0.5,
+          0, 0, 1,
+          baseHalf, 0, -0.5
+        ]);
+        let offsetBuf = new Float32Array(users.length * 4);
+        let diameterBuf = new Float32Array(users.length);
+        let colorBuf = new Uint32Array(users.length);
+
+        for (let i = 0; i < users.length; i++) {
+          const user = users[i];
+          offsetBuf[i * 3 + 0] = user.x;
+          offsetBuf[i * 3 + 1] = user.h;
+          offsetBuf[i * 3 + 2] = user.y;
+          diameterBuf[i] = Number.isFinite(user.weight) ? user.weight / 1000 : 0.001;
+          colorBuf[i] = user.colorRGB * 256 | 0xFF;
+        }
+
+        const geometry = new THREE.InstancedBufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(offsetBuf, 3));
+        geometry.setAttribute('diameter', new THREE.InstancedBufferAttribute(diameterBuf, 1));
+        geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colorBuf, 1));
+        geometry.instanceCount = users.length;
+
+        const material = new THREE.ShaderMaterial({
+          uniforms: {
+            time: { value: clock.nowSeconds }
+          },
+          vertexShader: /* glsl */`
+            precision highp float;
+
+            attribute vec3 offset;
+            attribute float diameter;
+            attribute uint color;
+
+            uniform float time;
+
+            varying vec3 vPosition;
+            varying float vDiameter;
+
+            varying float vFogDist;
+            varying vec4 vColor;
+
+            void main(){
+              vPosition = position;
+              vDiameter = diameter;
+
+              gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1) + vec4(position.xz * abs(diameter), 0, 0));
+
+              // https://stackoverflow.com/a/22899161/140739
+              uint rInt = (color / uint(256 * 256 * 256)) % uint(256);
+              uint gInt = (color / uint(256 * 256)) % uint(256);
+              uint bInt = (color / uint(256)) % uint(256);
+              uint aInt = (color) % uint(256);
+              vColor = vec4(float(rInt) / 255.0f, float(gInt) / 255.0f, float(bInt) / 255.0f, float(aInt) / 255.0f);
+
+              vFogDist = distance(cameraPosition, offset);
+            }
+          `,
+          fragmentShader: /* glsl */`
+            precision highp float;
+
+            uniform float time;
+
+            varying vec4 vColor;
+            varying float vFogDist;
+
+            varying vec3 vPosition;
+            varying float vDiameter;
+
+            void main() {
+              gl_FragColor = vColor;
+              float dist = distance(vPosition, vec3(0.0));
+              dist = vDiameter < 0.0 ? dist * 2.0 : dist;
+              float rad = 0.25;
+              float areola = rad * 2.0;
+              float bodyRatio =
+                dist < rad ? 1.0 :
+                dist > areola ? 0.0 :
+                (areola - dist) / (areola - rad);
+              float radiusRatio =
+                dist < 0.5 ? 1.0 - dist * 2.0 : 0.0;
+
+              float fogStart = 0.6;
+              float fogGray = 1.0;
+              float fogRatio = vFogDist < fogStart ? 0.0 : vFogDist > fogGray ? 1.0 : (vFogDist - fogStart) / (fogGray - fogStart);
+
+              vec4 tintColor = vColor;
+              tintColor.a = radiusRatio;
+              gl_FragColor = mix(gl_FragColor, vec4(1.0,1.0,1.0,0.7), fogRatio * 0.7);
+              gl_FragColor = vDiameter < 0.0 ? vec4(0.6,0.0,0.0,1.0) : gl_FragColor;
+              gl_FragColor.a = bodyRatio;
+            }
+          `,
+          side: THREE.BackSide,
+          forceSinglePass: true,
+          transparent: true,
+          depthWrite: false
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.frustumCulled = false;
+        mesh.onBeforeRender = () => {
+          material.uniforms['time'].value = clock.nowSeconds;
+        };
+        return mesh;
+      }
     }
 
     /**
@@ -2543,7 +2848,6 @@ function atlas(invokeType) {
     const fs = require('fs');
     const path = require('path');
     const atproto = require('@atproto/api');
-    const aptorotooo = require('@atproto/repo');
 
     // debugDumpFirehose();
     // syncAllJsonp();
