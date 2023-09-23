@@ -2053,7 +2053,7 @@ function atlas(invokeType) {
         const textEntries = [];
         for (const shortDID of fixedUsers) {
           const [shortHandle] = users[shortDID];
-          if (suppressUserLabel[shortHandle])) continue;
+          if (suppressUserLabel[shortHandle]) continue;
           const label = createLabel(shortDID);
           textEntries.push(label);
           layerGroup.add(label.group);
