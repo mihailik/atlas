@@ -943,9 +943,7 @@ function atlas(invokeType) {
           camera,
           renderer,
           stats,
-          usersBounds,
-          proximityTiles
-        } = setupScene(users, usersAndTiles.all, clock);
+        } = setupScene(usersAndTiles.all, clock);
 
         const domElements = createDOMLayout({
           canvas3D: renderer.domElement,
@@ -974,8 +972,7 @@ function atlas(invokeType) {
               onChipClick: (shortDID, userChipElem) =>
                 focusAndHighlightUser({
                   shortDID,
-                  users,
-                  usersBounds,
+                  users: usersAndTiles.byShortDID,
                   scene,
                   camera,
                   moveAndPauseRotation: orbit.moveAndPauseRotation
@@ -1006,7 +1003,12 @@ function atlas(invokeType) {
         const firehoseTrackingRenderer = trackFirehose({ users: usersAndTiles.byShortDID, clock });
         scene.add(firehoseTrackingRenderer.mesh);
 
-        const geoLayer = renderGeoLabels({ users, usersBounds, clock });
+        const geoLayer = renderGeoLabels({
+          users: usersAndTiles.all,
+          tiles: usersAndTiles.tiles,
+          tileDimensionCount: usersAndTiles.dimensionCount,
+          clock
+        });
         scene.add(geoLayer.layerGroup);
 
         startAnimation();
@@ -1097,11 +1099,10 @@ function atlas(invokeType) {
       }
 
       /**
-       * @param {{ [shortDID: string]: UserTuple }} rawUsers
        * @param {UserEntry[]} users
        * @param {ReturnType<typeof makeClock>} clock
        */
-      function setupScene(rawUsers, users, clock) {
+      function setupScene(users, clock) {
         const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.00001, 10000);
         camera.position.x = 0.18;
         camera.position.y = 0.49;
@@ -1126,20 +1127,15 @@ function atlas(invokeType) {
 
         const stats = new Stats();
 
-        const usersBounds = getUserCoordBounds(rawUsers);
-
         const farUsersMesh = massShaderRenderer({ clock, users: users });
         scene.add(farUsersMesh);
-        // const farUsersMesh = createFarUsersMesh({ clock, users: rawUsers, usersBounds });
-        // scene.add(farUsersMesh);
 
         return {
           scene,
           camera,
           lights: { dirLight1, dirLight2, ambientLight },
           renderer,
-          stats,
-          usersBounds,
+          stats
         };
       }
 
@@ -1909,14 +1905,13 @@ function atlas(invokeType) {
       /**
        * @param {{
        *  shortDID: string,
-       *  users: { [shortDID: string]: UserTuple },
-       *  usersBounds: {x: { min: number, max: number}, y: { min: number, max: number }},
+       *  users: { [shortDID: string]: UserEntry },
        *  scene: THREE.Scene,
        *  camera: THREE.Camera,
        *  moveAndPauseRotation: (coord: {x: number, y: number, h: number}, towards: {x: number, y: number, h: number}) => void
        * }} _param
        */
-      function focusAndHighlightUser({ shortDID, users, usersBounds, scene, camera, moveAndPauseRotation }) {
+      function focusAndHighlightUser({ shortDID, users, scene, camera, moveAndPauseRotation }) {
         const MAX_HIGHLIGHT_COUNT = 25;
         while (higlightUserStack?.length > MAX_HIGHLIGHT_COUNT) {
           const early = higlightUserStack.shift();
@@ -1929,19 +1924,12 @@ function atlas(invokeType) {
           return;
         }
 
-        const usrTuple = users[shortDID];
-        const shortHandle = usrTuple[0];
-        const displayName = usrTuple[4];
-        const xSpace = usrTuple[1];
-        const ySpace = usrTuple[2];
-
-        const xyhBuf = { x: 0, y: 0, h: 0 };
-        mapUserCoordsToAtlas(xSpace, ySpace, usersBounds, xyhBuf);
-        const r = distance2D(xyhBuf.x, xyhBuf.y, 0, 0);
-        const angle = Math.atan2(xyhBuf.y, xyhBuf.x);
+        const user = users[shortDID];
+        const r = distance2D(user.x, user.y, 0, 0);
+        const angle = Math.atan2(user.y, user.x);
         const xPlus = (r + 0.09) * Math.cos(angle);
         const yPlus = (r + 0.09) * Math.sin(angle);
-        const hPlus = xyhBuf.h + 0.04;
+        const hPlus = user.h + 0.04;
 
         const userColor = rndUserColorer(shortDID);
 
@@ -1955,15 +1943,15 @@ function atlas(invokeType) {
         const ball = new THREE.SphereGeometry(0.002);
         const stemMesh = new THREE.Mesh(stem, material);
         const ballMesh = new THREE.Mesh(ball, material);
-        stemMesh.position.set(xyhBuf.x, xyhBuf.h + 0.0062, xyhBuf.y);
+        stemMesh.position.set(user.x, user.h + 0.0062, user.y);
         stemMesh.scale.set(1, 11.5, 1);
 
-        ballMesh.position.set(xyhBuf.x, xyhBuf.h + 0.0136, xyhBuf.y);
+        ballMesh.position.set(user.x, user.h + 0.0136, user.y);
         scene.add(stemMesh);
         scene.add(ballMesh);
 
         const handleText = new troika_three_text.Text();
-        handleText.text = '@' + shortHandle;
+        handleText.text = '@' + user.shortHandle;
         handleText.fontSize = 0.01;
         handleText.color = userColor;
         handleText.outlineWidth = 0.0005;
@@ -1974,12 +1962,12 @@ function atlas(invokeType) {
         };
 
         const group = new THREE.Group();
-        group.position.set(xyhBuf.x, xyhBuf.h, xyhBuf.y);
+        group.position.set(user.x, user.h, user.y);
         group.add(/** @type {*} */(handleText));
 
-        const displayNameText = displayName ? new troika_three_text.Text() : undefined;
+        const displayNameText = user.displayName ? new troika_three_text.Text() : undefined;
         if (displayNameText) {
-          displayNameText.text = /** @type {string} */(displayName);
+          displayNameText.text = /** @type {string} */(user.displayName);
           displayNameText.fontSize = 0.004;
           const co = new THREE.Color(userColor);
           co.offsetHSL(0, 0, 0.15);
@@ -2009,7 +1997,7 @@ function atlas(invokeType) {
         }
 
         function highlightUser() {
-          moveAndPauseRotation({ x: xPlus, y: yPlus, h: hPlus }, xyhBuf);
+          moveAndPauseRotation({ x: xPlus, y: yPlus, h: hPlus }, user);
         }
 
         function unhighlightUser() {
@@ -2102,12 +2090,13 @@ function atlas(invokeType) {
 
       /**
        * @param {{
-       *  users: { [shortDID: string]: UserTuple },
-       *  usersBounds: {x: { min: number, max: number}, y: { min: number, max: number }},
+       *  users: UserEntry[],
+       *  tiles: UserEntry[][],
+       *  tileDimensionCount: number,
        *  clock: ReturnType<typeof makeClock>
        * }} _
        */
-      function renderGeoLabels({ users, usersBounds, clock }) {
+      function renderGeoLabels({ users, tiles, tileDimensionCount, clock }) {
         /**
          * @typedef {{
          *  shortDID: string;
@@ -2157,47 +2146,28 @@ function atlas(invokeType) {
           const MAX_NUMBER_OF_LARGEST = 300;
           const MIN_DISTANCE = 0.1;
 
+          /** @type {UserEntry[]} */
           const fixedUsers = [];
 
-          /** @type {{ shortDID: string, x: number, y: number, weight: number }[]} */
+          /** @type {UserEntry[]} */
           const largestUsers = [];
-          const xyhBuf = { x: 0, y: 0, h: 0 };
 
-          for (const shortDID in users) {
-            const [shortHandle, xSpace, ySpace, weight] = users[shortDID];
-            const userTooSmall = largestUsers.length === MAX_NUMBER_OF_LARGEST && weight <= largestUsers[largestUsers.length - 1].weight;
+          for (const user of users) {
+            const userTooSmall = largestUsers.length === MAX_NUMBER_OF_LARGEST && user.weight <= largestUsers[largestUsers.length - 1].weight;
 
             if (userTooSmall && fixedUsers.length === include.length) continue;
 
-            if (exclude.indexOf(shortHandle) >= 0) continue;
-            if (include.indexOf(shortHandle) >= 0) {
-              fixedUsers.push(shortDID);
+            if (exclude.indexOf(user.shortHandle) >= 0) continue;
+            if (include.indexOf(user.shortHandle) >= 0) {
+              fixedUsers.push(user);
               continue;
             }
 
-            continue;
-
-            if (userTooSmall) continue;
-
-            mapUserCoordsToAtlas(xSpace, ySpace, usersBounds, xyhBuf);
-            const insertUser = { shortDID, x: xyhBuf.x, y: xyhBuf.y, weight };
-            if (largestUsers.length < MAX_NUMBER_OF_LARGEST) {
-              largestUsers.push(insertUser);
-              if (largestUsers.length === MAX_NUMBER_OF_LARGEST) {
-                largestUsers.sort((a, b) => b.weight - a.weight);
-              }
-              continue;
-            }
-
-            let insertionIndex = binarySearch(largestUsers, insertUser, (a, b) => b.weight - a.weight);
-            if (insertionIndex < 0) insertionIndex = ~insertionIndex;
-            largestUsers.splice(insertionIndex, 0, insertUser);
-            largestUsers.pop();
           }
 
           pruneCrowdedNeighbours(largestUsers);
 
-          return fixedUsers.concat(largestUsers.map(u => u.shortDID));
+          return fixedUsers.concat(largestUsers);
 
           /** @param {{ shortDID: string, x: number, y: number, weight: number }[]} largestUsers */
           function pruneCrowdedNeighbours(largestUsers) {
@@ -2216,18 +2186,12 @@ function atlas(invokeType) {
           }
         }
 
-        /** @param {string} shortDID */
-        function createLabel(shortDID) {
-          const [shortHandle, xSpace, ySpace, weight] = users[shortDID];
-          const xyhBuf = { x: 0, y: 0, h: 0 };
-          mapUserCoordsToAtlas(xSpace, ySpace, usersBounds, xyhBuf);
-
-          const userColor = rndUserColorer(shortDID);
-
+        /** @param {UserEntry} user */
+        function createLabel(user) {
           const text = new troika_three_text.Text();
-          text.text = '@' + shortHandle;
+          text.text = '@' + user.shortHandle;
           text.fontSize = 0.004;
-          text.color = userColor;
+          text.color = user.colorRGB;
           text.outlineWidth = 0.0002;
           text.outlineBlur = 0.0005;
           text.position.set(0.003, 0.004, 0);
@@ -2236,7 +2200,7 @@ function atlas(invokeType) {
           });
 
           const group = /** @type {THREE.Group & { handleText: import('troika-three-text').Text }} */(new THREE.Group());
-          group.position.set(xyhBuf.x, xyhBuf.h, xyhBuf.y);
+          group.position.set(user.x, user.h, user.y);
           group.add(/** @type {*} */(text));
           group.rotation.z = 0.3;
           group.handleText = text;
@@ -2244,7 +2208,7 @@ function atlas(invokeType) {
 
           const label = {
             labelInfo: {
-              shortDID,
+              shortDID: user.shortDID,
               position: group.position,
               visible: true
             },
