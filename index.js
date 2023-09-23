@@ -966,7 +966,8 @@ function atlas(invokeType) {
         const usersBounds = getUserCoordBounds(users);
         const proximityTiles = makeProximityTiles(users, 16);
 
-        const farUsersMesh = createFarUsersMesh();
+        const farUsersMesh = createFarUsersMesh({ clock, users, usersBounds });
+        scene.add(farUsersMesh);
 
         return {
           scene,
@@ -978,26 +979,33 @@ function atlas(invokeType) {
           farUsersMesh,
           proximityTiles
         };
-
-        function createFarUsersMesh() {
-          const xyhBuf = { x: 0, y: 0, h: 0 };
-          const { mesh } = billboardShaderRenderer({
-            clock,
-            fragmentShader: `
-            `,
-            userKeys: Object.keys(users),
-            userMapper: (shortDID, pos) => {
-              const [, xSpace, ySpace, weight] = users[shortDID];
-              mapUserCoordsToAtlas(xSpace, ySpace, usersBounds, xyhBuf);
-              const weightRatio = weight / usersBounds.weight.max;
-              pos.set(xyhBuf.x, xyhBuf.h, xyhBuf.y, weight ? Math.max(0.0007, 0.01 * weightRatio * Math.sqrt(weightRatio)) : 0.001);
-            },
-            userColorer: defaultUserColorer
-          })
-          scene.add(mesh);
-          return mesh;
-        }
       }
+
+      /**
+       * @param {{
+       *  clock: ReturnType<typeof makeClock>,
+       *  users: { [shortDID: string]: UserTuple },
+       *  usersBounds: ReturnType<typeof getUserCoordBounds>
+       * }} _
+       */
+      function createFarUsersMesh({ clock, users, usersBounds }) {
+        const xyhBuf = { x: 0, y: 0, h: 0 };
+        const { mesh } = billboardShaderRenderer({
+          clock,
+          fragmentShader: `
+            `,
+          userKeys: Object.keys(users),
+          userMapper: (shortDID, pos) => {
+            const [, xSpace, ySpace, weight] = users[shortDID];
+            mapUserCoordsToAtlas(xSpace, ySpace, usersBounds, xyhBuf);
+            const weightRatio = weight / usersBounds.weight.max;
+            pos.set(xyhBuf.x, xyhBuf.h, xyhBuf.y, weight ? Math.max(0.0007, 0.01 * weightRatio * Math.sqrt(weightRatio)) : 0.001);
+          },
+          userColorer: defaultUserColorer
+        })
+        return mesh;
+      }
+
 
       /**
        * @param {{
@@ -1187,7 +1195,7 @@ function atlas(invokeType) {
         const FADE_TIME_MSEC = 4000;
         /** @type {{ [shortDID: string]: { x: number, y: number, h: number, weight: number, color: number, startAtMsec: number, fadeAtMsec: number } }} */
         const activeUsers = {};
-        const rend = flashesRenderer(clock);
+        const rend = flashesRenderer({ clock, users, activeUsers });
         let updateUsers = false;
 
         const unknownsLastSet = new Set();
@@ -1237,58 +1245,6 @@ function atlas(invokeType) {
         });
 
         return outcome;
-
-        /** @param {ReturnType<typeof makeClock>} clock */
-        function flashesRenderer(clock) {
-          const rend = billboardShaderRenderer({
-            clock,
-            vertexShader: /* glsl */`
-            float startTime = min(extra.x, extra.y);
-            float endTime = max(extra.x, extra.y);
-            float timeRatio = (time - startTime) / (endTime - startTime);
-            float step = 0.1;
-            float timeFunction = timeRatio < step ? timeRatio / step : 1.0 - (timeRatio - step) * (1.0 - step);
-
-            gl_Position.y += timeFunction * timeFunction * timeFunction * 0.01;
-            `,
-            fragmentShader: /* glsl */`
-            gl_FragColor = tintColor;
-
-            float startTime = min(extra.x, extra.y);
-            float endTime = max(extra.x, extra.y);
-            float timeRatio = (time - startTime) / (endTime - startTime);
-            float step = 0.1;
-            float timeFunction = timeRatio < step ? timeRatio / step : 1.0 - (timeRatio - step) * (1.0 - step);
-
-            gl_FragColor = tintColor;
-
-            gl_FragColor.a *= timeFunction * timeFunction * timeFunction;
-
-            // gl_FragColor =
-            //   timeRatio > 1000.0 ? vec4(1.0, 0.7, 1.0, tintColor.a) :
-            //   timeRatio > 1.0 ? vec4(1.0, 0.0, 1.0, tintColor.a) :
-            //   timeRatio > 0.0 ? vec4(0.0, 0.5, 0.5, tintColor.a) :
-            //   timeRatio == 0.0 ? vec4(0.0, 0.0, 1.0, tintColor.a) :
-            //   timeRatio < 0.0 ? vec4(1.0, 0.0, 0.0, tintColor.a) :
-            //   vec4(1.0, 1.0, 0.0, tintColor.a);
-
-            float diagBias = 1.0 - max(abs(vPosition.x), abs(vPosition.z));
-            float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
-            gl_FragColor.a *= diagBiasUltra;
-
-            `,
-            userKeys: Object.keys(users).slice(0, 10 * 1000),
-            userMapper: (shortDID, pos, extra) => {
-              const usr = activeUsers[shortDID];
-              if (!usr) return;
-              pos.set(usr.x, usr.h, usr.y, usr.weight / 5);
-              extra.x = usr.startAtMsec / 1000;
-              extra.y = usr.fadeAtMsec / 1000;
-            },
-            userColorer: (shortDID) => activeUsers[shortDID]?.color
-          });
-          return rend;
-        }
 
         /** @param {number} timePassedSec */
         function tickAll(timePassedSec) {
@@ -1348,6 +1304,64 @@ function atlas(invokeType) {
           updateUsers = true;
           return 1;
         }
+      }
+
+      /**
+       * @param {{
+       *  clock: ReturnType<typeof makeClock>,
+       *  users: { [shortDID: string]: UserTuple },
+       *  activeUsers: { [shortDID: string]: { x: number, y: number, h: number, weight: number, color: number, startAtMsec: number, fadeAtMsec: number } }
+       * }} _
+       */
+      function flashesRenderer({ clock, users, activeUsers }) {
+        const rend = billboardShaderRenderer({
+          clock,
+          vertexShader: /* glsl */`
+            float startTime = min(extra.x, extra.y);
+            float endTime = max(extra.x, extra.y);
+            float timeRatio = (time - startTime) / (endTime - startTime);
+            float step = 0.1;
+            float timeFunction = timeRatio < step ? timeRatio / step : 1.0 - (timeRatio - step) * (1.0 - step);
+
+            gl_Position.y += timeFunction * timeFunction * timeFunction * 0.01;
+            `,
+          fragmentShader: /* glsl */`
+            gl_FragColor = tintColor;
+
+            float startTime = min(extra.x, extra.y);
+            float endTime = max(extra.x, extra.y);
+            float timeRatio = (time - startTime) / (endTime - startTime);
+            float step = 0.1;
+            float timeFunction = timeRatio < step ? timeRatio / step : 1.0 - (timeRatio - step) * (1.0 - step);
+
+            gl_FragColor = tintColor;
+
+            gl_FragColor.a *= timeFunction * timeFunction * timeFunction;
+
+            // gl_FragColor =
+            //   timeRatio > 1000.0 ? vec4(1.0, 0.7, 1.0, tintColor.a) :
+            //   timeRatio > 1.0 ? vec4(1.0, 0.0, 1.0, tintColor.a) :
+            //   timeRatio > 0.0 ? vec4(0.0, 0.5, 0.5, tintColor.a) :
+            //   timeRatio == 0.0 ? vec4(0.0, 0.0, 1.0, tintColor.a) :
+            //   timeRatio < 0.0 ? vec4(1.0, 0.0, 0.0, tintColor.a) :
+            //   vec4(1.0, 1.0, 0.0, tintColor.a);
+
+            float diagBias = 1.0 - max(abs(vPosition.x), abs(vPosition.z));
+            float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
+            gl_FragColor.a *= diagBiasUltra;
+
+            `,
+          userKeys: Object.keys(users).slice(0, 10 * 1000),
+          userMapper: (shortDID, pos, extra) => {
+            const usr = activeUsers[shortDID];
+            if (!usr) return;
+            pos.set(usr.x, usr.h, usr.y, usr.weight / 5);
+            extra.x = usr.startAtMsec / 1000;
+            extra.y = usr.fadeAtMsec / 1000;
+          },
+          userColorer: (shortDID) => activeUsers[shortDID]?.color
+        });
+        return rend;
       }
 
       /**
