@@ -73438,6 +73438,8 @@ You can use close({ resize: true }) to resize header`);
           exports2["three/addons/controls/OrbitControls.js"] = OrbitControls;
           exports2["three/addons/controls/MapControls.js"] = MapControls;
           exports2["troika-three-text"] = troika_three_text_esm_exports;
+        } else {
+          exports2["three"] = three_module_exports;
         }
         if (!exportToGlobal.__logOnce) {
           exportToGlobal.__logOnce = true;
