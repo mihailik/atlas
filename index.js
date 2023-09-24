@@ -1547,7 +1547,7 @@ function atlas(invokeType) {
           let existingUser = activeUsers[shortDID];
           if (existingUser) {
             updateUsers = true;
-            existingUser.weight = Math.min(MAX_WEIGHT, weight * 0.15 + existingUser.weight);
+            existingUser.weight = Math.min(MAX_WEIGHT, weight * 0.11 + existingUser.weight);
             existingUser.stop = nowSec + FADE_TIME_MSEC / 1000;
             return 2;
           }
@@ -1565,7 +1565,7 @@ function atlas(invokeType) {
 
           activeUsers[shortDID] = {
             user,
-            weight: weight * 0.12,
+            weight: weight * 0.11,
             start: nowSec,
             stop: nowSec + FADE_TIME_MSEC / 1000
           };
@@ -2429,7 +2429,7 @@ function atlas(invokeType) {
               avatarMaterial = new THREE.MeshBasicMaterial({ map: avatarTexture, color: 0xffffff });
               avatarGeometry = new THREE.CircleGeometry(0.0014, 16);
               avatarMesh = new THREE.Mesh(avatarGeometry, avatarMaterial);
-              avatarMesh.position.set(0.005, 0.0005, 0);
+              avatarMesh.position.set(0.005, 0.00068, 0);
               text.text = text.text.slice(1);
               text.position.set(0.0065, 0.004, 0);
               text.sync();
