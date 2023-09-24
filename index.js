@@ -1040,7 +1040,7 @@ function atlas(invokeType) {
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
         scene.add(ambientLight);
 
-        const renderer = new THREE.WebGLRenderer();
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -2141,6 +2141,9 @@ function atlas(invokeType) {
 
         /** @param {UserEntry} user */
         function createLabel(user) {
+          /** @type {THREE.MeshBasicMaterial | undefined} */
+          let lineMaterial;
+
           const text = new troika_three_text.Text();
           text.text = '@' + user.shortHandle;
           text.fontSize = 0.004;
@@ -2149,8 +2152,23 @@ function atlas(invokeType) {
           text.outlineBlur = 0.0005;
           text.position.set(0.003, 0.004, 0);
           text.sync(() => {
-            // TODO: position text in funky way?
-            var info = text.textRenderInfo;
+            const visibleBounds = text.textRenderInfo?.visibleBounds
+            if (!visibleBounds) return;
+            const [xmin, ymin, xmax, ymax] = visibleBounds;
+
+            if (!lineMaterial)
+              lineMaterial = new THREE.MeshBasicMaterial({ color: user.colorRGB, transparent: true });
+
+            const underlineOffset = -0.006;
+            const startOffset = 0.0015;
+            const geometry = new THREE.BufferGeometry().setFromPoints([
+              new THREE.Vector3(0,0,0),
+              new THREE.Vector3(xmin + text.position.x + startOffset, text.position.y + underlineOffset, 0),
+              new THREE.Vector3(xmax + text.position.x, text.position.y + underlineOffset, 0),
+            ]);
+
+            const line = new THREE.Line(geometry, lineMaterial);
+            group.add(line);
           });
 
           const group = new THREE.Group();
@@ -2175,8 +2193,9 @@ function atlas(invokeType) {
           return label;
 
           function dispose() {
-            group.remove(/** @type {*} */(text));
+            group.clear();
             text.dispose();
+            lineMaterial?.dispose();
           }
 
           /** @param {THREE.Vector3} cameraPos */
@@ -2202,6 +2221,11 @@ function atlas(invokeType) {
                     1 - animationPhase;
 
               text.strokeOpacity = text.outlineOpacity = text.fillOpacity = opacity;
+              if (lineMaterial && lineMaterial?.opacity !== opacity) {
+                lineMaterial.opacity = opacity;
+                lineMaterial.needsUpdate = true;
+              }
+
               text.sync();
             } else {
               group.visible = false;
