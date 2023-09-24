@@ -2194,7 +2194,7 @@ function atlas(invokeType) {
          * @typedef {ReturnType<typeof createLabel>} LabelInfo
          */
 
-        const avatarRequestQueue = createThrottledQueue(2, 3000);
+        const avatarRequestQueue = createThrottledQueue(2, 400);
 
         /** @type {{ [shortDID: string]: string | Promise<string> }} */
         const avatarCids = {};
