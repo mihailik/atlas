@@ -765,9 +765,9 @@ function atlas(invokeType) {
 
   /**
  * @param {string} searchText
- * @param {{ [shortDID: string]: UserTuple }} users
+ * @param {UserEntry[]} userList
  */
-  function findUserMatches(searchText, users) {
+  function findUserMatches(searchText, userList) {
     if (!searchText) return;
 
     const mushMatch = new RegExp([...searchText.replace(/[^a-z0-9]/gi, '')].join('.*'), 'i');
@@ -782,43 +782,39 @@ function atlas(invokeType) {
         .join('|'),
       'gi');
 
-    /** @type {[shortDID: string, rank: number][]} */
+    /** @type {{ user: UserEntry, rank: number }[]} */
     const matches = [];
-    for (const shortDID in users) {
-      const usrTuple = users[shortDID];
-      const shortHandle = usrTuple[0];
-      const displayName = usrTuple[4];
+    for (const user of userList) {
+      let rank = 0;
 
-      let matchRank = 0;
-
-      if (displayName) {
+      if (user.displayName) {
         searchWordRegExp.lastIndex = 0;
         while (true) {
-          const match = searchWordRegExp.exec(displayName);
+          const match = searchWordRegExp.exec(user.displayName);
           if (!match) break;
-          matchRank += (match[0].length / displayName.length) * 20;
-          if (match.index === 0) matchRank += 30;
+          rank += (match[0].length / user.displayName.length) * 20;
+          if (match.index === 0) rank += 30;
         }
 
-        if (mushMatch.test(displayName)) matchRank += 3;
-        if (mushMatchLead.test(displayName)) matchRank += 5;
+        if (mushMatch.test(user.displayName)) rank += 3;
+        if (mushMatchLead.test(user.displayName)) rank += 5;
       }
 
       searchWordRegExp.lastIndex = 0;
       while (true) {
-        const match = searchWordRegExp.exec(shortHandle);
+        const match = searchWordRegExp.exec(user.shortHandle);
         if (!match) break;
-        matchRank += (match[0].length / shortHandle.length) * 30;
-        if (match.index === 0) matchRank += 40;
+        rank += (match[0].length / user.shortHandle.length) * 30;
+        if (match.index === 0) rank += 40;
       }
 
-      if (mushMatch.test(shortHandle)) matchRank += 3;
-      if (mushMatchLead.test(shortHandle)) matchRank += 5;
+      if (mushMatch.test(user.shortHandle)) rank += 3;
+      if (mushMatchLead.test(user.shortHandle)) rank += 5;
 
-      if (matchRank) matches.push([shortDID, matchRank]);
+      if (rank) matches.push({ user, rank });
     }
 
-    matches.sort((m1, m2) => m2[1] - m1[1]);
+    matches.sort((m1, m2) => m2.rank - m1.rank);
     return matches?.length ? matches : undefined;
   }
 
@@ -932,9 +928,9 @@ function atlas(invokeType) {
 
       async function constructStateAndRun() {
         /** @type {{ [shortDID: string]: UserTuple }} */
-        const users = await loadUsersPromise;
+        const rawUsers = await loadUsersPromise;
         const startProcessToTiles = Date.now();
-        const usersAndTiles = await processUsersToTiles({ users, dimensionCount: 32, sleep: () => new Promise(resolve => setTimeout(resolve, 1)) });
+        const usersAndTiles = await processUsersToTiles({ users: rawUsers, dimensionCount: 32, sleep: () => new Promise(resolve => setTimeout(resolve, 1)) });
         console.log('Processed users to tiles in ', Date.now() - startProcessToTiles, ' msec');
         const clock = makeClock();
 
@@ -963,11 +959,11 @@ function atlas(invokeType) {
             domElements.subtitleArea.innerHTML = '';
           },
           onSearchText: (searchText) => {
-            const matches = findUserMatches(searchText, users);
+            const matches = findUserMatches(searchText, usersAndTiles.all);
             if (!matches?.length) searchReportNoMatches(domElements.subtitleArea);
             else searchReportMatches({
               matches,
-              users,
+              users: rawUsers,
               subtitleArea: domElements.subtitleArea,
               onChipClick: (shortDID, userChipElem) =>
                 focusAndHighlightUser({
@@ -1200,8 +1196,50 @@ function atlas(invokeType) {
           controls.enableDamping = true;
           controls.autoRotate = true;
           controls.autoRotateSpeed = STEADY_ROTATION_SPEED;
-          controls.listenToKeyEvents(window);
+          controls.listenToKeyEvents(createKeyEventProxy(window));
           return controls;
+
+
+          /** @param {HTMLElement | Window} originalElement */
+          function createKeyEventProxy(originalElement) {
+            const keydownCallbacks = [];
+            return {
+              addEventListener: overrideAddEventListener,
+              removeEventListener: overrideRemoveEventListener,
+            };
+
+            /** @param {Event} event */
+            function handleKeydown(event) {
+              const target = /** @type {HTMLElement} */(event.target);
+              if (/input/i.test(target?.tagName)) return;
+              let result;
+              for (const callback of keydownCallbacks) {
+                result = callback(event);
+              }
+              return result;
+            }
+
+            function overrideAddEventListener(event, callback) {
+              if (event === 'keydown') {
+                if (keydownCallbacks.length === 0)
+                  originalElement.addEventListener('keydown', handleKeydown);
+                keydownCallbacks.push(callback);
+              } else {
+                host.addEventListener(event, callback);
+              }
+            }
+
+            function overrideRemoveEventListener(event, callback) {
+              if (event === 'keydown') {
+                keydownCallbacks.splice(keydownCallbacks.indexOf(callback), 1);
+                if (keydownCallbacks.length === 0)
+                  originalElement.removeEventListener('keydown', handleKeydown);
+              } else {
+                host.removeEventListener(event, callback);
+              }
+            }
+
+          }
         }
 
         function flipControlType() {
@@ -1817,7 +1855,7 @@ function atlas(invokeType) {
 
       /**
        * @param {{
-       *  matches: [shortDID: string, rank: number][],
+       *  matches: { user: UserEntry, rank: number }[],
        *  subtitleArea: HTMLElement,
        *  users: { [shortDID: string]: UserTuple },
        *  onChipClick: (shortDID: string, chip: HTMLElement) => void
@@ -1851,10 +1889,7 @@ function atlas(invokeType) {
         });
 
         for (let iMatch = 0; iMatch < Math.min(10, matches.length); iMatch++) {
-          const shortDID = matches[iMatch][0];
-          const usrTuple = users[shortDID];
-          const shortHandle = usrTuple[0];
-          const displayName = usrTuple[4];
+          const match = matches[iMatch];
 
           const matchElem = elem('span', {
             parent: scroller,
@@ -1874,9 +1909,9 @@ function atlas(invokeType) {
               elem('span', {
                 children: [
                   elem('span', { textContent: '@', style: 'opacity: 0.5; display: inline-block; transform: scale(0.8) translateY(0.05em);' }),
-                  shortHandle,
-                  !displayName ? undefined : elem('span', {
-                    textContent: ' ' + displayName,
+                  match.user.shortHandle,
+                  !match.user.displayName ? undefined : elem('span', {
+                    textContent: ' ' + match.user.displayName,
                     style: `
                         opacity: 0.6;
                         display: inline-block;
@@ -1893,7 +1928,7 @@ function atlas(invokeType) {
               })
             ],
             onclick: () => {
-              onChipClick(shortDID, matchElem);
+              onChipClick(match.user.shortDID, matchElem);
             }
           });
 
