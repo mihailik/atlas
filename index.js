@@ -92,6 +92,71 @@ function atlas(invokeType) {
     return { byShortDID, byShortHandle, all, tiles, dimensionCount };
   }
 
+  /**
+ * @param {{
+ *  testLabel: { screenX: number, screenY: number },
+ *  tileLabels: Iterable<{ screenX: number, screenY: number, visible: boolean }>,
+ *  considerLeftUp?: Iterable<{ screenX: number, screenY: number, visible: boolean }>,
+ *  considerLeft?: Iterable<{ screenX: number, screenY: number, visible: boolean }>,
+ *  considerUp?: Iterable<{ screenX: number, screenY: number, visible: boolean }>,
+ *  minScreenDistance: number
+ * }} _ 
+ */
+  function proximityTest({
+    testLabel,
+    tileLabels,
+    considerLeftUp, considerLeft, considerUp,
+    minScreenDistance }) {
+
+    for (const otherLabel of tileLabels) {
+      if (otherLabel === testLabel) break;
+      if (!otherLabel.visible) continue;
+
+      const dist = distance2D(
+        testLabel.screenX, testLabel.screenY,
+        otherLabel.screenX, otherLabel.screenY);
+
+      if (dist < minScreenDistance)
+        return true;
+    }
+
+    if (considerLeftUp) {
+      for (const otherLabel of considerLeftUp) {
+        if (!otherLabel.visible) continue;
+        const dist = distance2D(
+          testLabel.screenX, testLabel.screenY,
+          otherLabel.screenX, otherLabel.screenY);
+
+        if (dist < minScreenDistance)
+          return true;
+      }
+    }
+
+    if (considerLeft) {
+      for (const otherLabel of considerLeft) {
+        if (!otherLabel.visible) continue;
+        const dist = distance2D(
+          testLabel.screenX, testLabel.screenY,
+          otherLabel.screenX, otherLabel.screenY);
+
+        if (dist < minScreenDistance)
+          return true;
+      }
+    }
+
+    if (considerUp) {
+      for (const otherLabel of considerUp) {
+        if (!otherLabel.visible) continue;
+        const dist = distance2D(
+          testLabel.screenX, testLabel.screenY,
+          otherLabel.screenX, otherLabel.screenY);
+
+        if (dist < minScreenDistance)
+          return true;
+      }
+    }
+  }
+
   /** @param {{
    *  post?(author: string, postID: string, text: string, replyTo: { shortDID: string, postID: string } | undefined, replyToThread: { shortDID: string, postID: string } | undefined, timeMsec: number);
    *  repost?(who: string, whose: string, postID: string, timeMsec: number);
@@ -377,7 +442,6 @@ function atlas(invokeType) {
     return hexColor;
   }
 
-
   var hslToRgb = (function () {
 
     /**
@@ -420,6 +484,74 @@ function atlas(invokeType) {
 
     return hslToRgb;
   })();
+
+  /** @param {number=} concurrency @param {number=} cooldown */
+  function createThrottledQueue(concurrency, cooldown) {
+
+    let busy = 0;
+
+    const result = {
+      concurrency: concurrency || 3,
+      cooldown: cooldown || 0,
+      eventually,
+      queued: /** @type {{ [key: string]: Promise & { priority: number} }} */({})
+    };
+
+    return result;
+
+    /**
+     * @param {string} arg
+     * @param {(arg: string) => Promise<T>} call
+     * @returns {Promise<T> & { priority: number }}
+     * @template T
+     */
+    function eventually(arg, call) {
+      let entry = result.queued[arg];
+      if (entry) return entry;
+
+      let resolve, reject;
+      /** @type {*} */
+      const promise = new Promise((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      promise._arg = arg;
+      promise._call = call;
+      promise._resolve = resolve;
+      promise._reject = reject;
+      promise.priority = 0;
+      promise.then(completed, completed);
+      result.queued[arg] = promise;
+      setTimeout(workMore, result.cooldown);
+      return /** @type {*} */(result.queued[arg]) = promise;
+    }
+
+    function completed() {
+      busy--;
+      setTimeout(workMore, result.cooldown);
+    }
+
+    function workMore() {
+      if (busy >= result.concurrency) return;
+
+      /** @type {*} */
+      let topPriorityValue;
+      for (const key in result.queued) {
+        const entry = result.queued[key];
+        if (!topPriorityValue || entry.priority > topPriorityValue.priority)
+          topPriorityValue = entry;
+      }
+
+      if (!topPriorityValue) return;
+
+      busy++;
+      const { _arg, _call, _resolve, _reject } = topPriorityValue;
+      delete result.queued[_arg];
+      _call(_arg).then(_resolve, _reject);
+
+      if (busy < result.concurrency) setTimeout(workMore, result.cooldown);
+    }
+  }
 
   /**
    * @param {string} relativePath
@@ -763,6 +895,8 @@ function atlas(invokeType) {
     const bootStages = boot();
     await bootStages.waitForRunBrowserNext;
 
+    /** @type {import('@atproto/api')} */
+    const atproto = /** @type {*} */(atlas).imports['@atproto/api'];
     /** @type {typeof import('three')} */
     const THREE = /** @type {*} */(atlas).imports['three'];
     const Stats = /** @type {*} */(atlas).imports['three/addons/libs/stats.module.js'];
@@ -2060,6 +2194,13 @@ function atlas(invokeType) {
          * @typedef {ReturnType<typeof createLabel>} LabelInfo
          */
 
+        const avatarRequestQueue = createThrottledQueue(2, 3000);
+
+        /** @type {{ [shortDID: string]: string | Promise<string> }} */
+        const avatarCids = {};
+
+        const atClient = new atproto.BskyAgent({ service: 'https://bsky.social/xrpc' });
+
         const layerGroup = new THREE.Group();
 
         /** @type {Set<LabelInfo>[]} */
@@ -2144,6 +2285,18 @@ function atlas(invokeType) {
           /** @type {THREE.MeshBasicMaterial | undefined} */
           let lineMaterial;
 
+          /** @type {THREE.Texture} */
+          let avatarTexture;
+
+          /** @type {THREE.Material} */
+          let avatarMaterial;
+
+          /** @type {THREE.CircleGeometry} */
+          let avatarGeometry;
+
+          /** @type {THREE.Mesh} */
+          let avatarMesh;
+
           const text = new troika_three_text.Text();
           text.text = '@' + user.shortHandle;
           text.fontSize = 0.004;
@@ -2190,12 +2343,17 @@ function atlas(invokeType) {
             dispose
           };
 
+          retrieveAvatar();
+
           return label;
 
           function dispose() {
             group.clear();
             text.dispose();
             lineMaterial?.dispose();
+            avatarTexture?.dispose();
+            avatarMaterial?.dispose();
+            avatarGeometry?.dispose();
           }
 
           /** @param {THREE.Vector3} cameraPos */
@@ -2226,9 +2384,55 @@ function atlas(invokeType) {
                 lineMaterial.needsUpdate = true;
               }
 
+              const avatarRequest = avatarRequestQueue.queued[user.shortDID];
+              if (avatarRequest)
+                avatarRequest.priority += 1;
+
               text.sync();
             } else {
               group.visible = false;
+              delete avatarRequestQueue.queued[user.shortDID];
+            }
+          }
+
+          async function retrieveAvatar() {
+            avatarRequestQueue.eventually(user.shortDID, getAvatarTexture);
+
+            async function getAvatarTexture() {
+              const avatarCid = await avatarCids[user.shortDID] || await (avatarCids[user.shortDID] = (async () => {
+                const { data } = await atClient.com.atproto.repo.listRecords({ repo: unwrapShortDID(user.shortDID), collection: 'app.bsky.actor.profile' });
+                const avatarCid = /** @type {*} */(data.records?.[0]?.value)?.avatar?.ref?.toString();
+                return avatarCids[user.shortDID] = avatarCid || 'none';
+              })());
+
+              if (!avatarCid || avatarCid === 'none') return;
+
+              const avatarUrl = 'https://bsky.social/xrpc/com.atproto.sync.getBlob?did=' + unwrapShortDID(user.shortDID) + '&cid=' + avatarCid;
+
+              const loader = new THREE.TextureLoader();
+
+              avatarTexture = await new Promise((resolve, reject) => {
+                loader.load(
+                  avatarUrl,
+                  (texture) => {
+                    resolve(texture);
+                  },
+                  undefined,
+                  (error) => {
+                    reject(error);
+                  }
+                );
+              });
+
+              avatarMaterial = new THREE.MeshBasicMaterial({ map: avatarTexture, color: 0xffffff });
+              avatarGeometry = new THREE.CircleGeometry(0.0014, 16);
+              avatarMesh = new THREE.Mesh(avatarGeometry, avatarMaterial);
+              avatarMesh.position.set(0.005, 0.0005, 0);
+              text.text = text.text.slice(1);
+              text.position.set(0.0065, 0.004, 0);
+              text.sync();
+
+              group.add(avatarMesh);
             }
           }
         }
@@ -2345,70 +2549,6 @@ function atlas(invokeType) {
           }
         }
 
-        /**
-         * @param {{
-         *  testLabel: { screenX: number, screenY: number },
-         *  tileLabels: Set<{ screenX: number, screenY: number, visible: boolean }>,
-         *  considerLeftUp?: Set<{ screenX: number, screenY: number, visible: boolean }>,
-         *  considerLeft?: Set<{ screenX: number, screenY: number, visible: boolean }>,
-         *  considerUp?: Set<{ screenX: number, screenY: number, visible: boolean }>,
-         *  minScreenDistance: number
-         * }} _ 
-         */
-        function proximityTest({
-          testLabel,
-          tileLabels,
-          considerLeftUp, considerLeft, considerUp,
-          minScreenDistance }) {
-
-          for (const otherLabel of tileLabels) {
-            if (otherLabel === testLabel) break;
-            if (!otherLabel.visible) continue;
-
-            const dist = distance2D(
-              testLabel.screenX, testLabel.screenY,
-              otherLabel.screenX, otherLabel.screenY);
-
-            if (dist < minScreenDistance)
-              return true;
-          }
-
-          if (considerLeftUp) {
-            for (const otherLabel of considerLeftUp) {
-              if (!otherLabel.visible) continue;
-              const dist = distance2D(
-                testLabel.screenX, testLabel.screenY,
-                otherLabel.screenX, otherLabel.screenY);
-
-              if (dist < minScreenDistance)
-                return true;
-            }
-          }
-
-          if (considerLeft) {
-            for (const otherLabel of considerLeft) {
-              if (!otherLabel.visible) continue;
-              const dist = distance2D(
-                testLabel.screenX, testLabel.screenY,
-                otherLabel.screenX, otherLabel.screenY);
-
-              if (dist < minScreenDistance)
-                return true;
-            }
-          }
-
-          if (considerUp) {
-            for (const otherLabel of considerUp) {
-              if (!otherLabel.visible) continue;
-              const dist = distance2D(
-                testLabel.screenX, testLabel.screenY,
-                otherLabel.screenX, otherLabel.screenY);
-
-              if (dist < minScreenDistance)
-                return true;
-            }
-          }
-        }
       }
 
       /**
@@ -2936,9 +3076,7 @@ function atlas(invokeType) {
     }
 
     async function updateHotFromFirehose() {
-      const atClient = new atproto.BskyAgent({
-        service: 'https://bsky.social/xrpc'
-      });
+      const atClient = new atproto.BskyAgent({ service: 'https://bsky.social/xrpc' });
 
       console.log('Loading existing hot users...');
 
