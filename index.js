@@ -688,82 +688,6 @@ function atlas(invokeType) {
   }
 
   /**
-   * @param {{ [shortDID: string]: UserTuple}} users
-   * @param {number} tileAxisCount
-   */
-  function makeProximityTiles(users, tileAxisCount) {
-    // break users into tileAxisCount x tileAxisCount tiles
-    const usersBounds = getUserCoordBounds(users);
-    /** @type {string[][]} */
-    const tiles = [];
-    for (const shortDID in users) {
-      const [, x, y] = users[shortDID];
-      const xTileIndex = Math.floor((x - usersBounds.x.min) / (usersBounds.x.max - usersBounds.x.min) * tileAxisCount);
-      const yTileIndex = Math.floor((y - usersBounds.y.min) / (usersBounds.y.max - usersBounds.y.min) * tileAxisCount);
-      const tileIndex = xTileIndex + yTileIndex * tileAxisCount;
-      const tile = tiles[tileIndex];
-      if (!tile) tiles[tileIndex] = [shortDID];
-      else tile.push(shortDID);
-    }
-
-    return { tiles, findTiles, tileIndexXY };
-
-    /**
-     * @param {{ userX: number, userY: number} | {spaceX: number, spaceY: number}} coords
-     * @param {(shortDID: string, usrTuple: UserTuple, spaceX: number, spaceY: number, spaceH: number) => boolean | null | undefined} check
-     * @returns {[xLowIndex: number, xHighIndex: number, yLowIndex: number, yHighIndex: number]}
-     */
-    function findTiles(coords, check) {
-      const spaceX = Number.isFinite(/** @type {*} */(coords).spaceX) ?
-        /** @type {*} */(coords).spaceX :
-        (/** @type {*} */(coords).userX - usersBounds.x.min) / (usersBounds.x.max - usersBounds.x.min);
-
-      const spaceY = Number.isFinite(/** @type {*} */(coords).spaceY) ?
-        /** @type {*} */(coords).spaceY :
-        (/** @type {*} */(coords).userY - usersBounds.y.min) / (usersBounds.y.max - usersBounds.y.min);
-
-      const xCenterIndex = Math.floor(spaceX * tileAxisCount);
-      const yCenterIndex = Math.floor(spaceY * tileAxisCount);
-      const tileIndex = xCenterIndex + yCenterIndex * tileAxisCount;
-
-      let xLowIndex = Math.max(0, xCenterIndex - 1);
-      const xyhBuf = { x: 0, y: 0, h: 0 };
-      while ((xLowIndex - 1) > 0 && probeTile(tileIndexXY(xLowIndex, yCenterIndex))) xLowIndex--;
-
-      let xHighIndex = Math.min(tileAxisCount - 1, xCenterIndex + 1);
-      while ((xHighIndex + 1) < tileAxisCount && probeTile(tileIndexXY(xHighIndex, yCenterIndex))) xHighIndex++;
-
-      let yLowIndex = Math.max(0, yCenterIndex - 1);
-      while ((yLowIndex - 1) > 0 && probeTile(tileIndexXY(xCenterIndex, yLowIndex))) yLowIndex--;
-
-      let yHighIndex = Math.min(tileAxisCount - 1, yCenterIndex + 1);
-      while ((yHighIndex + 1) < tileAxisCount && probeTile(tileIndexXY(xCenterIndex, yHighIndex))) yHighIndex++;
-
-      return [xLowIndex, xHighIndex, yLowIndex, yHighIndex];
-
-      /** @param {number} tileIndex */
-      function probeTile(tileIndex) {
-        const shortDID = tiles[tileIndex]?.[0];
-        const usrTuple = shortDID && users[shortDID];
-        let checked = !!usrTuple;
-        if (!!usrTuple) {
-          mapUserCoordsToAtlas(usrTuple[1], usrTuple[2], usersBounds, xyhBuf);
-          checked = !!check(shortDID, usrTuple, xyhBuf.x, xyhBuf.y, xyhBuf.h);
-        }
-        return checked;
-      }
-    }
-
-    /**
-     * @param {number} xTileIndex
-     * @param {number} yTileIndex
-     */
-    function tileIndexXY(xTileIndex, yTileIndex) {
-      return xTileIndex + yTileIndex * tileAxisCount;
-    }
-  }
-
-  /**
  * @param {string} searchText
  * @param {UserEntry[]} userList
  */
@@ -963,7 +887,6 @@ function atlas(invokeType) {
             if (!matches?.length) searchReportNoMatches(domElements.subtitleArea);
             else searchReportMatches({
               matches,
-              users: rawUsers,
               subtitleArea: domElements.subtitleArea,
               onChipClick: (shortDID, userChipElem) =>
                 focusAndHighlightUser({
@@ -1857,11 +1780,10 @@ function atlas(invokeType) {
        * @param {{
        *  matches: { user: UserEntry, rank: number }[],
        *  subtitleArea: HTMLElement,
-       *  users: { [shortDID: string]: UserTuple },
        *  onChipClick: (shortDID: string, chip: HTMLElement) => void
        * }} _
        */
-      function searchReportMatches({ matches, subtitleArea, users, onChipClick }) {
+      function searchReportMatches({ matches, subtitleArea, onChipClick }) {
         subtitleArea.innerHTML = '';
         let scroller;
         const scrollerWrapper = elem('div', {
@@ -2133,44 +2055,38 @@ function atlas(invokeType) {
        */
       function renderGeoLabels({ users, tiles, tileDimensionCount, clock }) {
         /**
-         * @typedef {{
-         *  shortDID: string;
-         *  position: THREE.Vector3;
-         *  visible: boolean;
-         * }} LabelInfo
+         * @typedef {ReturnType<typeof createLabel>} LabelInfo
          */
-
-        const TILE_DIMENSION_COUNT = 32;
 
         const layerGroup = new THREE.Group();
 
-        /** @type {ReturnType<typeof createLabel>[]} */
-        const fixedTextEntries = [];
+        /** @type {Set<LabelInfo>[]} */
+        const labelsByTiles = [];
 
-        /** @type {{ [shortDID: string]: ReturnType<typeof createLabel> }} */
-        const variableTextEntries = {};
         const pBuf = new THREE.Vector3();
 
         addFixedUsers();
 
         return {
           layerGroup,
-          labels: fixedTextEntries.map(label => label.labelInfo),
           updateWithCamera
         };
 
         function addFixedUsers() {
           const fixedUsers = getFixedUsers();
-          for (const shortDID of fixedUsers) {
-            const label = createLabel(shortDID);
-            fixedTextEntries.push(label);
+          for (const user of fixedUsers) {
+            const label = createLabel(user);
+            label.fixed = true;
+            const xTileIndex = Math.floor((user.x + 1) / 2 * tileDimensionCount);
+            const yTileIndex = Math.floor((user.y + 1) / 2 * tileDimensionCount);
+            const tileIndex = xTileIndex + yTileIndex * tileDimensionCount;
+            const tileBucket = labelsByTiles[tileIndex] || (labelsByTiles[tileIndex] = new Set());
+            tileBucket.add(label);
             layerGroup.add(label.group);
           }
         }
 
         /** @typedef {{ shortDID: string, x: number, y: number, h: number, weight: number }} TileUserEntry */
-
-
 
         function getFixedUsers() {
           const include = [
@@ -2231,25 +2147,24 @@ function atlas(invokeType) {
           text.outlineBlur = 0.0005;
           text.position.set(0.003, 0.004, 0);
           text.sync(() => {
+            // TODO: position text in funky way?
             var info = text.textRenderInfo;
           });
 
-          const group = /** @type {THREE.Group & { handleText: import('troika-three-text').Text }} */(new THREE.Group());
+          const group = new THREE.Group();
           group.position.set(user.x, user.h, user.y);
           group.add(/** @type {*} */(text));
           group.rotation.z = 0.3;
-          group.handleText = text;
-          //group.scale.set(10, 10, 10);
 
           const label = {
-            labelInfo: {
-              shortDID: user.shortDID,
-              position: group.position,
-              visible: true
-            },
-            addedAtMsec: clock.nowMSec,
+            user,
+            addedAtSec: clock.nowSeconds,
             group,
-            text,
+            fixed: false,
+            searchResult: false,
+            visible: true,
+            screenX: NaN,
+            screenY: NaN,
             updateWithCamera,
             dispose
           };
@@ -2263,12 +2178,12 @@ function atlas(invokeType) {
 
           /** @param {THREE.Vector3} cameraPos */
           function updateWithCamera(cameraPos) {
-            if (label.labelInfo.visible) {
+            if (label.visible) {
               group.visible = true;
               group.rotation.y = Math.atan2(
                 (cameraPos.x - group.position.x),
                 (cameraPos.z - group.position.z));
-              group.handleText.sync();
+              text.sync();
             } else {
               group.visible = false;
             }
@@ -2284,20 +2199,151 @@ function atlas(invokeType) {
           const cameraPos = camera.position;
           camera.updateMatrixWorld();
 
-          for (const label of fixedTextEntries) {
-            label.updateWithCamera(cameraPos);
-          }
-
-          for (const shortDID in variableTextEntries) {
-            const label = variableTextEntries[shortDID];
-            label.updateWithCamera(cameraPos);
+          for (const tileBucket of labelsByTiles) {
+            if (!tileBucket) continue;
+            for (const label of tileBucket) {
+              label.updateWithCamera(cameraPos);
+            }
           }
 
           if (!lastUpdateTextLabelsMsec || clock.nowMSec - lastUpdateTextLabelsMsec > UPDATE_TEXT_LABELS_INTERVAL_MSEC) {
             lastUpdateTextLabelsMsec = clock.nowMSec;
 
+            refreshDynamicLabels(camera);
           }
 
+        }
+
+        /** @param {THREE.PerspectiveCamera} camera */
+        function refreshDynamicLabels(camera) {
+          const MIN_SCREEN_DISTANCE = 0.5;
+
+          const testArgs = /** @type {Parameters<typeof proximityTest>[0]} */({
+            minScreenDistance: MIN_SCREEN_DISTANCE
+          });
+
+          for (let xIndex = 0; xIndex < tileDimensionCount; xIndex++) {
+            for (let yIndex = 0; yIndex < tileDimensionCount; yIndex++) {
+              const tileIndex = xIndex + yIndex * tileDimensionCount;
+
+              const allTileUsers = tiles[tileIndex];
+              if (!allTileUsers) continue; // some tiles are empty (rectangular world, round galaxy)
+
+              const tileLabels = labelsByTiles[tileIndex] || (labelsByTiles[tileIndex] = new Set());
+              testArgs.tileLabels = tileLabels;
+
+              testArgs.considerLeftUp = xIndex > 0 && yIndex > 0 ?
+                labelsByTiles[xIndex - 1 + (yIndex - 1) * tileDimensionCount] : undefined;
+              testArgs.considerLeft = xIndex > 0 ?
+                labelsByTiles[xIndex - 1 + yIndex * tileDimensionCount] : undefined;
+              testArgs.considerUp = yIndex > 0 ?
+                labelsByTiles[xIndex + (yIndex - 1) * tileDimensionCount] : undefined;
+
+              const removeLabels = [];
+              for (const existingLabel of tileLabels) {
+                pBuf.set(existingLabel.user.x, existingLabel.user.h, existingLabel.user.y);
+                pBuf.project(camera);
+                existingLabel.screenX = pBuf.x;
+                existingLabel.screenY = pBuf.y;
+
+                if (existingLabel.fixed) continue;
+
+                testArgs.testLabel = existingLabel;
+
+                let shouldBeRemoved = proximityTest(testArgs);
+                if (shouldBeRemoved) {
+                  removeLabels.push(existingLabel);
+                  break;
+                }
+              }
+
+              for (const removeLabel of removeLabels) {
+                tileLabels.delete(removeLabel);
+                layerGroup.remove(removeLabel.group);
+                removeLabel.dispose();
+              }
+
+              testArgs.testLabel = {screenX: NaN, screenY: NaN };
+              for (const user of allTileUsers) {
+                pBuf.set(user.x, user.h, user.y);
+                pBuf.project(camera);
+
+                testArgs.testLabel.screenX = pBuf.x;
+                testArgs.testLabel.screenY = pBuf.y;
+
+                if (proximityTest(testArgs)) {
+                  break;
+                } else {
+                  const label = createLabel(user);
+                  label.screenX = pBuf.x;
+                  label.screenY = pBuf.y;
+                  tileLabels.add(label);
+                  layerGroup.add(label.group);
+                }
+              }
+            }
+          }
+        }
+
+        /**
+         * @param {{
+         *  testLabel: { screenX: number, screenY: number },
+         *  tileLabels: Set<{ screenX: number, screenY: number }>,
+         *  considerLeftUp?: Set<{ screenX: number, screenY: number }>,
+         *  considerLeft?: Set<{ screenX: number, screenY: number }>,
+         *  considerUp?: Set<{ screenX: number, screenY: number }>,
+         *  minScreenDistance: number
+         * }} _ 
+         */
+        function proximityTest({
+          testLabel,
+          tileLabels,
+          considerLeftUp, considerLeft, considerUp,
+          minScreenDistance }) {
+
+          for (const otherLabel of tileLabels) {
+            if (otherLabel === testLabel) break;
+
+            const dist = distance2D(
+              testLabel.screenX, testLabel.screenY,
+              otherLabel.screenX, otherLabel.screenY);
+
+            if (dist < minScreenDistance)
+              return true;
+          }
+
+          if (considerLeftUp) {
+            for (const otherLabel of considerLeftUp) {
+              const dist = distance2D(
+                testLabel.screenX, testLabel.screenY,
+                otherLabel.screenX, otherLabel.screenY);
+
+              if (dist < minScreenDistance)
+                return true;
+            }
+          }
+
+          if (considerLeft) {
+            for (const otherLabel of considerLeft) {
+              const dist = distance2D(
+                testLabel.screenX, testLabel.screenY,
+                otherLabel.screenX, otherLabel.screenY);
+
+              if (dist < minScreenDistance)
+                return true;
+            }
+          }
+
+          if (considerUp) {
+            for (const otherLabel of considerUp) {
+              const dist = distance2D(
+                testLabel.screenX, testLabel.screenY,
+                otherLabel.screenX, otherLabel.screenY);
+
+              if (dist < minScreenDistance)
+                return true;
+            }
+          }
         }
 
         /**
