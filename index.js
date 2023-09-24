@@ -2234,7 +2234,7 @@ function atlas(invokeType) {
         function getFixedUsers() {
           const include = [
             'oyin.bo', 'africanceleb', 'ohkafuimykafui', 'jaz', 'kite.black', 'mathan.dev', 'wolfigelkott.crimea.ua',
-            'tressiemcphd', 'theferocity', 'reniadeb', 'kevinlikesmaps', 'rasmansa',
+            'tressiemcphd', 'theferocity', 'reniadeb', 'kevinlikesmaps', 'rasmansa','thieflord.dev',
             'twoscooters', 'finokoye', 'teetotaller', 'hystericalblkns', 'faytak', 'xkcd.com'];
           const exclude = ['dougchu'];
           const MAX_NUMBER_OF_LARGEST = 300;
