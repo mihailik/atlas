@@ -2299,7 +2299,7 @@ function atlas(invokeType) {
           /** @type {THREE.Mesh} */
           let avatarMesh;
 
-          const text = new troika_three_text.Text();
+          let text = new troika_three_text.Text();
           text.text = '@' + user.shortHandle;
           text.fontSize = 0.004;
           text.color = user.colorRGB;
@@ -2430,9 +2430,14 @@ function atlas(invokeType) {
               avatarGeometry = new THREE.CircleGeometry(0.0014, 16);
               avatarMesh = new THREE.Mesh(avatarGeometry, avatarMaterial);
               avatarMesh.position.set(0.005, 0.0005, 0);
-              text.text = text.text.slice(1);
-              text.position.set(0.0065, 0.004, 0);
-              text.sync();
+              const updatedText = text.clone();
+              updatedText.text = text.text.slice(1);
+              updatedText.position.set(0.0065, 0.004, 0);
+              group.remove(/** @type {*} */(text));
+              group.add(updatedText);
+              updatedText.sync();
+              text.dispose();
+              text = updatedText;
 
               group.add(avatarMesh);
             }
