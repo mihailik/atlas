@@ -94,33 +94,31 @@ function atlas(invokeType) {
 
   /**
  * @param {{
- *  testLabel: { screenX: number, screenY: number },
- *  tiles: Iterable<{ screenX: number, screenY: number, visible: boolean }>[],
+ *  testLabel: TLabel,
+ *  tiles: Iterable<TLabel>[],
  *  tileX: number, tileY: number,
  *  tileDimensionCount: number,
- *  minScreenDistance: number
+ *  isClose: (label1: TLabel, label2: TLabel) => number,
+ *  isVisible: (label: TLabel) => boolean
  * }} _ 
+ * @template TLabel
  */
   function nearestLabel({
     testLabel,
     tiles,
     tileX, tileY,
     tileDimensionCount,
-    minScreenDistance }) {
+    isClose,
+    isVisible }) {
     
     const tileLabels = tiles[tileX + tileY * tileDimensionCount];
 
     if (tileLabels) {
       for (const otherLabel of tileLabels) {
         if (otherLabel === testLabel) break;
-        if (!otherLabel.visible) continue;
+        if (!isVisible(otherLabel)) continue;
 
-        const dist = distance2D(
-          testLabel.screenX, testLabel.screenY,
-          otherLabel.screenX, otherLabel.screenY);
-
-        if (dist < minScreenDistance)
-          return otherLabel;
+        if (isClose(testLabel, otherLabel)) return otherLabel;
       }
     }
 
@@ -129,14 +127,9 @@ function atlas(invokeType) {
       if (testTile) {
         let anyLabelsInTile = false;
         for (const otherLabel of testTile) {
-          if (!otherLabel.visible) continue;
+          if (!isVisible(otherLabel)) continue;
           anyLabelsInTile = true;
-          const dist = distance2D(
-            testLabel.screenX, testLabel.screenY,
-            otherLabel.screenX, otherLabel.screenY);
-
-          if (dist < minScreenDistance)
-            return otherLabel;
+          if (isClose(testLabel, otherLabel)) return otherLabel;
         }
 
         // if there are no labels in the tile, we must keep looking left
@@ -151,14 +144,9 @@ function atlas(invokeType) {
         if (testTile) {
           let anyLabelsInTile = false;
           for (const otherLabel of testTile) {
-            if (!otherLabel.visible) continue;
+            if (!isVisible(otherLabel)) continue;
             anyLabelsInTile = true;
-            const dist = distance2D(
-              testLabel.screenX, testLabel.screenY,
-              otherLabel.screenX, otherLabel.screenY);
-
-            if (dist < minScreenDistance)
-              return otherLabel;
+            if (isClose(testLabel, otherLabel)) return otherLabel;
           }
 
           // if there are no labels in the tile, we must keep looking left
@@ -171,7 +159,6 @@ function atlas(invokeType) {
 
       if (stopLeftAt === tileX) break;
     }
-
   }
 
   /** @param {{
@@ -2519,11 +2506,13 @@ function atlas(invokeType) {
 
         /** @param {THREE.PerspectiveCamera} camera */
         function refreshDynamicLabels(camera) {
-          const testArgs = /** @type {Parameters<typeof nearestLabel>[0]} */({
-            minScreenDistance: MIN_SCREEN_DISTANCE,
+          const testArgs = /** @type {Parameters<typeof nearestLabel<{ screenX: number, screenY: Number, visible?: boolean }>>[0]} */({
             tileDimensionCount,
             tileX: 0, tileY: 0, testLabel: { screenX: NaN, screenY: NaN },
-            tiles: labelsByTiles
+            tiles: labelsByTiles,
+            isClose: (label1, label2) =>
+              Math.max(0, MIN_SCREEN_DISTANCE - distance2D(label1.screenX, label1.screenY, label2.screenX, label2.screenY)),
+            isVisible: (label) => label.visible
           });
 
           for (let xIndex = 0; xIndex < tileDimensionCount; xIndex++) {
