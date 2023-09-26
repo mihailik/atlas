@@ -101,7 +101,7 @@ function atlas(invokeType) {
  *  minScreenDistance: number
  * }} _ 
  */
-  function proximityTest({
+  function nearestLabel({
     testLabel,
     tiles,
     tileX, tileY,
@@ -120,7 +120,7 @@ function atlas(invokeType) {
           otherLabel.screenX, otherLabel.screenY);
 
         if (dist < minScreenDistance)
-          return true;
+          return otherLabel;
       }
     }
 
@@ -136,7 +136,7 @@ function atlas(invokeType) {
             otherLabel.screenX, otherLabel.screenY);
 
           if (dist < minScreenDistance)
-            return true;
+            return otherLabel;
         }
 
         // if there are no labels in the tile, we must keep looking left
@@ -158,7 +158,7 @@ function atlas(invokeType) {
               otherLabel.screenX, otherLabel.screenY);
 
             if (dist < minScreenDistance)
-              return true;
+              return otherLabel;
           }
 
           // if there are no labels in the tile, we must keep looking left
@@ -2207,7 +2207,7 @@ function atlas(invokeType) {
        */
       function renderGeoLabels({ users, tiles, tileDimensionCount, clock }) {
         const ANIMATE_LENGTH_SEC = 0.7;
-        const MIN_SCREEN_DISTANCE = 0.3;
+        const MIN_SCREEN_DISTANCE = 0.33;
         /**
          * @typedef {ReturnType<typeof createLabel>} LabelInfo
          */
@@ -2381,6 +2381,7 @@ function atlas(invokeType) {
 
           /** @param {THREE.Vector3} cameraPos */
           function updateWithCamera(cameraPos) {
+            const SCALE_LABELS_CLOSER_THAN = 0.2;
             const trueVisible = label.visible ||
               label.animationEndsAtSec >= clock.nowSeconds;
 
@@ -2389,6 +2390,11 @@ function atlas(invokeType) {
               group.rotation.y = Math.atan2(
                 (cameraPos.x - group.position.x),
                 (cameraPos.z - group.position.z));
+
+              const scale = cameraPos.distanceTo(group.position) < SCALE_LABELS_CLOSER_THAN ?
+                cameraPos.distanceTo(group.position) / SCALE_LABELS_CLOSER_THAN :
+                cameraPos.distanceTo(group.position) / SCALE_LABELS_CLOSER_THAN;
+              group.scale.set(scale, scale, scale);
 
               // 0 to 1 when animation ends
               const animationPhase = (clock.nowSeconds - (label.animationEndsAtSec - ANIMATE_LENGTH_SEC)) / ANIMATE_LENGTH_SEC;
@@ -2410,6 +2416,11 @@ function atlas(invokeType) {
               const avatarRequest = avatarRequestQueue.queued[user.shortDID];
               if (avatarRequest)
                 avatarRequest.priority += 1;
+
+              if (avatarMaterial && avatarMaterial.opacity !== opacity) {
+                avatarMaterial.opacity = opacity;
+                avatarMaterial.needsUpdate = true;
+              }
 
               text.sync();
             } else {
@@ -2508,7 +2519,7 @@ function atlas(invokeType) {
 
         /** @param {THREE.PerspectiveCamera} camera */
         function refreshDynamicLabels(camera) {
-          const testArgs = /** @type {Parameters<typeof proximityTest>[0]} */({
+          const testArgs = /** @type {Parameters<typeof nearestLabel>[0]} */({
             minScreenDistance: MIN_SCREEN_DISTANCE,
             tileDimensionCount,
             tileX: 0, tileY: 0, testLabel: { screenX: NaN, screenY: NaN },
@@ -2536,7 +2547,7 @@ function atlas(invokeType) {
 
                 testArgs.testLabel = existingLabel;
 
-                let shouldBeRemoved = proximityTest(testArgs);
+                let shouldBeRemoved = nearestLabel(testArgs);
                 if (shouldBeRemoved) {
                   if (existingLabel.visible) {
                     existingLabel.visible = false;
@@ -2565,7 +2576,7 @@ function atlas(invokeType) {
                 testArgs.testLabel.screenX = pBuf.x;
                 testArgs.testLabel.screenY = pBuf.y;
 
-                if (proximityTest(testArgs)) {
+                if (nearestLabel(testArgs)) {
                   break;
                 } else {
                   const label = createLabel(user);
