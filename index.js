@@ -2393,7 +2393,7 @@ function atlas(invokeType) {
 
               const scale = cameraPos.distanceTo(group.position) < SCALE_LABELS_CLOSER_THAN ?
                 cameraPos.distanceTo(group.position) / SCALE_LABELS_CLOSER_THAN :
-                cameraPos.distanceTo(group.position) / SCALE_LABELS_CLOSER_THAN;
+                1 + (cameraPos.distanceTo(group.position) / SCALE_LABELS_CLOSER_THAN - 1) * 0.3;
               group.scale.set(scale, scale, scale);
 
               // 0 to 1 when animation ends
