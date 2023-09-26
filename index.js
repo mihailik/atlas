@@ -993,7 +993,7 @@ function atlas(invokeType) {
         /** @type {{ [shortDID: string]: UserTuple }} */
         const rawUsers = await loadUsersPromise;
         const startProcessToTiles = Date.now();
-        const usersAndTiles = await processUsersToTiles({ users: rawUsers, dimensionCount: 16, sleep: () => new Promise(resolve => setTimeout(resolve, 1)) });
+        const usersAndTiles = await processUsersToTiles({ users: rawUsers, dimensionCount: 48, sleep: () => new Promise(resolve => setTimeout(resolve, 1)) });
         console.log('Processed users to tiles in ', Date.now() - startProcessToTiles, ' msec');
         const clock = makeClock();
 
@@ -2072,7 +2072,6 @@ function atlas(invokeType) {
           displayNameText.outlineWidth = 0.0003;
           displayNameText.outlineBlur = 0.005;
           displayNameText.position.set(0.005, 0.017, 0.0001);
-          // displayNameText.fillOpacity = 0.9;
           displayNameText.fontWeight = /** @type {*} */(200);
           group.add(/** @type {*} */(displayNameText));
         }
@@ -2195,7 +2194,7 @@ function atlas(invokeType) {
        */
       function renderGeoLabels({ users, tiles, tileDimensionCount, clock }) {
         const ANIMATE_LENGTH_SEC = 0.7;
-        const MIN_SCREEN_DISTANCE = 0.25;
+        const MIN_SCREEN_DISTANCE = 0.4;
         /**
          * @typedef {ReturnType<typeof createLabel>} LabelInfo
          */
@@ -2314,8 +2313,8 @@ function atlas(invokeType) {
           text.text = '@' + user.shortHandle;
           text.fontSize = 0.004;
           text.color = user.colorRGB;
-          text.outlineWidth = 0.0002;
-          text.outlineBlur = 0.0005;
+          text.outlineWidth = 0.00043;
+          text.outlineBlur = 0.0016;
           text.position.set(0.003, 0.004, 0);
           text.sync(() => {
             const visibleBounds = text.textRenderInfo?.visibleBounds
@@ -2373,7 +2372,7 @@ function atlas(invokeType) {
 
           /** @param {THREE.Vector3} cameraPos */
           function updateWithCamera(cameraPos) {
-            const SCALE_LABELS_CLOSER_THAN = 0.2;
+            const SCALE_LABELS_CLOSER_THAN = 0.23;
             const trueVisible = label.visible ||
               label.animationEndsAtSec >= clock.nowSeconds;
 
@@ -2480,7 +2479,7 @@ function atlas(invokeType) {
 
         /** @param {THREE.PerspectiveCamera} camera */
         function updateWithCamera(camera) {
-          const UPDATE_TEXT_LABELS_INTERVAL_MSEC = 1000;
+          const UPDATE_TEXT_LABELS_INTERVAL_MSEC = 2000;
 
           const cameraPos = camera.position;
           camera.updateMatrixWorld();
