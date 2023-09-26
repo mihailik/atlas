@@ -1150,14 +1150,15 @@ function atlas(invokeType) {
                 firehoseTrackingRenderer.fallback
               );
 
-              location.hash =
+              const updatedHash =
                 '#' +
                 camera.position.x.toFixed(2) + ',' + camera.position.y.toFixed(2) + ',' + camera.position.z.toFixed(2) +
                 '';
-              // ':' +
-              //   orbit.controls.target.x.toFixed(2) + ',' + orbit.controls.target.y.toFixed(2) + ',' + orbit.controls.target.z.toFixed(2) +
-              //   ':' +
-              //   ;
+
+              try {
+                history.replaceState(null, '', updatedHash);
+              } catch (_error) {
+              }
             }
 
             if (!(clock.nowMSec - lastBottomStatsUpdate < 1000) && domElements.bottomStatusLine) {
