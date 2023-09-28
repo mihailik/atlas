@@ -1951,7 +1951,7 @@ function atlas(invokeType) {
                 children: [
                   flashesSection = elem('span', {
                     children: [
-                      elem('span', { opacity: '0.6', textContent: 'L' }),
+                      elem('span', { opacity: '0.6', textContent: '@' }),
                       labelsElem = elem('span', { opacity: '0.8', textContent: '0' }),
                       hitTestElem = elem('span', { opacity: '0.8', style: `
                         opacity: 0.8;
@@ -1960,18 +1960,22 @@ function atlas(invokeType) {
                         position: relative;
                         top: -0.5em;
                       ` }),
-                      elem('span', { opacity: '0.6', textContent: ' A' }),
+                      elem('span', { opacity: '0.6', textContent: ' \u263a' }),
                       avatarImagesElem = elem('span', { opacity: '0.8', textContent: '0' }),
-                      elem('span', { opacity: '0.6', textContent: '~' }),
-                      avatarRequestsElem = elem('span', { opacity: '0.8', textContent: '0' }),
-                      avatarCachedAvatars = elem('span', { opacity: '0.8', style: `
-                        opacity: 0.8;
+                      elem('span', {
+                        style: `
                         zoom: 0.6;
                         display: inline-block;
                         position: relative;
                         top: -0.5em;
-                      ` }),
-                      ' *',
+                      `,
+                        children: [
+                          avatarCachedAvatars = elem('span', { opacity: '0.8' }),
+                          elem('span', { opacity: '0.6', textContent: '+' }),
+                          avatarRequestsElem = elem('span', { opacity: '0.8', textContent: '0' }),
+                        ]
+                      }),
+                      elem('span', { textContent: ' \u26ED', color: 'transparent', textShadow: '0 0 0 cornflowerblue' }),
                       flashesElem = elem('span', '0'),
                       ' '],
                     display: flashStatsHidden ? 'none' : 'inline',
@@ -1979,7 +1983,7 @@ function atlas(invokeType) {
                   }),
                   'posts+',
                   postsElem = elem('span', { color: 'gold' }),
-                  ' ♡+',
+                  ' \u2661+', // heart
                   likesElem = elem('span', { color: 'gold' }),
                   ' RT+',
                   repostsElem = elem('span', { color: 'gold' }),
