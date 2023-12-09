@@ -198,7 +198,9 @@ function atlas(invokeType) {
 
     let now = Date.now();
 
-    const wsAddress = bskyService.replace(/^(http|https)\:/, 'wss:') + 'com.atproto.sync.subscribeRepos';
+    const wsAddress =
+      // bskyService.replace(/^(http|https)\:/, 'wss:') + 'com.atproto.sync.subscribeRepos';
+      'wss://bsky.network/xrpc/com.atproto.sync.subscribeRepos';
     const ws = new WebSocketImpl(wsAddress);
     ws.addEventListener('message', handleMessage);
     ws.addEventListener('error', error => handleError(error));
