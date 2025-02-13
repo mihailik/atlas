@@ -434,8 +434,8 @@ function atlas(invokeType) {
           stats.begin();
           const delta = clock.getDelta();
           controls.update(delta);
-          camera.updateProjectionMatrix();
-          camera.updateMatrix();
+          // camera.updateProjectionMatrix();
+          // camera.updateMatrix();
           shaderState.material.uniforms['time'].value = clock.elapsedTime;
           shaderState.material.uniforms['camera'].value = camera.position;
           // const cameraDistanceXZ = Math.sqrt(
@@ -453,7 +453,7 @@ function atlas(invokeType) {
           stats.end();
 
           const now = clock.getElapsedTime() / 1000;
-          if (!cameraStatus && !(now < lastCameraUpdate + 100)) {
+          if (!cameraStatus && !(now < lastCameraUpdate + 200)) {
             lastCameraUpdate = now;
             cameraStatus = {
               elem: elem('div', { parent: domElements.rightStatus, fontSize: '80%', opacity: '0.7' }),
