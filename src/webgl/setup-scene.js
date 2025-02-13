@@ -4,6 +4,7 @@ import { AmbientLight, DirectionalLight, PerspectiveCamera, Scene, WebGLRenderer
 import Stats from 'three/examples/jsm/libs/stats.module';
 
 import { massShaderRenderer } from './mass-shader-renderer';
+import { massSpotMesh } from './mass-spot-mesh';
 
 /**
  * @param {import('..').UserEntry[]} users
@@ -34,7 +35,20 @@ export function setupScene(users, clock) {
 
   const stats = new Stats();
 
-  const farUsersMesh = massShaderRenderer({ clock, users: users });
+  const farUsersMesh =
+    massSpotMesh({
+      clock: { now: () => clock.nowMSec },
+      spots: users,
+      get: (user, dummy) => {
+        dummy.x = user.x;
+        dummy.y = user.h;
+        dummy.z = user.y;
+        dummy.mass = user.weight;
+        dummy.color = user.colorRGB * 256 | 0xFF;
+      }
+    });
+    // massShaderRenderer({ clock, users });
+
   scene.add(farUsersMesh);
 
   return {

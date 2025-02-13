@@ -1,31 +1,60 @@
 // @ts-check
 
-import { BackSide, Float32BufferAttribute, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial } from 'three';
+import {
+  BackSide,
+  Float32BufferAttribute,
+  InstancedBufferAttribute,
+  InstancedBufferGeometry,
+  Mesh,
+  ShaderMaterial
+} from 'three';
 
 /**
+ * @template {{ x?: number, y?: number, z?: number, mass?: number, color?: number }} T
  * @param {{
- *  clock: ReturnType<typeof import('./clock').makeClock>;
- *  users: import('..').UserEntry[];
+ *  clock?: { now(): number },
+ *  spots: T[],
+ *  get?: (spot: T, coords: { x: number, y: number, z: number, mass: number, color: number }) => void
  * }} _ 
  */
-export function massShaderRenderer({ clock, users }) {
+export function massSpotMesh({ clock: clockArg, spots, get }) {
+  const clock = clockArg || { now: () => Date.now() };
+
+  const dummy = {
+    x: 0,
+    y: 0,
+    z: 0,
+    mass: 0,
+    color: 0
+  };
+
   const baseHalf = 1.5 * Math.tan(Math.PI / 6);
   let positions = new Float32Array([
     -baseHalf, 0, -0.5,
     0, 0, 1,
     baseHalf, 0, -0.5
   ]);
-  let offsetBuf = new Float32Array(users.length * 4);
-  let diameterBuf = new Float32Array(users.length);
-  let colorBuf = new Uint32Array(users.length);
+  let offsetBuf = new Float32Array(spots.length * 4);
+  let diameterBuf = new Float32Array(spots.length);
+  let colorBuf = new Uint32Array(spots.length);
 
-  for (let i = 0; i < users.length; i++) {
-    const user = users[i];
-    offsetBuf[i * 3 + 0] = user.x;
-    offsetBuf[i * 3 + 1] = user.h;
-    offsetBuf[i * 3 + 2] = user.y;
-    diameterBuf[i] = user.weight;
-    colorBuf[i] = user.colorRGB * 256 | 0xFF;
+  for (let i = 0; i < spots.length; i++) {
+    const user = spots[i];
+
+    // reset the dummy object
+    dummy.x = user.x || 0;
+    dummy.y = user.z || 0;
+    dummy.z = user.y || 0;
+    dummy.mass = user.mass || 0;
+    dummy.color = user.color || 0;
+
+    if (typeof get === 'function') get(user, dummy);
+
+    offsetBuf[i * 3 + 0] = dummy.x;
+    offsetBuf[i * 3 + 1] = dummy.y;
+    offsetBuf[i * 3 + 2] = dummy.z;
+    diameterBuf[i] = dummy.mass;
+    colorBuf[i] = dummy.color;
   }
 
   const geometry = new InstancedBufferGeometry();
@@ -33,11 +62,11 @@ export function massShaderRenderer({ clock, users }) {
   geometry.setAttribute('offset', new InstancedBufferAttribute(offsetBuf, 3));
   geometry.setAttribute('diameter', new InstancedBufferAttribute(diameterBuf, 1));
   geometry.setAttribute('color', new InstancedBufferAttribute(colorBuf, 1));
-  geometry.instanceCount = users.length;
+  geometry.instanceCount = spots.length;
 
   const material = new ShaderMaterial({
     uniforms: {
-      time: { value: clock.nowSeconds }
+      time: { value: clock.now() / 1000 }
     },
     vertexShader: /* glsl */`
             precision highp float;
@@ -114,7 +143,7 @@ export function massShaderRenderer({ clock, users }) {
   const mesh = new Mesh(geometry, material);
   mesh.frustumCulled = false;
   mesh.onBeforeRender = () => {
-    material.uniforms['time'].value = clock.nowSeconds;
+    material.uniforms['time'].value = clock.now() / 1000;
   };
   return mesh;
 }
