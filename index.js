@@ -620,7 +620,31 @@ function atlas(invokeType) {
   padding-bottom: 0.25em;
 }
 
-          ` })] });
+.chip-block {
+  text-align: right;
+}
+
+.flying {
+  position: fixed;
+  bottom: 0; left: 0;
+  animation: 3s linear forwards flying;
+}
+
+@keyframes flying {
+  from {
+    transform: translateY(100%) perspective(500px) translateZ(400px);
+  }
+
+  to {
+    transform: translateY(-1000px) perspective(500px) translateZ(-3000px);
+  }
+}
+
+          ` })]
+      });
+
+      /** @type {HTMLDivElement | undefined} */
+      let groupedSpansParent;
 
       {
         const introElement = elem('div', { className: 'firehose-intro', textContent: 'Loading user list...', parentElement: view });
@@ -631,15 +655,33 @@ function atlas(invokeType) {
 
       for await (const record of shared.fallbackIterator(() => api.operationsFirehose(), () => shared.fallbackCachedFirehose())) {
         const renderRecord = renderRecordHTML(record);
-        if (renderRecord)
+        if (!renderRecord) continue;
+        if ((renderRecord.tagName || '').toUpperCase() === 'SPAN') {
+          if (!groupedSpansParent) {
+            groupedSpansParent = elem('div', { className: 'chip-block', children: [renderRecord] });
+          }
+          groupedSpansParent.appendChild(renderRecord);
+        } else {
+          if (groupedSpansParent) {
+            addFlyingElement(groupedSpansParent);
+            groupedSpansParent = undefined;
+          }
+
           addFlyingElement(renderRecord);
+        }
       }
 
+      /**
+       * @param {HTMLElement} flyingElem
+       */
       function addFlyingElement(flyingElem) {
+        const flyDurationMsec = 6000;
+        flyingElem.className += ' flying';
+        flyingElem.style.animationDuration = flyDurationMsec + 'ms';  
         view.appendChild(flyingElem);
         setTimeout(() => {
           if (flyingElem.parentElement) flyingElem.parentElement.removeChild(flyingElem);
-        }, 2000);
+        }, flyDurationMsec);
       }
 
     }
@@ -737,6 +779,7 @@ function atlas(invokeType) {
     /**
      * @param {TagName} tagName
      * @param {(Omit<Partial<HTMLElement['style']> & Partial<HTMLElement>, 'children' | 'parent' | 'parentElement'> & { children?: (Element | string | null | void | undefined)[], parent?: Element | null, parentElement?: Element | null  })=} [style]
+     * @returns {HTMLElementTagNameMap[TagName]}
      * @template {string} TagName
      */
     function elem(tagName, style) {
