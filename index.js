@@ -639,6 +639,7 @@ function atlas(invokeType) {
     const THREE = /** @type {*} */(atlas).imports['three'];
     const Stats = /** @type {*} */(atlas).imports['three/addons/libs/stats.module.js'];
     const OrbitControls = /** @type {*} */(atlas).imports['three/addons/controls/OrbitControls.js'];
+    const MapControls = /** @type {*} */(atlas).imports['three/addons/controls/MapControls.js'];
     /** @type {typeof import('troika-three-text')} */
     const troika_three_text = /** @type {*} */(atlas).imports['troika-three-text'];
 
@@ -742,6 +743,10 @@ function atlas(invokeType) {
           orbit: orbit.controls,
           statsElem: stats.domElement,
           users
+        });
+
+        domElements.rightStatus.addEventListener('click', () => {
+          orbit.flipControlType();
         });
 
         const searchUI = searchUIController({
@@ -867,7 +872,15 @@ function atlas(invokeType) {
                 orbit.rotating,
                 firehoseTrackingRenderer.fallback
               );
-              location.hash = '#' + camera.position.x.toFixed(2) + ',' + camera.position.y.toFixed(2) + ',' + camera.position.z.toFixed(2);
+
+              location.hash =
+                '#' +
+                camera.position.x.toFixed(2) + ',' + camera.position.y.toFixed(2) + ',' + camera.position.z.toFixed(2) +
+                '';
+              // ':' +
+              //   orbit.controls.target.x.toFixed(2) + ',' + orbit.controls.target.y.toFixed(2) + ',' + orbit.controls.target.z.toFixed(2) +
+              //   ':' +
+              //   ;
             }
 
             if (!(clock.nowMSec - lastBottomStatsUpdate < 1000) && domElements.bottomStatusLine) {
@@ -967,34 +980,59 @@ function atlas(invokeType) {
       function setupOrbitControls({ camera, host, clock }) {
         const STEADY_ROTATION_SPEED = 0.2;
 
-        const controls = new OrbitControls(camera, host);
-        let autorotateTimeout1, autorotateTimeout2, autorotateTimeout3;
-        controls.addEventListener('start', function () {
-          pauseRotation();
-        });
+        let usedControlType = OrbitControls;
+        const possibleControlTypes = [OrbitControls, MapControls];
 
-        // restart autorotate after the last interaction & an idle time has passed
-        controls.addEventListener('end', function () {
-          waitAndResumeRotation();
-        });
-
-        controls.maxDistance = 40 * 1000;
-        controls.enableDamping = true;
-        controls.autoRotate = true;
-        controls.autoRotateSpeed = STEADY_ROTATION_SPEED;
-        controls.listenToKeyEvents(window);
+        let controls = initControls(usedControlType);
 
         const outcome = {
           controls,
           rotating: !!controls.autoRotate,
           pauseRotation,
           waitAndResumeRotation,
-          moveAndPauseRotation
+          moveAndPauseRotation,
+          flipControlType
         };
 
         return outcome;
 
         var changingRotationInterval;
+
+        function initControls(OrbitControls) {
+          let controls = new OrbitControls(camera, host);
+          controls.addEventListener('start', function () {
+            pauseRotation();
+          });
+
+          // restart autorotate after the last interaction & an idle time has passed
+          controls.addEventListener('end', function () {
+            waitAndResumeRotation();
+          });
+
+          controls.maxDistance = 40 * 1000;
+          controls.enableDamping = true;
+          controls.autoRotate = true;
+          controls.autoRotateSpeed = STEADY_ROTATION_SPEED;
+          controls.listenToKeyEvents(window);
+          return controls;
+        }
+
+        function flipControlType() {
+          controls.saveState();
+          const state = {};
+          for (const key in controls) {
+            if (key.charAt(key.length - 1) === '0') {
+              state[key] = controls[key];
+            }
+          }
+          controls.dispose();
+          const nextControlType = possibleControlTypes[(possibleControlTypes.indexOf(usedControlType) + 1) % possibleControlTypes.length];
+          controls = initControls(nextControlType);
+          for (const key in state) {
+            controls[key] = state[key];
+          }
+          controls.reset();
+        }
 
         function pauseRotation() {
           controls.autoRotate = false;
@@ -1357,7 +1395,7 @@ function atlas(invokeType) {
                   '<span style="display: inline-block; width: 0.1em;"></span>' +
                   usersCountStr.slice(3)
               }),
-              elem('div', { innerHTML: 'users' }),
+              elem('div', { textContent: 'users' }),
             ]
           });
 
@@ -1431,7 +1469,7 @@ function atlas(invokeType) {
               ' follows+',
               followsElem = elem('span', { color: 'gold' }),
               ' ',
-              elem('span', { textContent: 'unknown users: +', color: '#1ca1a1' }),
+              elem('span', { textContent: '+', color: '#1ca1a1' }),
               unknownsPerSecElem = elem('span', { color: 'cyan' }),
               elem('span', { textContent: '/', color: '#1ca1a1' }),
               unknownsTotalElem = elem('span', { color: 'cyan' })
@@ -1826,6 +1864,8 @@ function atlas(invokeType) {
         /**@param {TouchEvent} event */
         function handleTouch(event) {
           if (genuineUX(event)) return;
+          event.preventDefault();
+          event.stopPropagation();
 
           const touches = event.changedTouches || event.targetTouches || event.touches;
           if (touches?.length) {
@@ -1835,7 +1875,6 @@ function atlas(invokeType) {
             }
           }
 
-          event.preventDefault();
           if (!touchTimeout) {
             touchTimeout = setTimeout(processTouch, 100);
           }
