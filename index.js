@@ -227,6 +227,19 @@ function atlas(invokeType) {
     return calcCRC32;
   })();
 
+  /** @param {{ [shortDID: string ]: UserTuple }} */
+  function getUserCoordBounds(users) {
+    const bounds = { x: { min: NaN, max: NaN }, y: { min: NaN, max: NaN } };
+    for (const shortDID in users) {
+      const [shortHandle, x, y] = users[shortDID];
+      if (!Number.isFinite(bounds.x.min) || x < bounds.x.min) bounds.x.min = x;
+      if (!Number.isFinite(bounds.x.max) || x > bounds.x.max) bounds.x.max = x;
+      if (!Number.isFinite(bounds.y.min) || y < bounds.y.min) bounds.y.min = y;
+      if (!Number.isFinite(bounds.y.max) || y > bounds.y.max) bounds.y.max = y;
+    }
+    return bounds;
+  }
+
   async function runBrowser(invokeType) {
     const users = await boot();
     /** @type {typeof import('three')} */
@@ -524,16 +537,8 @@ function atlas(invokeType) {
         const offsets = [];
         const colors = [];
 
-        const bounds = { x: { min: NaN, max: NaN }, y: { min: NaN, max: NaN } };
-        for (const shortDID in users) {
-          const [shortHandle, x, y] = users[shortDID];
-          if (!Number.isFinite(bounds.x.min) || x < bounds.x.min) bounds.x.min = x;
-          if (!Number.isFinite(bounds.x.max) || x > bounds.x.max) bounds.x.max = x;
-          if (!Number.isFinite(bounds.y.min) || y < bounds.y.min) bounds.y.min = y;
-          if (!Number.isFinite(bounds.y.max) || y > bounds.y.max) bounds.y.max = y;
-        }
+        const bounds = getUserCoordBounds(users);
 
-        // instanced attributes
         let instanceCount = 0;
         const limitSmall = location.search && parseInt(location.search.replace(/^\?/, ''));
         for (const shortDID in users) {
