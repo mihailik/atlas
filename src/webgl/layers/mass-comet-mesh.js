@@ -182,15 +182,15 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
 
               gl_FragColor.a *= timeFunction;
 
-              // vec2 posR = vec2(vPosition.x, vPosition.z);
-              // float angle = vTimeRatio * 3.14159 * 2.0;
-              // mat2 rotationMatrix = mat2(
-              //   cos(angle), -sin(angle),
-              //   sin(angle), cos(angle)
-              // );
-              // vec2 posRotated = rotationMatrix * posR;
+              vec2 posR = vec2(vPosition.x, vPosition.z);
+              float angle = vTimeRatio * 3.14159 * 4.0;
+              mat2 rotationMatrix = mat2(
+                cos(angle), -sin(angle),
+                sin(angle), cos(angle)
+              );
+              vec2 posRotated = rotationMatrix * posR;
 
-              float diagBias = 1.0 - max(abs(vPosition.x), abs(vPosition.z));
+              float diagBias = 1.0 - max(abs(posRotated.x), abs(posRotated.y));
               float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
               gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra;
 
@@ -297,11 +297,11 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
       offsetControlBuf[i * 3 + 1] = control.y;
       offsetControlBuf[i * 3 + 2] = control.z;
 
-      diameterStartStopBuf[i + 0] = start.mass;
-      diameterStartStopBuf[i + 1] = stop.mass;
+      diameterStartStopBuf[i * 2 + 0] = start.mass;
+      diameterStartStopBuf[i * 2 + 1] = stop.mass;
 
-      colorStartStopBuf[i + 0] = start.color;
-      colorStartStopBuf[i + 1] = stop.color;
+      colorStartStopBuf[i * 2 + 0] = start.color;
+      colorStartStopBuf[i * 2 + 1] = stop.color;
 
       timeStartStopBuf[i * 2 + 0] = start.time;
       timeStartStopBuf[i * 2 + 1] = stop.time;
@@ -325,7 +325,7 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
         diameterStartStopBuf,
         timeStartStopBuf,
         colorStartStopBuf
-      ] = allocateBuffers(comets.length);
+      ] = allocateBuffers(newAllocateCount);
 
       populateBuffers();
 

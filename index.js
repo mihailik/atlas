@@ -20483,7 +20483,7 @@ void main() {
   }
 
   // package.json
-  var version = "1.1.14";
+  var version = "1.2.0";
 
   // src/webgl/create-dom-layout.js
   function createDOMLayout({ canvas3D, statsElem, userCount }) {
@@ -29101,15 +29101,15 @@ if (edgeAlpha == 0.0) {
 
               gl_FragColor.a *= timeFunction;
 
-              // vec2 posR = vec2(vPosition.x, vPosition.z);
-              // float angle = vTimeRatio * 3.14159 * 2.0;
-              // mat2 rotationMatrix = mat2(
-              //   cos(angle), -sin(angle),
-              //   sin(angle), cos(angle)
-              // );
-              // vec2 posRotated = rotationMatrix * posR;
+              vec2 posR = vec2(vPosition.x, vPosition.z);
+              float angle = vTimeRatio * 3.14159 * 4.0;
+              mat2 rotationMatrix = mat2(
+                cos(angle), -sin(angle),
+                sin(angle), cos(angle)
+              );
+              vec2 posRotated = rotationMatrix * posR;
 
-              float diagBias = 1.0 - max(abs(vPosition.x), abs(vPosition.z));
+              float diagBias = 1.0 - max(abs(posRotated.x), abs(posRotated.y));
               float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
               gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra;
 
@@ -29191,10 +29191,10 @@ if (edgeAlpha == 0.0) {
         offsetControlBuf[i * 3 + 0] = control.x;
         offsetControlBuf[i * 3 + 1] = control.y;
         offsetControlBuf[i * 3 + 2] = control.z;
-        diameterStartStopBuf[i + 0] = start.mass;
-        diameterStartStopBuf[i + 1] = stop.mass;
-        colorStartStopBuf[i + 0] = start.color;
-        colorStartStopBuf[i + 1] = stop.color;
+        diameterStartStopBuf[i * 2 + 0] = start.mass;
+        diameterStartStopBuf[i * 2 + 1] = stop.mass;
+        colorStartStopBuf[i * 2 + 0] = start.color;
+        colorStartStopBuf[i * 2 + 1] = stop.color;
         timeStartStopBuf[i * 2 + 0] = start.time;
         timeStartStopBuf[i * 2 + 1] = stop.time;
       }
@@ -29213,7 +29213,7 @@ if (edgeAlpha == 0.0) {
           diameterStartStopBuf,
           timeStartStopBuf,
           colorStartStopBuf
-        ] = allocateBuffers(comets.length);
+        ] = allocateBuffers(newAllocateCount);
         populateBuffers();
         const oldGeometry = geometry;
         geometry = createGeometryAndAttributes();
@@ -29470,7 +29470,7 @@ if (edgeAlpha == 0.0) {
   function trackFirehose({ users, clock }) {
     const MAX_WEIGHT = 0.1;
     const FADE_TIME_MSEC = 4e3;
-    const COMET_TIME_MSEC = 1e3;
+    const COMET_TIME_MSEC = 700;
     const activeFlashes = [];
     const activeComets = [];
     const flashMesh = massFlashMesh({
@@ -29495,17 +29495,17 @@ if (edgeAlpha == 0.0) {
         start.x = from.x;
         start.y = from.h;
         start.z = from.y;
-        start.mass = comet.weight * 2;
+        start.mass = from.weight;
         start.color = from.colorRGB * 256 | 255;
         start.time = comet.start;
         stop.x = to.x;
         stop.y = to.h;
         stop.z = to.y;
-        stop.mass = comet.weight * 3;
+        stop.mass = comet.weight;
         stop.color = start.color;
         stop.time = comet.stop;
         control.x = (start.x + stop.x) / 2;
-        control.y = (start.y + stop.y) / 2 + 0.05;
+        control.y = (start.y + stop.y) / 2 + 0.1;
         control.z = (start.z + stop.z) / 2;
       }
     });
@@ -29588,6 +29588,7 @@ if (edgeAlpha == 0.0) {
         if (!outcome.unknowns) {
           unknownsLastSet.clear();
           updateFlashes();
+          updateComets();
         }
         unknownsLastSet.add(shortDID);
         unknownsTotalSet.add(shortDID);
@@ -29655,22 +29656,22 @@ if (edgeAlpha == 0.0) {
       if (typeof fromUser === "string") {
         const toRadius = distance2D(toUser.x, toUser.y, 0, 0);
         fromUserOrUnknown = {
-          x: toUser.x / toRadius * 1.3,
-          y: toUser.y / toRadius * 1.3,
-          h: toUser.h - 0.1,
-          colorRGB: rndUserColorer(fromUser),
-          weight: toUser.weight * 0.7
+          x: toUser.x * 4,
+          y: toUser.y * 4,
+          h: toUser.h + 2,
+          colorRGB: 16777215,
+          weight: toUser.weight * 0.2
         };
       } else {
         fromUserOrUnknown = fromUser;
       }
-      const normWeight = Math.min(MAX_WEIGHT, weight * 0.09 + fromUserOrUnknown.weight) * 5;
+      const normWeight = Math.min(MAX_WEIGHT, weight * fromUserOrUnknown.weight * 70) * 5;
       if (gapIndex >= 0) {
         const reuseComet = activeComets[gapIndex];
         reuseComet.from = fromUserOrUnknown;
         reuseComet.to = toUser;
         reuseComet.start = start;
-        reuseComet.stop = stop;
+        reuseComet.stop = typeof fromUser === "string" ? stop + (stop - start) * 4 : stop;
         reuseComet.weight = normWeight;
       } else {
         activeComets.push({ from: fromUserOrUnknown, to: toUser, start, stop, weight: normWeight });

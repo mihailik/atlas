@@ -18,7 +18,7 @@ export function trackFirehose({ users, clock }) {
   const MAX_WEIGHT = 0.1;
   const FADE_TIME_MSEC = 4000;
   // DEBUG
-  const COMET_TIME_MSEC = 1000;
+  const COMET_TIME_MSEC = 700;
 
   /** @type {{ user: import('..').UserEntry, start: number, stop: number, weight: number }[]} */
   const activeFlashes = [];
@@ -49,19 +49,19 @@ export function trackFirehose({ users, clock }) {
       start.x = from.x;
       start.y = from.h;
       start.z = from.y;
-      start.mass = comet.weight * 2;
+      start.mass = from.weight;
       start.color = from.colorRGB * 256 | 0xFF;
       start.time = comet.start;
 
       stop.x = to.x;
       stop.y = to.h;
       stop.z = to.y;
-      stop.mass = comet.weight * 3;
+      stop.mass = comet.weight;
       stop.color = start.color;
       stop.time = comet.stop;
 
       control.x = (start.x + stop.x) / 2;
-      control.y = (start.y + stop.y) / 2 + 0.05;
+      control.y = (start.y + stop.y) / 2 + 0.1;
       control.z = (start.z + stop.z) / 2;
     }
   });
@@ -139,6 +139,9 @@ export function trackFirehose({ users, clock }) {
     const toUser = users[toShortDID];
     if (!toUser) return;
 
+    // DEBUG
+    // if (!fromUser) return;
+
     addComet(
       fromUser || fromShortDID, toUser,
       clock.nowSeconds,
@@ -157,6 +160,7 @@ export function trackFirehose({ users, clock }) {
       if (!outcome.unknowns) {
         unknownsLastSet.clear();
         updateFlashes();
+        updateComets();
       }
 
       unknownsLastSet.add(shortDID);
@@ -250,18 +254,18 @@ export function trackFirehose({ users, clock }) {
       const toRadius = distance2D(toUser.x, toUser.y, 0, 0);
 
       fromUserOrUnknown = {
-        x: toUser.x / toRadius * 1.3,
-        y: toUser.y / toRadius * 1.3,
-        h: toUser.h - 0.1,
-        colorRGB: rndUserColorer(fromUser),
-        weight: toUser.weight * 0.7
+        x: toUser.x * 4,
+        y: toUser.y * 4,
+        h: toUser.h + 2,
+        colorRGB: 0xffffff,
+        weight: toUser.weight * 0.2
       };
     } else {
       fromUserOrUnknown = fromUser;
     }
 
     const normWeight =
-      Math.min(MAX_WEIGHT, weight * 0.09 + fromUserOrUnknown.weight)
+      Math.min(MAX_WEIGHT, weight * fromUserOrUnknown.weight * 70)
       * 5;
 
     if (gapIndex >= 0) {
@@ -269,7 +273,7 @@ export function trackFirehose({ users, clock }) {
       reuseComet.from = fromUserOrUnknown;
       reuseComet.to = toUser;
       reuseComet.start = start;
-      reuseComet.stop = stop;
+      reuseComet.stop = typeof fromUser === 'string' ? stop + (stop - start) * 4 : stop;
       reuseComet.weight = normWeight;
     } else {
       activeComets.push({ from: fromUserOrUnknown, to: toUser, start, stop, weight: normWeight });
