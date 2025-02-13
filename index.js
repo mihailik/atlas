@@ -434,37 +434,10 @@ function atlas(invokeType) {
 
       //const shaderState = webgl_buffergeometry_instancing_demo();
 
-      const userBounds = getUserCoordBounds(users);
-      const farUsersMesh = farUsersRenderer({
-        positions: (() => {
-          const b = 0.0002;
-          return new Float32Array([
-            -b, b, -b,
-            -b, 0, b,
-            b, b, b,
-            -b, b, -b,
-            b, 0, -b,
-            b, b, b,
-          ]);
-        })(),
-        userKeys: Object.keys(users),
-        userMapper: (shortDID, pos) => {
-          const [, xSpace, ySpace] = users[shortDID];
-          const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, userBounds);
-          pos[0] = x;
-          pos[1] = h;
-          pos[2] = y;
-        },
-        userColorer: (shortDID) => {
-          const crc32 = calcCRC32(shortDID) & 0x808080FF;
-          return crc32;
-        }
-      });
-      scene.add(farUsersMesh);
       startAnimation();
 
       function setupScene() {
-        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.00001, 1000);
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.00001, 10000);
         camera.position.x = 0.18;
         camera.position.y = 0.49;
         camera.position.z = 0.88;
@@ -497,6 +470,36 @@ function atlas(invokeType) {
 
         scene.add(new THREE.AxesHelper(1000));
 
+
+        const userBounds = getUserCoordBounds(users);
+
+        const { mesh: farUsersMesh, updateUserSet } = farUsersRenderer({
+          positions: (() => {
+            const b = 0.0002;
+            return new Float32Array([
+              -b, b, -b,
+              -b, 0, b,
+              b, b, b,
+              -b, b, -b,
+              b, 0, -b,
+              b, b, b,
+            ]);
+          })(),
+          userKeys: Object.keys(users),
+          userMapper: (shortDID, pos) => {
+            const [, xSpace, ySpace] = users[shortDID];
+            const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, userBounds);
+            pos[0] = x;
+            pos[1] = h;
+            pos[2] = y;
+          },
+          userColorer: (shortDID) => {
+            const crc32 = calcCRC32(shortDID) & 0x808080FF;
+            return crc32;
+          }
+        });
+        scene.add(farUsersMesh);
+
         return {
           scene,
           camera,
@@ -504,6 +507,8 @@ function atlas(invokeType) {
           renderer,
           stats,
           clock,
+          userBounds,
+          farUsersMesh,
           controls
         };
       }
@@ -630,20 +635,10 @@ function atlas(invokeType) {
        * @template K
        */
       function farUsersRenderer({ positions, userKeys, userMapper, userColorer }) {
-        const userOffsets = new Float32Array(userKeys.length * 3);
-        const userColors = new Uint32Array(userKeys.length);
+        let userOffsets = new Float32Array(userKeys.length * 3);
+        let userColors = new Uint32Array(userKeys.length);
 
-        /** @type {[x: number, y: number, z: number]} */
-        const userPos = [NaN, NaN, NaN];
-
-        for (let i = 0; i < userKeys.length; i++)  {
-          const user = userKeys[i];
-          userMapper(user, userPos);
-          userOffsets[i * 3 + 0] = userPos[0];
-          userOffsets[i * 3 + 1] = userPos[1];
-          userOffsets[i * 3 + 2] = userPos[2];
-          userColors[i] = userColorer(user);
-        }
+        populateAttributes(userKeys);
 
         const geometry = new THREE.InstancedBufferGeometry();
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -690,7 +685,39 @@ function atlas(invokeType) {
         });
 
         const mesh = new THREE.Mesh(geometry, material);
-        return mesh;
+        return { mesh, updateUserSet };
+
+        /**
+         * @param {Parameters<typeof userColorer>[0][]} userKeys
+         */
+        function populateAttributes(userKeys) {
+          /** @type {[x: number, y: number, z: number]} */
+          const userPos = [NaN, NaN, NaN];
+
+          for (let i = 0; i < userKeys.length; i++) {
+            const user = userKeys[i];
+            userMapper(user, userPos);
+            userOffsets[i * 3 + 0] = userPos[0];
+            userOffsets[i * 3 + 1] = userPos[1];
+            userOffsets[i * 3 + 2] = userPos[2];
+            userColors[i] = userColorer(user);
+          }
+        }
+
+        /**
+         * @param {Parameters<typeof userColorer>[0][]} userKeys
+         */
+        function updateUserSet(userKeys) {
+          if (userKeys.length !== userColors.length) {
+            userOffsets = new Float32Array(userKeys.length * 3);
+            userColors = new Uint32Array(userKeys.length);
+          }
+
+          populateAttributes(userKeys);
+
+          geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(userOffsets, 3));
+          geometry.setAttribute('color', new THREE.InstancedBufferAttribute(userColors, 1));
+        }
       }
 
       function webgl_buffergeometry_instancing_demo() {
