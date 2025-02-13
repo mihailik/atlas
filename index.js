@@ -425,7 +425,7 @@ function atlas(invokeType) {
       function webgl_buffergeometry_instancing_demo() {
         const vector = new THREE.Vector4();
 
-        const instances = 50000;
+        const instances = 100000;
 
         const positions = [];
         const offsets = [];
