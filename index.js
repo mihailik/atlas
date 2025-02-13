@@ -2206,7 +2206,7 @@ function atlas(invokeType) {
        */
       function renderGeoLabels({ users, tiles, tileDimensionCount, clock }) {
         const ANIMATE_LENGTH_SEC = 0.7;
-        const MIN_SCREEN_DISTANCE = 0.2;
+        const MIN_SCREEN_DISTANCE = 0.3;
         /**
          * @typedef {ReturnType<typeof createLabel>} LabelInfo
          */
