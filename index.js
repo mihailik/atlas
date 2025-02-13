@@ -1304,6 +1304,7 @@ function atlas(invokeType) {
           var testElem = /** @type {El | null | undefined} */(event.target);
           while (testElem && testElem !== document.body) {
             if (testElem === domElements.titleBar) return true;
+            if (testElem === domElements.subtitleArea) return true;
             if (testElem === renderer.domElement) return false;
             if (testElem === domElements.root) return false;
             testElem = testElem.parentElement;
