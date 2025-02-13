@@ -1011,8 +1011,8 @@ function atlas(invokeType) {
         });
 
         const orbit =
-          //setupOrbitControls2({ camera, host: renderer.domElement, clock, scene });
-          setupOrbitControls({ camera, host: renderer.domElement, clock });
+          setupOrbitControls2({ camera, host: renderer.domElement, clock, scene });
+          // setupOrbitControls({ camera, host: renderer.domElement, clock });
 
         // domElements.rightStatus.addEventListener('click', () => {
         //   orbit.flipControlType();
