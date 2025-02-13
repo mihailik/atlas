@@ -850,7 +850,7 @@ function atlas(invokeType) {
               post.reply?.root?.cid ? flyingPosts[post.reply.root.cid] :
                 undefined;
 
-          const postPoint = new THREE.SphereGeometry(20, 20, 20, 20);
+          const postPoint = new THREE.SphereGeometry(40, 40, 40, 10);
           const postMesh = new THREE.Mesh(postPoint, shortHandle ? postMaterial : dorkyPostMaterial);
           postMesh.position.set(x / 20, 0, y / 20);
           
