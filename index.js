@@ -746,7 +746,7 @@ function atlas(invokeType) {
       function trackFirehose(bounds) {
 
         const MAX_WEIGHT = 0.1;
-        const FADE_TIME_MSEC = 2000;
+        const FADE_TIME_MSEC = 3000;
         /** @type {{ [shortDID: string]: { x: number, y: number, h: number, weight: number, color: number, startAtMsec: number, fadeAtMsec: number } }} */
         const activeUsers = {};
         const rend = flashesRenderer();
