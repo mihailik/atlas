@@ -469,7 +469,6 @@ function atlas(invokeType) {
         geometry.setAttribute('orientationEnd', new THREE.InstancedBufferAttribute(new Float32Array(orientationsEnd), 4));
 
         // material
-
         const material = new THREE.RawShaderMaterial({
 
           uniforms: {
