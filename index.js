@@ -16,14 +16,66 @@ function atlas(invokeType) {
   const api = (function () {
     const api = {
       unauthenticatedAgent,
+      getAuthentication,
+      authenticateExistingAgentWith,
+      authenticatedAgent,
       rawFirehose,
-      operationsFirehose
+      operationsFirehose,
+      searchActorsStreaming
     };
 
     const bskyService = 'https://bsky.social/xrpc/';
 
     function unauthenticatedAgent() {
       const agent = new atproto_api.BskyAgent({ service: bskyService });
+      return agent;
+    }
+
+    async function getAuthentication() {
+      const namePwd = prompt('Login@password');
+      const posAt = (namePwd || '').indexOf('@');
+      if (!namePwd || posAt < 0) throw new Error('Login/password not provided.');
+      const identifier = namePwd.slice(0, posAt);
+      const password = namePwd.slice(posAt + 1);
+      return { identifier, password };
+    }
+
+    /** @type {import('@atproto/api').AtpAgentLoginOpts=} */
+    var cachedAuth;
+
+    /**
+     * @param {import('@atproto/api').BskyAgent} agent
+     * @param {import('@atproto/api').AtpAgentLoginOpts=} auth
+     */
+    async function authenticateExistingAgentWith(agent, auth) {
+      if (auth) {
+        await agent.login(auth);
+        return;
+      }
+
+      if (cachedAuth) {
+        try {
+          await agent.login(cachedAuth);
+          return;
+        }
+        catch {
+          auth = await api.getAuthentication();
+          await agent.login(auth);
+          cachedAuth = auth;
+        }
+      }
+
+      auth = await api.getAuthentication();
+      await agent.login(auth);
+      cachedAuth = auth;
+    }
+
+    /**
+     * @param {import('@atproto/api').AtpAgentLoginOpts=} auth
+     */
+    async function authenticatedAgent(auth) {
+      const agent = new atproto_api.BskyAgent({ service: bskyService });
+      await api.authenticateExistingAgentWith(agent, auth);
       return agent;
     }
 
@@ -111,6 +163,18 @@ function atlas(invokeType) {
       }
     }
 
+    /** @param {{ term: string, cursor?: string, auth?: import('@atproto/api').AtpAgentLoginOpts}} _ */
+    async function* searchActorsStreaming({ term, cursor, auth }) {
+      const agent = await authenticatedAgent(auth);
+
+      while (true) {
+        const reply = await agent.app.bsky.actor.searchActors({ cursor: cursor ?? undefined, term, limit: 100 });
+        if (!reply.data.cursor || !reply.data.actors?.length) return;
+        cursor = reply.data.cursor;
+        yield reply.data;
+      }
+    }
+
     return api;
   })();
 
@@ -129,15 +193,14 @@ function atlas(invokeType) {
 
       return {
         iterator: iterate(),
+        stop,
         next,
         error
       };
 
       async function* iterate() {
         try {
-          while (true) {
-            if (stopped) return;
-
+          while (stopped) {
             let next;
             if (buffer.length) {
               next = buffer.shift();
@@ -157,6 +220,11 @@ function atlas(invokeType) {
           stopped = true;
           buffer.length = 0;
         }
+      }
+
+      function stop() {
+        if (failed || stopped) return;
+        stopped = true;
       }
 
       function next(item) {
@@ -348,8 +416,7 @@ function atlas(invokeType) {
                 firehoseConsoleContent.removeChild(el);
               }
 
-              /** @type {HTMLElement} */
-              const reuseElement = removeElements[0];
+              const reuseElement = /** @type {HTMLElement} */(removeElements[0]);
               reuseElement.innerHTML = '';
               reuseElement.style.cssText = elementCSS;
               return reuseElement;
@@ -366,49 +433,294 @@ function atlas(invokeType) {
   }
 
   function runNode(invokeType) {
-    console.log('node: ', invokeType);
 
-    atproto_api = require('@atproto/api');
-
-    /** @type {typeof import('./lib/lib')} */
-    const localLibExports =
+    function patchLibExports() {
+      /** @type {typeof import('./lib/lib')} */
+      const localLibExports =
       // @ts-ignore
       /** @type {*} */(require('./lib')) || global;
 
-    ipld_car = localLibExports.ipld_car;
-    cbor_x = localLibExports.cbor_x;
+      ipld_car = localLibExports.ipld_car;
+      cbor_x = localLibExports.cbor_x;
+    }
 
-    api.rawFirehose = nodeFirehose;
+    function patchApi() {
+      api.rawFirehose = nodeFirehose;
+      api.getAuthentication = nodeGetAuthentication;
 
-    shared.debugDumpFirehose();
+      async function* nodeFirehose() {
 
+        const websocketBskyService = 'wss://bsky.social';
+        const ids = {
+          ComAtprotoSyncSubscribeRepos: 'com.atproto.sync.subscribeRepos'
+        };
 
-    async function* nodeFirehose() {
+        const atproto_xprc_server = require('@atproto/xrpc-server');
+        const atproto_repo = require('@atproto/repo');
 
-      const websocketBskyService = 'wss://bsky.social';
-      const ids = {
-        ComAtprotoSyncSubscribeRepos: 'com.atproto.sync.subscribeRepos'
-      };
+        /** @type {atproto_xprc_server.Subscription<import('@atproto/api').ComAtprotoSyncSubscribeRepos.Commit>} */
+        const sub = new atproto_xprc_server.Subscription({
+          service: websocketBskyService,
+          method: ids.ComAtprotoSyncSubscribeRepos,
+          // getParams: () => /** @type {*} */(this.getCursor()),
+          validate: /** @type {*} */(value) => {
+            // lexicons.assertValidXrpcMessage(ids.ComAtprotoSyncSubscribeRepos, value)
+            if (value?.$type === ids.ComAtprotoSyncSubscribeRepos) return value;
+            return value;
+          },
+        });
 
-      const atproto_xprc_server = require('@atproto/xrpc-server');
-      const atproto_repo = require('@atproto/repo');
+        for await (const value of sub) {
+          yield value;
+        }
+      }
 
-      /** @type {atproto_xprc_server.Subscription<import('@atproto/api').ComAtprotoSyncSubscribeRepos.Commit>} */
-      const sub = new atproto_xprc_server.Subscription({
-        service: websocketBskyService,
-        method: ids.ComAtprotoSyncSubscribeRepos,
-        // getParams: () => /** @type {*} */(this.getCursor()),
-        validate: /** @type {*} */(value) => {
-          // lexicons.assertValidXrpcMessage(ids.ComAtprotoSyncSubscribeRepos, value)
-          if (value?.$type === ids.ComAtprotoSyncSubscribeRepos) return value;
-          return value;
-        },
-      });
+      async function nodeGetAuthentication() {
+        if (process.env.ATLASUSER && process.env.ATLASPASSWORD)
+          return { identifier: process.env.ATLASUSER, password: process.env.ATLASPASSWORD };
 
-      for await (const value of sub) {
-        yield value;
+        return new Promise((resolve, reject) => {
+          const fs = require('fs');
+          fs.readFile(__dirname + '/node_modules/.auth', 'utf8', (error, text) => {
+            if (!error) {
+              const [identifier, password] = text.split(/[\r\n]/g).filter(str => str);
+              if (identifier && password) return resolve({ identifier, password });
+            }
+
+            const readline = require('readline');
+            const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+            rl.question('BSky login: ', identifier => {
+              rl.question('BSky login: ', password => {
+                rl.close();
+                resolve({ identifier, password });
+              });
+            });
+          });
+        });
       }
     }
+
+    const utils = (function () {
+      const utils = {
+        openOrCreateTextFile,
+        createDirectoryRecursive,
+        readTextFileFirstLine,
+        overwriteFirstLine,
+        overwriteLastLine
+      };
+
+      /**
+       * @param {string} filePath
+       * @param {string | (() => string | Promise<string>)} initContent
+       * @returns {Promise<number>}
+       */
+      async function openOrCreateTextFile(filePath, initContent) {
+        /** @type {number} */
+        const openFD = await open();
+
+        if (openFD) return openFD;
+
+        await createDirectoryRecursive(path.basename(filePath));
+        const initContentStr = typeof initContent === 'string' ? initContent : await initContent();
+        await new Promise((resolve, reject) => {
+          fs.writeFile(filePath, initContentStr, (err) => {
+            if (err) reject(err);
+            else resolve(err);
+          });
+        });
+
+        return await open();
+
+        function open() {
+          return new Promise((resolve, reject) => {
+            fs.open(filePath, 'r+', (_err, fd) => {
+              resolve(fd);
+            });
+          });
+        }
+      }
+
+      async function getFirstLine(filePath) {
+        const maxFirstLineLength = 256;
+        const fd = await utils.openOrCreateTextFile(filePath, () => { throw new Error('File not found.'); });
+        const buffer = Buffer.alloc ? Buffer.alloc(maxFirstLineLength) : new Buffer(maxFirstLineLength);
+        /** @type {string} */
+        const fileLead = await new Promise((resolve, reject) => {
+          fs.read(fd, buffer, 0, buffer.byteLength, 0, (err, bytesRead) => {
+            if (err) reject(err);
+            resolve(buffer.toString('utf8', 0, bytesRead));
+          });
+        });
+
+        const newLineRegExp = /(\n)|(\r\n)/g;
+        const endLineMatch = newLineRegExp.exec(fileLead);
+        if (!endLineMatch) throw new Error('First line is longer than ' + maxFirstLineLength);
+        let firstLineStart = 0;
+        let firstLineEnd;
+        if (endLineMatch.index) {
+          firstLineEnd = endLineMatch.index;
+        } else {
+          const nextLineMatch = newLineRegExp.exec(fileLead);
+          if (!nextLineMatch?.index) throw new Error('Multiple new lines at the start of the file.');
+          firstLineStart = endLineMatch.index + endLineMatch[0].length;
+          firstLineEnd = nextLineMatch.index;
+        }
+
+        return { fd, firstLineStart, firstLineEnd, firstLine: fileLead.slice(firstLineStart, firstLineEnd) };
+      }
+
+
+      async function readTextFileFirstLine(filePath) {
+        const { firstLine } = await getFirstLine(filePath);
+        return firstLine;
+      }
+
+      async function overwriteFirstLine(filePath, content) {
+        const { fd, firstLineStart } = await getFirstLine(filePath);
+
+        return new Promise((resolve, reject) => {
+          fs.write(fd, content, firstLineStart, 'utf8', (err) => {
+            if (err) reject(err);
+            resolve(undefined);
+          });
+        });
+      }
+
+      async function overwriteLastLine(filePath, content) {
+        const maxLastLineLength = 256;
+
+        /** @type {import('fs').Stats} */
+        const stat = await new Promise((resolve, reject) => {
+          fs.stat(filePath, (err, stat) => {
+            if (err) reject(err);
+            else resolve(stat);
+          });
+        });
+        if (stat.isDirectory()) throw new Error('Directory instead of file ' + filePath);
+
+        const fd = await utils.openOrCreateTextFile(filePath, () => { throw new Error('File not found.'); });
+
+        const buffer = Buffer.alloc ? Buffer.alloc(maxLastLineLength) : new Buffer(maxLastLineLength);
+        const fileTrail = await new Promise((resolve, reject) => {
+          fs.read(fd, buffer, 0, buffer.byteLength, stat.size - buffer.length, (err, bytesRead) => {
+            if (err) reject(err);
+            resolve(buffer.toString('utf8', 0, bytesRead));
+          });
+        });
+
+        const lastLineRegExp = /((\n)|(\r\n))[^\r\n]+((\n)|(\r\n))?$/g;
+        const lastLineMatch = lastLineRegExp.exec(fileTrail);
+        if (!lastLineMatch) throw new Error('Garbled end of the file, no last line found in ' + maxLastLineLength + ' characters.');
+
+        // lastLineMatch will include preceding newline, remove it from calculation
+        const posLastLine = stat.size - (lastLineMatch[0].length - lastLineMatch[1].length);
+
+        return new Promise((resolve, reject) => {
+          fs.write(fd, content, posLastLine, 'utf8', (err) => {
+            if (err) reject(err);
+            resolve(undefined);
+          });
+        });
+      }
+
+      /**
+       * @param {string} dirPath
+       * @returns {Promise<void>}
+       */
+      async function createDirectoryRecursive(dirPath) {
+        return new Promise((resolve, reject) => {
+          fs.stat(dirPath, (err, stat) => {
+            if (stat && stat.isDirectory()) return resolve();
+            if (stat) return reject(new Error('File cannot be directory ' + dirPath));
+
+            const basename = path.basename(dirPath);
+            if (!basename || basename === dirPath || path.basename(basename) === basename) return resolve();
+            createDirectoryRecursive(basename).then(
+              () => {
+                fs.mkdir(dirPath, (err) => {
+                  if (err) reject(err);
+                  resolve();
+                });
+              },
+              parentError => reject(parentError));
+          });
+        });
+      }
+
+      return utils;
+    })();
+
+    async function continueDumpUsers() {
+      const usersJsonPath = path.resolve(__dirname, 'db/users.json');
+
+      const firstLine = (cursor) => (`{ "cursor": ${JSON.stringify(cursor ?? null)}, "timestamp": ${Date.now()},`
+        .padEnd(200, ' '));
+      const secondLine = '"users": { "fields": ["did-short", "handle-short", "description" ], "list": ['
+
+      const lastLine = ']}}';
+
+      await utils.openOrCreateTextFile(
+        usersJsonPath,
+        firstLine() + '\n' +
+        secondLine + '\n' +
+        lastLine
+      );
+
+      const currentFirstLine = await utils.readTextFileFirstLine(usersJsonPath);
+      let { cursor } = JSON.parse(currentFirstLine + ' "a": 0}');
+
+      console.log({ cursor });
+      let added = 0;
+
+      const start = Date.now();
+      let startBatch = Date.now();
+      for await (const batchEntry of api.searchActorsStreaming({ cursor, term: 'bsky.social' })) {
+        await utils.overwriteLastLine(
+          usersJsonPath,
+          (cursor ? ',\n' : '') +
+          batchEntry.actors.map(actor => JSON.stringify([
+            actor.did,
+            actor.handle,
+            actor.description
+          ])).join(',\n') +
+          '\n]}}'
+        );
+
+        await utils.overwriteFirstLine(
+          usersJsonPath,
+          firstLine(batchEntry.cursor));
+        
+        cursor = batchEntry.cursor;
+        added += batchEntry.actors.length;
+
+        const now = Date.now();
+
+        console.log(
+          batchEntry.cursor,
+          '[' + batchEntry.actors.length + '] ' + batchEntry.actors[0].handle + '...' + batchEntry.actors[batchEntry.actors.length - 1].handle,
+          ' in ' + (now - startBatch) / 1000 + 's (' +
+          added + ' in ' + (now - start) / 1000 + 's)'
+        );
+
+        startBatch = now;
+      }
+
+    }
+
+    console.log('node: ', invokeType);
+
+    atproto_api = require('@atproto/api');
+    const fs = require('fs');
+    const path = require('path');
+
+    patchLibExports();
+    patchApi();
+
+    //shared.debugDumpFirehose();
+
+    continueDumpUsers();
+
+
   }
 
   if (typeof window !== 'undefined' && window && typeof window.alert === 'function')
