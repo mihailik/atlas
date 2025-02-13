@@ -328,9 +328,9 @@ function atlas(invokeType) {
 
       function setupScene() {
         const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.01, 1000);
-        camera.position.x = 0.05;
-        camera.position.z = 2;
-        camera.position.y = 0.1;
+        camera.position.x = 0.18;
+        camera.position.y = 0.49;
+        camera.position.z = 0.88;
 
         // const camera = new THREE.PerspectiveCamera(
         //   15,
@@ -428,10 +428,12 @@ function atlas(invokeType) {
           renderFrame();
         }
 
+        let cameraStatus;
         function renderFrame() {
           stats.begin();
           const delta = clock.getDelta();
           shaderState.material.uniforms['time'].value = clock.elapsedTime;
+          shaderState.material.uniforms['camera'].value = camera.position;
           // const cameraDistanceXZ = Math.sqrt(
           //   camera.position.x * camera.position.x +
           //   camera.position.z * camera.position.z);
@@ -446,16 +448,61 @@ function atlas(invokeType) {
           renderer.render(scene, camera);
           controls.update(delta);
           stats.end();
+          if (!cameraStatus) {
+            cameraStatus = {
+              elem: elem('div', { parent: domElements.rightStatus, fontSize: '80%', opacity: 0.7 }),
+              lastPos: { x: NaN, y: NaN, z: NaN }
+            };
+          }
+
+          const dist = Math.sqrt(
+            (camera.position.x - cameraStatus.lastPos.x) * (camera.position.x - cameraStatus.lastPos.x) +
+            (camera.position.y - cameraStatus.lastPos.y) * (camera.position.y - cameraStatus.lastPos.y) +
+            (camera.position.z - cameraStatus.lastPos.z) * (camera.position.z - cameraStatus.lastPos.z));
+
+          if (!(dist < 0.001)) {
+            cameraStatus.lastPos.x = camera.position.x;
+            cameraStatus.lastPos.y = camera.position.y;
+            cameraStatus.lastPos.z = camera.position.z;
+            cameraStatus.elem.textContent = camera.position.x.toFixed(2) + ', ' + camera.position.y.toFixed(2) + ', ' + camera.position.z.toFixed(2) + '[' + dist.toFixed(3) + ']';
+          }
+        }
+      }
+
+      /**
+       * @param {THREE.BufferGeometry} geometry
+       */
+      function geometryVertices(geometry) {
+        const geoPos = geometry.getAttribute('position');
+        const index = geometry.getIndex();
+        if (index) {
+          const positions = [];
+          for (let i = 0; i < index.count; i++) {
+            const posIndex = index.getX(i);
+            positions.push(geoPos.getX(posIndex));
+            positions.push(geoPos.getY(posIndex));
+            positions.push(geoPos.getZ(posIndex));
+          }
+          return positions;
+        } else {
+          const positions = [];
+          for (let i = 0; i < geoPos.count; i++) {
+            positions.push(geoPos.getX(i));
+            positions.push(geoPos.getY(i));
+            positions.push(geoPos.getZ(i));
+          }
+          return positions;
         }
       }
 
       function webgl_buffergeometry_instancing_demo() {
 
-        const positions = [
-          0.025, 0, 0,
-          0, 0.025, 0,
-          0, 0, 0.025
-        ];
+        let positions = geometryVertices(new THREE.TetrahedronGeometry(0.01, 2));
+        let detailedPositions = geometryVertices(
+          new THREE.TetrahedronGeometry(0.01, 5)
+          // new THREE.SphereGeometry(0.01, 16, 10)
+        ).map(x => x + 10000);
+
         const offsets = [];
         const colors = [];
 
@@ -484,19 +531,23 @@ function atlas(invokeType) {
           offsets.push(xRatiod, h, yRatiod);
 
           // colors
-          colors.push(Math.random(), Math.random(), Math.random(), Math.random());
+          colors.push(Math.random(), Math.random(), Math.random(), 1);
 
           //if (instanceCount > 20) break;
         }
 
         const geometry = new THREE.InstancedBufferGeometry();
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geometry.instanceCount = instanceCount;
+        // geometry.copy(new THREE.BoxGeometry(1, 1, 1));
+        // geometry.instanceCount = instanceCount;
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions.concat(detailedPositions), 3));
         geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(new Float32Array(offsets), 3));
         geometry.setAttribute('color', new THREE.InstancedBufferAttribute(new Float32Array(colors), 4));
 
         const material = new THREE.ShaderMaterial({
           uniforms: {
-            'time': { value: 1.0 }
+            time: { value: 1.0 },
+            camera: { value: new THREE.Vector3(0,0,0) }
           },
           vertexShader: `
 		precision highp float;
@@ -504,6 +555,7 @@ function atlas(invokeType) {
 		uniform float time;
 
 		attribute vec3 offset;
+    attribute vec3 camera;
 		attribute vec4 color;
 
 		varying vec3 vPosition;
@@ -512,8 +564,15 @@ function atlas(invokeType) {
 		void main(){
 
 			vColor = color;
+      vec3 intendedPosition = position.x > 1000.0 ? position - vec3(10000.0) : position;
+      vec4 targetPosition = projectionMatrix * modelViewMatrix * vec4( intendedPosition * 0.01 + offset, 1.0 );
+      vec4 nonePosition = targetPosition * (0.0/0.0);
+      float distanceToCamera = distance(targetPosition.xyz, camera);
 
-			gl_Position = projectionMatrix * modelViewMatrix * vec4( mix(position, offset * 1.6, 0.9), 1.0 );
+			gl_Position = // (position.x > 1000.0 ? targetPosition : nonePosition );
+        distanceToCamera > 0.001 ?
+          (position.x > 1000.0 ? targetPosition : nonePosition ) :
+          (position.x > 1000.0 ? nonePosition : targetPosition );
 
 		}
           `,
