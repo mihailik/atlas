@@ -275,7 +275,7 @@ function atlas(invokeType) {
     const yRatiod = (y - bounds.y.min) / (bounds.y.max - bounds.y.min) - 0.5;
     const r = Math.sqrt(xRatiod * xRatiod + yRatiod * yRatiod);
     let h = (1 - r * r) * 0.3 - 0.265;
-    return { x: xRatiod, h, y: yRatiod };
+    return { x: xRatiod, h, y: -yRatiod };
   }
 
 
