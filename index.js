@@ -972,7 +972,7 @@ function atlas(invokeType) {
 
       /**
        * @param {{
-       *  camera: THREE.Camera,
+       *  camera: THREE.PerspectiveCamera,
        *  host: HTMLElement,
        *  clock: ReturnType<typeof makeClock>
        * }} _
@@ -998,6 +998,23 @@ function atlas(invokeType) {
 
         var changingRotationInterval;
 
+        /**
+         * @param {{
+         *  new (camera: THREE.PerspectiveCamera, host: HTMLElement): {
+         *    target: THREE.Vector3;
+         *    addEventListener(event: 'start' | 'end', callback: Function);
+         *    maxDistance: number;
+         *    enableDamping: boolean;
+         *    autoRotate: boolean;
+         *    autoRotateSpeed: number;
+         *    listenToKeyEvents(element);
+         *    saveState(): void;
+         *    reset(): void;
+         *    dispose(): void;
+         *    update(deltaTime?: number): void;
+         *  } }} OrbitControls 
+         * @returns 
+         */
         function initControls(OrbitControls) {
           let controls = new OrbitControls(camera, host);
           controls.addEventListener('start', function () {
@@ -1028,6 +1045,7 @@ function atlas(invokeType) {
           controls.dispose();
           const nextControlType = possibleControlTypes[(possibleControlTypes.indexOf(usedControlType) + 1) % possibleControlTypes.length];
           controls = initControls(nextControlType);
+          outcome.rotating = controls.autoRotate;
           for (const key in state) {
             controls[key] = state[key];
           }
@@ -1035,7 +1053,8 @@ function atlas(invokeType) {
         }
 
         function pauseRotation() {
-          controls.autoRotate = false;
+          if (controls.autoRotate) controls.autoRotate = false;
+
           outcome.rotating = false;
           clearInterval(changingRotationInterval);
         }
@@ -1069,8 +1088,11 @@ function atlas(invokeType) {
           }
         }
 
-        /** @param {{x: number, y: number, h: number }} xyh */
-        function moveAndPauseRotation(xyh) {
+        /**
+         * @param {{x: number, y: number, h: number }} xyh
+         * @param {{x: number, y: number, h: number }} towardsXYH
+         */
+        function moveAndPauseRotation(xyh, towardsXYH) {
           const MOVE_WITHIN_MSEC = 6000;
           const WAIT_AFTER_MOVEMENT_BEFORE_RESUMING_ROTATION_MSEC = 30000;
           const MIDDLE_AT_PHASE = 0.6;
@@ -1079,6 +1101,7 @@ function atlas(invokeType) {
           pauseRotation();
           const startMoving = clock.nowMSec;
           const startCameraPosition = camera.position.clone();
+          const startCameraTarget = controls.target.clone();
 
           const r = Math.sqrt(xyh.x * xyh.x + xyh.y * xyh.y);
           const angle = Math.atan2(xyh.y, xyh.x);
@@ -1093,12 +1116,17 @@ function atlas(invokeType) {
             const passedTime = clock.nowMSec - startMoving;
             if (passedTime > MOVE_WITHIN_MSEC) {
               clearInterval(changingRotationInterval);
+              camera.position.set(xyh.x, xyh.h, xyh.y);
+              controls.target.set(towardsXYH.x, towardsXYH.h, towardsXYH.y);
               waitAndResumeRotation(WAIT_AFTER_MOVEMENT_BEFORE_RESUMING_ROTATION_MSEC);
-              // controls.target.set(xyh.x, xyh.h, xyh.y);
               return;
             }
 
             const phase = passedTime / MOVE_WITHIN_MSEC;
+            controls.target.set(
+              startCameraTarget.x + (towardsXYH.x - startCameraTarget.x) * phase,
+              startCameraTarget.y + (towardsXYH.h - startCameraTarget.y) * phase,
+              startCameraTarget.z + (towardsXYH.y - startCameraTarget.z) * phase);
 
             if (passedTime < MOVE_WITHIN_MSEC * MIDDLE_AT_PHASE) {
               const dampenedPhase = dampenPhase(phase / MIDDLE_AT_PHASE);
@@ -1717,7 +1745,7 @@ function atlas(invokeType) {
        *  usersBounds: {x: { min: number, max: number}, y: { min: number, max: number }},
        *  scene: THREE.Scene,
        *  camera: THREE.Camera,
-       *  moveAndPauseRotation: (coord: {x: number, y: number, h: number}) => void
+       *  moveAndPauseRotation: (coord: {x: number, y: number, h: number}, towards: {x: number, y: number, h: number}) => void
        * }} _param
        */
       function focusAndHighlightUser({ shortDID, users, usersBounds, scene, camera, moveAndPauseRotation }) {
@@ -1739,7 +1767,6 @@ function atlas(invokeType) {
         const xSpace = usrTuple[1];
         const ySpace = usrTuple[2];
 
-        //troika_three_text
         const xyhBuf = { x: 0, y: 0, h: 0 };
         mapUserCoordsToAtlas(xSpace, ySpace, usersBounds, xyhBuf);
         const r = Math.sqrt(xyhBuf.x * xyhBuf.x + xyhBuf.y * xyhBuf.y);
@@ -1814,7 +1841,7 @@ function atlas(invokeType) {
         }
 
         function highlightUser() {
-          moveAndPauseRotation({ x: xPlus, y: yPlus, h: hPlus });
+          moveAndPauseRotation({ x: xPlus, y: yPlus, h: hPlus }, xyhBuf);
         }
 
         function unhighlightUser() {
