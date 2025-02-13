@@ -12,7 +12,16 @@ function atlas(invokeType) {
    * ({$type: 'app.bsky.graph.listitem'} & import ('@atproto/api').AppBskyGraphListitem.Record) |
    * ({$type: 'app.bsky.graph.block'} & import ('@atproto/api').AppBskyGraphBlock.Record) |
    * ({$type: 'app.bsky.actor.profile'} & import ('@atproto/api').AppBskyActorProfile.Record)
-   * ) & { cid?: string, action?: string, path?: string, timestamp?: number }} FeedRecord */
+   * ) & {
+   *  cid?: string;
+   *  action?: string;
+   *  path?: string;
+   *  timestamp?: number;
+  *   repo?: string;
+  *   rev?: string;
+  *   seq?: number;
+  *   since?: string;
+   * }} FeedRecord */
 
   const api = (function () {
     const api = {
@@ -171,6 +180,10 @@ function atlas(invokeType) {
           /** @type {FeedRecord} */
           const record = cbor_x.decode(block.bytes);
 
+          record.repo = commit.repo;
+          record.rev = /** @type {string} */(commit.rev);
+          record.seq = commit.seq;
+          record.since = /** @type {string} */(commit.since);
           record.action = op.action;
           record.cid = cid;
           record.path = op.path;
@@ -229,8 +242,27 @@ function atlas(invokeType) {
 
     const shared = {
       debugDumpFirehose,
-      subscriptionAsyncIterator
+      subscriptionAsyncIterator,
+      fallbackIterator,
+      fallbackCachedFirehose,
+      shortenDID,
+      unwrapShortDID,
+      shortenHandle
     };
+
+    /** @param {string} did */
+    function shortenDID(did) {
+      return typeof did === 'string' ? did.replace(/^did\:plc\:/, '') : did;
+    }
+
+    function unwrapShortDID(shortDID) {
+      return shortDID.indexOf(':') < 0 ? 'did:plc:' + shortDID : shortDID;
+    }
+
+    /** @param {string} handle */
+    function shortenHandle(handle) {
+      return handle.replace(/\.bsky\.social$/, '');
+    }
 
     function subscriptionAsyncIterator() {
       const buffer = [];
@@ -299,6 +331,45 @@ function atlas(invokeType) {
         }
       }
 
+    }
+
+    /**
+     * @param {() => AsyncIterable | Promise<AsyncIterable<T>>} mainIterate
+     * @param {() => AsyncIterable | Promise<AsyncIterable<T>>} fallbackIterate
+     * @template T
+     */
+    async function* fallbackIterator(mainIterate, fallbackIterate) {
+      let onePassed = false;
+      while (true) {
+        try {
+          for await (const value of await mainIterate()) {
+            onePassed = true;
+            yield value;
+          }
+        } catch (error) {
+          if (onePassed) throw error;
+          for await (const value of await fallbackIterate()) {
+            yield value;
+          }
+        }
+      }
+    }
+
+    async function* fallbackCachedFirehose() {
+      /** @type {FeedRecord[]} */
+      const fakeFirehose = await fetch('../atlas-db/firehose.json').then(response => response.json());
+      console.log('fakeFirehose', fakeFirehose);
+      let lastTweetTime = 0;
+      for (const record of fakeFirehose) {
+        const delayTime = (record.timestamp || 0) - lastTweetTime;
+        if (delayTime > 0 && delayTime < 10000)
+          await new Promise(resolve => setTimeout(resolve, delayTime));
+
+        if (record.timestamp && delayTime > 0)
+          lastTweetTime = record.timestamp;
+
+        yield record;
+      }
     }
 
     async function debugDumpFirehose() {
@@ -373,44 +444,39 @@ function atlas(invokeType) {
 
       document.body.appendChild(firehoseConsoleBoundary);
 
-      try {
-        console.log('call operationsFirehose()');
-        const firehose = api.operationsFirehose();
-        console.log('iterate of firehose');
-        for await (const value of firehose) {
-          addFirehoseEntry(value);
-        }
-      } catch (error) {
-        console.log('firehose error', error);
-        /** @type {FeedRecord[]} */
-        const fakeFirehose = await fetch('../atlas-db/firehose.json').then(response => response.json());
-        console.log('fakeFirehose', fakeFirehose);
-        let lastTweetTime = 0;
-        for (const value of fakeFirehose) {
-          const delayTime = (value.timestamp || 0) - lastTweetTime;
-          if (delayTime > 0 && delayTime < 10000)
-            await new Promise(resolve => setTimeout(resolve, delayTime));
+      /** @type {{ [shortDID: string]: string | [handle: string, displayName: string] }} */
+      let userList;
+      {
+        const introElement = addDOM();
+        introElement.style.display = 'block';
+        introElement.textContent = 'Loading user list...';
+        userList = await fetch('../atlas-db/users.json').then(response => response.json());
+      }
 
-          if (value.timestamp && delayTime > 0)
-            lastTweetTime = value.timestamp;
+      for await (const value of shared.fallbackIterator(() => api.operationsFirehose(), () => shared.fallbackCachedFirehose())) {
+        addFirehoseEntry(value);
+      }
 
-          addFirehoseEntry(value);
-        }
+      function resolveUserHandle(did) {
+        const shortDID = shared.shortenDID(did);
+        const user = userList[shortDID];
+        return typeof user === 'string' ? '@' + shared.shortenHandle(user) : user ? '@' + shared.shortenHandle(user[0]) : shortDID ? '#' + shortDID.slice(0, 4) : shortDID;
       }
 
       /**
        * @param {FeedRecord} record 
        */
       function addFirehoseEntry(record) {
+        const author = resolveUserHandle(record?.repo);
         switch (record?.$type) {
           case 'app.bsky.feed.like':
             const likeElement = addDOM();
-            likeElement.textContent = '💓' + (record.subject?.uri || '').slice(-4);
+            likeElement.textContent = author + ' 💓 ' + (record.subject?.uri || '').slice(-4);
             break;
 
           case 'app.bsky.graph.follow':
             const followElement = addDOM();
-            followElement.textContent = 'follow> ' + (record.subject || '').slice(-4);
+            followElement.textContent = author + ' follow> ' + resolveUserHandle(record.subject).slice(-4);
             break;
 
           case 'app.bsky.feed.post':
@@ -420,7 +486,7 @@ function atlas(invokeType) {
             postElement.style.marginBottom = '1em';
             postElement.style.borderColor = 'black';
             postElement.style.background = 'whitesmoke';
-            postElement.textContent = '📧 ';
+            postElement.textContent = '📧  ' + author;
             const postText = document.createElement('span');
             postText.style.fontSize = '150%';
             postText.textContent = record.text + (
@@ -504,6 +570,9 @@ function atlas(invokeType) {
         return newElement;
       }
     }
+
+    async function firehose3D() {
+    }
   }
 
   async function runNode(invokeType) {
@@ -580,25 +649,9 @@ function atlas(invokeType) {
         createDirectoryRecursive,
         readTextFileFirstLine,
         overwriteFirstLine,
-        overwriteLastLine,
-        shortenDID,
-        shortenHandle,
-        unwrapShortDID
+        overwriteLastLine
       };
 
-      /** @param {string} did */
-      function shortenDID(did) {
-        return did.replace(/^did\:plc\:/, '');
-      }
-
-      function unwrapShortDID(shortDID) {
-        return shortDID.indexOf(':') < 0 ? 'did:plc:' + shortDID : shortDID;
-      }
-
-      /** @param {string} handle */
-      function shortenHandle(handle) {
-        return handle.replace(/\.bsky\.social$/, '');
-      }
 
       /**
        * @param {string} filePath
@@ -779,7 +832,7 @@ function atlas(invokeType) {
           if (users[shortDID]) continue;
 
           const startEntryTime = Date.now();
-          const did = utils.unwrapShortDID(shortDID);
+          const did = shared.unwrapShortDID(shortDID);
           //const followRecords = await agent.com.atproto.repo.listRecords({ repo: did, collection: 'app.bsky.graph.follow' });
           const describeProfilePromise = agent.com.atproto.repo.describeRepo({ repo: did })
             .catch(err => console.log('    \x1b[31mcom.atproto.repo.describeRepo ', shortDID, ' ' + err.message + '\x1b[39m'));
@@ -799,7 +852,7 @@ function atlas(invokeType) {
           }
 
           const handle = describeProfile.data.handle;
-          const shortHandle = utils.shortenHandle(handle);
+          const shortHandle = shared.shortenHandle(handle);
           const displayName = /** @type {*} */(profileRecords.data.records[0]?.value)?.displayName;
 
           if (users[shortDID]) {
@@ -861,7 +914,7 @@ function atlas(invokeType) {
         for await (const batchEntry of api.listReposStreaming(listRepos)) {
           batchWholeSize += batchEntry.repos.length;
           for (const actor of batchEntry.repos) {
-            const shortDID = utils.shortenDID(actor.did);
+            const shortDID = shared.shortenDID(actor.did);
             if (!(shortDID in users) || typeof users[shortDID] !== 'undefined') continue;
             users[shortDID] = 0;
             batchAddedUsers++;
@@ -882,7 +935,7 @@ function atlas(invokeType) {
 
             console.log(
               '\x1b[36mLISTREPOS ',
-                '[' + (batchAddedUsers === batchWholeSize ? batchAddedUsers : batchAddedUsers + ' of ' + batchWholeSize) + '] ...' + utils.shortenDID(batchEntry.repos[batchEntry.repos.length - 1].did),
+              '[' + (batchAddedUsers === batchWholeSize ? batchAddedUsers : batchAddedUsers + ' of ' + batchWholeSize) + '] ...' + shared.shortenDID(batchEntry.repos[batchEntry.repos.length - 1].did),
               ' in ' + (now - startBatchTime) / 1000 + 's (' +
               totalAddedUsers + ' in ' + (now - startTime) / 1000 + 's, ' + (totalAddedUsers / (now - startTime) * 1000).toFixed(1).replace(/\.?0+$/, '') + ' per second)' +
               '\x1b[39m'
@@ -928,9 +981,9 @@ function atlas(invokeType) {
         for await (const batchEntry of api.searchActorsStreaming({ cursor: searchActors, term: searchTerm })) {
           batchWholeSize += batchEntry.actors.length;
           for (const actor of batchEntry.actors) {
-            const shortDID = utils.shortenDID(actor.did);
+            const shortDID = shared.shortenDID(actor.did);
             if (users[shortDID]) continue;
-            const shortHandle = utils.shortenHandle(actor.handle);
+            const shortHandle = shared.shortenHandle(actor.handle);
             users[shortDID] = actor.displayName ? [shortHandle, actor.displayName] : shortHandle;
             batchAddedUsers++;
             totalAddedUsers++;
@@ -951,7 +1004,7 @@ function atlas(invokeType) {
             console.log(
               'SEARCHACTORS ',
               '[' + (batchAddedUsers === batchWholeSize ? batchAddedUsers : batchAddedUsers + ' of ' + batchWholeSize) + '] ...' +
-              utils.shortenDID(batchEntry.actors[batchEntry.actors.length - 1].did) + '/' + utils.shortenHandle(batchEntry.actors[batchEntry.actors.length - 1].handle),
+              shared.shortenDID(batchEntry.actors[batchEntry.actors.length - 1].did) + '/' + shared.shortenHandle(batchEntry.actors[batchEntry.actors.length - 1].handle),
               ' in ' + (now - startBatchTime) / 1000 + 's (' +
               totalAddedUsers + ' in ' + (now - startTime) / 1000 + 's, ' + (totalAddedUsers / (now - startTime) * 1000).toFixed(1).replace(/\.0+$/, '') + ' per second)'
             );
@@ -1010,7 +1063,7 @@ function atlas(invokeType) {
         };
         const keys = Object.keys(entry).sort();
         firehoses.push(
-          '{ '+keys.map(key =>  JSON.stringify(key) + ':' + JSON.stringify(entry[key])).join(',\n  ')+' }'
+          '{ ' + keys.map(key => JSON.stringify(key) + ':' + JSON.stringify(entry[key])).join(',\n  ') + ' }'
         );
         if (firehoses.length > count) break;
       }
@@ -1022,7 +1075,7 @@ function atlas(invokeType) {
         '\n]\n',
         'utf8');
     }
-  
+
 
     console.log('node: ', invokeType);
 
