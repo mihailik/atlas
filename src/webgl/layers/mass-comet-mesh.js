@@ -17,8 +17,7 @@ import { BackSide, Float32BufferAttribute, InstancedBufferAttribute, InstancedBu
  *    spot: TParticle,
  *    start: { x: number, y: number, z: number, time: number, mass: number, color: number },
  *    stop: { x: number, y: number, z: number, time: number, mass: number, color: number },
- *    startControl: { x: number, y: number, z: number },
- *    stopControl: { x: number, y: number, z: number }
+ *    control: { x: number, y: number, z: number }
  *  ) => void
  * }} _ 
  */
@@ -27,8 +26,7 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
 
   const start = { x: 0, y: 0, z: 0, time: 0, mass: 0, color: 0 };
   const stop = { x: 0, y: 0, z: 0, time: 0, mass: 0, color: 0 };
-  const startControl = { x: 0, y: 0, z: 0 };
-  const stopControl = { x: 0, y: 0, z: 0 };
+  const control = { x: 0, y: 0, z: 0 };
 
   const baseHalf = 1.5 * Math.tan(Math.PI / 6);
   let positions = new Float32Array([
@@ -37,7 +35,14 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
     baseHalf, 0, -0.5
   ]);
 
-  let [offsetBuf, diameterBuf, startStopBuf, colorBuf] = allocateBuffers(comets.length);
+  let [
+    offsetStartBuf,
+    offsetStopBuf,
+    offsetControlBuf,
+    diameterStartStopBuf,
+    timeStartStopBuf,
+    colorStartStopBuf
+  ] = allocateBuffers(comets.length);
 
   populateBuffers();
 
@@ -51,60 +56,84 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
     vertexShader: /* glsl */`
             precision highp float;
 
-            attribute vec3 offset;
-            attribute float diameter;
-            attribute vec2 startStop;
-            attribute uint color;
+            attribute vec3 offsetStart;
+            attribute vec3 offsetStop;
+            attribute vec3 offsetControl;
+
+            attribute vec2 diameterStartStop;
+            attribute vec2 timeStartStop;
+
+            attribute uvec2 colorStartStop;
 
             uniform float time;
 
             varying vec3 vPosition;
             varying vec3 vOffset;
             varying float vDiameter;
-            varying vec2 vStartStop;
 
             varying float vFogDist;
             varying vec4 vColor;
+
+            varying float vTimeRatio;
+
+            vec3 quadraticBezier(float t, vec3 startPoint, vec3 controlPoint, vec3 stopPoint) {
+              float oneMinusT = 1.0 - t;
+              return  oneMinusT * oneMinusT * startPoint + 2.0 * oneMinusT * t * controlPoint + t * t * stopPoint;
+            }
 
             void main(){
               vPosition = position;
               vOffset = offset;
               vDiameter = diameter;
-              vStartStop = startStop;
 
-              gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1) + vec4(position.xz * abs(diameter), 0, 0));
+            float startTime = min(timeStartStop.x, timeStartStop.y);
+            float endTime = max(timeStartStop.x, timeStartStop.y);
+            vTimeRatio = (time - startTime) / (endTime - startTime);
 
-              // https://stackoverflow.com/a/22899161/140739
-              uint rInt = (color / uint(256 * 256 * 256)) % uint(256);
-              uint gInt = (color / uint(256 * 256)) % uint(256);
-              uint bInt = (color / uint(256)) % uint(256);
-              uint aInt = (color) % uint(256);
-              vColor = vec4(float(rInt) / 255.0f, float(gInt) / 255.0f, float(bInt) / 255.0f, float(aInt) / 255.0f);
+            vOffset = quadraticBezier(timeRatio, offsetStart, offsetControl, offsetStop);
 
-              vFogDist = distance(cameraPosition, offset);
+            uint rIntStart = (colorStartStop.x / uint(256 * 256 * 256)) % uint(256);
+            uint gIntStart = (colorStartStop.x / uint(256 * 256)) % uint(256);
+            uint bIntStart = (colorStartStop.x / uint(256)) % uint(256);
+            uint aIntStart = (colorStartStop.x) % uint(256);
+            vec4 colorStart = vec4(
+              float(rIntStart) / 255.0f,
+              float(gIntStart) / 255.0f,
+              float(bIntStart) / 255.0f,
+              float(aIntStart) / 255.0f);
 
-              // this part was kept separate before:
-            float startTime = min(startStop.x, startStop.y);
-            float endTime = max(startStop.x, startStop.y);
-            float timeRatio = (time - startTime) / (endTime - startTime);
-            float step = 0.1;
-            float timeFunction = timeRatio < step ? timeRatio / step : 1.0 - (timeRatio - step) * (1.0 - step);
+            uint rIntStop = (colorStartStop.y / uint(256 * 256 * 256)) % uint(256);
+            uint gIntStop = (colorStartStop.y / uint(256 * 256)) % uint(256);
+            uint bIntStop = (colorStartStop.y / uint(256)) % uint(256);
+            uint aIntStop = (colorStartStop.y) % uint(256);
+            vec4 colorStop = vec4(
+              float(rIntStop) / 255.0f,
+              float(gIntStop) / 255.0f,
+              float(bIntStop) / 255.0f,
+              float(aIntStop) / 255.0f);
 
-            //gl_Position.y += timeFunction * timeFunction * timeFunction * 0.001;
-            }
+            vColor = mix(colorStart, colorStop, timeRatio);
+            vDiameter = mix(diameterStartStop.x, diameterStartStop.y, timeRatio);
+
+            gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1) + vec4(position.xz * abs(diameter), 0, 0));
+
+            vFogDist = distance(cameraPosition, offset);
+
+          }
           `,
     fragmentShader: /* glsl */`
             precision highp float;
 
             uniform float time;
 
-            varying vec4 vColor;
-            varying float vFogDist;
-
             varying vec3 vPosition;
             varying vec3 vOffset;
             varying float vDiameter;
-            varying vec2 vStartStop;
+
+            varying float vFogDist;
+            varying vec4 vColor;
+
+            varying vTimeRatio;
 
             void main() {
               gl_FragColor = vColor;
@@ -132,40 +161,26 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
               vec3 position = vPosition;
               vec3 offset = vOffset;
               float diameter = vDiameter;
-              vec2 startStop = vStartStop;
 
+              gl_FragColor = tintColor;
 
-              // this part was kept separate before:
+              float PI = 3.1415926535897932384626433832795;
 
-            gl_FragColor = tintColor;
+              float timeRatio = vTimeRatio;
+              float step = 0.05;
+              float timeFunction =
+                timeRatio < step ? timeRatio / step :
+                timeRatio < step * 2.0 ?
+                  (cos((step * 2.0 - timeRatio) * step * PI) + 1.0) / 4.5 + 0.7 :
+                  (1.0 - (timeRatio - step * 2.0)) / 2.5 + 0.2;
 
-            float PI = 3.1415926535897932384626433832795;
+              gl_FragColor = tintColor;
 
-            float startTime = min(startStop.x, startStop.y);
-            float endTime = max(startStop.x, startStop.y);
-            float timeRatio = (time - startTime) / (endTime - startTime);
-            float step = 0.05;
-            float timeFunction =
-              timeRatio < step ? timeRatio / step :
-              timeRatio < step * 2.0 ?
-                (cos((step * 2.0 - timeRatio) * step * PI) + 1.0) / 4.5 + 0.7 :
-                (1.0 - (timeRatio - step * 2.0)) / 2.5 + 0.2;
+              gl_FragColor.a *= timeFunction;
 
-            gl_FragColor = tintColor;
-
-            gl_FragColor.a *= timeFunction;
-
-            // gl_FragColor =
-            //   timeRatio > 1000.0 ? vec4(1.0, 0.7, 1.0, tintColor.a) :
-            //   timeRatio > 1.0 ? vec4(1.0, 0.0, 1.0, tintColor.a) :
-            //   timeRatio > 0.0 ? vec4(0.0, 0.5, 0.5, tintColor.a) :
-            //   timeRatio == 0.0 ? vec4(0.0, 0.0, 1.0, tintColor.a) :
-            //   timeRatio < 0.0 ? vec4(1.0, 0.0, 0.0, tintColor.a) :
-            //   vec4(1.0, 1.0, 0.0, tintColor.a);
-
-            float diagBias = 1.0 - max(abs(vPosition.x), abs(vPosition.z));
-            float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
-            gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra;
+              float diagBias = 1.0 - max(abs(vPosition.x), abs(vPosition.z));
+              float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
+              gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra;
 
             }
           `,
@@ -198,21 +213,34 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
     geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
 
     // these are instanced: one set of values per comet
-    geometry.setAttribute('offset', new InstancedBufferAttribute(offsetBuf, 4 * 3));
-    geometry.setAttribute('diameter', new InstancedBufferAttribute(diameterBuf, 2));
-    geometry.setAttribute('startStop', new InstancedBufferAttribute(startStopBuf, 2));
-    geometry.setAttribute('color', new InstancedBufferAttribute(colorBuf, 2))
+    geometry.setAttribute('offsetStart', new InstancedBufferAttribute(offsetStartBuf, 3));
+    geometry.setAttribute('offsetStop', new InstancedBufferAttribute(offsetStartBuf, 3));
+    geometry.setAttribute('offsetControl', new InstancedBufferAttribute(offsetControlBuf, 3));
+    geometry.setAttribute('diameterStartStop', new InstancedBufferAttribute(diameterStartStopBuf, 2));
+    geometry.setAttribute('timeStartStop', new InstancedBufferAttribute(timeStartStopBuf, 2));
+    geometry.setAttribute('colorStartStop', new InstancedBufferAttribute(colorStartStopBuf, 2))
 
     return geometry;
   }
 
   /** @param {number} count */
   function allocateBuffers(count) {
-    const offsetBuf = new Float32Array(count * 4 * 3); // start, stop, startControl, stopControl - each x/y/z
-    const diameterBuf = new Float32Array(count * 2); // start, stop
-    const startStopBuf = new Float32Array(count * 2); // start, stop
-    const colorBuf = new Uint32Array(count * 2); // start, stop
-    return [offsetBuf, diameterBuf, startStopBuf, colorBuf];
+    const offsetStartBuf = new Float32Array(count * 3);
+    const offsetStopBuf = new Float32Array(count * 3);
+    const offsetControlBuf = new Float32Array(count * 3);
+
+    const diameterStartStopBuf = new Float32Array(count * 2);
+    const timeStartStopBuf = new Float32Array(count * 2);
+    const colorStartStopBuf = new Uint32Array(count * 2);
+
+    return [
+      offsetStartBuf,
+      offsetStopBuf,
+      offsetControlBuf,
+      diameterStartStopBuf,
+      timeStartStopBuf,
+      colorStartStopBuf
+    ];
   }
 
   function zeroEndPoint(p) {
@@ -237,35 +265,30 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
       // reset the dummy object
       zeroEndPoint(start);
       zeroEndPoint(stop);
-      zeroControlPoint(startControl);
-      zeroControlPoint(stopControl);
+      zeroControlPoint(control);
 
-      if (typeof get === 'function') get(spot, start, stop, startControl, stopControl);
+      if (typeof get === 'function') get(spot, start, stop, control);
 
-      offsetBuf[i * 3 + 0] = start.x;
-      offsetBuf[i * 3 + 1] = start.y;
-      offsetBuf[i * 3 + 2] = start.z;
+      offsetStartBuf[i * 3 + 0] = start.x;
+      offsetStartBuf[i * 3 + 1] = start.y;
+      offsetStartBuf[i * 3 + 2] = start.z;
 
-      offsetBuf[i * 3 + 3] = stop.x;
-      offsetBuf[i * 3 + 4] = stop.y;
-      offsetBuf[i * 3 + 5] = stop.z;
+      offsetStopBuf[i * 3 + 0] = stop.x;
+      offsetStopBuf[i * 3 + 1] = stop.y;
+      offsetStopBuf[i * 3 + 2] = stop.z;
 
-      offsetBuf[i * 3 + 6] = startControl.x;
-      offsetBuf[i * 3 + 7] = startControl.y;
-      offsetBuf[i * 3 + 8] = startControl.z;
+      offsetControlBuf[i * 3 + 0] = control.x;
+      offsetControlBuf[i * 3 + 1] = control.y;
+      offsetControlBuf[i * 3 + 2] = control.z;
 
-      offsetBuf[i * 3 + 9] = stopControl.x;
-      offsetBuf[i * 3 + 10] = stopControl.y;
-      offsetBuf[i * 3 + 11] = stopControl.z;
+      diameterStartStopBuf[i + 0] = start.mass;
+      diameterStartStopBuf[i + 1] = stop.mass;
 
-      diameterBuf[i + 0] = start.mass;
-      diameterBuf[i + 1] = stop.mass;
+      colorStartStopBuf[i + 0] = start.color;
+      colorStartStopBuf[i + 1] = stop.color;
 
-      colorBuf[i + 0] = start.color;
-      colorBuf[i + 1] = stop.color;
-
-      startStopBuf[i * 2 + 0] = start.time;
-      startStopBuf[i * 2 + 1] = stop.time;
+      timeStartStopBuf[i * 2 + 0] = start.time;
+      timeStartStopBuf[i * 2 + 1] = stop.time;
     }
   }
 
@@ -279,7 +302,14 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
         Math.floor(newSpots.length * 1.5),
         newSpots.length + 300);
 
-      [offsetBuf, diameterBuf, startStopBuf, colorBuf] = allocateBuffers(comets.length);
+      [
+        offsetStartBuf,
+        offsetStopBuf,
+        offsetControlBuf,
+        diameterStartStopBuf,
+        timeStartStopBuf,
+        colorStartStopBuf
+      ] = allocateBuffers(comets.length);
 
       populateBuffers();
 

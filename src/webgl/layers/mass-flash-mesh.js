@@ -15,11 +15,11 @@ import { BackSide, Float32BufferAttribute, InstancedBufferAttribute, InstancedBu
  *
  * @param {{
  *  clock: { now(): number };
- *  splashes: TParticle[],
- *  get?: (splash: TParticle, coords: { x: number, y: number, z: number, mass: number, color: number, start: number, stop: number }) => void
+ *  flashes: TParticle[],
+ *  get?: (fash: TParticle, coords: { x: number, y: number, z: number, mass: number, color: number, start: number, stop: number }) => void
  * }} _ 
  */
-export function massSplashMesh({ clock: clockArg, splashes, get }) {
+export function massFlashMesh({ clock: clockArg, flashes, get }) {
   const clock = clockArg || { now: () => Date.now() };
 
   const dummy = {
@@ -38,10 +38,10 @@ export function massSplashMesh({ clock: clockArg, splashes, get }) {
     0, 0, 1,
     baseHalf, 0, -0.5
   ]);
-  let offsetBuf = new Float32Array(splashes.length * 4);
-  let diameterBuf = new Float32Array(splashes.length);
-  let extraBuf = new Float32Array(splashes.length * 2);
-  let colorBuf = new Uint32Array(splashes.length);
+  let offsetBuf = new Float32Array(flashes.length * 4);
+  let diameterBuf = new Float32Array(flashes.length);
+  let extraBuf = new Float32Array(flashes.length * 2);
+  let colorBuf = new Uint32Array(flashes.length);
 
   populateBuffers();
 
@@ -51,7 +51,7 @@ export function massSplashMesh({ clock: clockArg, splashes, get }) {
   geometry.setAttribute('diameter', new InstancedBufferAttribute(diameterBuf, 1));
   geometry.setAttribute('extra', new InstancedBufferAttribute(extraBuf, 2));
   geometry.setAttribute('color', new InstancedBufferAttribute(colorBuf, 1));
-  geometry.instanceCount = splashes.length;
+  geometry.instanceCount = flashes.length;
 
   const material = new ShaderMaterial({
     uniforms: {
@@ -194,27 +194,27 @@ export function massSplashMesh({ clock: clockArg, splashes, get }) {
   };
 
   const meshWithUpdates =
-    /** @type {typeof mesh & { updateSplashes: typeof updateSplashes }} */(
+    /** @type {typeof mesh & { updateFlashes: typeof updateFlashes }} */(
       mesh
     );
-  meshWithUpdates.updateSplashes = updateSplashes;
+  meshWithUpdates.updateFlashes = updateFlashes;
 
   return meshWithUpdates;
 
   function populateBuffers() {
-    for (let i = 0; i < splashes.length; i++) {
-      const splash = splashes[i];
+    for (let i = 0; i < flashes.length; i++) {
+      const flash = flashes[i];
 
       // reset the dummy object
-      dummy.x = splash.x || 0;
-      dummy.y = splash.z || 0;
-      dummy.z = splash.y || 0;
-      dummy.mass = splash.mass || 0;
-      dummy.color = splash.color || 0;
-      dummy.start = splash.start || 0;
-      dummy.stop = splash.stop || 0;
+      dummy.x = flash.x || 0;
+      dummy.y = flash.z || 0;
+      dummy.z = flash.y || 0;
+      dummy.mass = flash.mass || 0;
+      dummy.color = flash.color || 0;
+      dummy.start = flash.start || 0;
+      dummy.stop = flash.stop || 0;
 
-      if (typeof get === 'function') get(splash, dummy);
+      if (typeof get === 'function') get(flash, dummy);
 
       offsetBuf[i * 3 + 0] = dummy.x;
       offsetBuf[i * 3 + 1] = dummy.y;
@@ -227,14 +227,14 @@ export function massSplashMesh({ clock: clockArg, splashes, get }) {
   }
 
   /**
-* @param {TParticle[]} newSplashes
+* @param {TParticle[]} newFlashes
 */
-  function updateSplashes(newSplashes) {
-    splashes = newSplashes;
-    if (newSplashes.length > geometry.instanceCount || newSplashes.length < Math.max(320, geometry.instanceCount / 2)) {
+  function updateFlashes(newFlashes) {
+    flashes = newFlashes;
+    if (newFlashes.length > geometry.instanceCount || newFlashes.length < Math.max(320, geometry.instanceCount / 2)) {
       const newAllocateCount = Math.max(
-        Math.floor(newSplashes.length * 1.5),
-        newSplashes.length + 300);
+        Math.floor(newFlashes.length * 1.5),
+        newFlashes.length + 300);
 
       offsetBuf = new Float32Array(newAllocateCount * 4);
       diameterBuf = new Float32Array(newAllocateCount);

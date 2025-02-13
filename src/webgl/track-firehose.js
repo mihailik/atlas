@@ -1,7 +1,7 @@
 // @ts-check
 
 import { firehoseWithFallback } from '../firehose/firehose-with-callback';
-import { massSplashMesh } from './layers/mass-splash-mesh';
+import { massFlashMesh } from './layers/mass-flash-mesh';
 
 /**
  * @param {{
@@ -15,20 +15,23 @@ export function trackFirehose({ users, clock }) {
   const FADE_TIME_MSEC = 4000;
 
   /** @type {{ user: import('..').UserEntry, start: number, stop: number, weight: number }[]} */
-  const activeSplashes = [];
+  const activeFlashes = [];
 
-  const mesh = massSplashMesh({
+  /** @type {{ from: import('..').UserEntry, to: import('..').UserEntry, start: number, stop: number, weight: number }[]} */
+  const activeComets = [];
+
+  const flash = massFlashMesh({
     clock: { now: () => clock.nowMSec },
-    splashes: activeSplashes,
-    get: (splash, coords) => {
-      const { user } = splash;
+    flashes: activeFlashes,
+    get: (flash, coords) => {
+      const { user } = flash;
       coords.x = user.x;
       coords.y = user.h;
       coords.z = user.y;
-      coords.mass = splash.weight;
+      coords.mass = flash.weight;
       coords.color = user.colorRGB * 256 | 0xFF;
-      coords.start = splash.start;
-      coords.stop = splash.stop;
+      coords.start = flash.start;
+      coords.stop = flash.stop;
     }
   });
 
@@ -43,34 +46,34 @@ export function trackFirehose({ users, clock }) {
     flashes: 0,
     unknowns: 0,
     unknownsTotal: 0,
-    mesh,
+    mesh: flash,
     fallback: false
   };
 
   firehoseWithFallback({
     post(author, postID, text, replyTo, replyToThread, timeMsec) {
       clock.update();
-      splashShortID(author, 1);
-      replyTo?.shortDID ? splashShortID(replyTo.shortDID, 1) : undefined;
-      replyToThread?.shortDID ? splashShortID(replyToThread.shortDID, 0.5) : undefined;
+      flashShortID(author, 1);
+      replyTo?.shortDID ? flashShortID(replyTo.shortDID, 1) : undefined;
+      replyToThread?.shortDID ? flashShortID(replyToThread.shortDID, 0.5) : undefined;
       outcome.posts++;
     },
     repost(who, whose, postID, timeMsec) {
       clock.update();
-      splashShortID(who, 0.6);
-      splashShortID(whose, 0.7);
+      flashShortID(who, 0.6);
+      flashShortID(whose, 0.7);
       outcome.reposts++;
     },
     like(who, whose, postID, timeMsec) {
       clock.update();
-      splashShortID(who, 0.1);
-      splashShortID(whose, 0.4);
+      flashShortID(who, 0.1);
+      flashShortID(whose, 0.4);
       outcome.likes++;
     },
     follow(who, whom, timeMsec) {
       clock.update();
-      splashShortID(who, 0.1);
-      splashShortID(whom, 1.5);
+      flashShortID(who, 0.1);
+      flashShortID(whom, 1.5);
       outcome.follows++;
     }
   }, () => {
@@ -80,14 +83,14 @@ export function trackFirehose({ users, clock }) {
   return outcome;
 
   /** @param {string} shortDID */
-  function splashShortID(shortDID, weight) {
+  function flashShortID(shortDID, weight) {
     const user = users[shortDID];
     if (user) {
       addUser(user, clock.nowSeconds, clock.nowSeconds + FADE_TIME_MSEC / 1000, weight);
     } else {
       if (!outcome.unknowns) {
         unknownsLastSet.clear();
-        updateSplashes();
+        updateFlashes();
       }
 
       unknownsLastSet.add(shortDID);
@@ -98,10 +101,10 @@ export function trackFirehose({ users, clock }) {
     }
   }
 
-  function updateSplashes() {
+  function updateFlashes() {
     outcome.flashes = 0;
-    for (const splash of activeSplashes) {
-      if (splash.start <= clock.nowSeconds && clock.nowSeconds <= splash.stop) {
+    for (const flash of activeFlashes) {
+      if (flash.start <= clock.nowSeconds && clock.nowSeconds <= flash.stop) {
         outcome.flashes++;
       }
     }
@@ -115,37 +118,37 @@ export function trackFirehose({ users, clock }) {
   function addUser(user, start, stop, weight) {
     const nowSeconds = clock.nowSeconds;
     let gapIndex = -1;
-    let userSplash;
-    for (let i = 0; i < activeSplashes.length; i++) {
-      const splash = activeSplashes[i];
-      if (splash.user === user) {
-        userSplash = splash;
+    let userFlash;
+    for (let i = 0; i < activeFlashes.length; i++) {
+      const flash = activeFlashes[i];
+      if (flash.user === user) {
+        userFlash = flash;
         break;
       }
 
-      if (nowSeconds > splash.stop) {
+      if (nowSeconds > flash.stop) {
         gapIndex = i;
       }
     }
 
-    if (userSplash) {
-      userSplash.stop = stop;
-      userSplash.weight = Math.min(MAX_WEIGHT, weight * 0.09 + userSplash.weight);
+    if (userFlash) {
+      userFlash.stop = stop;
+      userFlash.weight = Math.min(MAX_WEIGHT, weight * 0.09 + userFlash.weight);
     } else {
       const normWeight = Math.min(MAX_WEIGHT, weight * 0.09 + user.weight);
 
       if (gapIndex >= 0) {
-        const reuseSplash = activeSplashes[gapIndex];
-        reuseSplash.user = user;
-        reuseSplash.start = start;
-        reuseSplash.stop = stop;
-        reuseSplash.weight = normWeight;
+        const reuseFlash = activeFlashes[gapIndex];
+        reuseFlash.user = user;
+        reuseFlash.start = start;
+        reuseFlash.stop = stop;
+        reuseFlash.weight = normWeight;
       } else {
-        activeSplashes.push({ user, start, stop, weight: normWeight });
+        activeFlashes.push({ user, start, stop, weight: normWeight });
       }
     }
 
-    mesh.updateSplashes(activeSplashes);
+    flash.updateFlashes(activeFlashes);
   }
 
 }
