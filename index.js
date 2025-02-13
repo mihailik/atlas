@@ -1236,7 +1236,8 @@ function atlas(invokeType) {
          *    enableDamping: boolean;
          *    autoRotate: boolean;
          *    autoRotateSpeed: number;
-         *    listenToKeyEvents(element);
+         *    zoomToCursor?: boolean;
+         *    listenToKeyEvents(element: { addEventListener: Function });
          *    saveState(): void;
          *    reset(): void;
          *    dispose(): void;
@@ -1246,6 +1247,7 @@ function atlas(invokeType) {
          */
         function initControls(OrbitControls) {
           let controls = new OrbitControls(camera, host);
+          controls.zoomToCursor = true;
           controls.addEventListener('start', function () {
             pauseRotation();
           });
@@ -1720,7 +1722,7 @@ function atlas(invokeType) {
             unknownsPerSecElem, unknownsTotalElem;
 
           let flashStatsHidden = true;
-          const bottomStatusLine = /** @type {HTMLDivElement & { update(outcome, labelsOutcome) }} */(elem('div', {
+          const bottomStatusLine = /** @type {HTMLDivElement & { update: typeof update }} */(elem('div', {
             style: `
                 grid-row: 5;
                 color: #cc903b;
@@ -1804,6 +1806,24 @@ function atlas(invokeType) {
           bottomStatusLine.update = update;
           return bottomStatusLine;
 
+          /**
+           * @param {{
+           *  flashes: number,
+           *  likes: number,
+           *  posts: number,
+           *  reposts: number,
+           *  follows: number,
+           *  unknowns: number,
+           *  unknownsTotal: number
+           * }} outcome
+           * @param {{
+           *  labelCount: number,
+           *  hitTestCount: number,
+           *  avatarImages: number,
+           *  avatarRequestCount: number,
+           *  allCachedAvatars: number
+           * }} labelsOutcome
+           */
           function update(outcome, labelsOutcome) {
             labelsElem.textContent = labelsOutcome.labelCount.toString();
             hitTestElem.textContent = labelsOutcome.hitTestCount.toString();
