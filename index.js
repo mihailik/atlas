@@ -454,7 +454,9 @@ function atlas(invokeType) {
           const xRatiod = x - bounds.x.min / (bounds.x.max - bounds.x.min);
           const yRatiod = y - bounds.y.min / (bounds.y.max - bounds.y.min);
           const r = Math.sqrt(xRatiod * xRatiod + yRatiod * yRatiod);
-          offsets.push(xRatiod - 0.5, yRatiod, 1 - r * r);
+          //offsets.push(xRatiod - 0.5, yRatiod, 1 - r * r);
+          offsets.push(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
+
 
           // colors
           colors.push(Math.random(), Math.random(), Math.random(), Math.random());
