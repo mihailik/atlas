@@ -20483,7 +20483,7 @@ void main() {
   }
 
   // package.json
-  var version = "1.1.12";
+  var version = "1.1.13";
 
   // src/webgl/create-dom-layout.js
   function createDOMLayout({ canvas3D, statsElem, userCount }) {
@@ -20642,7 +20642,7 @@ void main() {
                     elem("span", {
                       textContent: "v",
                       style: `
-                          opacity: 0.6;
+                          opacity: 0.8;
                           color: transparent;
                           text-shadow: cornflowerblue 0px 0px 0px;
                           font-size: 91%;

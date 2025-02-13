@@ -186,7 +186,7 @@ export function createDOMLayout({ canvas3D, statsElem, userCount }) {
               children: [
                 elem('span', {
                   textContent: 'v', style: `
-                          opacity: 0.6;
+                          opacity: 0.8;
                           color: transparent;
                           text-shadow: cornflowerblue 0px 0px 0px;
                           font-size: 91%;
