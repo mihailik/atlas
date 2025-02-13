@@ -20483,7 +20483,7 @@ void main() {
   }
 
   // package.json
-  var version = "1.1.13";
+  var version = "1.1.14";
 
   // src/webgl/create-dom-layout.js
   function createDOMLayout({ canvas3D, statsElem, userCount }) {
@@ -27705,6 +27705,7 @@ if (edgeAlpha == 0.0) {
     geometry.setAttribute("color", new InstancedBufferAttribute(colorBuf, 1));
     geometry.instanceCount = spots.length;
     const material = new ShaderMaterial({
+      blending: AdditiveBlending,
       uniforms: {
         time: { value: clock.now() / 1e3 }
       },

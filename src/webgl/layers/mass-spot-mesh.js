@@ -1,6 +1,7 @@
 // @ts-check
 
 import {
+  AdditiveBlending,
   BackSide,
   Float32BufferAttribute,
   InstancedBufferAttribute,
@@ -55,6 +56,7 @@ export function massSpotMesh({ clock: clockArg, spots, get }) {
   geometry.instanceCount = spots.length;
 
   const material = new ShaderMaterial({
+    blending: AdditiveBlending,
     uniforms: {
       time: { value: clock.now() / 1000 }
     },
