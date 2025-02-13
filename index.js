@@ -20490,6 +20490,8 @@ void main() {
       style: `
           position: fixed; left: 0; top: 0; width: 100%; height: 100%;
           display: grid; grid-template-rows: auto auto 1fr auto; grid-template-columns: 1fr;
+          opacity: 0.01; pointer-events: none;
+          transition: opacity 5s;
           `,
       children: [
         canvas3D,
@@ -20553,6 +20555,10 @@ void main() {
         bottomStatusLine = createBottomStatusLine()
       ]
     });
+    setTimeout(() => {
+      root.style.opacity = "1";
+      root.style.pointerEvents = "all";
+    }, 400);
     canvas3D.style.cssText = `
         position: fixed;
         left: 0; top: 0; width: 100%; height: 100%;
@@ -29752,6 +29758,20 @@ if (edgeAlpha == 0.0) {
   }
   async function withHot(hotJsonPromise) {
     const hotJson = await hotJsonPromise;
+    const atlasInit = (
+      /** @type {HTMLElement} */
+      document.querySelector(".atlas-init")
+    );
+    if (atlasInit) {
+      atlasInit.style.transition = "opacity 2s";
+      setTimeout(() => {
+        atlasInit.style.opacity = "0";
+        atlasInit.style.opacity = "0";
+        setTimeout(() => {
+          atlasInit?.remove();
+        }, 2e3);
+      }, 10);
+    }
     runWebglGalaxy(hotJson);
   }
 

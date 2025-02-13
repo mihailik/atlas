@@ -17,6 +17,8 @@ export function createDOMLayout({ canvas3D, statsElem, userCount }) {
     style: `
           position: fixed; left: 0; top: 0; width: 100%; height: 100%;
           display: grid; grid-template-rows: auto auto 1fr auto; grid-template-columns: 1fr;
+          opacity: 0.01; pointer-events: none;
+          transition: opacity 5s;
           `,
     children: [
       canvas3D,
@@ -79,6 +81,12 @@ export function createDOMLayout({ canvas3D, statsElem, userCount }) {
       bottomStatusLine = createBottomStatusLine()
     ]
   });
+
+  setTimeout(() => {
+    root.style.opacity = '1';
+    root.style.pointerEvents = 'all';
+  }, 400);
+
   canvas3D.style.cssText = `
         position: fixed;
         left: 0; top: 0; width: 100%; height: 100%;
