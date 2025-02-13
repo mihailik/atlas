@@ -22,7 +22,8 @@ function atlas(invokeType) {
       rawFirehose,
       operationsFirehose,
       searchActorsStreaming,
-      listReposStreaming
+      listReposStreaming,
+      repeatUntilSuccess
     };
 
     const bskyService = 'https://bsky.social/xrpc/';
@@ -78,6 +79,21 @@ function atlas(invokeType) {
       const agent = new atproto_api.BskyAgent({ service: bskyService });
       await api.authenticateExistingAgentWith(agent, auth);
       return agent;
+    }
+
+    /**
+     * @param {() => Promise<T>} fn
+     * @param {number=} repeats
+     * @template T
+     */
+    async function repeatUntilSuccess(fn, repeats) {
+      for (let i = 0; i < (repeats || 5) - 1; i++) {
+        try {
+          return await fn();
+        } catch (error) {
+        }
+      }
+      return await fn();
     }
 
     var cborExtensionInstalled = false;
@@ -169,17 +185,7 @@ function atlas(invokeType) {
       const agent = await authenticatedAgent(auth);
 
       while (true) {
-        /** @type {import('@atproto/api').AppBskyActorSearchActors.Response | undefined} */
-        let reply;
-        for (let i = 0; i < 5; i++) {
-          try {
-            reply = await agent.app.bsky.actor.searchActors({ cursor: cursor ?? undefined, term, limit: 100 });
-            if (reply) break;
-          } catch (error) {
-            reply = await agent.app.bsky.actor.searchActors({ cursor: cursor ?? undefined, term, limit: 100 });
-          }
-        }
-        if (!reply) reply = await agent.app.bsky.actor.searchActors({ cursor: cursor ?? undefined, term, limit: 100 });
+        let reply = await api.repeatUntilSuccess(() => agent.app.bsky.actor.searchActors({ cursor: cursor ?? undefined, term, limit: 100 }));
 
         if (!reply.data.cursor || !reply.data.actors?.length) return;
         cursor = reply.data.cursor;
@@ -192,17 +198,7 @@ function atlas(invokeType) {
       const agent = unauthenticatedAgent();
 
       while (true) {
-        /** @type {import('@atproto/api').ComAtprotoSyncListRepos.Response | undefined} */
-        let reply;
-        for (let i = 0; i < 5; i++) {
-          try {
-            reply = await agent.com.atproto.sync.listRepos({ cursor: cursor ?? undefined, limit: 1000 });
-            if (reply) break;
-          } catch (error) {
-            reply = await agent.com.atproto.sync.listRepos({ cursor: cursor ?? undefined, limit: 1000 });
-          }
-        }
-        if (!reply) reply = await agent.com.atproto.sync.listRepos({ cursor: cursor ?? undefined, limit: 1000 });
+        const reply = await api.repeatUntilSuccess(() => agent.com.atproto.sync.listRepos({ cursor: cursor ?? undefined, limit: 1000 }));
 
         if (!reply.data.cursor || !reply.data.repos?.length) return;
         cursor = reply.data.cursor;
@@ -541,8 +537,25 @@ function atlas(invokeType) {
         createDirectoryRecursive,
         readTextFileFirstLine,
         overwriteFirstLine,
-        overwriteLastLine
+        overwriteLastLine,
+        shortenDID,
+        shortenHandle,
+        unwrapShortDID
       };
+
+      /** @param {string} did */
+      function shortenDID(did) {
+        return did.replace(/^did\:plc\:/, '');
+      }
+
+      function unwrapShortDID(shortDID) {
+        return shortDID.indexOf(':') < 0 ? 'did:plc:' + shortDID : shortDID;
+      }
+
+      /** @param {string} handle */
+      function shortenHandle(handle) {
+        return handle.replace(/\.bsky\.social$/, '');
+      }
 
       /**
        * @param {string} filePath
@@ -687,8 +700,62 @@ function atlas(invokeType) {
 
     const continueUpdateUsers = (function () {
 
-      const cursorsJsonPath = path.resolve(__dirname, 'db/cursors.json');
-      const usersJsonPath = path.resolve(__dirname, 'db/users.json');
+      const cursorsJsonPath = require('path').resolve(__dirname, 'db/cursors.json');
+      const usersJsonPath = require('path').resolve(__dirname, 'db/users.json');
+
+      async function continueEnrichUsers(users) {
+        if (!users)
+          users = JSON.parse(fs.readFileSync(usersJsonPath, 'utf8'));
+
+        const usersToEnrich = Object.keys(users).filter((shortDID) => !users[shortDID]);
+        const agent = api.unauthenticatedAgent();
+
+        let totalEnrichedUsers = 0;
+        const startTime = Date.now();
+        let lastReport = startTime;
+        for (const shortDID of usersToEnrich) {
+          if (users[shortDID]) continue;
+
+          const startEntryTime = Date.now();
+          const did = utils.unwrapShortDID(shortDID);
+          //const followRecords = await agent.com.atproto.repo.listRecords({ repo: did, collection: 'app.bsky.graph.follow' });
+          const describeProfilePromise = api.repeatUntilSuccess(() => agent.com.atproto.repo.describeRepo({ repo: did }));
+          const profileRecordsPromise = api.repeatUntilSuccess(() => agent.com.atproto.repo.listRecords({ repo: did, collection: 'app.bsky.actor.profile' }));
+
+          const describeProfile = await describeProfilePromise;
+          const profileRecords = await profileRecordsPromise;
+
+          if (profileRecords.data.records.length > 1) {
+            console.log(profileRecords.data.records.length + ' PROFILE RECORDS FOR ' + shortDID);
+            continue;
+          }
+
+          const handle = describeProfile.data.handle;
+          const shortHandle = utils.shortenHandle(handle);
+          const displayName = /** @type {*} */(profileRecords.data.records[0]?.value)?.displayName;
+
+          if (!users[shortDID]) {
+            users[shortDID] =
+              displayName ? [shortHandle, displayName] :
+                shortHandle;
+            
+            totalEnrichedUsers++;
+
+            const now = Date.now();
+            if (now - lastReport > 5000) {
+              console.log(
+                'DESCRIBEREPOS/LISTRECORDS ',
+                did,
+                ' ' + shortHandle + ' ' + (shortHandle === handle ? ' <**>' : ''),
+                ' in ' + (now - startEntryTime) / 1000 + 's (' +
+                totalEnrichedUsers + ' in ' + (now - startTime) / 1000 + 's, ' + (totalEnrichedUsers / (now - startTime) * 1000).toFixed(1).replace(/0+$/, '') + ' per second)'
+              );
+              lastReport = now;
+            }
+          }
+
+        }
+      }
 
       async function continueDumpAllUsers(users) {
         let { users: { listRepos, timestamp } } = JSON.parse(fs.readFileSync(cursorsJsonPath, 'utf8'));
@@ -704,7 +771,7 @@ function atlas(invokeType) {
         for await (const batchEntry of api.listReposStreaming(listRepos)) {
           let batchAddedUsers = 0;
           for (const actor of batchEntry.repos) {
-            const shortDID = actor.did.replace(/^did:plc:/, '');
+            const shortDID = utils.shortenDID(actor.did);
             if (!(shortDID in users)) continue;
             users[shortDID] = 0;
             batchAddedUsers++;
@@ -732,6 +799,7 @@ function atlas(invokeType) {
 
           startBatchTime = now;
         }
+
       }
 
       async function continueDumpUserDetails(users) {
@@ -748,10 +816,10 @@ function atlas(invokeType) {
         for await (const batchEntry of api.searchActorsStreaming({ cursor: searchActors, term: 'bsky.social' })) {
           let batchAddedUsers = 0;
           for (const actor of batchEntry.actors) {
-            const shortDID = actor.did.replace(/^did:plc:/, '');
+            const shortDID = utils.shortenDID(actor.did);
             if (users[shortDID]) continue;
-            const shortHandle = actor.handle.replace(/\.bsky\.social$/, '');
-            users[shortDID] = actor.description ? [shortHandle, actor.description] : shortHandle;
+            const shortHandle = utils.shortenHandle(actor.handle);
+            users[shortDID] = actor.displayName ? [shortHandle, actor.displayName] : shortHandle;
             batchAddedUsers++;
           }
 
@@ -770,13 +838,14 @@ function atlas(invokeType) {
           console.log(
             'SEARCHACTORS ',
             batchEntry.cursor,
-            '[' + batchAddedUsers + '] ' + batchEntry.actors[0].handle + '...' + batchEntry.actors[batchEntry.actors.length - 1].handle,
+            '[' + batchAddedUsers + '] ' + utils.shortenHandle(batchEntry.actors[0].handle) + '...' + utils.shortenHandle(batchEntry.actors[batchEntry.actors.length - 1].handle),
             ' in ' + (now - startBatchTime) / 1000 + 's (' +
             totalAddedUsers + ' in ' + (now - startTime) / 1000 + 's, ' + (totalAddedUsers / (now - startTime) * 1000).toFixed(3).replace(/0+$/, '') + ' per second)'
           );
 
           startBatchTime = now;
         }
+
       }
 
       async function writeUsers(users) {
@@ -790,13 +859,16 @@ function atlas(invokeType) {
         const users = JSON.parse(fs.readFileSync(usersJsonPath, 'utf8'));
         const finishUserDetails = continueDumpUserDetails(users);
         const finishAllUsers = continueDumpAllUsers(users);
+        const finishEnrichingUsers = continueEnrichUsers(users);
 
         await finishUserDetails;
         await finishAllUsers;
+        await finishEnrichingUsers;
       }
 
       continueUpdateUsers.continueDumpUserDetails = continueDumpUserDetails;
       continueUpdateUsers.continueDumpAllUsers = continueDumpAllUsers;
+      continueUpdateUsers.continueEnrichUsers = continueEnrichUsers;
 
       return continueUpdateUsers;
 
