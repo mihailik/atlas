@@ -4,14 +4,15 @@
 function atlas(invokeType) {
 
   /** @typedef {(
-  * ({$type: 'app.bsky.feed.like'} & import ('@atproto/api').AppBskyFeedLike.Record) |
-  * ({$type: 'app.bsky.graph.follow'} & import ('@atproto/api').AppBskyGraphFollow.Record) |
-  * ({$type: 'app.bsky.feed.post'} & import ('@atproto/api').AppBskyFeedPost.Record) |
-  * ({$type: 'app.bsky.feed.repost'} & import ('@atproto/api').AppBskyFeedRepost.Record) |
-  * ({$type: 'app.bsky.graph.listitem'} & import ('@atproto/api').AppBskyGraphListitem.Record) |
-  * ({$type: 'app.bsky.graph.block'} & import ('@atproto/api').AppBskyGraphBlock.Record) |
-  * ({$type: 'app.bsky.actor.profile'} & import ('@atproto/api').AppBskyActorProfile.Record)
-  * )} FeedRecord */
+   * ({$type: undefined}) |
+   * ({$type: 'app.bsky.feed.like'} & import ('@atproto/api').AppBskyFeedLike.Record) |
+   * ({$type: 'app.bsky.graph.follow'} & import ('@atproto/api').AppBskyGraphFollow.Record) |
+   * ({$type: 'app.bsky.feed.post'} & import ('@atproto/api').AppBskyFeedPost.Record) |
+   * ({$type: 'app.bsky.feed.repost'} & import ('@atproto/api').AppBskyFeedRepost.Record) |
+   * ({$type: 'app.bsky.graph.listitem'} & import ('@atproto/api').AppBskyGraphListitem.Record) |
+   * ({$type: 'app.bsky.graph.block'} & import ('@atproto/api').AppBskyGraphBlock.Record) |
+   * ({$type: 'app.bsky.actor.profile'} & import ('@atproto/api').AppBskyActorProfile.Record)
+   * ) & { cid?: string, action?: string, path?: string, timestamp?: number }} FeedRecord */
 
   const api = (function () {
     const api = {
@@ -119,6 +120,7 @@ function atlas(invokeType) {
       const wsAddress = bskyService.replace(/^(http|https)\:/, 'wss:') + 'com.atproto.sync.subscribeRepos';
       const ws = new WebSocket(wsAddress);
       ws.addEventListener('message', handleMessage);
+      ws.addEventListener('error', error => handleError(error));
 
       const subscription = shared.subscriptionAsyncIterator();
       try {
@@ -128,6 +130,10 @@ function atlas(invokeType) {
       } finally {
         ws.removeEventListener('message', handleMessage);
         ws.close();
+      }
+
+      async function handleError(error) {
+        subscription.error(error);
       }
 
       async function handleMessage(e) {
@@ -144,25 +150,33 @@ function atlas(invokeType) {
 
     async function* operationsFirehose() {
       for await (const commit of api.rawFirehose()) {
+        const timestamp = commit.time ? Date.parse(commit.time) : Date.now();
         if (!commit.blocks) {
           // unusual commit type?
-          yield { commit };
+          yield /** @type {FeedRecord} */({ timestamp });
           continue;
         }
 
         const car = await ipld_car.CarReader.fromBytes(commit.blocks);
 
         for (const op of commit.ops) {
-          if (!op.cid) continue;
-          const block = await car.get(/** @type {*} */(op.cid));
+          const cid = op.cid ? op.cid.toString() : undefined
+
+          const block = cid && await car.get(/** @type {*} */(op.cid));
           if (!block) {
-            yield { commit, op };
+            yield /** @type {FeedRecord} */({ action: op.action, cid, path: op.path, timestamp });
             continue;
           }
 
           /** @type {FeedRecord} */
           const record = cbor_x.decode(block.bytes);
-          yield { commit, op, record };
+
+          record.action = op.action;
+          record.cid = cid;
+          record.path = op.path;
+          record.timestamp = timestamp;
+
+          yield record;
         }
       }
     }
@@ -233,7 +247,7 @@ function atlas(invokeType) {
 
       async function* iterate() {
         try {
-          while (stopped) {
+          while (!stopped) {
             let next;
             if (buffer.length) {
               next = buffer.shift();
@@ -289,44 +303,44 @@ function atlas(invokeType) {
 
     async function debugDumpFirehose() {
       const firehose = api.operationsFirehose();
-      for await (const value of firehose) {
-        switch (value.record?.$type) {
+      for await (const record of firehose) {
+        switch (record?.$type) {
           case 'app.bsky.feed.like':
-            console.log(value.op?.action + ' ' + value.record.$type + '  ', value.record.subject?.uri);
+            console.log(record.action + ' ' + record.$type + '  ', record.subject?.uri);
             break;
 
           case 'app.bsky.graph.follow':
-            console.log(value.op?.action + ' ' + value.record.$type + '  ', value.record.subject);
+            console.log(record.action + ' ' + record.$type + '  ', record.subject);
             break;
 
           case 'app.bsky.feed.post':
-            console.log(value.op?.action + ' ' + value.record.$type + '  ', value.record.text.length < 20 ? value.record.text : value.record.text.slice(0, 20).replace(/\s+/g, ' ') + '...');
+            console.log(record.action + ' ' + record.$type + '  ', record.text.length < 20 ? record.text : record.text.slice(0, 20).replace(/\s+/g, ' ') + '...');
             break;
 
           case 'app.bsky.feed.repost':
-            console.log(value.op?.action + ' ' + value.record.$type + '  ', value.record.subject?.uri);
+            console.log(record.action + ' ' + record.$type + '  ', record.subject?.uri);
             break;
 
           case 'app.bsky.graph.listitem':
-            console.log(value.op?.action + ' ' + value.record.$type + '  ', value.record.subject, ' : ', value.record.list);
+            console.log(record.action + ' ' + record.$type + '  ', record.subject, ' : ', record.list);
             break;
 
           case 'app.bsky.graph.block':
-            console.log(value.op?.action + ' ' + value.record.$type + '  ', value.record.subject);
+            console.log(record.action + ' ' + record.$type + '  ', record.subject);
             break;
 
           case 'app.bsky.actor.profile':
-            console.log(value.op?.action + ' ' + value.record.$type +
-              '  [', value.record.displayName, '] : "',
-              (value.record.description?.length || 0) < 20 ? value.record.description : (value.record.description || '').slice(0, 20).replace(/\s+/g, ' ') + '...',
-              '" : LABELS: ', value.record.labels ? JSON.stringify(value.record.labels) : value.record.labels);
+            console.log(record.action + ' ' + record.$type +
+              '  [', record.displayName, '] : "',
+              (record.description?.length || 0) < 20 ? record.description : (record.description || '').slice(0, 20).replace(/\s+/g, ' ') + '...',
+              '" : LABELS: ', record.labels ? JSON.stringify(record.labels) : record.labels);
             break;
 
           default:
-            if (value.record) {
-              console.log(/** @type {*} */(value.record).$type, '  RECORD????????????????????????\n\n');
+            if (record) {
+              console.log(/** @type {*} */(record).$type, '  RECORD????????????????????????\n\n');
             } else {
-              console.log(value.commit.$type, '  COMMIT????????????????????????\n\n');
+              console.log(/** @type {*} */(record).$type, '  COMMIT????????????????????????\n\n');
             }
         }
       }
@@ -359,8 +373,32 @@ function atlas(invokeType) {
 
       document.body.appendChild(firehoseConsoleBoundary);
 
-      const firehose = api.operationsFirehose();
-      for await (const value of firehose) {
+      try {
+        console.log('call operationsFirehose()');
+        const firehose = api.operationsFirehose();
+        console.log('iterate of firehose');
+        for await (const value of firehose) {
+          addFirehoseEntry(value);
+        }
+      } catch (error) {
+        console.log('firehose error', error);
+        /** @type {FeedRecord[]} */
+        const fakeFirehose = await fetch('../atlas-db/firehose.json').then(response => response.json());
+        console.log('fakeFirehose', fakeFirehose);
+        let lastTweetTime = 0;
+        for (const value of fakeFirehose) {
+          const delayTime = (value.timestamp || 0) - lastTweetTime;
+          if (delayTime > 0 && delayTime < 10000)
+            await new Promise(resolve => setTimeout(resolve, delayTime));
+
+          if (value.timestamp && delayTime > 0)
+            lastTweetTime = value.timestamp;
+
+          addFirehoseEntry(value);
+        }
+      }
+
+      function addFirehoseEntry(value) {
         switch (value.record?.$type) {
           case 'app.bsky.feed.like':
             const likeElement = addDOM();
@@ -960,15 +998,12 @@ function atlas(invokeType) {
       if (!count) count = 200;
       const firehoses = [];
       let start = Date.now();
-      for await (const { commit, op, record } of api.operationsFirehose()) {
+      for await (const record of api.operationsFirehose()) {
         if (!record) continue;
         if (!firehoses.length) start = Date.now();
         const entry = {
           ...record,
-          cid: op.cid + '',
-          action: op.action,
-          path: op.path,
-          timestamp: Date.now() - start
+          timestamp: (record.timestamp || Date.now()) - start
         };
         const keys = Object.keys(entry).sort();
         firehoses.push(
