@@ -1547,7 +1547,7 @@ function atlas(invokeType) {
           let existingUser = activeUsers[shortDID];
           if (existingUser) {
             updateUsers = true;
-            existingUser.weight = Math.min(MAX_WEIGHT, weight * 0.11 + existingUser.weight);
+            existingUser.weight = Math.min(MAX_WEIGHT, weight * 0.09 + existingUser.weight);
             existingUser.stop = nowSec + FADE_TIME_MSEC / 1000;
             return 2;
           }
@@ -1565,7 +1565,7 @@ function atlas(invokeType) {
 
           activeUsers[shortDID] = {
             user,
-            weight: weight * 0.11,
+            weight: weight * 0.09,
             start: nowSec,
             stop: nowSec + FADE_TIME_MSEC / 1000
           };
