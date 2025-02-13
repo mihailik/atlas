@@ -17,6 +17,7 @@
     "@ipld/car": "^5.2.0",
     "cbor-x": "^1.5.4",
     "esbuild": "^0.19.2",
-    "multiformats": "^12.0.1"
+    "multiformats": "^12.0.1",
+    "three": "^0.156.0"
   }
 }
