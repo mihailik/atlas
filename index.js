@@ -2194,7 +2194,10 @@ function atlas(invokeType) {
          * @typedef {ReturnType<typeof createLabel>} LabelInfo
          */
 
+        const avatarTextureLoader = new THREE.TextureLoader();
         const avatarRequestQueue = createThrottledQueue(2, 400);
+        let avatarRequestSuccesses = 0;
+        let avatarRequestFailures = 0;
 
         /** @type {{ [shortDID: string]: string | Promise<string> }} */
         const avatarCids = {};
@@ -2397,34 +2400,37 @@ function atlas(invokeType) {
             }
           }
 
-          async function retrieveAvatar() {
-            avatarRequestQueue.eventually(user.shortDID, getAvatarTexture);
+          function retrieveAvatar() {
+            let avatarCidPromise = avatarCids[user.shortDID];
+            if (avatarCidPromise === 'none') return;
+            if (typeof avatarCidPromise === 'string') return makeAvatarTexture(avatarCidPromise);
+            if (!avatarCidPromise)
+              avatarCidPromise = avatarCids[user.shortDID] = avatarRequestQueue.eventually(user.shortDID, getAvatarCid);
 
-            async function getAvatarTexture() {
-              const avatarCid = await avatarCids[user.shortDID] || await (avatarCids[user.shortDID] = (async () => {
+            avatarCidPromise.then(makeAvatarTexture);
+
+            async function getAvatarCid() {
+              try {
                 const { data } = await atClient.com.atproto.repo.listRecords({ repo: unwrapShortDID(user.shortDID), collection: 'app.bsky.actor.profile' });
-                const avatarCid = /** @type {*} */(data.records?.[0]?.value)?.avatar?.ref?.toString();
-                return avatarCids[user.shortDID] = avatarCid || 'none';
-              })());
+                let avatarCid = /** @type {*} */(data.records?.[0]?.value)?.avatar?.ref?.toString();
+                if (!avatarCid) avatarCid = 'none';
+                else avatarRequestSuccesses++;
+                avatarCids[user.shortDID] = avatarCid;
+                return avatarCid;
+              } catch (avatarReqError) {
+                avatarRequestFailures++;
+                return 'none';
+              }
+            }
 
+            /** @param {string} avatarCid  */
+            async function makeAvatarTexture(avatarCid) {
               if (!avatarCid || avatarCid === 'none') return;
+              if (labelsByShortDID[user.shortDID]) return;
 
               const avatarUrl = 'https://bsky.social/xrpc/com.atproto.sync.getBlob?did=' + unwrapShortDID(user.shortDID) + '&cid=' + avatarCid;
 
-              const loader = new THREE.TextureLoader();
-
-              avatarTexture = await new Promise((resolve, reject) => {
-                loader.load(
-                  avatarUrl,
-                  (texture) => {
-                    resolve(texture);
-                  },
-                  undefined,
-                  (error) => {
-                    reject(error);
-                  }
-                );
-              });
+              avatarTexture = await avatarTextureLoader.loadAsync(avatarUrl);
 
               avatarMaterial = new THREE.MeshBasicMaterial({ map: avatarTexture, color: 0xffffff });
               avatarGeometry = new THREE.CircleGeometry(0.0014, 16);
