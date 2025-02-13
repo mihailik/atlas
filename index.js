@@ -2363,7 +2363,7 @@ function atlas(invokeType) {
     const aptorotooo = require('@atproto/repo');
 
     // debugDumpFirehose();
-    // syncAllJsonp();
+    syncAllJsonp();
 
     updateHotFromFirehose();
 
@@ -2403,15 +2403,19 @@ function atlas(invokeType) {
        * }}} */
       const pairs = {};
       for (const jsonFile of jsonFiles) {
-        const rawText = fs.readFileSync(path.resolve(jsonDir, jsonFile), 'utf8');
-        const contentModified = fishForContentModifiedDate(rawText);
-        const jsonData = JSON.parse(rawText);
-        const modified = fs.statSync(path.resolve(jsonDir, jsonFile)).mtimeMs;
+        try {
+          const rawText = fs.readFileSync(path.resolve(jsonDir, jsonFile), 'utf8');
+          const contentModified = fishForContentModifiedDate(rawText);
+          const jsonData = JSON.parse(rawText);
+          const modified = fs.statSync(path.resolve(jsonDir, jsonFile)).mtimeMs;
 
-        const key = jsonFile.replace(/\.json$/i, '');
+          const key = jsonFile.replace(/\.json$/i, '');
 
-        pairs[key] = {
-          json: { modified, contentModified, data: jsonData, jsonText: rawText },
+          pairs[key] = {
+            json: { modified, contentModified, data: jsonData, jsonText: rawText },
+          }
+        } catch (jsonError) {
+          console.log('Error parsing ' + jsonFile + ': ' + jsonError.message);
         }
       }
 
@@ -2607,9 +2611,10 @@ function atlas(invokeType) {
       /** @param {string} shortDID @param {(string | undefined)[]=} proximityTo */
       async function loadUser(shortDID, proximityTo) {
         await new Promise(resolve => setTimeout(resolve, 400 + 550 * Math.random()));
-        console.log('Resolving ' + shortDID + '...');
 
         const shortHandle = await getDidHandle(shortDID);
+        console.log('Placing ' + shortHandle + '...');
+
         await new Promise(resolve => setTimeout(resolve, 50 + 20 * Math.random()));
         const displayName = await getDidDisplayName(shortDID);
         await new Promise(resolve => setTimeout(resolve, 50 + 20 * Math.random()));
@@ -2617,7 +2622,6 @@ function atlas(invokeType) {
         await new Promise(resolve => setTimeout(resolve, 50 + 20 * Math.random()));
         const likes = await getUserLikes(shortDID);
 
-        console.log('  ' + shortDID + ' resolved to ' + shortHandle + ' placing it...');
 
         /** @type {typeof hotUsers} */
         const knownUserNeighbours = {};
@@ -2626,12 +2630,12 @@ function atlas(invokeType) {
         addUserNeightbours(likes, 0.1);
 
         if (!Object.keys(knownUserNeighbours).length) {
-          console.log('  abandoning ' + shortDID + ' due to no of follows');
+          console.log('      ![' + shortHandle + '] abandoned due to no neighbours');
           return;
         }
 
         if (Object.keys(knownUserNeighbours).length < 3) {
-          console.log('  abandoning ' + shortDID + ' due to insufficient follows: ',
+          console.log('      ![' + shortHandle + '] abandoned due to insufficient neighbours: ',
             Object.values(knownUserNeighbours).map(usr => usr[0]));
           return;
         }
@@ -2648,7 +2652,7 @@ function atlas(invokeType) {
 
         addedUsers[shortDID] = userTuple;
 
-        console.log('  ' + shortDID + ' resolved to ' + shortHandle + '    ' + Object.keys(knownUserNeighbours).length + ' neighbours  for [' + x + ',' + y + ']');
+        console.log('        ' + shortHandle + ' placed near ' + Object.keys(knownUserNeighbours).length + ' neighbours  for [' + x + ',' + y + ']');
 
         /** @param {(string | null | undefined)[] | undefined} neighbours @param {number} coef */
         function addUserNeightbours(neighbours, coef) {
