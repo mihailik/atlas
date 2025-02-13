@@ -2195,7 +2195,7 @@ function atlas(invokeType) {
        */
       function renderGeoLabels({ users, tiles, tileDimensionCount, clock }) {
         const ANIMATE_LENGTH_SEC = 0.7;
-        const MIN_SCREEN_DISTANCE = 0.33;
+        const MIN_SCREEN_DISTANCE = 0.25;
         /**
          * @typedef {ReturnType<typeof createLabel>} LabelInfo
          */
@@ -2308,6 +2308,8 @@ function atlas(invokeType) {
           /** @type {THREE.Mesh} */
           let avatarMesh;
 
+          let xmin, ymin, xmax, ymax;
+
           const text = new troika_three_text.Text();
           text.text = '@' + user.shortHandle;
           text.fontSize = 0.004;
@@ -2318,7 +2320,7 @@ function atlas(invokeType) {
           text.sync(() => {
             const visibleBounds = text.textRenderInfo?.visibleBounds
             if (!visibleBounds) return;
-            const [xmin, ymin, xmax, ymax] = visibleBounds;
+            [xmin, ymin, xmax, ymax] = visibleBounds;
 
             if (!lineMaterial)
               lineMaterial = new THREE.MeshBasicMaterial({ color: user.colorRGB, transparent: true });
@@ -2350,6 +2352,8 @@ function atlas(invokeType) {
             visible: true,
             screenX: NaN,
             screenY: NaN,
+            textWidth: NaN,
+            textHeight: NaN,
             updateWithCamera,
             dispose
           };
@@ -2383,6 +2387,11 @@ function atlas(invokeType) {
                 cameraPos.distanceTo(group.position) / SCALE_LABELS_CLOSER_THAN :
                 1 + (cameraPos.distanceTo(group.position) / SCALE_LABELS_CLOSER_THAN - 1) * 0.2;
               group.scale.set(scale, scale, scale);
+
+              if (xmin && xmax) {
+                label.textWidth = (xmax - xmin) * scale;
+                label.textHeight = (ymax - ymin) * scale;
+              }
 
               // 0 to 1 when animation ends
               const animationPhase = (clock.nowSeconds - (label.animationEndsAtSec - ANIMATE_LENGTH_SEC)) / ANIMATE_LENGTH_SEC;
@@ -2585,7 +2594,11 @@ function atlas(invokeType) {
          * @param {{ screenX: number, screenY: number }} testLabel
          */
         function labelsDistanceTo(toLabel, testLabel) {
-          return distance2D(toLabel.screenX, toLabel.screenY, testLabel.screenX, testLabel.screenY);
+          return distance2D(
+            toLabel.screenX + (toLabel.textWidth || 0),
+            toLabel.screenY + (toLabel.textHeight || 0) * 3,
+            testLabel.screenX,
+            testLabel.screenY);
         }
       }
 
