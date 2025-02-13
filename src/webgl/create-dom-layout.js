@@ -3,6 +3,8 @@
 import { PerspectiveCamera } from 'three';
 import { elem } from '../ui/elem';
 
+import { version } from '../../package.json';
+
 /**
  * @param {{
  *  canvas3D: HTMLElement,
@@ -17,7 +19,7 @@ export function createDOMLayout({ canvas3D, statsElem, userCount }) {
     style: `
           position: fixed; left: 0; top: 0; width: 100%; height: 100%;
           display: grid; grid-template-rows: auto auto 1fr auto; grid-template-columns: 1fr;
-          opacity: 0.01; pointer-events: none;
+          opacity: 0.07; pointer-events: none;
           transition: opacity 8s;
           `,
     children: [
@@ -183,6 +185,20 @@ export function createDOMLayout({ canvas3D, statsElem, userCount }) {
             flashesSection = elem('span', {
               children: [
                 elem('span', {
+                  textContent: 'v', style: `
+                          opacity: 0.6;
+                          color: transparent;
+                          text-shadow: cornflowerblue 0px 0px 0px;
+                          font-size: 91%;
+                          position: relative;
+                          display: inline-block;
+                          top: -0.07em;
+                      ` }),
+                elem('span', {
+                  textContent: version + ' ', style: `
+                          text-shadow: black 0 0 2px, black 0 0 2px;
+                      ` }),
+                elem('span', {
                   textContent: '@', style: `
                           opacity: 0.6;
                           color: transparent;
@@ -229,7 +245,10 @@ export function createDOMLayout({ canvas3D, statsElem, userCount }) {
                 flashesElem = elem('span', '0'),
                 ' '],
               display: flashStatsHidden ? 'none' : 'inline',
-              color: 'cornflowerblue'
+              color: 'cornflowerblue',
+              borderRadius: '0.2em',
+              background: '#00000073',
+              boxShadow: '0 0 5px black, 0 0 5px black'
             }),
             'posts+',
             postsElem = elem('span', { color: 'gold' }),

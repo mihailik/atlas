@@ -1,7 +1,7 @@
 // @ts-check
 
 import { firehoseWithFallback } from '../firehose/firehose-with-callback';
-import { splashSpotMesh } from './layers/splash-spot-mesh';
+import { massSplashMesh } from './layers/mass-splash-mesh';
 
 /**
  * @param {{
@@ -17,9 +17,9 @@ export function trackFirehose({ users, clock }) {
   /** @type {{ user: import('..').UserEntry, start: number, stop: number, weight: number }[]} */
   const activeSplashes = [];
 
-  const mesh = splashSpotMesh({
+  const mesh = massSplashMesh({
     clock: { now: () => clock.nowMSec },
-    spots: activeSplashes,
+    splashes: activeSplashes,
     get: (splash, coords) => {
       const { user } = splash;
       coords.x = user.x;
@@ -85,14 +85,25 @@ export function trackFirehose({ users, clock }) {
     if (user) {
       addUser(user, clock.nowSeconds, clock.nowSeconds + FADE_TIME_MSEC / 1000, weight);
     } else {
-      if (!outcome.unknowns)
+      if (!outcome.unknowns) {
         unknownsLastSet.clear();
+        updateSplashes();
+      }
 
       unknownsLastSet.add(shortDID);
       unknownsTotalSet.add(shortDID);
 
       outcome.unknowns = unknownsLastSet.size;
       outcome.unknownsTotal = unknownsTotalSet.size;
+    }
+  }
+
+  function updateSplashes() {
+    outcome.flashes = 0;
+    for (const splash of activeSplashes) {
+      if (splash.start <= clock.nowSeconds && clock.nowSeconds <= splash.stop) {
+        outcome.flashes++;
+      }
     }
   }
 
@@ -134,7 +145,7 @@ export function trackFirehose({ users, clock }) {
       }
     }
 
-    mesh.updateSpots(activeSplashes);
+    mesh.updateSplashes(activeSplashes);
   }
 
 }

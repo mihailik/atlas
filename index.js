@@ -12725,10 +12725,10 @@
       const indices = [];
       const geometryIndex = geometry.index;
       const geometryPosition = geometry.attributes.position;
-      let version2 = 0;
+      let version3 = 0;
       if (geometryIndex !== null) {
         const array = geometryIndex.array;
-        version2 = geometryIndex.version;
+        version3 = geometryIndex.version;
         for (let i = 0, l = array.length; i < l; i += 3) {
           const a = array[i + 0];
           const b = array[i + 1];
@@ -12737,7 +12737,7 @@
         }
       } else if (geometryPosition !== void 0) {
         const array = geometryPosition.array;
-        version2 = geometryPosition.version;
+        version3 = geometryPosition.version;
         for (let i = 0, l = array.length / 3 - 1; i < l; i += 3) {
           const a = i + 0;
           const b = i + 1;
@@ -12748,7 +12748,7 @@
         return;
       }
       const attribute = new (arrayNeedsUint32(indices) ? Uint32BufferAttribute : Uint16BufferAttribute)(indices, 1);
-      attribute.version = version2;
+      attribute.version = version3;
       const previousAttribute = wireframeAttributes.get(geometry);
       if (previousAttribute) attributes.remove(previousAttribute);
       wireframeAttributes.set(geometry, attribute);
@@ -15878,14 +15878,14 @@
     let currentPolygonOffsetUnits = null;
     const maxTextures = gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
     let lineWidthAvailable = false;
-    let version2 = 0;
+    let version3 = 0;
     const glVersion = gl.getParameter(gl.VERSION);
     if (glVersion.indexOf("WebGL") !== -1) {
-      version2 = parseFloat(/^WebGL (\d)/.exec(glVersion)[1]);
-      lineWidthAvailable = version2 >= 1;
+      version3 = parseFloat(/^WebGL (\d)/.exec(glVersion)[1]);
+      lineWidthAvailable = version3 >= 1;
     } else if (glVersion.indexOf("OpenGL ES") !== -1) {
-      version2 = parseFloat(/^OpenGL ES (\d)/.exec(glVersion)[1]);
-      lineWidthAvailable = version2 >= 2;
+      version3 = parseFloat(/^OpenGL ES (\d)/.exec(glVersion)[1]);
+      lineWidthAvailable = version3 >= 2;
     }
     let currentTextureSlot = null;
     let currentBoundTextures = {};
@@ -20482,6 +20482,9 @@ void main() {
     );
   }
 
+  // package.json
+  var version = "1.1.5";
+
   // src/webgl/create-dom-layout.js
   function createDOMLayout({ canvas3D, statsElem, userCount }) {
     let title, titleBar, subtitleArea, rightStatus, searchMode, bottomStatusLine;
@@ -20490,7 +20493,7 @@ void main() {
       style: `
           position: fixed; left: 0; top: 0; width: 100%; height: 100%;
           display: grid; grid-template-rows: auto auto 1fr auto; grid-template-columns: 1fr;
-          opacity: 0.01; pointer-events: none;
+          opacity: 0.07; pointer-events: none;
           transition: opacity 8s;
           `,
       children: [
@@ -20637,6 +20640,24 @@ void main() {
                 flashesSection = elem("span", {
                   children: [
                     elem("span", {
+                      textContent: "v",
+                      style: `
+                          opacity: 0.6;
+                          color: transparent;
+                          text-shadow: cornflowerblue 0px 0px 0px;
+                          font-size: 91%;
+                          position: relative;
+                          display: inline-block;
+                          top: -0.07em;
+                      `
+                    }),
+                    elem("span", {
+                      textContent: version + " ",
+                      style: `
+                          text-shadow: black 0 0 2px, black 0 0 2px;
+                      `
+                    }),
+                    elem("span", {
                       textContent: "@",
                       style: `
                           opacity: 0.6;
@@ -20690,7 +20711,10 @@ void main() {
                     " "
                   ],
                   display: flashStatsHidden ? "none" : "inline",
-                  color: "cornflowerblue"
+                  color: "cornflowerblue",
+                  borderRadius: "0.2em",
+                  background: "#00000073",
+                  boxShadow: "0 0 5px black, 0 0 5px black"
                 }),
                 "posts+",
                 postsElem = elem("span", { color: "gold" }),
@@ -28340,8 +28364,8 @@ if (edgeAlpha == 0.0) {
     if (value === null || typeof value !== "object") {
       return false;
     }
-    const { version: version2, roots } = value;
-    return version2 === 1 && Array.isArray(roots) && roots.every((root) => root instanceof CidLinkWrapper);
+    const { version: version3, roots } = value;
+    return version3 === 1 && Array.isArray(roots) && roots.every((root) => root instanceof CidLinkWrapper);
   };
 
   // node_modules/@atcute/car/dist/utilities/sync-car-reader.js
@@ -28368,11 +28392,11 @@ if (edgeAlpha == 0.0) {
   };
   var readCid2 = (reader) => {
     const head = reader.upto(3 + 4);
-    const version2 = head[0];
+    const version3 = head[0];
     const codec = head[1];
     const digestCodec = head[2];
-    if (version2 !== CID_VERSION) {
-      throw new RangeError(`incorrect cid version (got v${version2})`);
+    if (version3 !== CID_VERSION) {
+      throw new RangeError(`incorrect cid version (got v${version3})`);
     }
     if (codec !== CODEC_DCBOR && codec !== CODEC_RAW) {
       throw new RangeError(`incorrect cid codec (got 0x${codec.toString(16)})`);
@@ -28384,7 +28408,7 @@ if (edgeAlpha == 0.0) {
     const bytes = reader.exactly(3 + digestLebSize + digestSize, true);
     const digest = bytes.subarray(3 + digestLebSize);
     const cid = {
-      version: version2,
+      version: version3,
       codec,
       digest: {
         codec: digestCodec,
@@ -28426,7 +28450,7 @@ if (edgeAlpha == 0.0) {
   };
 
   // node_modules/bski/package.json
-  var version = "0.9.16";
+  var version2 = "0.9.16";
 
   // node_modules/bski/firehose.js
   var emptyUint8Array = new Uint8Array();
@@ -28459,7 +28483,7 @@ if (edgeAlpha == 0.0) {
     throw new Error("WebSocket not available");
   }
   firehose.each = each;
-  firehose.version = version;
+  firehose.version = version2;
   async function* firehose(address) {
     const WebSocketImpl = typeof WebSocket === "function" ? WebSocket : requireWebsocket();
     const wsAddress = address || "wss://bsky.network/xrpc/com.atproto.sync.subscribeRepos";
@@ -28894,8 +28918,8 @@ if (edgeAlpha == 0.0) {
     }
   }
 
-  // src/webgl/layers/splash-spot-mesh.js
-  function splashSpotMesh({ clock: clockArg, spots, get }) {
+  // src/webgl/layers/mass-splash-mesh.js
+  function massSplashMesh({ clock: clockArg, splashes, get }) {
     const clock = clockArg || { now: () => Date.now() };
     const dummy = {
       x: 0,
@@ -28918,10 +28942,10 @@ if (edgeAlpha == 0.0) {
       0,
       -0.5
     ]);
-    let offsetBuf = new Float32Array(spots.length * 4);
-    let diameterBuf = new Float32Array(spots.length);
-    let extraBuf = new Float32Array(spots.length * 2);
-    let colorBuf = new Uint32Array(spots.length);
+    let offsetBuf = new Float32Array(splashes.length * 4);
+    let diameterBuf = new Float32Array(splashes.length);
+    let extraBuf = new Float32Array(splashes.length * 2);
+    let colorBuf = new Uint32Array(splashes.length);
     populateBuffers();
     let geometry = new InstancedBufferGeometry();
     geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
@@ -28929,7 +28953,7 @@ if (edgeAlpha == 0.0) {
     geometry.setAttribute("diameter", new InstancedBufferAttribute(diameterBuf, 1));
     geometry.setAttribute("extra", new InstancedBufferAttribute(extraBuf, 2));
     geometry.setAttribute("color", new InstancedBufferAttribute(colorBuf, 1));
-    geometry.instanceCount = spots.length;
+    geometry.instanceCount = splashes.length;
     const material = new ShaderMaterial({
       uniforms: {
         time: { value: clock.now() / 1e3 }
@@ -29071,22 +29095,22 @@ if (edgeAlpha == 0.0) {
       material.uniforms["time"].value = clock.now() / 1e3;
     };
     const meshWithUpdates = (
-      /** @type {typeof mesh & { updateSpots: typeof updateSpots }} */
+      /** @type {typeof mesh & { updateSplashes: typeof updateSplashes }} */
       mesh
     );
-    meshWithUpdates.updateSpots = updateSpots;
+    meshWithUpdates.updateSplashes = updateSplashes;
     return meshWithUpdates;
     function populateBuffers() {
-      for (let i = 0; i < spots.length; i++) {
-        const spot = spots[i];
-        dummy.x = spot.x || 0;
-        dummy.y = spot.z || 0;
-        dummy.z = spot.y || 0;
-        dummy.mass = spot.mass || 0;
-        dummy.color = spot.color || 0;
-        dummy.start = spot.start || 0;
-        dummy.stop = spot.stop || 0;
-        if (typeof get === "function") get(spot, dummy);
+      for (let i = 0; i < splashes.length; i++) {
+        const splash = splashes[i];
+        dummy.x = splash.x || 0;
+        dummy.y = splash.z || 0;
+        dummy.z = splash.y || 0;
+        dummy.mass = splash.mass || 0;
+        dummy.color = splash.color || 0;
+        dummy.start = splash.start || 0;
+        dummy.stop = splash.stop || 0;
+        if (typeof get === "function") get(splash, dummy);
         offsetBuf[i * 3 + 0] = dummy.x;
         offsetBuf[i * 3 + 1] = dummy.y;
         offsetBuf[i * 3 + 2] = dummy.z;
@@ -29096,12 +29120,12 @@ if (edgeAlpha == 0.0) {
         extraBuf[i * 2 + 1] = dummy.stop;
       }
     }
-    function updateSpots(newSpots) {
-      spots = newSpots;
-      if (newSpots.length > geometry.instanceCount || newSpots.length < geometry.instanceCount / 2) {
+    function updateSplashes(newSplashes) {
+      splashes = newSplashes;
+      if (newSplashes.length > geometry.instanceCount || newSplashes.length < Math.max(320, geometry.instanceCount / 2)) {
         const newAllocateCount = Math.max(
-          Math.floor(newSpots.length * 1.5),
-          newSpots.length + 300
+          Math.floor(newSplashes.length * 1.5),
+          newSplashes.length + 300
         );
         offsetBuf = new Float32Array(newAllocateCount * 4);
         diameterBuf = new Float32Array(newAllocateCount);
@@ -29133,9 +29157,9 @@ if (edgeAlpha == 0.0) {
     const MAX_WEIGHT = 0.1;
     const FADE_TIME_MSEC = 4e3;
     const activeSplashes = [];
-    const mesh = splashSpotMesh({
+    const mesh = massSplashMesh({
       clock: { now: () => clock.nowMSec },
-      spots: activeSplashes,
+      splashes: activeSplashes,
       get: (splash, coords) => {
         const { user } = splash;
         coords.x = user.x;
@@ -29195,12 +29219,22 @@ if (edgeAlpha == 0.0) {
       if (user) {
         addUser(user, clock.nowSeconds, clock.nowSeconds + FADE_TIME_MSEC / 1e3, weight);
       } else {
-        if (!outcome.unknowns)
+        if (!outcome.unknowns) {
           unknownsLastSet.clear();
+          updateSplashes();
+        }
         unknownsLastSet.add(shortDID);
         unknownsTotalSet.add(shortDID);
         outcome.unknowns = unknownsLastSet.size;
         outcome.unknownsTotal = unknownsTotalSet.size;
+      }
+    }
+    function updateSplashes() {
+      outcome.flashes = 0;
+      for (const splash of activeSplashes) {
+        if (splash.start <= clock.nowSeconds && clock.nowSeconds <= splash.stop) {
+          outcome.flashes++;
+        }
       }
     }
     function addUser(user, start, stop, weight) {
@@ -29232,7 +29266,7 @@ if (edgeAlpha == 0.0) {
           activeSplashes.push({ user, start, stop, weight: normWeight });
         }
       }
-      mesh.updateSpots(activeSplashes);
+      mesh.updateSplashes(activeSplashes);
     }
   }
 

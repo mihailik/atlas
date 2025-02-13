@@ -10,7 +10,14 @@ import {
 } from 'three';
 
 /**
- * @template {{ x?: number, y?: number, z?: number, mass?: number, color?: number }} TParticle
+ * @template {{
+ *  x?: number,
+ *  y?: number,
+ *  z?: number,
+ *  mass?: number,
+ *  color?: number
+ * }} TParticle
+ *
  * @param {{
  *  clock?: { now(): number },
  *  spots: TParticle[],

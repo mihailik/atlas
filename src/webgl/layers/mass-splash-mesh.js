@@ -3,14 +3,23 @@
 import { BackSide, Float32BufferAttribute, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial } from 'three';
 
 /**
- * @template {{ x?: number, y?: number, z?: number, mass?: number, color?: number, start?: number, stop?: number }} TParticle
+ * @template {{
+ *  x?: number,
+ *  y?: number,
+ *  z?: number,
+ *  mass?: number,
+ *  color?: number,
+ *  start?: number,
+ *  stop?: number
+ * }} TParticle
+ *
  * @param {{
  *  clock: { now(): number };
- *  spots: TParticle[],
- *  get?: (spot: TParticle, coords: { x: number, y: number, z: number, mass: number, color: number, start: number, stop: number }) => void
+ *  splashes: TParticle[],
+ *  get?: (splash: TParticle, coords: { x: number, y: number, z: number, mass: number, color: number, start: number, stop: number }) => void
  * }} _ 
  */
-export function splashSpotMesh({ clock: clockArg, spots, get }) {
+export function massSplashMesh({ clock: clockArg, splashes, get }) {
   const clock = clockArg || { now: () => Date.now() };
 
   const dummy = {
@@ -29,10 +38,10 @@ export function splashSpotMesh({ clock: clockArg, spots, get }) {
     0, 0, 1,
     baseHalf, 0, -0.5
   ]);
-  let offsetBuf = new Float32Array(spots.length * 4);
-  let diameterBuf = new Float32Array(spots.length);
-  let extraBuf = new Float32Array(spots.length * 2);
-  let colorBuf = new Uint32Array(spots.length);
+  let offsetBuf = new Float32Array(splashes.length * 4);
+  let diameterBuf = new Float32Array(splashes.length);
+  let extraBuf = new Float32Array(splashes.length * 2);
+  let colorBuf = new Uint32Array(splashes.length);
 
   populateBuffers();
 
@@ -42,7 +51,7 @@ export function splashSpotMesh({ clock: clockArg, spots, get }) {
   geometry.setAttribute('diameter', new InstancedBufferAttribute(diameterBuf, 1));
   geometry.setAttribute('extra', new InstancedBufferAttribute(extraBuf, 2));
   geometry.setAttribute('color', new InstancedBufferAttribute(colorBuf, 1));
-  geometry.instanceCount = spots.length;
+  geometry.instanceCount = splashes.length;
 
   const material = new ShaderMaterial({
     uniforms: {
@@ -185,27 +194,27 @@ export function splashSpotMesh({ clock: clockArg, spots, get }) {
   };
 
   const meshWithUpdates =
-    /** @type {typeof mesh & { updateSpots: typeof updateSpots }} */(
+    /** @type {typeof mesh & { updateSplashes: typeof updateSplashes }} */(
       mesh
     );
-  meshWithUpdates.updateSpots = updateSpots;
+  meshWithUpdates.updateSplashes = updateSplashes;
 
   return meshWithUpdates;
 
   function populateBuffers() {
-    for (let i = 0; i < spots.length; i++) {
-      const spot = spots[i];
+    for (let i = 0; i < splashes.length; i++) {
+      const splash = splashes[i];
 
       // reset the dummy object
-      dummy.x = spot.x || 0;
-      dummy.y = spot.z || 0;
-      dummy.z = spot.y || 0;
-      dummy.mass = spot.mass || 0;
-      dummy.color = spot.color || 0;
-      dummy.start = spot.start || 0;
-      dummy.stop = spot.stop || 0;
+      dummy.x = splash.x || 0;
+      dummy.y = splash.z || 0;
+      dummy.z = splash.y || 0;
+      dummy.mass = splash.mass || 0;
+      dummy.color = splash.color || 0;
+      dummy.start = splash.start || 0;
+      dummy.stop = splash.stop || 0;
 
-      if (typeof get === 'function') get(spot, dummy);
+      if (typeof get === 'function') get(splash, dummy);
 
       offsetBuf[i * 3 + 0] = dummy.x;
       offsetBuf[i * 3 + 1] = dummy.y;
@@ -218,14 +227,14 @@ export function splashSpotMesh({ clock: clockArg, spots, get }) {
   }
 
   /**
-* @param {TParticle[]} newSpots
+* @param {TParticle[]} newSplashes
 */
-  function updateSpots(newSpots) {
-    spots = newSpots;
-    if (newSpots.length > geometry.instanceCount || newSpots.length < geometry.instanceCount / 2) {
+  function updateSplashes(newSplashes) {
+    splashes = newSplashes;
+    if (newSplashes.length > geometry.instanceCount || newSplashes.length < Math.max(320, geometry.instanceCount / 2)) {
       const newAllocateCount = Math.max(
-        Math.floor(newSpots.length * 1.5),
-        newSpots.length + 300);
+        Math.floor(newSplashes.length * 1.5),
+        newSplashes.length + 300);
 
       offsetBuf = new Float32Array(newAllocateCount * 4);
       diameterBuf = new Float32Array(newAllocateCount);
