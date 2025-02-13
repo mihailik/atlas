@@ -1713,7 +1713,9 @@ function atlas(invokeType) {
         }
 
         function createBottomStatusLine() {
-          let flashesSection, labelsElem, hitTestElem, flashesElem,
+          let flashesSection,
+            labelsElem, hitTestElem, avatarImagesElem, avatarRequestsElem, avatarCachedAvatars,
+            flashesElem,
             likesElem, postsElem, repostsElem, followsElem,
             unknownsPerSecElem, unknownsTotalElem;
 
@@ -1752,8 +1754,24 @@ function atlas(invokeType) {
                     children: [
                       elem('span', { opacity: '0.6', textContent: 'L' }),
                       labelsElem = elem('span', { opacity: '0.8', textContent: '0' }),
-                      elem('span', { opacity: '0.6', textContent: ' H' }),
-                      hitTestElem = elem('span', { opacity: '0.8', textContent: '0' }),
+                      hitTestElem = elem('span', { opacity: '0.8', style: `
+                        opacity: 0.8;
+                        zoom: 0.6;
+                        display: inline-block;
+                        position: relative;
+                        top: -0.5em;
+                      ` }),
+                      elem('span', { opacity: '0.6', textContent: ' A' }),
+                      avatarImagesElem = elem('span', { opacity: '0.8', textContent: '0' }),
+                      elem('span', { opacity: '0.6', textContent: '~' }),
+                      avatarRequestsElem = elem('span', { opacity: '0.8', textContent: '0' }),
+                      avatarCachedAvatars = elem('span', { opacity: '0.8', style: `
+                        opacity: 0.8;
+                        zoom: 0.6;
+                        display: inline-block;
+                        position: relative;
+                        top: -0.5em;
+                      ` }),
                       ' *',
                       flashesElem = elem('span', '0'),
                       ' '],
@@ -1789,6 +1807,9 @@ function atlas(invokeType) {
           function update(outcome, labelsOutcome) {
             labelsElem.textContent = labelsOutcome.labelCount.toString();
             hitTestElem.textContent = labelsOutcome.hitTestCount.toString();
+            avatarImagesElem.textContent = labelsOutcome.avatarImages.toString();
+            avatarRequestsElem.textContent = labelsOutcome.avatarRequestCount.toString();
+            avatarCachedAvatars.textContent = labelsOutcome.allCachedAvatars.toString();
             flashesElem.textContent = outcome.flashes.toString();
             likesElem.textContent = outcome.likes.toString();
             postsElem.textContent = outcome.posts.toString();
@@ -2232,7 +2253,10 @@ function atlas(invokeType) {
           layerGroup,
           updateWithCamera,
           labelCount: 0,
-          hitTestCount: 0
+          hitTestCount: 0,
+          allCachedAvatars: 0,
+          avatarRequestCount: 0,
+          avatarImages: 0
         };
 
         addFixedUsers();
@@ -2326,6 +2350,8 @@ function atlas(invokeType) {
 
           outcome.labelCount++;
 
+          let disposed = false;
+
           const text = new troika_three_text.Text();
           text.text = '@' + user.shortHandle;
           text.fontSize = 0.004;
@@ -2379,6 +2405,7 @@ function atlas(invokeType) {
           return label;
 
           function dispose() {
+            disposed = true;
             group.clear();
             text.dispose();
             lineMaterial?.dispose();
@@ -2386,6 +2413,7 @@ function atlas(invokeType) {
             avatarMaterial?.dispose();
             avatarGeometry?.dispose();
             outcome.labelCount--;
+            if (avatarMaterial) outcome.avatarImages++;
           }
 
           /** @param {THREE.Vector3} cameraPos */
@@ -2460,26 +2488,34 @@ function atlas(invokeType) {
 
             async function getAvatarCid() {
               try {
+                outcome.avatarRequestCount++;
                 const { data } = await atClient.com.atproto.repo.listRecords({ repo: unwrapShortDID(user.shortDID), collection: 'app.bsky.actor.profile' });
                 let avatarCid = /** @type {*} */(data.records?.[0]?.value)?.avatar?.ref?.toString();
                 if (!avatarCid) avatarCid = 'none';
                 else avatarRequestSuccesses++;
+                if (typeof avatarCids[user.shortDID] !== 'string' && avatarCid !== 'none') outcome.allCachedAvatars++;
                 avatarCids[user.shortDID] = avatarCid;
+                outcome.avatarRequestCount--;
                 return avatarCid;
               } catch (avatarReqError) {
                 avatarRequestFailures++;
+                outcome.avatarRequestCount--;
                 return 'none';
               }
             }
 
             /** @param {string} avatarCid  */
             async function makeAvatarTexture(avatarCid) {
+              if (disposed) return;
               if (!avatarCid || avatarCid === 'none') return;
               if (labelsByShortDID[user.shortDID]) return;
 
               const avatarUrl = 'https://bsky.social/xrpc/com.atproto.sync.getBlob?did=' + unwrapShortDID(user.shortDID) + '&cid=' + avatarCid;
 
               avatarTexture = await avatarTextureLoader.loadAsync(avatarUrl);
+              if (disposed) return;
+
+              outcome.avatarImages++;
 
               avatarMaterial = new THREE.MeshBasicMaterial({ map: avatarTexture, color: 0xffffff });
               avatarMaterial.transparent = true;
