@@ -492,7 +492,6 @@ function atlas(invokeType) {
     return { x: xRatiod, h, y: -yRatiod };
   }
 
-
   /**
    * @param {{ [shortDID: string]: UserTuple}} users
    * @param {number} tileAxisCount
@@ -549,8 +548,69 @@ function atlas(invokeType) {
     }
   }
 
+  /**
+ * @param {string} searchText
+ * @param {{ [shortDID: string]: UserTuple }} users
+ */
+  function findUserMatches(searchText, users) {
+    if (!searchText) return;
+
+    const mushMatch = new RegExp([...searchText.replace(/[^a-z0-9]/gi, '')].join('.*'), 'i');
+    const mushMatchLead = new RegExp('^' + [...searchText.replace(/[^a-z0-9]/gi, '')].join('.*'), 'i');
+
+    const searchWordRegExp = new RegExp(
+      searchText.split(/\s+/)
+        // sort longer words match first
+        .sort((w1, w2) => w2.length - w1.length || (w1 > w2 ? 1 : w1 < w2 ? -1 : 0))
+        // generate a regexp out of word
+        .map(word => '(' + word.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&') + ')')
+        .join('|'),
+      'gi');
+
+    /** @type {[shortDID: string, rank: number][]} */
+    const matches = [];
+    for (const shortDID in users) {
+      const usrTuple = users[shortDID];
+      const shortHandle = usrTuple[0];
+      const displayName = usrTuple[4];
+
+      let matchRank = 0;
+
+      if (displayName) {
+        searchWordRegExp.lastIndex = 0;
+        while (true) {
+          const match = searchWordRegExp.exec(displayName);
+          if (!match) break;
+          matchRank += (match[0].length / displayName.length) * 20;
+          if (match.index === 0) matchRank += 30;
+        }
+
+        if (mushMatch.test(displayName)) matchRank += 3;
+        if (mushMatchLead.test(displayName)) matchRank += 5;
+      }
+
+      searchWordRegExp.lastIndex = 0;
+      while (true) {
+        const match = searchWordRegExp.exec(shortHandle);
+        if (!match) break;
+        matchRank += (match[0].length / shortHandle.length) * 30;
+        if (match.index === 0) matchRank += 40;
+      }
+
+      if (mushMatch.test(shortHandle)) matchRank += 3;
+      if (mushMatchLead.test(shortHandle)) matchRank += 5;
+
+      if (matchRank) matches.push([shortDID, matchRank]);
+    }
+
+    matches.sort((m1, m2) => m2[1] - m1[1]);
+    return matches?.length ? matches : undefined;
+  }
+
   async function runBrowser(invokeType) {
-    const users = await boot();
+    const bootStages = boot();
+    await bootStages.waitForRunBrowserNext;
+
     /** @type {typeof import('three')} */
     const THREE = /** @type {*} */(atlas).imports['three'];
     const Stats = /** @type {*} */(atlas).imports['three/addons/libs/stats.module.js'];
@@ -558,16 +618,17 @@ function atlas(invokeType) {
     /** @type {typeof import('troika-three-text')} */
     const troika_three_text = /** @type {*} */(atlas).imports['troika-three-text'];
 
-    console.log('Users: ', typeof users, Object.keys(users).length);
-    runWebglGalaxy();
+    runWebglGalaxy(bootStages.waitForUsersLoaded);
 
-    async function boot() {
+    function boot() {
       const INIT_UI_FADE_MSEC = 2000;
         // @ts-ignore
       const waitForRunBrowserNext = new Promise(resolve => runBrowser = resolve);
 
+      /** @type {Promise<{ [shortDID: string]: UserTuple}>} */
+      let waitForUsersLoaded = new Promise((resolve, reject) =>
         // @ts-ignore
-      let waitForUsersLoaded = new Promise((resolve, reject) => typeof hot !== 'undefined' ? resolve(hot) :
+        typeof hot !== 'undefined' ? resolve(hot) :
         // @ts-ignore
         hot = value =>
           value.message ? reject(value) : resolve(value))
@@ -584,24 +645,24 @@ function atlas(invokeType) {
           });
         });
 
-      let timedout = await Promise.race([
-        Promise.all([waitForUsersLoaded, waitForRunBrowserNext]),
-        new Promise(resolve => setTimeout(() => resolve('timedout'), 600))]);
+      (async () => {
+        let timedout = await Promise.race([
+          Promise.all([waitForUsersLoaded, waitForRunBrowserNext]),
+          new Promise(resolve => setTimeout(() => resolve('timedout'), 600))]);
 
-      if (timedout === 'timedout') {
-        const initUI = createInitUI();
-        await waitForUsersLoaded;
-        await waitForRunBrowserNext;
-        initUI.style.opacity = '0';
-        initUI.style.pointerEvents = 'none';
-        setTimeout(() => {
-          initUI.remove();
-        }, INIT_UI_FADE_MSEC * 1.5);
-      }
+        if (timedout === 'timedout') {
+          const initUI = createInitUI();
+          await waitForUsersLoaded;
+          await waitForRunBrowserNext;
+          initUI.style.opacity = '0';
+          initUI.style.pointerEvents = 'none';
+          setTimeout(() => {
+            initUI.remove();
+          }, INIT_UI_FADE_MSEC * 1.5);
+        }
+      })();
 
-      /** @type {{ [shortDID: string]: UserTuple}} */
-      const users = await waitForUsersLoaded;
-      return users;
+      return { waitForUsersLoaded, waitForRunBrowserNext };
 
       function createInitUI() {
         elem('style', {
@@ -633,10 +694,11 @@ function atlas(invokeType) {
       }
     }
 
-    async function runWebglGalaxy() {
+    async function runWebglGalaxy(loadUsersPromise) {
       constructStateAndRun();
 
-      function constructStateAndRun() {
+      async function constructStateAndRun() {
+        const users = await loadUsersPromise;
         const clock = makeClock();
 
         const {
@@ -645,19 +707,43 @@ function atlas(invokeType) {
           renderer,
           stats,
           usersBounds
-        } = setupScene(clock);
+        } = setupScene(users, clock);
 
         const orbit = setupOrbitControls({ camera, host: renderer.domElement, clock });
 
-        const domElements = appendToDOM({
+        const domElements = crateDOMLayout({
           camera,
           canvas3D: renderer.domElement,
           orbit: orbit.controls,
-          moveAndPauseRotation: orbit.moveAndPauseRotation,
           statsElem: stats.domElement,
-          scene,
-          usersBounds
+          users
         });
+
+        const searchUI = searchUIController({
+          titleBarElem: domElements.title,
+          onClose: () => {
+            domElements.subtitleArea.innerHTML = '';
+          },
+          onSearchText: (searchText) => {
+            const matches = findUserMatches(searchText, users);
+            if (!matches?.length) searchReportNoMatches(domElements.subtitleArea);
+            else searchReportMatches({
+              matches,
+              users,
+              subtitleArea: domElements.subtitleArea,
+              onChipClick: (shortDID, userChipElem) =>
+                focusAndHighlightUser({
+                  shortDID,
+                  users,
+                  usersBounds,
+                  scene,
+                  camera,
+                  moveAndPauseRotation: orbit.moveAndPauseRotation
+                })
+            });
+          }
+        });
+
         if (location.hash?.length > 3) {
           const hasCommaParts = location.hash.replace(/^#/, '').split(',');
           if (hasCommaParts.length === 3) {
@@ -668,7 +754,7 @@ function atlas(invokeType) {
 
         handleWindowResizes(camera, renderer);
 
-        handleTouch({
+        trackTouchWithCallback({
           touchElement: document.body,
           uxElements: [domElements.titleBar, domElements.subtitleArea, domElements.bottomStatusLine],
           renderElements: [renderer.domElement, domElements.root],
@@ -677,10 +763,8 @@ function atlas(invokeType) {
           }
         });
 
-        //const shaderState = webgl_buffergeometry_instancing_demo();
-
-        const fh = trackFirehose(usersBounds, clock);
-        scene.add(fh.mesh);
+        const firehoseTrackingRenderer = trackFirehose({ users, usersBounds, clock });
+        scene.add(firehoseTrackingRenderer.mesh);
 
         startAnimation();
 
@@ -744,7 +828,7 @@ function atlas(invokeType) {
             const delta = lastRender ? clock.nowMSec - lastRender : 0;
             lastRender = clock.nowMSec;
             orbit.controls.update(Math.min(delta / 1000, 0.2));
-            fh.tickAll(delta / 1000);
+            firehoseTrackingRenderer.tickAll(delta / 1000);
 
             renderer.render(scene, camera);
             stats.end();
@@ -759,7 +843,7 @@ function atlas(invokeType) {
 
             if (!(clock.nowMSec - lastBottomStatsUpdate < 1000) && domElements.bottomStatusLine) {
               lastBottomStatsUpdate = clock.nowMSec;
-              domElements.bottomStatusLine.update(fh);
+              domElements.bottomStatusLine.update(firehoseTrackingRenderer);
             }
           }
         }
@@ -779,8 +863,11 @@ function atlas(invokeType) {
         return hexColor;
       }
 
-      /** @param {ReturnType<typeof makeClock>} clock */
-      function setupScene(clock) {
+      /**
+       * @param {{ [shortDID: string]: UserTuple }} users
+       * @param {ReturnType<typeof makeClock>} clock
+       */
+      function setupScene(users, clock) {
         const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.00001, 10000);
         camera.position.x = 0.18;
         camera.position.y = 0.49;
@@ -830,7 +917,8 @@ function atlas(invokeType) {
             userMapper: (shortDID, pos) => {
               const [, xSpace, ySpace, weight] = users[shortDID];
               const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, usersBounds);
-              pos.set(x, h, y, weight ? 0.003 * (weight / usersBounds.weight.max) : -0.0005);
+              const weightRatio = weight / usersBounds.weight.max;
+              pos.set(x, h, y, weight ? 0.01 * weightRatio * Math.sqrt(weightRatio) : -0.0005);
             },
             userColorer: defaultUserColorer
           })
@@ -957,10 +1045,13 @@ function atlas(invokeType) {
       }
 
       /**
-       * @param {{x: { min: number, max: number}, y: { min: number, max: number }}} usersBounds
-       * @param {ReturnType<typeof makeClock>} clock
+       * @param {{
+       *  users: { [shortDID: string]: UserTuple},
+       *  usersBounds: {x: { min: number, max: number}, y: { min: number, max: number }},
+       *  clock: ReturnType<typeof makeClock>
+       * }} _
        */
-      function trackFirehose(usersBounds, clock) {
+      function trackFirehose({ users, usersBounds, clock }) {
 
         const MAX_WEIGHT = 0.1;
         const FADE_TIME_MSEC = 4000;
@@ -1052,7 +1143,7 @@ function atlas(invokeType) {
             gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra * diagBiasUltra;
 
             `,
-            userKeys: Object.keys(users).slice(0, 10* 1000),
+            userKeys: Object.keys(users).slice(0, 10 * 1000),
             userMapper: (shortDID, pos, extra) => {
               const usr = activeUsers[shortDID];
               if (!usr) return;
@@ -1073,7 +1164,7 @@ function atlas(invokeType) {
             if (ball.fadeAtMsec < current) {
               delete activeUsers[shortDID];
               updateUsers = true;
-            } 
+            }
           }
 
           if (updateUsers) {
@@ -1121,14 +1212,12 @@ function atlas(invokeType) {
        * @param {{
        *  canvas3D: HTMLElement,
        *  statsElem: HTMLElement,
-       *  usersBounds: {x: { min: number, max: number}, y: { min: number, max: number }},
+       *  users: { [shortDID: string]: UserTuple },
        *  camera: THREE.Camera,
-       *  orbit: { autoRotate: boolean, autoRotateSpeed: number },
-       *  moveAndPauseRotation: (xyh: {x: number, y: number, h: number }) => void,
-       *  scene: THREE.Scene
+       *  orbit: { autoRotate: boolean, autoRotateSpeed: number }
        * }} _
        */
-      function appendToDOM({ canvas3D, statsElem, usersBounds, camera, orbit, moveAndPauseRotation, scene }) {
+      function crateDOMLayout({ canvas3D, statsElem, users, camera, orbit }) {
         let title, titleBar, subtitleArea, rightStatus, searchMode, bottomStatusLine;
         const root = elem('div', {
           parent: document.body,
@@ -1144,7 +1233,6 @@ function atlas(invokeType) {
               display: grid; grid-template-rows: auto; grid-template-columns: auto 1fr auto;
               z-index: 10;
               max-height: 5em;`,
-              onclick: () => { if (!searchMode) switchToSearch(); },
               children: [
                 statsElem,
                 title = elem('h3', {
@@ -1275,7 +1363,7 @@ function atlas(invokeType) {
                   style: 'color: gray; text-decoration: none; font-weight: 100;'
                 })]
               }),
-              elem('div', { height: '0.5em'}),
+              elem('div', { height: '0.5em' }),
               'posts+',
               postsElem = elem('span', { color: 'gold' }),
               ' ♡+',
@@ -1310,16 +1398,44 @@ function atlas(invokeType) {
 
         }
 
+      }
+
+      /**
+       * @param {{
+       *  titleBarElem: HTMLElement,
+       *  onSearchText: (searchText: string) => void,
+       *  onClose: () => void
+       * }} _
+       */
+      function searchUIController({ titleBarElem, onSearchText, onClose }) {
         /** @type {HTMLElement} */
         var searchBar;
         /** @type {HTMLInputElement} */
         var searchInput;
         /** @type {HTMLButtonElement} */
         var closeButton;
-        function switchToSearch() {
+
+        var searchClosedAt = 1;
+
+        const controller = {
+          showSearch,
+          closeSearch
+        };
+
+        titleBarElem.addEventListener('click', () => {
+          if (Date.now() - searchClosedAt < 500) return;
+          showSearch();
+        });
+
+        return controller;
+
+        function showSearch() {
+          if (!searchClosedAt) return;
+          searchClosedAt = 0;
+
           if (!searchBar) {
             searchBar = elem('div', {
-              parent: title,
+              parent: titleBarElem,
               style: 'position: relative; border-bottom: solid 1px #888;',
               children: [
                 searchInput = elem('input', {
@@ -1332,7 +1448,10 @@ function atlas(invokeType) {
                   outline: none;
                   `,
                   onkeydown: (event) => {
-                    if (event.keyCode === 27) closeSearch();
+                    if (event.keyCode === 27) {
+                      onClose();
+                      closeSearch();
+                    }
                     handleInputEventQueue(event);
                   },
                   onkeyup: handleInputEventQueue,
@@ -1351,9 +1470,10 @@ function atlas(invokeType) {
                     color: gold; font-size: 80%;
                     cursor: pointer;
                     `,
-                  textContent: '×',
+                  textContent: '\u00d7', // cross like x, but not a letter
                   onclick: (event) => {
                     event.preventDefault();
+                    onClose();
                     closeSearch();
                   }
                 })
@@ -1365,10 +1485,12 @@ function atlas(invokeType) {
         }
 
         function closeSearch() {
+          if (searchClosedAt) return;
+          searchClosedAt = Date.now();
+
           setTimeout(() => {
             searchBar.style.display = 'none';
             searchInput.value = '';
-            subtitleArea.innerHTML = '';
             clearTimeout(debounceTimeoutSearchInput);
           }, 100);
         }
@@ -1377,96 +1499,41 @@ function atlas(invokeType) {
         /** @param {Event} event */
         function handleInputEventQueue(event) {
           clearTimeout(debounceTimeoutSearchInput);
+          if (searchClosedAt) return;
           debounceTimeoutSearchInput = setTimeout(handleInputEventDebounced, 200);
         }
 
         var latestSearchInputApplied;
         function handleInputEventDebounced() {
+          if (searchClosedAt) return;
           const currentSearchInputStr = (searchInput.value || '').trim();
           if (currentSearchInputStr === latestSearchInputApplied) return;
 
           console.log('search to run: ', currentSearchInputStr);
           latestSearchInputApplied = currentSearchInputStr;
-          applySearchText(currentSearchInputStr);
+          onSearchText(currentSearchInputStr);
         }
+      }
 
-        /** @param {string} searchText */
-        function applySearchText(searchText) {
-          if (!searchText) {
-            reportNoMatches();
-            return;
-          }
+      /** @param {HTMLElement} subtitleArea */
+      function searchReportNoMatches(subtitleArea) {
+        subtitleArea.innerHTML = '<div style="font-style: italic; font-size: 80%; text-align: center; opacity: 0.6;">No matches.</div>';
+      }
 
-          const mushMatch = new RegExp([...searchText.replace(/[^a-z0-9]/gi, '')].join('.*'), 'i');
-          const mushMatchLead = new RegExp('^' + [...searchText.replace(/[^a-z0-9]/gi, '')].join('.*'), 'i');
-
-          const searchWordRegExp = new RegExp(
-            searchText.split(/\s+/)
-              // sort longer words match first
-              .sort((w1, w2) => w2.length - w1.length || (w1 > w2 ? 1 : w1 < w2 ? -1 : 0))
-              // generate a regexp out of word
-              .map(word => '(' + word.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&') + ')')
-              .join('|'),
-            'gi');
-
-          /** @type {[shortDID: string, rank: number][]} */
-          const matches = [];
-          for (const shortDID in users) {
-            const usrTuple = users[shortDID];
-            const shortHandle = usrTuple[0];
-            const displayName = usrTuple[4];
-
-            let matchRank = 0;
-
-            if (displayName) {
-              searchWordRegExp.lastIndex = 0;
-              while (true) {
-                const match = searchWordRegExp.exec(displayName);
-                if (!match) break;
-                matchRank += (match[0].length / displayName.length) * 20;
-                if (match.index === 0) matchRank += 30;
-              }
-
-              if (mushMatch.test(displayName)) matchRank += 3;
-              if (mushMatchLead.test(displayName)) matchRank += 5;
-            }
-
-            searchWordRegExp.lastIndex = 0;
-            while (true) {
-              const match = searchWordRegExp.exec(shortHandle);
-              if (!match) break;
-              matchRank += (match[0].length / shortHandle.length) * 30;
-              if (match.index === 0) matchRank += 40;
-            }
-
-            if (mushMatch.test(shortHandle)) matchRank += 3;
-            if (mushMatchLead.test(shortHandle)) matchRank += 5;
-
-            if (matchRank) matches.push([shortDID, matchRank]);
-          }
-
-          matches.sort((m1, m2) => m2[1] - m1[1]);
-          if (!matches?.length) {
-            reportNoMatches();
-          } else {
-            reportMatches(matches);
-          }
-
-        }
-
-        function reportNoMatches() {
-          subtitleArea.innerHTML = '<div style="font-style: italic; font-size: 80%; text-align: center; opacity: 0.6;">No matches.</div>';
-        }
-
-        /**
-         * @param {[shortDID: string, rank: number][]} matches
-         */
-        function reportMatches(matches) {
-          subtitleArea.innerHTML = '';
-          let scroller;
-          const scrollerWrapper = elem('div', {
-            parent: subtitleArea,
-            style: `
+      /**
+       * @param {{
+       *  matches: [shortDID: string, rank: number][],
+       *  subtitleArea: HTMLElement,
+       *  users: { [shortDID: string]: UserTuple },
+       *  onChipClick: (shortDID: string, chip: HTMLElement) => void
+       * }} _
+       */
+      function searchReportMatches({ matches, subtitleArea, users, onChipClick }) {
+        subtitleArea.innerHTML = '';
+        let scroller;
+        const scrollerWrapper = elem('div', {
+          parent: subtitleArea,
+          style: `
             position: absolute;
             width: 100%;
             height: 2.5em;
@@ -1474,9 +1541,9 @@ function atlas(invokeType) {
             font-size: 80%;
             margin-top: 0.5em;
             `,
-            children: [scroller = elem('div', {
-              parent: subtitleArea,
-              style: `
+          children: [scroller = elem('div', {
+            parent: subtitleArea,
+            style: `
             position: absolute;
             overflow: auto;
             white-space: nowrap;
@@ -1484,19 +1551,19 @@ function atlas(invokeType) {
             height: 4em;
             padding-top: 0.2em;
             `
-            })
-            ]
-          });
+          })
+          ]
+        });
 
-          for (let iMatch = 0; iMatch < Math.min(10, matches.length); iMatch++) {
-            const shortDID = matches[iMatch][0];
-            const usrTuple = users[shortDID];
-            const shortHandle = usrTuple[0];
-            const displayName = usrTuple[4];
+        for (let iMatch = 0; iMatch < Math.min(10, matches.length); iMatch++) {
+          const shortDID = matches[iMatch][0];
+          const usrTuple = users[shortDID];
+          const shortHandle = usrTuple[0];
+          const displayName = usrTuple[4];
 
-            const matchElem = elem('span', {
-              parent: scroller,
-              style: `
+          const matchElem = elem('span', {
+            parent: scroller,
+            style: `
                 margin-left: 0.3em;
                 padding: 0px 0.4em 0.2em 0.2em;
                 cursor: pointer;
@@ -1508,14 +1575,14 @@ function atlas(invokeType) {
                 box-shadow: 2px 2px 7px #000000a8;
               }
               `,
-              children: [
-                elem('span', {
-                  children: [
-                    elem('span', { textContent: '@', style: 'opacity: 0.5; display: inline-block; transform: scale(0.8) translateY(0.05em);' }),
-                    shortHandle,
-                    !displayName ? undefined : elem('span', {
-                      textContent: ' ' + displayName,
-                      style: `
+            children: [
+              elem('span', {
+                children: [
+                  elem('span', { textContent: '@', style: 'opacity: 0.5; display: inline-block; transform: scale(0.8) translateY(0.05em);' }),
+                  shortHandle,
+                  !displayName ? undefined : elem('span', {
+                    textContent: ' ' + displayName,
+                    style: `
                         opacity: 0.6;
                         display: inline-block;
                         zoom: 0.7;
@@ -1526,24 +1593,16 @@ function atlas(invokeType) {
                         white-space: nowrap;
                         padding-left: 0.25em;
                       `
-                    })
-                  ]
-                })
-              ],
-              onclick: () => {
-                focusAndHighlightUser({
-                  shortDID,
-                  usersBounds,
-                  scene,
-                  camera,
-                  moveAndPauseRotation
-                });
-              }
-            });
+                  })
+                ]
+              })
+            ],
+            onclick: () => {
+              onChipClick(shortDID, matchElem);
+            }
+          });
 
-          }
         }
-
       }
 
       /** @type {{ highlight(), dispose(), shortDID: string }[]} */
@@ -1551,13 +1610,14 @@ function atlas(invokeType) {
       /**
        * @param {{
        *  shortDID: string,
+       *  users: { [shortDID: string]: UserTuple },
        *  usersBounds: {x: { min: number, max: number}, y: { min: number, max: number }},
        *  scene: THREE.Scene,
        *  camera: THREE.Camera,
        *  moveAndPauseRotation: (coord: {x: number, y: number, h: number}) => void
        * }} _param
        */
-      function focusAndHighlightUser({ shortDID, usersBounds, scene, camera, moveAndPauseRotation }) {
+      function focusAndHighlightUser({ shortDID, users, usersBounds, scene, camera, moveAndPauseRotation }) {
         const MAX_HIGHLIGHT_COUNT = 25;
         while (higlightUserStack?.length > MAX_HIGHLIGHT_COUNT) {
           const early = higlightUserStack.shift();
@@ -1615,7 +1675,7 @@ function atlas(invokeType) {
         group.position.set(x, h, y);
         group.add(/** @type {*} */(handleText));
 
-          const displayNameText = displayName ? new troika_three_text.Text() : undefined;
+        const displayNameText = displayName ? new troika_three_text.Text() : undefined;
         if (displayNameText) {
           displayNameText.text = /** @type {string} */(displayName);
           displayNameText.fontSize = 0.004;
@@ -1665,7 +1725,6 @@ function atlas(invokeType) {
         }
       }
 
-
       /**
        * @param {{
        *  touchElement: HTMLElement,
@@ -1674,7 +1733,7 @@ function atlas(invokeType) {
        *  touchCallback: (xy: { x: number, y: number }) => void
        * }} _
        */
-      function handleTouch({ touchElement, uxElements, renderElements, touchCallback }) {
+      function trackTouchWithCallback({ touchElement, uxElements, renderElements, touchCallback }) {
         touchElement.addEventListener('touchstart', handleTouch);
         touchElement.addEventListener('touchend', handleTouch);
         touchElement.addEventListener('touchmove', handleTouch);
@@ -1753,91 +1812,73 @@ function atlas(invokeType) {
           renderer.setSize(window.innerWidth, window.innerHeight);
         }
       }
-    }
 
-    function makeClock() {
-      const clock = {
-        worldStartTime: Date.now(),
-        nowMSec: 0,
-        nowSeconds: 0,
-        update
-      };
-
-      return clock;
-
-      function update() {
-        clock.nowSeconds =
-          (clock.nowMSec = Date.now() - clock.worldStartTime)
-          / 1000;
-      }
-    }
-
-    /** @param {THREE.BufferGeometry} geometry */
-    function geometryVertices(geometry) {
-      const geoPos = geometry.getAttribute('position');
-      const index = geometry.getIndex();
-      if (index) {
-        const positions = [];
-        for (let i = 0; i < index.count; i++) {
-          const posIndex = index.getX(i);
-          positions.push(geoPos.getX(posIndex));
-          positions.push(geoPos.getY(posIndex));
-          positions.push(geoPos.getZ(posIndex));
+      /** @param {THREE.BufferGeometry} geometry */
+      function geometryVertices(geometry) {
+        const geoPos = geometry.getAttribute('position');
+        const index = geometry.getIndex();
+        if (index) {
+          const positions = [];
+          for (let i = 0; i < index.count; i++) {
+            const posIndex = index.getX(i);
+            positions.push(geoPos.getX(posIndex));
+            positions.push(geoPos.getY(posIndex));
+            positions.push(geoPos.getZ(posIndex));
+          }
+          return positions;
+        } else {
+          const positions = [];
+          for (let i = 0; i < geoPos.count; i++) {
+            positions.push(geoPos.getX(i));
+            positions.push(geoPos.getY(i));
+            positions.push(geoPos.getZ(i));
+          }
+          return positions;
         }
-        return positions;
-      } else {
-        const positions = [];
-        for (let i = 0; i < geoPos.count; i++) {
-          positions.push(geoPos.getX(i));
-          positions.push(geoPos.getY(i));
-          positions.push(geoPos.getZ(i));
-        }
-        return positions;
       }
-    }
 
-    /**
-     * @param {{
-     *  clock: ReturnType<typeof makeClock>;
-     *  userKeys: K[];
-     *  userMapper(i: K, pos: THREE.Vector4, extra: THREE.Vector4): void;
-     *  userColorer(i: K): number;
-     *  fragmentShader?: string;
-     *  vertexShader?: string;
-     * }} _ 
-     * @template K
-     */
-    function billboardShaderRenderer({ clock, userKeys, userMapper, userColorer, fragmentShader, vertexShader }) {
-      const baseHalf = 1.5 * Math.tan(Math.PI / 6);
-      let positions = new Float32Array([
-        -baseHalf, 0, -0.5,
-        0, 0, 1,
-        baseHalf, 0, -0.5
-      ]);
-      let offsetBuf = new Float32Array(userKeys.length * 4);
-      let diameterBuf = new Float32Array(userKeys.length);
-      let extraBuf = new Float32Array(userKeys.length * 4);
-      let colorBuf = new Uint32Array(userKeys.length);
-      let offsetsChanged = false;
-      let diametersChanged = false;
-      let colorsChanged = false;
-      let extrasChanged = false;
+      /**
+       * @param {{
+       *  clock: ReturnType<typeof makeClock>;
+       *  userKeys: K[];
+       *  userMapper(i: K, pos: THREE.Vector4, extra: THREE.Vector4): void;
+       *  userColorer(i: K): number;
+       *  fragmentShader?: string;
+       *  vertexShader?: string;
+       * }} _ 
+       * @template K
+       */
+      function billboardShaderRenderer({ clock, userKeys, userMapper, userColorer, fragmentShader, vertexShader }) {
+        const baseHalf = 1.5 * Math.tan(Math.PI / 6);
+        let positions = new Float32Array([
+          -baseHalf, 0, -0.5,
+          0, 0, 1,
+          baseHalf, 0, -0.5
+        ]);
+        let offsetBuf = new Float32Array(userKeys.length * 4);
+        let diameterBuf = new Float32Array(userKeys.length);
+        let extraBuf = new Float32Array(userKeys.length * 4);
+        let colorBuf = new Uint32Array(userKeys.length);
+        let offsetsChanged = false;
+        let diametersChanged = false;
+        let colorsChanged = false;
+        let extrasChanged = false;
 
-      populateAttributes(userKeys);
+        populateAttributes(userKeys);
 
-      const geometry = new THREE.InstancedBufferGeometry();
-      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-      geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(offsetBuf, 3));
-      geometry.setAttribute('diameter', new THREE.InstancedBufferAttribute(diameterBuf, 1));
-      geometry.setAttribute('extra', new THREE.InstancedBufferAttribute(extraBuf, 4));
-      geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colorBuf, 1));
-      geometry.instanceCount = userKeys.length;
+        const geometry = new THREE.InstancedBufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(offsetBuf, 3));
+        geometry.setAttribute('diameter', new THREE.InstancedBufferAttribute(diameterBuf, 1));
+        geometry.setAttribute('extra', new THREE.InstancedBufferAttribute(extraBuf, 4));
+        geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colorBuf, 1));
+        geometry.instanceCount = userKeys.length;
 
-      const material = new THREE.ShaderMaterial({
-        uniforms: {
-          time: { value: clock.nowSeconds }
-        },
-        vertexShader: /* glsl */`
+        const material = new THREE.ShaderMaterial({
+          uniforms: {
+            time: { value: clock.nowSeconds }
+          },
+          vertexShader: /* glsl */`
             precision highp float;
 
             attribute vec3 offset;
@@ -1875,7 +1916,7 @@ function atlas(invokeType) {
               ${vertexShader || ''}
             }
           `,
-        fragmentShader: /* glsl */`
+          fragmentShader: /* glsl */`
             precision highp float;
 
             uniform float time;
@@ -1907,7 +1948,7 @@ function atlas(invokeType) {
 
               vec4 tintColor = vColor;
               tintColor.a = radiusRatio;
-              gl_FragColor = mix(gl_FragColor, vec4(1.0,1.0,1.0,0.7), fogRatio);
+              gl_FragColor = mix(gl_FragColor, vec4(1.0,1.0,1.0,0.7), fogRatio * 0.7);
               gl_FragColor = vDiameter < 0.0 ? vec4(0.6,0.0,0.0,1.0) : gl_FragColor;
               gl_FragColor.a = bodyRatio;
 
@@ -1919,120 +1960,138 @@ function atlas(invokeType) {
               ${fragmentShader || ''}
             }
           `,
-        side: THREE.BackSide,
-        forceSinglePass: true,
-        transparent: true,
-        depthWrite: false
-      });
+          side: THREE.BackSide,
+          forceSinglePass: true,
+          transparent: true,
+          depthWrite: false
+        });
 
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.frustumCulled = false;
-      mesh.onBeforeRender = () => {
-        material.uniforms['time'].value = clock.nowSeconds;
-      };
-      return { mesh, updateUserSet };
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.frustumCulled = false;
+        mesh.onBeforeRender = () => {
+          material.uniforms['time'].value = clock.nowSeconds;
+        };
+        return { mesh, updateUserSet };
 
-      /**
-       * @param {Parameters<typeof userColorer>[0][]} userKeys
-       */
-      function populateAttributes(userKeys) {
-        const userPos = new THREE.Vector4();
-        const userExtra = new THREE.Vector4();
-        const oldUserPos = new THREE.Vector4();
-        const oldUserExtra = new THREE.Vector4();
+        /**
+         * @param {Parameters<typeof userColorer>[0][]} userKeys
+         */
+        function populateAttributes(userKeys) {
+          const userPos = new THREE.Vector4();
+          const userExtra = new THREE.Vector4();
+          const oldUserPos = new THREE.Vector4();
+          const oldUserExtra = new THREE.Vector4();
 
-        for (let i = 0; i < userKeys.length; i++) {
-          const user = userKeys[i];
-          userExtra.copy(userPos.set(NaN, NaN, NaN, NaN));
-          userMapper(user, userPos, userExtra);
-          oldUserPos.set(
-            offsetBuf[i * 3 + 0],
-            offsetBuf[i * 3 + 1],
-            offsetBuf[i * 3 + 2],
-            diameterBuf[i]);
-          oldUserExtra.set(
-            extraBuf[i * 4 + 0],
-            extraBuf[i * 4 + 1],
-            extraBuf[i * 4 + 2],
-            extraBuf[i * 4 + 3]);
-          const oldColor = colorBuf[i];
+          for (let i = 0; i < userKeys.length; i++) {
+            const user = userKeys[i];
+            userExtra.copy(userPos.set(NaN, NaN, NaN, NaN));
+            userMapper(user, userPos, userExtra);
+            oldUserPos.set(
+              offsetBuf[i * 3 + 0],
+              offsetBuf[i * 3 + 1],
+              offsetBuf[i * 3 + 2],
+              diameterBuf[i]);
+            oldUserExtra.set(
+              extraBuf[i * 4 + 0],
+              extraBuf[i * 4 + 1],
+              extraBuf[i * 4 + 2],
+              extraBuf[i * 4 + 3]);
+            const oldColor = colorBuf[i];
 
-          offsetBuf[i * 3 + 0] = userPos.x;
-          offsetBuf[i * 3 + 1] = userPos.y;
-          offsetBuf[i * 3 + 2] = userPos.z;
-          diameterBuf[i] = userPos.w;
-          colorBuf[i] = userColorer(user);
-          extraBuf[i * 4 + 0] = userExtra.x;
-          extraBuf[i * 4 + 1] = userExtra.y;
-          extraBuf[i * 4 + 2] = userExtra.z;
-          extraBuf[i * 4 + 3] = userExtra.w;
+            offsetBuf[i * 3 + 0] = userPos.x;
+            offsetBuf[i * 3 + 1] = userPos.y;
+            offsetBuf[i * 3 + 2] = userPos.z;
+            diameterBuf[i] = userPos.w;
+            colorBuf[i] = userColorer(user);
+            extraBuf[i * 4 + 0] = userExtra.x;
+            extraBuf[i * 4 + 1] = userExtra.y;
+            extraBuf[i * 4 + 2] = userExtra.z;
+            extraBuf[i * 4 + 3] = userExtra.w;
 
-          if (offsetBuf[i * 3 + 0] !== oldUserPos.x
-            || offsetBuf[i * 3 + 1] !== oldUserPos.y
-            || offsetBuf[i * 3 + 2] !== oldUserPos.z)
-            offsetsChanged = true;
-          if (diameterBuf[i] !== oldUserPos.w)
-            diametersChanged = true;
-          if (extraBuf[i * 4 + 0] !== oldUserExtra.x ||
-            extraBuf[i * 4 + 1] !== oldUserExtra.y ||
-            extraBuf[i * 4 + 2] !== oldUserExtra.z ||
-            extraBuf[i * 4 + 3] !== oldUserExtra.w)
-            extrasChanged = true;
-          if (colorBuf[i] !== oldColor)
-            colorsChanged = true;
+            if (offsetBuf[i * 3 + 0] !== oldUserPos.x
+              || offsetBuf[i * 3 + 1] !== oldUserPos.y
+              || offsetBuf[i * 3 + 2] !== oldUserPos.z)
+              offsetsChanged = true;
+            if (diameterBuf[i] !== oldUserPos.w)
+              diametersChanged = true;
+            if (extraBuf[i * 4 + 0] !== oldUserExtra.x ||
+              extraBuf[i * 4 + 1] !== oldUserExtra.y ||
+              extraBuf[i * 4 + 2] !== oldUserExtra.z ||
+              extraBuf[i * 4 + 3] !== oldUserExtra.w)
+              extrasChanged = true;
+            if (colorBuf[i] !== oldColor)
+              colorsChanged = true;
+          }
+        }
+
+        /**
+         * @param {Parameters<typeof userColorer>[0][]} userKeys
+         */
+        function updateUserSet(userKeys) {
+          if (userKeys.length > colorBuf.length) {
+            const newSize = Math.max(colorBuf.length * 2, userKeys.length);
+            offsetBuf = new Float32Array(newSize * 3);
+            diameterBuf = new Float32Array(newSize);
+            colorBuf = new Uint32Array(newSize);
+            extraBuf = new Float32Array(newSize * 4);
+
+            geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(offsetBuf, 3));
+            geometry.attributes['offset'].needsUpdate = true;
+            geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colorBuf, 1));
+            geometry.attributes['color'].needsUpdate = true;
+            geometry.setAttribute('diameter', new THREE.InstancedBufferAttribute(diameterBuf, 1));
+            geometry.attributes['diameter'].needsUpdate = true;
+            geometry.setAttribute('extra', new THREE.InstancedBufferAttribute(extraBuf, 4));
+            geometry.attributes['extra'].needsUpdate = true;
+          }
+
+          populateAttributes(userKeys);
+          if (offsetsChanged) geometry.attributes['offset'].needsUpdate = true;
+          if (diametersChanged) geometry.attributes['diameter'].needsUpdate = true;
+          if (colorsChanged) geometry.attributes['color'].needsUpdate = true;
+          if (extrasChanged) geometry.attributes['extra'].needsUpdate = true;
+
+          const LOG_BUFFER_UPDATES = false;
+          if (LOG_BUFFER_UPDATES && (
+            offsetsChanged ||
+            diametersChanged ||
+            colorsChanged ||
+            extrasChanged)) {
+            console.log('changed: ' +
+              (offsetsChanged ? 'o' : ' ') +
+              (diametersChanged ? 'd' : ' ') +
+              (colorsChanged ? 'c' : ' ') +
+              (extrasChanged ? 'x' : ' '),
+              ' ',
+              userKeys.length
+            );
+          }
+
+          offsetsChanged =
+            diametersChanged =
+            colorsChanged =
+            extrasChanged =
+            false;
+
+          geometry.instanceCount = userKeys.length;
         }
       }
+    }
 
-      /**
-       * @param {Parameters<typeof userColorer>[0][]} userKeys
-       */
-      function updateUserSet(userKeys) {
-        if (userKeys.length > colorBuf.length) {
-          const newSize = Math.max(colorBuf.length * 2, userKeys.length);
-          offsetBuf = new Float32Array(newSize * 3);
-          diameterBuf = new Float32Array(newSize);
-          colorBuf = new Uint32Array(newSize);
-          extraBuf = new Float32Array(newSize * 4);
+    function makeClock() {
+      const clock = {
+        worldStartTime: Date.now(),
+        nowMSec: 0,
+        nowSeconds: 0,
+        update
+      };
 
-          geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(offsetBuf, 3));
-          geometry.attributes['offset'].needsUpdate = true;
-          geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colorBuf, 1));
-          geometry.attributes['color'].needsUpdate = true;
-          geometry.setAttribute('diameter', new THREE.InstancedBufferAttribute(diameterBuf, 1));
-          geometry.attributes['diameter'].needsUpdate = true;
-          geometry.setAttribute('extra', new THREE.InstancedBufferAttribute(extraBuf, 4));
-          geometry.attributes['extra'].needsUpdate = true;
-        }
+      return clock;
 
-        populateAttributes(userKeys);
-        if (offsetsChanged) geometry.attributes['offset'].needsUpdate = true;
-        if (diametersChanged) geometry.attributes['diameter'].needsUpdate = true;
-        if (colorsChanged) geometry.attributes['color'].needsUpdate = true;
-        if (extrasChanged) geometry.attributes['extra'].needsUpdate = true;
-
-        const LOG_BUFFER_UPDATES = false;
-        if (LOG_BUFFER_UPDATES && (
-          offsetsChanged ||
-          diametersChanged ||
-          colorsChanged ||
-          extrasChanged)) {
-          console.log('changed: ' +
-            (offsetsChanged ? 'o' : ' ') +
-            (diametersChanged ? 'd' : ' ') +
-            (colorsChanged ? 'c' : ' ') +
-            (extrasChanged ? 'x' : ' '),
-            ' ',
-            userKeys.length
-          );
-        }
-
-        offsetsChanged =
-          diametersChanged =
-          colorsChanged =
-          extrasChanged =
-          false;
-
-        geometry.instanceCount = userKeys.length;
+      function update() {
+        clock.nowSeconds =
+          (clock.nowMSec = Date.now() - clock.worldStartTime)
+          / 1000;
       }
     }
 
