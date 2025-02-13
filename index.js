@@ -990,7 +990,7 @@ function atlas(invokeType) {
               const [, xSpace, ySpace, weight] = users[shortDID];
               mapUserCoordsToAtlas(xSpace, ySpace, usersBounds, xyhBuf);
               const weightRatio = weight / usersBounds.weight.max;
-              pos.set(xyhBuf.x, xyhBuf.h, xyhBuf.y, weight ? 0.01 * weightRatio * Math.sqrt(weightRatio) : -0.0005);
+              pos.set(xyhBuf.x, xyhBuf.h, xyhBuf.y, weight ? Math.max(0.0007, 0.01 * weightRatio * Math.sqrt(weightRatio)) : -0.0005);
             },
             userColorer: defaultUserColorer
           })
@@ -1274,14 +1274,14 @@ function atlas(invokeType) {
 
             float diagBias = 1.0 - max(abs(vPosition.x), abs(vPosition.z));
             float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
-            gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra * diagBiasUltra;
+            gl_FragColor.a *= diagBiasUltra;
 
             `,
             userKeys: Object.keys(users).slice(0, 10 * 1000),
             userMapper: (shortDID, pos, extra) => {
               const usr = activeUsers[shortDID];
               if (!usr) return;
-              pos.set(usr.x, usr.h, usr.y, usr.weight);
+              pos.set(usr.x, usr.h, usr.y, usr.weight / 5);
               extra.x = usr.startAtMsec / 1000;
               extra.y = usr.fadeAtMsec / 1000;
             },
