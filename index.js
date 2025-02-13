@@ -20483,7 +20483,7 @@ void main() {
   }
 
   // package.json
-  var version = "1.1.7";
+  var version = "1.1.9";
 
   // src/webgl/create-dom-layout.js
   function createDOMLayout({ canvas3D, statsElem, userCount }) {
@@ -28918,8 +28918,284 @@ if (edgeAlpha == 0.0) {
     }
   }
 
-  // src/webgl/layers/mass-splash-mesh.js
-  function massSplashMesh({ clock: clockArg, splashes, get }) {
+  // src/webgl/layers/mass-comet-mesh.js
+  function massCometMesh({ clock: clockArg, comets, get }) {
+    const clock = clockArg || { now: () => Date.now() };
+    const start = { x: 0, y: 0, z: 0, time: 0, mass: 0, color: 0 };
+    const stop = { x: 0, y: 0, z: 0, time: 0, mass: 0, color: 0 };
+    const control = { x: 0, y: 0, z: 0 };
+    const baseHalf = 1.5 * Math.tan(Math.PI / 6);
+    let positions = new Float32Array([
+      -baseHalf,
+      0,
+      -0.5,
+      0,
+      0,
+      1,
+      baseHalf,
+      0,
+      -0.5
+    ]);
+    let [
+      offsetStartBuf,
+      offsetStopBuf,
+      offsetControlBuf,
+      diameterStartStopBuf,
+      timeStartStopBuf,
+      colorStartStopBuf
+    ] = allocateBuffers(comets.length);
+    populateBuffers();
+    let geometry = createGeometryAndAttributes();
+    geometry.instanceCount = comets.length;
+    const material = new ShaderMaterial({
+      uniforms: {
+        time: { value: clock.now() / 1e3 }
+      },
+      vertexShader: (
+        /* glsl */
+        `
+            precision highp float;
+
+            attribute vec3 offsetStart;
+            attribute vec3 offsetStop;
+            attribute vec3 offsetControl;
+
+            attribute vec2 diameterStartStop;
+            attribute vec2 timeStartStop;
+
+            attribute uvec2 colorStartStop;
+
+            uniform float time;
+
+            varying vec3 vPosition;
+            varying vec3 vOffset;
+            varying float vDiameter;
+
+            varying float vFogDist;
+            varying vec4 vColor;
+
+            varying float vTimeRatio;
+
+            vec3 quadraticBezier(float t, vec3 startPoint, vec3 controlPoint, vec3 stopPoint) {
+              float oneMinusT = 1.0 - t;
+              return  oneMinusT * oneMinusT * startPoint + 2.0 * oneMinusT * t * controlPoint + t * t * stopPoint;
+            }
+
+            void main(){
+              vPosition = position;
+
+            float startTime = min(timeStartStop.x, timeStartStop.y);
+            float endTime = max(timeStartStop.x, timeStartStop.y);
+            vTimeRatio = (time - startTime) / (endTime - startTime);
+
+            vOffset = quadraticBezier(vTimeRatio, offsetStart, offsetControl, offsetStop);
+
+            uint rIntStart = (colorStartStop.x / uint(256 * 256 * 256)) % uint(256);
+            uint gIntStart = (colorStartStop.x / uint(256 * 256)) % uint(256);
+            uint bIntStart = (colorStartStop.x / uint(256)) % uint(256);
+            uint aIntStart = (colorStartStop.x) % uint(256);
+            vec4 colorStart = vec4(
+              float(rIntStart) / 255.0f,
+              float(gIntStart) / 255.0f,
+              float(bIntStart) / 255.0f,
+              float(aIntStart) / 255.0f);
+
+            uint rIntStop = (colorStartStop.y / uint(256 * 256 * 256)) % uint(256);
+            uint gIntStop = (colorStartStop.y / uint(256 * 256)) % uint(256);
+            uint bIntStop = (colorStartStop.y / uint(256)) % uint(256);
+            uint aIntStop = (colorStartStop.y) % uint(256);
+            vec4 colorStop = vec4(
+              float(rIntStop) / 255.0f,
+              float(gIntStop) / 255.0f,
+              float(bIntStop) / 255.0f,
+              float(aIntStop) / 255.0f);
+
+            vColor = mix(colorStart, colorStop, vTimeRatio);
+            vDiameter = mix(diameterStartStop.x, diameterStartStop.y, vTimeRatio);
+
+            gl_Position = projectionMatrix * (modelViewMatrix * vec4(vOffset, 1) + vec4(position.xz * abs(vDiameter), 0, 0));
+
+            vFogDist = distance(cameraPosition, vOffset);
+
+          }
+          `
+      ),
+      fragmentShader: (
+        /* glsl */
+        `
+            precision highp float;
+
+            uniform float time;
+
+            varying vec3 vPosition;
+            varying vec3 vOffset;
+            varying float vDiameter;
+
+            varying float vFogDist;
+            varying vec4 vColor;
+
+            varying float vTimeRatio;
+
+            void main() {
+              gl_FragColor = vColor;
+              float dist = distance(vPosition, vec3(0.0));
+              dist = vDiameter < 0.0 ? dist * 2.0 : dist;
+              float rad = 0.25;
+              float areola = rad * 2.0;
+              float bodyRatio =
+                dist < rad ? 1.0 :
+                dist > areola ? 0.0 :
+                (areola - dist) / (areola - rad);
+              float radiusRatio =
+                dist < 0.5 ? 1.0 - dist * 2.0 : 0.0;
+
+              float fogStart = 0.6;
+              float fogGray = 1.0;
+              float fogRatio = vFogDist < fogStart ? 0.0 : vFogDist > fogGray ? 1.0 : (vFogDist - fogStart) / (fogGray - fogStart);
+
+              vec4 tintColor = vColor;
+              tintColor.a = radiusRatio;
+              gl_FragColor = mix(gl_FragColor, vec4(1.0,1.0,1.0,0.7), fogRatio * 0.7);
+              gl_FragColor = vDiameter < 0.0 ? vec4(0.6,0.0,0.0,1.0) : gl_FragColor;
+              gl_FragColor.a = bodyRatio;
+
+              vec3 position = vPosition;
+              float diameter = vDiameter;
+
+              gl_FragColor = tintColor;
+
+              float PI = 3.1415926535897932384626433832795;
+
+              float step = 0.05;
+              float timeFunction =
+                vTimeRatio < step ? vTimeRatio / step :
+                vTimeRatio < step * 2.0 ?
+                  (cos((step * 2.0 - vTimeRatio) * step * PI) + 1.0) / 4.5 + 0.7 :
+                  (1.0 - (vTimeRatio - step * 2.0)) / 2.5 + 0.2;
+
+              gl_FragColor = tintColor;
+
+              gl_FragColor.a *= timeFunction;
+
+              float diagBias = 1.0 - max(abs(vPosition.x), abs(vPosition.z));
+              float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
+              gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra;
+
+            }
+          `
+      ),
+      side: BackSide,
+      forceSinglePass: true,
+      transparent: true,
+      depthWrite: false
+    });
+    const mesh = new Mesh(geometry, material);
+    mesh.onBeforeRender = () => {
+      material.uniforms["time"].value = clock.now() / 1e3;
+    };
+    const meshWithUpdates = (
+      /** @type {typeof mesh & { updateSpots: typeof updateSpots }} */
+      mesh
+    );
+    meshWithUpdates.updateSpots = updateSpots;
+    return meshWithUpdates;
+    function createGeometryAndAttributes() {
+      const geometry2 = new InstancedBufferGeometry();
+      geometry2.setAttribute("position", new Float32BufferAttribute(positions, 3));
+      geometry2.setAttribute("offsetStart", new InstancedBufferAttribute(offsetStartBuf, 3));
+      geometry2.setAttribute("offsetStop", new InstancedBufferAttribute(offsetStartBuf, 3));
+      geometry2.setAttribute("offsetControl", new InstancedBufferAttribute(offsetControlBuf, 3));
+      geometry2.setAttribute("diameterStartStop", new InstancedBufferAttribute(diameterStartStopBuf, 2));
+      geometry2.setAttribute("timeStartStop", new InstancedBufferAttribute(timeStartStopBuf, 2));
+      geometry2.setAttribute("colorStartStop", new InstancedBufferAttribute(colorStartStopBuf, 2));
+      return geometry2;
+    }
+    function allocateBuffers(count) {
+      const offsetStartBuf2 = new Float32Array(count * 3);
+      const offsetStopBuf2 = new Float32Array(count * 3);
+      const offsetControlBuf2 = new Float32Array(count * 3);
+      const diameterStartStopBuf2 = new Float32Array(count * 2);
+      const timeStartStopBuf2 = new Float32Array(count * 2);
+      const colorStartStopBuf2 = new Uint32Array(count * 2);
+      return [
+        offsetStartBuf2,
+        offsetStopBuf2,
+        offsetControlBuf2,
+        diameterStartStopBuf2,
+        timeStartStopBuf2,
+        colorStartStopBuf2
+      ];
+    }
+    function zeroEndPoint(p) {
+      p.x = 0;
+      p.y = 0;
+      p.z = 0;
+      p.time = 0;
+      p.mass = 0;
+      p.color = 0;
+    }
+    function zeroControlPoint(p) {
+      p.x = 0;
+      p.y = 0;
+      p.z = 0;
+    }
+    function populateBuffers() {
+      for (let i = 0; i < comets.length; i++) {
+        const spot = comets[i];
+        zeroEndPoint(start);
+        zeroEndPoint(stop);
+        zeroControlPoint(control);
+        if (typeof get === "function") get(spot, start, stop, control);
+        offsetStartBuf[i * 3 + 0] = start.x;
+        offsetStartBuf[i * 3 + 1] = start.y;
+        offsetStartBuf[i * 3 + 2] = start.z;
+        offsetStopBuf[i * 3 + 0] = stop.x;
+        offsetStopBuf[i * 3 + 1] = stop.y;
+        offsetStopBuf[i * 3 + 2] = stop.z;
+        offsetControlBuf[i * 3 + 0] = control.x;
+        offsetControlBuf[i * 3 + 1] = control.y;
+        offsetControlBuf[i * 3 + 2] = control.z;
+        diameterStartStopBuf[i + 0] = start.mass;
+        diameterStartStopBuf[i + 1] = stop.mass;
+        colorStartStopBuf[i + 0] = start.color;
+        colorStartStopBuf[i + 1] = stop.color;
+        timeStartStopBuf[i * 2 + 0] = start.time;
+        timeStartStopBuf[i * 2 + 1] = stop.time;
+      }
+    }
+    function updateSpots(newSpots) {
+      comets = newSpots;
+      if (newSpots.length > geometry.instanceCount || newSpots.length < Math.max(320, geometry.instanceCount / 2)) {
+        const newAllocateCount = Math.max(
+          Math.floor(newSpots.length * 1.5),
+          newSpots.length + 300
+        );
+        [
+          offsetStartBuf,
+          offsetStopBuf,
+          offsetControlBuf,
+          diameterStartStopBuf,
+          timeStartStopBuf,
+          colorStartStopBuf
+        ] = allocateBuffers(comets.length);
+        populateBuffers();
+        const oldGeometry = geometry;
+        geometry = createGeometryAndAttributes();
+        geometry.instanceCount = newAllocateCount;
+        mesh.geometry = geometry;
+        oldGeometry.dispose();
+      } else {
+        populateBuffers();
+        geometry.attributes["offset"].needsUpdate = true;
+        geometry.attributes["diameter"].needsUpdate = true;
+        geometry.attributes["startStop"].needsUpdate = true;
+        geometry.attributes["color"].needsUpdate = true;
+      }
+    }
+  }
+
+  // src/webgl/layers/mass-flash-mesh.js
+  function massFlashMesh({ clock: clockArg, flashes, get }) {
     const clock = clockArg || { now: () => Date.now() };
     const dummy = {
       x: 0,
@@ -28942,10 +29218,10 @@ if (edgeAlpha == 0.0) {
       0,
       -0.5
     ]);
-    let offsetBuf = new Float32Array(splashes.length * 4);
-    let diameterBuf = new Float32Array(splashes.length);
-    let extraBuf = new Float32Array(splashes.length * 2);
-    let colorBuf = new Uint32Array(splashes.length);
+    let offsetBuf = new Float32Array(flashes.length * 4);
+    let diameterBuf = new Float32Array(flashes.length);
+    let extraBuf = new Float32Array(flashes.length * 2);
+    let colorBuf = new Uint32Array(flashes.length);
     populateBuffers();
     let geometry = new InstancedBufferGeometry();
     geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
@@ -28953,7 +29229,7 @@ if (edgeAlpha == 0.0) {
     geometry.setAttribute("diameter", new InstancedBufferAttribute(diameterBuf, 1));
     geometry.setAttribute("extra", new InstancedBufferAttribute(extraBuf, 2));
     geometry.setAttribute("color", new InstancedBufferAttribute(colorBuf, 1));
-    geometry.instanceCount = splashes.length;
+    geometry.instanceCount = flashes.length;
     const material = new ShaderMaterial({
       uniforms: {
         time: { value: clock.now() / 1e3 }
@@ -29095,22 +29371,22 @@ if (edgeAlpha == 0.0) {
       material.uniforms["time"].value = clock.now() / 1e3;
     };
     const meshWithUpdates = (
-      /** @type {typeof mesh & { updateSplashes: typeof updateSplashes }} */
+      /** @type {typeof mesh & { updateFlashes: typeof updateFlashes }} */
       mesh
     );
-    meshWithUpdates.updateSplashes = updateSplashes;
+    meshWithUpdates.updateFlashes = updateFlashes;
     return meshWithUpdates;
     function populateBuffers() {
-      for (let i = 0; i < splashes.length; i++) {
-        const splash = splashes[i];
-        dummy.x = splash.x || 0;
-        dummy.y = splash.z || 0;
-        dummy.z = splash.y || 0;
-        dummy.mass = splash.mass || 0;
-        dummy.color = splash.color || 0;
-        dummy.start = splash.start || 0;
-        dummy.stop = splash.stop || 0;
-        if (typeof get === "function") get(splash, dummy);
+      for (let i = 0; i < flashes.length; i++) {
+        const flash = flashes[i];
+        dummy.x = flash.x || 0;
+        dummy.y = flash.z || 0;
+        dummy.z = flash.y || 0;
+        dummy.mass = flash.mass || 0;
+        dummy.color = flash.color || 0;
+        dummy.start = flash.start || 0;
+        dummy.stop = flash.stop || 0;
+        if (typeof get === "function") get(flash, dummy);
         offsetBuf[i * 3 + 0] = dummy.x;
         offsetBuf[i * 3 + 1] = dummy.y;
         offsetBuf[i * 3 + 2] = dummy.z;
@@ -29120,12 +29396,12 @@ if (edgeAlpha == 0.0) {
         extraBuf[i * 2 + 1] = dummy.stop;
       }
     }
-    function updateSplashes(newSplashes) {
-      splashes = newSplashes;
-      if (newSplashes.length > geometry.instanceCount || newSplashes.length < Math.max(320, geometry.instanceCount / 2)) {
+    function updateFlashes(newFlashes) {
+      flashes = newFlashes;
+      if (newFlashes.length > geometry.instanceCount || newFlashes.length < Math.max(320, geometry.instanceCount / 2)) {
         const newAllocateCount = Math.max(
-          Math.floor(newSplashes.length * 1.5),
-          newSplashes.length + 300
+          Math.floor(newFlashes.length * 1.5),
+          newFlashes.length + 300
         );
         offsetBuf = new Float32Array(newAllocateCount * 4);
         diameterBuf = new Float32Array(newAllocateCount);
@@ -29156,21 +29432,46 @@ if (edgeAlpha == 0.0) {
   function trackFirehose({ users, clock }) {
     const MAX_WEIGHT = 0.1;
     const FADE_TIME_MSEC = 4e3;
-    const activeSplashes = [];
-    const mesh = massSplashMesh({
+    const COMET_TIME_MSEC = 500;
+    const activeFlashes = [];
+    const activeComets = [];
+    const flashMesh = massFlashMesh({
       clock: { now: () => clock.nowMSec },
-      splashes: activeSplashes,
-      get: (splash, coords) => {
-        const { user } = splash;
+      flashes: activeFlashes,
+      get: (flash, coords) => {
+        const { user } = flash;
         coords.x = user.x;
         coords.y = user.h;
         coords.z = user.y;
-        coords.mass = splash.weight;
+        coords.mass = flash.weight;
         coords.color = user.colorRGB * 256 | 255;
-        coords.start = splash.start;
-        coords.stop = splash.stop;
+        coords.start = flash.start;
+        coords.stop = flash.stop;
       }
     });
+    const cometMesh = massCometMesh({
+      clock: { now: () => clock.nowMSec },
+      comets: activeComets,
+      get: (comet, start, stop, control) => {
+        const { from, to } = comet;
+        start.x = from.x;
+        start.y = from.h * 1.01;
+        start.z = from.y;
+        start.mass = comet.weight * 0.2;
+        start.color = from.colorRGB * 256 | 255;
+        start.time = comet.start;
+        stop.x = to.x;
+        stop.y = to.h * 1.1;
+        stop.z = to.y;
+        stop.mass = comet.weight;
+        stop.color = start.color;
+        control.x = (start.x + stop.x) / 2;
+        control.y = (start.y + stop.y) * 0.8;
+        control.z = (start.z + stop.z) / 2;
+      }
+    });
+    const group = new Group();
+    group.add(flashMesh, cometMesh);
     const unknownsLastSet = /* @__PURE__ */ new Set();
     const unknownsTotalSet = /* @__PURE__ */ new Set();
     const outcome = {
@@ -29181,47 +29482,68 @@ if (edgeAlpha == 0.0) {
       flashes: 0,
       unknowns: 0,
       unknownsTotal: 0,
-      mesh,
+      mesh: group,
       fallback: false
     };
     firehoseWithFallback({
       post(author, postID, text, replyTo, replyToThread, timeMsec) {
         clock.update();
-        splashShortID(author, 1);
-        replyTo?.shortDID ? splashShortID(replyTo.shortDID, 1) : void 0;
-        replyToThread?.shortDID ? splashShortID(replyToThread.shortDID, 0.5) : void 0;
+        flashShortID(author, 1);
+        if (replyTo?.shortDID) {
+          flashShortID(replyTo.shortDID, 1);
+          cometShortID(author, replyTo.shortDID, 0.5);
+        }
+        ;
+        if (replyToThread?.shortDID) {
+          flashShortID(replyToThread.shortDID, 0.5);
+        }
         outcome.posts++;
       },
       repost(who, whose, postID, timeMsec) {
         clock.update();
-        splashShortID(who, 0.6);
-        splashShortID(whose, 0.7);
+        flashShortID(who, 0.6);
+        flashShortID(whose, 0.7);
+        cometShortID(who, whose, 0.4);
         outcome.reposts++;
       },
       like(who, whose, postID, timeMsec) {
         clock.update();
-        splashShortID(who, 0.1);
-        splashShortID(whose, 0.4);
+        flashShortID(who, 0.1);
+        flashShortID(whose, 0.4);
+        cometShortID(who, whose, 0.2);
         outcome.likes++;
       },
       follow(who, whom, timeMsec) {
         clock.update();
-        splashShortID(who, 0.1);
-        splashShortID(whom, 1.5);
+        flashShortID(who, 0.1);
+        flashShortID(whom, 1.5);
+        cometShortID(who, whom, 2);
         outcome.follows++;
       }
     }, () => {
       outcome.fallback = true;
     });
     return outcome;
-    function splashShortID(shortDID, weight) {
+    function cometShortID(fromShortDID, toShortDID, weight) {
+      const fromUser = users[fromShortDID];
+      const toUser = users[toShortDID];
+      if (!fromUser || !toUser) return;
+      addComet(
+        fromUser,
+        toUser,
+        clock.nowSeconds,
+        clock.nowSeconds + COMET_TIME_MSEC / 1e3,
+        weight
+      );
+    }
+    function flashShortID(shortDID, weight) {
       const user = users[shortDID];
       if (user) {
-        addUser(user, clock.nowSeconds, clock.nowSeconds + FADE_TIME_MSEC / 1e3, weight);
+        addUserFlash(user, clock.nowSeconds, clock.nowSeconds + FADE_TIME_MSEC / 1e3, weight);
       } else {
         if (!outcome.unknowns) {
           unknownsLastSet.clear();
-          updateSplashes();
+          updateFlashes();
         }
         unknownsLastSet.add(shortDID);
         unknownsTotalSet.add(shortDID);
@@ -29229,44 +29551,65 @@ if (edgeAlpha == 0.0) {
         outcome.unknownsTotal = unknownsTotalSet.size;
       }
     }
-    function updateSplashes() {
+    function updateFlashes() {
       outcome.flashes = 0;
-      for (const splash of activeSplashes) {
-        if (splash.start <= clock.nowSeconds && clock.nowSeconds <= splash.stop) {
+      for (const flash of activeFlashes) {
+        if (flash.start <= clock.nowSeconds && clock.nowSeconds <= flash.stop) {
           outcome.flashes++;
         }
       }
     }
-    function addUser(user, start, stop, weight) {
+    function addUserFlash(user, start, stop, weight) {
       const nowSeconds = clock.nowSeconds;
       let gapIndex = -1;
-      let userSplash;
-      for (let i = 0; i < activeSplashes.length; i++) {
-        const splash = activeSplashes[i];
-        if (splash.user === user) {
-          userSplash = splash;
+      let userFlash;
+      for (let i = 0; i < activeFlashes.length; i++) {
+        const flash = activeFlashes[i];
+        if (flash.user === user) {
+          userFlash = flash;
           break;
         }
-        if (nowSeconds > splash.stop) {
+        if (nowSeconds > flash.stop) {
           gapIndex = i;
         }
       }
-      if (userSplash) {
-        userSplash.stop = stop;
-        userSplash.weight = Math.min(MAX_WEIGHT, weight * 0.09 + userSplash.weight);
+      if (userFlash) {
+        userFlash.stop = stop;
+        userFlash.weight = Math.min(MAX_WEIGHT, weight * 0.09 + userFlash.weight);
       } else {
         const normWeight = Math.min(MAX_WEIGHT, weight * 0.09 + user.weight);
         if (gapIndex >= 0) {
-          const reuseSplash = activeSplashes[gapIndex];
-          reuseSplash.user = user;
-          reuseSplash.start = start;
-          reuseSplash.stop = stop;
-          reuseSplash.weight = normWeight;
+          const reuseFlash = activeFlashes[gapIndex];
+          reuseFlash.user = user;
+          reuseFlash.start = start;
+          reuseFlash.stop = stop;
+          reuseFlash.weight = normWeight;
         } else {
-          activeSplashes.push({ user, start, stop, weight: normWeight });
+          activeFlashes.push({ user, start, stop, weight: normWeight });
         }
       }
-      mesh.updateSplashes(activeSplashes);
+      flashMesh.updateFlashes(activeFlashes);
+    }
+    function addComet(fromUser, toUser, start, stop, weight) {
+      const nowSeconds = clock.nowSeconds;
+      let gapIndex = -1;
+      for (let i = 0; i < activeComets.length; i++) {
+        const co = activeComets[i];
+        if (nowSeconds > co.stop) {
+          gapIndex = i;
+        }
+      }
+      const normWeight = Math.min(MAX_WEIGHT, weight * 0.09 + fromUser.weight);
+      if (gapIndex >= 0) {
+        const reuseComet = activeComets[gapIndex];
+        reuseComet.from = fromUser;
+        reuseComet.to = toUser;
+        reuseComet.start = start;
+        reuseComet.stop = stop;
+        reuseComet.weight = normWeight;
+      } else {
+        activeComets.push({ from: fromUser, to: toUser, start, stop, weight: normWeight });
+      }
     }
   }
 

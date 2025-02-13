@@ -83,14 +83,12 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
 
             void main(){
               vPosition = position;
-              vOffset = offset;
-              vDiameter = diameter;
 
             float startTime = min(timeStartStop.x, timeStartStop.y);
             float endTime = max(timeStartStop.x, timeStartStop.y);
             vTimeRatio = (time - startTime) / (endTime - startTime);
 
-            vOffset = quadraticBezier(timeRatio, offsetStart, offsetControl, offsetStop);
+            vOffset = quadraticBezier(vTimeRatio, offsetStart, offsetControl, offsetStop);
 
             uint rIntStart = (colorStartStop.x / uint(256 * 256 * 256)) % uint(256);
             uint gIntStart = (colorStartStop.x / uint(256 * 256)) % uint(256);
@@ -112,12 +110,12 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
               float(bIntStop) / 255.0f,
               float(aIntStop) / 255.0f);
 
-            vColor = mix(colorStart, colorStop, timeRatio);
-            vDiameter = mix(diameterStartStop.x, diameterStartStop.y, timeRatio);
+            vColor = mix(colorStart, colorStop, vTimeRatio);
+            vDiameter = mix(diameterStartStop.x, diameterStartStop.y, vTimeRatio);
 
-            gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1) + vec4(position.xz * abs(diameter), 0, 0));
+            gl_Position = projectionMatrix * (modelViewMatrix * vec4(vOffset, 1) + vec4(position.xz * abs(vDiameter), 0, 0));
 
-            vFogDist = distance(cameraPosition, offset);
+            vFogDist = distance(cameraPosition, vOffset);
 
           }
           `,
@@ -133,7 +131,7 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
             varying float vFogDist;
             varying vec4 vColor;
 
-            varying vTimeRatio;
+            varying float vTimeRatio;
 
             void main() {
               gl_FragColor = vColor;
@@ -159,20 +157,18 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
               gl_FragColor.a = bodyRatio;
 
               vec3 position = vPosition;
-              vec3 offset = vOffset;
               float diameter = vDiameter;
 
               gl_FragColor = tintColor;
 
               float PI = 3.1415926535897932384626433832795;
 
-              float timeRatio = vTimeRatio;
               float step = 0.05;
               float timeFunction =
-                timeRatio < step ? timeRatio / step :
-                timeRatio < step * 2.0 ?
-                  (cos((step * 2.0 - timeRatio) * step * PI) + 1.0) / 4.5 + 0.7 :
-                  (1.0 - (timeRatio - step * 2.0)) / 2.5 + 0.2;
+                vTimeRatio < step ? vTimeRatio / step :
+                vTimeRatio < step * 2.0 ?
+                  (cos((step * 2.0 - vTimeRatio) * step * PI) + 1.0) / 4.5 + 0.7 :
+                  (1.0 - (vTimeRatio - step * 2.0)) / 2.5 + 0.2;
 
               gl_FragColor = tintColor;
 
