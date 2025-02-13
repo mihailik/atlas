@@ -704,13 +704,29 @@ function atlas(invokeType) {
 
       const cursorsJsonPath = require('path').resolve(__dirname, 'db/cursors.json');
       const usersJsonPath = require('path').resolve(__dirname, 'db/users.json');
-      const reportEveryMsec = 15000;
+      const reportEveryMsec = 30000;
 
       async function continueEnrichUsers(users) {
+        let { users: { oneByOne, timestamp } } = JSON.parse(fs.readFileSync(cursorsJsonPath, 'utf8'));
+
         if (!users)
           users = JSON.parse(fs.readFileSync(usersJsonPath, 'utf8'));
 
-        const usersToEnrich = Object.keys(users).filter((shortDID) => !users[shortDID]);
+        console.log('\x1b[31m', { oneByOne }, '\x1b[39m');
+
+        const shortDIDs = Object.keys(users);
+        const usersToEnrichLead = [];
+        const usersToEnrichTail = [];
+        let tailStarted = false;
+        for (const shortDID of shortDIDs) {
+          if (shortDID === oneByOne) tailStarted = true;
+          if (!users[shortDID]) {
+            if (tailStarted) usersToEnrichTail.push(shortDID);
+            else usersToEnrichLead.push(shortDID);
+          }
+        }
+        let usersToEnrich = usersToEnrichTail.concat(usersToEnrichLead);
+
         const agent = api.unauthenticatedAgent();
 
         let totalEnrichedUsers = 0;
@@ -725,9 +741,9 @@ function atlas(invokeType) {
           const did = utils.unwrapShortDID(shortDID);
           //const followRecords = await agent.com.atproto.repo.listRecords({ repo: did, collection: 'app.bsky.graph.follow' });
           const describeProfilePromise = agent.com.atproto.repo.describeRepo({ repo: did })
-            .catch(err => console.log('com.atproto.repo.describeRepo ', shortDID, ' ' + err.message));
+            .catch(err => console.log('    \x1b[31mcom.atproto.repo.describeRepo ', shortDID, ' ' + err.message + '\x1b[39m'));
           const profileRecordsPromise = agent.com.atproto.repo.listRecords({ repo: did, collection: 'app.bsky.actor.profile' })
-            .catch(err => console.log('com.atproto.repo.listRecords ', shortDID, ' ' + err.message));
+            .catch(err => console.log('    \x1b[31mcom.atproto.repo.listRecords ', shortDID, ' ' + err.message + '\x1b[39m'));
 
           const describeProfile = await describeProfilePromise;
           const profileRecords = await profileRecordsPromise;
@@ -736,7 +752,7 @@ function atlas(invokeType) {
             continue;
 
           if (profileRecords.data.records.length > 1) {
-            console.log(profileRecords.data.records.length + ' PROFILE RECORDS FOR ' + shortDID);
+            console.log('    \x1b[31m' + profileRecords.data.records.length + ' PROFILE RECORDS FOR ' + shortDID + '\x1b[39m');
             skippedSinceLastReport++;
             continue;
           }
@@ -765,7 +781,14 @@ function atlas(invokeType) {
                 totalEnrichedUsers + ' in ' + ((now - startTime) / 1000).toFixed(2).replace(/\.?0+$/, '') + 's, ' + (totalEnrichedUsers / (now - startTime) * 1000).toFixed(1).replace(/\.?0+$/, '') + ' per second)' +
                 '\x1b[39m'
               );
+
+              const currentCursorsJson = JSON.parse(fs.readFileSync(cursorsJsonPath, 'utf8'));
+              currentCursorsJson.users.oneByOne = shortDID;
+              currentCursorsJson.users.timestamp = now;
+              fs.writeFileSync(cursorsJsonPath, JSON.stringify(currentCursorsJson, null, 2), 'utf8');
+
               writeUsers(users);
+
               lastReport = now;
               addedSinceLastReport = 0;
               skippedSinceLastReport = 0;
@@ -788,7 +811,7 @@ function atlas(invokeType) {
         const startTime = Date.now();
         let startBatchTime = Date.now();
 
-        console.log({ cursor: listRepos });
+        console.log('\x1b[36m', { listRepos }, '\x1b[39m');
         let totalAddedUsers = 0;
 
         let batchAddedUsers = 0;
@@ -853,7 +876,7 @@ function atlas(invokeType) {
         const startTime = Date.now();
         let startBatchTime = Date.now();
 
-        console.log({ cursor: searchActors });
+        console.log({ searchActors });
         let totalAddedUsers = 0;
 
         let lastReport = Date.now() + Math.random() * reportEveryMsec;
@@ -914,11 +937,11 @@ function atlas(invokeType) {
           Object.keys(users).filter((shortDID) => !users[shortDID]).length + ' raw DID\n' +
           Object.keys(users).filter((shortDID) => users[shortDID]).length + ' populated');
 
-        const finishUserDetails = continueDumpUserDetails(users);
+        //const finishUserDetails = continueDumpUserDetails(users);
         const finishAllUsers = continueDumpAllUsers(users);
         const finishEnrichingUsers = continueEnrichUsers(users);
 
-        await finishUserDetails;
+        //await finishUserDetails;
         await finishAllUsers;
         await finishEnrichingUsers;
       }
