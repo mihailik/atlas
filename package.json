@@ -1,24 +1,22 @@
 {
   "name": "atlas",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "npx esbuild lib/lib.js --outfile=lib.js --bundle",
-    "start": "node index.js"
+    "build": "esbuild --bundle src/index.js --sourcemap --outfile=index.js",
+    "start": "npm run build -- --serve=8304 --servedir=."
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@atproto/api": "^0.7.2",
-    "@atproto/repo": "^0.3.6",
-    "@atproto/xrpc-server": "^0.4.2",
-    "@ipld/car": "^5.2.4",
-    "cbor-x": "^1.5.6",
-    "esbuild": "^0.19.8",
-    "multiformats": "^12.1.3",
-    "three": "^0.159.0",
-    "troika-three-text": "^0.49.0"
+    "bski": "*",
+    "esbuild": "*",
+    "three": "*",
+    "troika-three-text": "*"
+  },
+  "overrides": {
+    "three": "$three"
   }
 }

@@ -58,6 +58,16 @@
         -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
         "Arial Unicode";
     }
+
+    .atlas-init {
+      position: fixed;
+      bottom: 0; left: 0; width: 100%;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 2000ms;
+      z-index: 100;
+    }
+
     input, textarea, button {
       font-family: inherit;
     }
@@ -71,10 +81,21 @@
 
 <body>
 
-  <script src="index.js"></script>
-  <script src="lib.js"></script>
-  <script> atlas("libraries") </script>
-  <script src="../atlas-db-jsonp/users/hot.js" defer async onerror="hot(new Error('Failed to load users list.'))"></script>
-</body>
+  <div class="atlas-init" style="opacity: 0;">
+    <h1>Loading...</h1>
+    <p>Application code and user accounts base is loading.</p>
+  </div>
 
+  <script>
+    setTimeout(function() {
+      document.querySelector('.atlas-init').style.opacity = 1;
+    }, 100);
+  </script>
+
+  <script src="index.js"></script>
+  <script src="../atlas-db-jsonp/users/hot.js" defer async
+    onerror="hot(new Error('Failed to load users list.'))"></script>
+
+
+</body>
 </html>

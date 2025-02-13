@@ -1,0 +1,7 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "three/examples/*": ["../node_modules/three/examples/*"]
+    }
+  }
+}
