@@ -752,6 +752,7 @@ function atlas(invokeType) {
             attribute uint color;
 
             varying vec3 vPosition;
+            varying float vFogDist;
             varying vec4 vColor;
 
             void main(){
@@ -771,6 +772,8 @@ function atlas(invokeType) {
 
               // https://stackoverflow.com/a/22899161/140739
               vColor = vec4(float(rInt) / 255.0f, float(gInt) / 255.0f, float(bInt) / 255.0f, float(aInt) / 255.0f);
+
+              vFogDist = distance(cameraPosition, offset);
             }
           `,
           fragmentShader: `
@@ -778,6 +781,7 @@ function atlas(invokeType) {
 
             varying vec3 vPosition;
             varying vec4 vColor;
+            varying float vFogDist;
 
             void main() {
               gl_FragColor = vColor;
@@ -788,6 +792,11 @@ function atlas(invokeType) {
                 dist < rad ? 1.0 :
                 dist > areola ? 0.0 :
                 (areola - dist) / (areola - rad);
+
+              float fogStart = 0.5;
+              float fogGray = 1.0;
+              float fogRatio = vFogDist < fogStart ? 0.0 : vFogDist > fogGray ? 1.0 : (vFogDist - fogStart) / (fogGray - fogStart);
+              gl_FragColor = mix(gl_FragColor, vec4(1,1,1,0.7), fogRatio);
             }
           `,
           side: THREE.BackSide,
