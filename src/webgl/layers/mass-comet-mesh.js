@@ -91,6 +91,7 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
             vOffset = quadraticBezier(vTimeRatio, offsetStart, offsetControl, offsetStop);
 
             // DEBUG
+            // vOffset = mix(offsetStart, offsetStop, vTimeRatio);
             // vOffset = offsetStart;
 
             uint rIntStart = (colorStartStop.x / uint(256 * 256 * 256)) % uint(256);
@@ -115,6 +116,9 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
 
             vColor = mix(colorStart, colorStop, vTimeRatio);
             vDiameter = mix(diameterStartStop.x, diameterStartStop.y, vTimeRatio);
+            if (vTimeRatio > 1.0 || vTimeRatio < 0.0) {
+              vDiameter = 0.0;
+            }
 
             gl_Position = projectionMatrix * (modelViewMatrix * vec4(vOffset, 1) + vec4(position.xz * abs(vDiameter), 0, 0));
 

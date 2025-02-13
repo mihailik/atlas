@@ -282,8 +282,21 @@ export function renderGeoLabels({ users, tiles, tileDimensionCount, clock }) {
       async function getAvatarCid() {
         try {
           outcome.avatarRequestCount++;
+
+          const plc = await fetch(
+            'https://plc.directory/' + unwrapShortDID(user.shortDID) + '/log/audit'
+          ).then(x => x.json());
+          let pds;
+          for (const entry of plc.reverse()) {
+            const endpoint = entry.operation.services?.atproto_pds?.endpoint;
+            if (endpoint) {
+              pds = endpoint;
+              break;
+            }
+          }
+
           const data = await fetch(
-            'https://bsky.social/xrpc/com.atproto.repo.listRecords?' +
+            (pds || 'https://bsky.social') + '/xrpc/com.atproto.repo.listRecords?' +
             'repo=' + unwrapShortDID(user.shortDID) + '&' +
             'collection=app.bsky.actor.profile').then(x => x.json());
 

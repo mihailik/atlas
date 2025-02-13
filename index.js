@@ -20483,7 +20483,7 @@ void main() {
   }
 
   // package.json
-  var version = "1.1.11";
+  var version = "1.1.12";
 
   // src/webgl/create-dom-layout.js
   function createDOMLayout({ canvas3D, statsElem, userCount }) {
@@ -29006,6 +29006,7 @@ if (edgeAlpha == 0.0) {
             vOffset = quadraticBezier(vTimeRatio, offsetStart, offsetControl, offsetStop);
 
             // DEBUG
+            // vOffset = mix(offsetStart, offsetStop, vTimeRatio);
             // vOffset = offsetStart;
 
             uint rIntStart = (colorStartStop.x / uint(256 * 256 * 256)) % uint(256);
@@ -29030,6 +29031,9 @@ if (edgeAlpha == 0.0) {
 
             vColor = mix(colorStart, colorStop, vTimeRatio);
             vDiameter = mix(diameterStartStop.x, diameterStartStop.y, vTimeRatio);
+            if (vTimeRatio > 1.0 || vTimeRatio < 0.0) {
+              vDiameter = 0.0;
+            }
 
             gl_Position = projectionMatrix * (modelViewMatrix * vec4(vOffset, 1) + vec4(position.xz * abs(vDiameter), 0, 0));
 
@@ -29452,7 +29456,7 @@ if (edgeAlpha == 0.0) {
   function trackFirehose({ users, clock }) {
     const MAX_WEIGHT = 0.1;
     const FADE_TIME_MSEC = 4e3;
-    const COMET_TIME_MSEC = 1e3;
+    const COMET_TIME_MSEC = 600;
     const activeFlashes = [];
     const activeComets = [];
     const flashMesh = massFlashMesh({
@@ -29486,7 +29490,7 @@ if (edgeAlpha == 0.0) {
         stop.mass = comet.weight;
         stop.color = start.color;
         control.x = (start.x + stop.x) / 2;
-        control.y = (start.y + stop.y) * 0.8 + 0.4;
+        control.y = (start.y + stop.y) / 2 - 0.4;
         control.z = (start.z + stop.z) / 2;
       }
     });
@@ -29978,8 +29982,19 @@ if (edgeAlpha == 0.0) {
         async function getAvatarCid() {
           try {
             outcome.avatarRequestCount++;
+            const plc = await fetch(
+              "https://plc.directory/" + unwrapShortDID(user.shortDID) + "/log/audit"
+            ).then((x) => x.json());
+            let pds;
+            for (const entry of plc.reverse()) {
+              const endpoint = entry.operation.services?.atproto_pds?.endpoint;
+              if (endpoint) {
+                pds = endpoint;
+                break;
+              }
+            }
             const data = await fetch(
-              "https://bsky.social/xrpc/com.atproto.repo.listRecords?repo=" + unwrapShortDID(user.shortDID) + "&collection=app.bsky.actor.profile"
+              (pds || "https://bsky.social") + "/xrpc/com.atproto.repo.listRecords?repo=" + unwrapShortDID(user.shortDID) + "&collection=app.bsky.actor.profile"
             ).then((x) => x.json());
             let avatarCid = (
               /** @type {*} */

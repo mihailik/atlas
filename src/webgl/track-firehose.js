@@ -15,7 +15,8 @@ export function trackFirehose({ users, clock }) {
 
   const MAX_WEIGHT = 0.1;
   const FADE_TIME_MSEC = 4000;
-  const COMET_TIME_MSEC = 1000;
+  // DEBUG
+  const COMET_TIME_MSEC = 600;
 
   /** @type {{ user: import('..').UserEntry, start: number, stop: number, weight: number }[]} */
   const activeFlashes = [];
@@ -57,7 +58,7 @@ export function trackFirehose({ users, clock }) {
       stop.color = start.color;
 
       control.x = (start.x + stop.x) / 2;
-      control.y = (start.y + stop.y) * 0.8 + 0.4;
+      control.y = (start.y + stop.y) / 2 - 0.4;
       control.z = (start.z + stop.z) / 2;
     }
   });
