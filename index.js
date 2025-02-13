@@ -2401,6 +2401,11 @@ function atlas(invokeType) {
           }
 
           function retrieveAvatar() {
+            if (!avatarRequestSuccesses && avatarRequestFailures > 5) {
+              avatarRequestQueue.concurrency = 0;
+              return;
+            }
+
             let avatarCidPromise = avatarCids[user.shortDID];
             if (avatarCidPromise === 'none') return;
             if (typeof avatarCidPromise === 'string') return makeAvatarTexture(avatarCidPromise);
