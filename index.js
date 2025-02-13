@@ -1151,7 +1151,7 @@ function atlas(invokeType) {
 
             if (!(clock.nowMSec - lastBottomStatsUpdate < 1000) && domElements.bottomStatusLine) {
               lastBottomStatsUpdate = clock.nowMSec;
-              domElements.bottomStatusLine.update(firehoseTrackingRenderer);
+              domElements.bottomStatusLine.update(firehoseTrackingRenderer, geoLayer);
             }
           }
         }
@@ -1713,10 +1713,12 @@ function atlas(invokeType) {
         }
 
         function createBottomStatusLine() {
-          let flashesSection, flashesElem, likesElem, postsElem, repostsElem, followsElem, unknownsPerSecElem, unknownsTotalElem;
+          let flashesSection, labelsElem, hitTestElem, flashesElem,
+            likesElem, postsElem, repostsElem, followsElem,
+            unknownsPerSecElem, unknownsTotalElem;
 
           let flashStatsHidden = true;
-          const bottomStatusLine = /** @type {HTMLDivElement & { update(outcome) }} */(elem('div', {
+          const bottomStatusLine = /** @type {HTMLDivElement & { update(outcome, labelsOutcome) }} */(elem('div', {
             style: `
                 grid-row: 5;
                 color: #cc903b;
@@ -1747,7 +1749,14 @@ function atlas(invokeType) {
                 pointerEvents: 'all',
                 children: [
                   flashesSection = elem('span', {
-                    children: ['*', flashesElem = elem('span', '0'), ' '],
+                    children: [
+                      elem('span', { opacity: '0.6', textContent: 'L' }),
+                      labelsElem = elem('span', { opacity: '0.8', textContent: '0' }),
+                      elem('span', { opacity: '0.6', textContent: ' H' }),
+                      hitTestElem = elem('span', { opacity: '0.8', textContent: '0' }),
+                      ' *',
+                      flashesElem = elem('span', '0'),
+                      ' '],
                     display: flashStatsHidden ? 'none' : 'inline',
                     color: 'cornflowerblue'
                   }),
@@ -1762,7 +1771,7 @@ function atlas(invokeType) {
                   ' ',
                   elem('span', { textContent: '+', color: '#1ca1a1' }),
                   unknownsPerSecElem = elem('span', { color: 'cyan' }),
-                  elem('span', { textContent: '?/', color: '#1ca1a1' }),
+                  elem('span', { textContent: '/', color: '#1ca1a1' }),
                   unknownsTotalElem = elem('span', { color: 'cyan' }),
                   elem('span', { textContent: '?', color: '#1ca1a1' })
                 ]
@@ -1777,7 +1786,9 @@ function atlas(invokeType) {
           bottomStatusLine.update = update;
           return bottomStatusLine;
 
-          function update(outcome) {
+          function update(outcome, labelsOutcome) {
+            labelsElem.textContent = labelsOutcome.labelCount.toString();
+            hitTestElem.textContent = labelsOutcome.hitTestCount.toString();
             flashesElem.textContent = outcome.flashes.toString();
             likesElem.textContent = outcome.likes.toString();
             postsElem.textContent = outcome.posts.toString();
@@ -2194,7 +2205,7 @@ function atlas(invokeType) {
        */
       function renderGeoLabels({ users, tiles, tileDimensionCount, clock }) {
         const ANIMATE_LENGTH_SEC = 0.7;
-        const MIN_SCREEN_DISTANCE = 0.4;
+        const MIN_SCREEN_DISTANCE = 0.5;
         /**
          * @typedef {ReturnType<typeof createLabel>} LabelInfo
          */
@@ -2217,12 +2228,16 @@ function atlas(invokeType) {
 
         const pBuf = new THREE.Vector3();
 
+        const outcome = {
+          layerGroup,
+          updateWithCamera,
+          labelCount: 0,
+          hitTestCount: 0
+        };
+
         addFixedUsers();
 
-        return {
-          layerGroup,
-          updateWithCamera
-        };
+        return outcome;
 
         function addFixedUsers() {
           const fixedUsers = getFixedUsers();
@@ -2309,6 +2324,8 @@ function atlas(invokeType) {
 
           let xmin, ymin, xmax, ymax;
 
+          outcome.labelCount++;
+
           const text = new troika_three_text.Text();
           text.text = '@' + user.shortHandle;
           text.fontSize = 0.004;
@@ -2368,6 +2385,7 @@ function atlas(invokeType) {
             avatarTexture?.dispose();
             avatarMaterial?.dispose();
             avatarGeometry?.dispose();
+            outcome.labelCount--;
           }
 
           /** @param {THREE.Vector3} cameraPos */
@@ -2516,12 +2534,15 @@ function atlas(invokeType) {
 
         /** @param {THREE.PerspectiveCamera} camera */
         function refreshDynamicLabels(camera) {
+          let numberOfTests = 0;
           const testArgs = /** @type {Parameters<typeof nearestLabel<LabelInfo, { screenX: number, screenY: Number, visible?: boolean }>>[0]} */({
             tileDimensionCount,
             tileX: 0, tileY: 0, testLabel: { screenX: NaN, screenY: NaN },
             tiles: labelsByTiles,
-            isCloseTo: (toLabel, testLabel) =>
-              Math.max(0, MIN_SCREEN_DISTANCE - labelsDistanceTo(toLabel, testLabel)),
+            isCloseTo: (toLabel, testLabel) => {
+              numberOfTests++;
+              return Math.max(0, MIN_SCREEN_DISTANCE - labelsDistanceTo(toLabel, testLabel))
+            },
             isVisible: (label) => label.visible
           });
 
@@ -2587,6 +2608,8 @@ function atlas(invokeType) {
               }
             }
           }
+
+          outcome.hitTestCount = numberOfTests;
         }
 
         /**
