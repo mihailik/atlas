@@ -2403,7 +2403,8 @@ function atlas(invokeType) {
                     // fade out
                     1 - animationPhase;
 
-              text.strokeOpacity = text.outlineOpacity = text.fillOpacity = opacity;
+              text.strokeOpacity = text.outlineOpacity = opacity * opacity;
+              text.fillOpacity = opacity;
               if (lineMaterial && lineMaterial?.opacity !== opacity) {
                 lineMaterial.opacity = opacity;
                 lineMaterial.needsUpdate = true;
