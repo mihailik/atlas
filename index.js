@@ -28895,7 +28895,7 @@ if (edgeAlpha == 0.0) {
   }
 
   // src/webgl/layers/splash-spot-mesh.js
-  function splashSpotMesh({ clock: clockArg, spots, get, fragmentShader, vertexShader }) {
+  function splashSpotMesh({ clock: clockArg, spots, get }) {
     const clock = clockArg || { now: () => Date.now() };
     const dummy = {
       x: 0,
@@ -28971,7 +28971,14 @@ if (edgeAlpha == 0.0) {
 
               vFogDist = distance(cameraPosition, offset);
 
-              ${vertexShader || ""}
+              // this part was kept separate before:
+            float startTime = min(extra.x, extra.y);
+            float endTime = max(extra.x, extra.y);
+            float timeRatio = (time - startTime) / (endTime - startTime);
+            float step = 0.1;
+            float timeFunction = timeRatio < step ? timeRatio / step : 1.0 - (timeRatio - step) * (1.0 - step);
+
+            //gl_Position.y += timeFunction * timeFunction * timeFunction * 0.001;
             }
           `
       ),
@@ -29018,7 +29025,39 @@ if (edgeAlpha == 0.0) {
               float diameter = vDiameter;
               vec2 extra = vExtra;
 
-              ${fragmentShader || ""}
+
+              // this part was kept separate before:
+
+            gl_FragColor = tintColor;
+
+            float PI = 3.1415926535897932384626433832795;
+
+            float startTime = min(extra.x, extra.y);
+            float endTime = max(extra.x, extra.y);
+            float timeRatio = (time - startTime) / (endTime - startTime);
+            float step = 0.05;
+            float timeFunction =
+              timeRatio < step ? timeRatio / step :
+              timeRatio < step * 2.0 ?
+                (cos((step * 2.0 - timeRatio) * step * PI) + 1.0) / 4.5 + 0.7 :
+                (1.0 - (timeRatio - step * 2.0)) / 2.5 + 0.2;
+
+            gl_FragColor = tintColor;
+
+            gl_FragColor.a *= timeFunction;
+
+            // gl_FragColor =
+            //   timeRatio > 1000.0 ? vec4(1.0, 0.7, 1.0, tintColor.a) :
+            //   timeRatio > 1.0 ? vec4(1.0, 0.0, 1.0, tintColor.a) :
+            //   timeRatio > 0.0 ? vec4(0.0, 0.5, 0.5, tintColor.a) :
+            //   timeRatio == 0.0 ? vec4(0.0, 0.0, 1.0, tintColor.a) :
+            //   timeRatio < 0.0 ? vec4(1.0, 0.0, 0.0, tintColor.a) :
+            //   vec4(1.0, 1.0, 0.0, tintColor.a);
+
+            float diagBias = 1.0 - max(abs(vPosition.x), abs(vPosition.z));
+            float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
+            gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra;
+
             }
           `
       ),
@@ -29106,54 +29145,7 @@ if (edgeAlpha == 0.0) {
         coords.color = user.colorRGB * 256 | 255;
         coords.start = splash.start;
         coords.stop = splash.stop;
-      },
-      vertexShader: (
-        /* glsl */
-        `
-            float startTime = min(extra.x, extra.y);
-            float endTime = max(extra.x, extra.y);
-            float timeRatio = (time - startTime) / (endTime - startTime);
-            float step = 0.1;
-            float timeFunction = timeRatio < step ? timeRatio / step : 1.0 - (timeRatio - step) * (1.0 - step);
-
-            //gl_Position.y += timeFunction * timeFunction * timeFunction * 0.001;
-            `
-      ),
-      fragmentShader: (
-        /* glsl */
-        `
-            gl_FragColor = tintColor;
-
-            float PI = 3.1415926535897932384626433832795;
-
-            float startTime = min(extra.x, extra.y);
-            float endTime = max(extra.x, extra.y);
-            float timeRatio = (time - startTime) / (endTime - startTime);
-            float step = 0.05;
-            float timeFunction =
-              timeRatio < step ? timeRatio / step :
-              timeRatio < step * 2.0 ?
-                (cos((step * 2.0 - timeRatio) * step * PI) + 1.0) / 4.5 + 0.7 :
-                (1.0 - (timeRatio - step * 2.0)) / 2.5 + 0.2;
-
-            gl_FragColor = tintColor;
-
-            gl_FragColor.a *= timeFunction;
-
-            // gl_FragColor =
-            //   timeRatio > 1000.0 ? vec4(1.0, 0.7, 1.0, tintColor.a) :
-            //   timeRatio > 1.0 ? vec4(1.0, 0.0, 1.0, tintColor.a) :
-            //   timeRatio > 0.0 ? vec4(0.0, 0.5, 0.5, tintColor.a) :
-            //   timeRatio == 0.0 ? vec4(0.0, 0.0, 1.0, tintColor.a) :
-            //   timeRatio < 0.0 ? vec4(1.0, 0.0, 0.0, tintColor.a) :
-            //   vec4(1.0, 1.0, 0.0, tintColor.a);
-
-            float diagBias = 1.0 - max(abs(vPosition.x), abs(vPosition.z));
-            float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
-            gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra;
-
-            `
-      )
+      }
     });
     const unknownsLastSet = /* @__PURE__ */ new Set();
     const unknownsTotalSet = /* @__PURE__ */ new Set();
@@ -29203,8 +29195,12 @@ if (edgeAlpha == 0.0) {
       if (user) {
         addUser(user, clock.nowSeconds, clock.nowSeconds + FADE_TIME_MSEC / 1e3, weight);
       } else {
+        if (!outcome.unknowns)
+          unknownsLastSet.clear();
         unknownsLastSet.add(shortDID);
         unknownsTotalSet.add(shortDID);
+        outcome.unknowns = unknownsLastSet.size;
+        outcome.unknownsTotal = unknownsTotalSet.size;
       }
     }
     function addUser(user, start, stop, weight) {
