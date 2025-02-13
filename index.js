@@ -784,14 +784,14 @@ function atlas(invokeType) {
 
         handleWindowResizes(camera, renderer);
 
-        trackTouchWithCallback({
-          touchElement: document.body,
-          uxElements: [domElements.titleBar, domElements.subtitleArea, domElements.bottomStatusLine],
-          renderElements: [renderer.domElement, domElements.root],
-          touchCallback: (xy) => {
-            console.log('touch ', xy);
-          }
-        });
+        // trackTouchWithCallback({
+        //   touchElement: document.body,
+        //   uxElements: [domElements.titleBar, domElements.subtitleArea, domElements.bottomStatusLine],
+        //   renderElements: [renderer.domElement, domElements.root],
+        //   touchCallback: (xy) => {
+        //     console.log('touch ', xy);
+        //   }
+        // });
 
         const firehoseTrackingRenderer = trackFirehose({ users, usersBounds, clock });
         scene.add(firehoseTrackingRenderer.mesh);
