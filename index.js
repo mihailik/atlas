@@ -20483,7 +20483,7 @@ void main() {
   }
 
   // package.json
-  var version = "1.1.6";
+  var version = "1.1.7";
 
   // src/webgl/create-dom-layout.js
   function createDOMLayout({ canvas3D, statsElem, userCount }) {
