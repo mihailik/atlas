@@ -189,7 +189,7 @@ function atlas(invokeType) {
 
         let lastTimestamp = 0;
         for (const entry of firehoseJsonObj) {
-          if (!lastTimestamp)
+          if (lastTimestamp)
             await new Promise(resolve => setTimeout(resolve, entry.timestamp - lastTimestamp));
           if (stopped) return;
           lastTimestamp = entry.timestamp;
@@ -253,19 +253,24 @@ function atlas(invokeType) {
       return new Promise((resolve, reject) => {
         /** @type {*} */(window)[funcName] = (data) => {
           delete window[funcName];
+          if (script.parentElement) script.parentElement.removeChild(script);
           resolve(data);
         };
         const script = document.createElement('script');
         script.onerror = (error) => {
           delete window[funcName];
+          if (script.parentElement) script.parentElement.removeChild(script);
           reject(error);
         };
         script.onload = function () {
           setTimeout(() => {
             delete window[funcName];
+            if (script.parentElement) script.parentElement.removeChild(script);
             reject(new Error('jsonp script loaded but no data received'));
           }, 300);
         };
+        script.src = relativePath;
+        document.body.appendChild(script);
       });
     }
   }
@@ -752,7 +757,7 @@ function atlas(invokeType) {
 
           /** @param {number} timePassedSec */
           function tick(timePassedSec) {
-            weight -= timePassedSec * 0.4;
+            weight -= timePassedSec * 0.2;
             if (weight < ballBaseSize) {
               scene.remove(ballMesh);
               delete activeUsers[shortDID];
