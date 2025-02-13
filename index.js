@@ -23,6 +23,7 @@ function atlas(invokeType) {
   *   since?: string;
    * }} FeedRecord */
 
+  // #region api
   const api = (function () {
     const api = {
       unauthenticatedAgent,
@@ -237,7 +238,9 @@ function atlas(invokeType) {
 
     return api;
   })();
+  // #endregion
 
+  // #region shared
   const shared = (function () {
 
     const shared = {
@@ -245,10 +248,23 @@ function atlas(invokeType) {
       subscriptionAsyncIterator,
       fallbackIterator,
       fallbackCachedFirehose,
+      breakFeedUri,
       shortenDID,
       unwrapShortDID,
       shortenHandle
     };
+
+    const uriRegex = /^at\:\/\/(did:plc:)?([a-z0-9]+)\/([a-z\.]+)\/?(.*)?$/;
+
+    /**
+     * @param {string=} uri
+     */
+    function breakFeedUri(uri) {
+      if (!uri) return;
+      const match = uriRegex.exec(uri);
+      if (!match) return;
+      return { shortDID: match[2], type: match[3], id: match[4] };
+    }
 
     /** @param {string} did */
     function shortenDID(did) {
@@ -351,6 +367,7 @@ function atlas(invokeType) {
           for await (const value of await fallbackIterate()) {
             yield value;
           }
+          break;
         }
       }
     }
@@ -419,11 +436,15 @@ function atlas(invokeType) {
 
     return shared;
   })();
+  // #endregion
 
   function runBrowser(invokeType) {
     console.log('browser: ', invokeType);
     if (invokeType === 'init') return;
-    if (invokeType === 'page') showFirehoseConsole();
+    if (invokeType === 'page') firehose3D();
+
+    /** @type {{ [shortDID: string]: string | [handle: string, displayName: string] }} */
+    let userList;
 
     async function showFirehoseConsole() {
       let recycledLast = Date.now();
@@ -444,8 +465,6 @@ function atlas(invokeType) {
 
       document.body.appendChild(firehoseConsoleBoundary);
 
-      /** @type {{ [shortDID: string]: string | [handle: string, displayName: string] }} */
-      let userList;
       {
         const introElement = addDOM();
         introElement.style.display = 'block';
@@ -572,7 +591,200 @@ function atlas(invokeType) {
     }
 
     async function firehose3D() {
+      const view = elem('div', {
+        className: 'firehose-panel-3d', parent: document.body, children: [
+          elem('style', {
+            innerHTML: `
+.like-chip, .follow-chip {
+  display: inline-block;
+  border: solid 1px silver;
+  border-radius: 2em;
+  padding-left: 0.3em;
+  padding-right: 0.36em;
+  padding-bottom: 0.05em;
+  margin: 0.2em;
+}
+
+.user-handle {
+  display: inline-block;
+  opacity: 0.6;
+  zoom: 0.8;
+  transform: scaleY(1.1) translateY(-0.1em);
+}
+
+.post-panel {
+  border: solid 1px silver;
+  border-radius: 0.7em;
+  margin: 0.2em;
+  padding-left: 0.25em;
+  padding-bottom: 0.25em;
+}
+
+          ` })] });
+
+      {
+        const introElement = elem('div', { className: 'firehose-intro', textContent: 'Loading user list...', parentElement: view });
+        const startIntroTime = Date.now();
+        userList = await fetch('../atlas-db/users.json').then(response => response.json());
+        introElement.textContent = 'Loaded ' + Object.keys(userList).length + ' users in ' + (Date.now() - startIntroTime)/1000 + 's.';
+      }
+
+      for await (const record of shared.fallbackIterator(() => api.operationsFirehose(), () => shared.fallbackCachedFirehose())) {
+        const renderRecord = renderRecordHTML(record);
+        if (renderRecord)
+          addFlyingElement(renderRecord);
+      }
+
+      function addFlyingElement(flyingElem) {
+        view.appendChild(flyingElem);
+        setTimeout(() => {
+          if (flyingElem.parentElement) flyingElem.parentElement.removeChild(flyingElem);
+        }, 2000);
+      }
+
     }
+
+    /**
+     * @param {FeedRecord} record
+     */
+    function renderRecordHTML(record) {
+      if (record.action !== 'create') return;
+      const authorElem = renderUserHandle(record?.repo);
+      switch (record?.$type) {
+        case 'app.bsky.feed.like':
+          const post = shared.breakFeedUri(record.subject?.uri);
+          const postAuthorElem = renderUserHandle(post?.shortDID);
+          // TODO: lookup post
+          return elem('span', {
+            className: 'like-chip', children: [
+              elem('span', { className: 'like-author', children: [authorElem] }),
+              elem('span', { className: 'like-icon', textContent: '💓' }),
+              elem('span', { className: 'like-to', children: [postAuthorElem] }),
+            ]
+          });
+
+        case 'app.bsky.graph.follow':
+          const subjectUserElem = renderUserHandle(record.subject);
+          return elem('span', {
+            className: 'follow-chip', children: [
+              elem('span', { className: 'follow-author', children: [authorElem] }),
+              elem('span', { className: 'follow-icon', textContent: '>' }),
+              elem('span', { className: 'follow-of', children: [subjectUserElem] }),
+            ]
+          });
+
+        case 'app.bsky.feed.post':
+          return elem('div', {
+            className: 'post-panel', children: [
+              elem('span', { className: 'post-author', children: [authorElem] }),
+              elem('span', { className: 'post-icon', textContent: '📧' }),
+              elem('div', { className: 'post-text', textContent: record.text }),
+              record.embed && elem('span', { className: 'post-embed', textContent: '📋' })
+            ]
+          });
+
+        case 'app.bsky.feed.repost':
+          const origPost = shared.breakFeedUri(record.subject?.uri);
+          const origPostAuthorElem = renderUserHandle(origPost?.shortDID);
+          // TODO: lookup post
+          return elem('span', {
+            className: 'repost-chip', children: [
+              elem('span', { className: 'repost-author', children: [authorElem] }),
+              elem('span', { className: 'repost-icon', textContent: '🔁' }),
+              elem('span', { className: 'repost-of', children: [origPostAuthorElem] }),
+            ]
+          });
+
+        case 'app.bsky.graph.listitem':
+          break;
+
+        case 'app.bsky.graph.block':
+          break;
+
+        case 'app.bsky.actor.profile':
+          break;
+
+        default:
+          break;
+      }
+
+      /**
+       * @param {string=} did
+       */
+      function renderUserHandle(did) {
+        if (!did) return did;
+        const shortDID = shared.shortenDID(did);
+        const user = userList[shortDID];
+        const handle = typeof user === 'string' ? user : user ? user[0] : undefined;
+        const displayName = user && typeof user !== 'string' ? user[1] : undefined;
+        const shortHandle = handle ? shared.shortenHandle(handle) : undefined;
+
+        if (shortHandle) return elem('span', {
+          className: 'user-handle', title: displayName, children: [
+            elem('span', { className: 'at', textContent: '@' }),
+            elem('span', { className: 'user-handle-label', textContent: shortHandle }),
+          ]
+        });
+        else return elem('span', {
+          className: 'user-handle user-handle-did', title: shortDID !== did ? did : undefined, children: [
+            elem('span', { className: 'hash', textContent: '#' }),
+            elem('span', { className: 'did', textContent: '#' + shortDID.slice(0, 4) }),
+          ]
+        });
+      }
+    }
+
+    /**
+     * @param {TagName} tagName
+     * @param {(Omit<Partial<HTMLElement['style']> & Partial<HTMLElement>, 'children' | 'parent' | 'parentElement'> & { children?: (Element | string | null | void | undefined)[], parent?: Element | null, parentElement?: Element | null  })=} [style]
+     * @template {string} TagName
+     */
+    function elem(tagName, style) {
+      const el = document.createElement(tagName);
+
+      if (style && typeof style.appendChild === 'function') {
+        const tmp = parent;
+        style = /** @type {*} */(parent);
+        parent = tmp;
+      }
+
+      if (typeof style === 'string') {
+        if (/** @type{*} */(style).indexOf(':') >= 0) el.style.cssText = style;
+        else el.className = style;
+      }
+      else if (style) {
+        /** @type {Element | undefined} */
+        let setParent;
+        /** @type {Element[] | undefined} */
+        let appendChildren;
+        for (const key in style) {
+          if (key === 'parent' || key === 'parentElement')
+            setParent = /** @type {*} */(style[key]);
+          else if (key === 'children')
+            appendChildren = /** @type {*} */(style[key]);
+          else if (style[key] == null || typeof style[key] === 'function') continue;
+          if (key in el.style) el.style[key] = /** @type {*} */(style[key]);
+          else if (key in el) el[key] = style[key];
+        }
+
+        if (appendChildren) {
+          for (const child of appendChildren) {
+            if (child == null) continue;
+            if (typeof child === 'string') {
+              const childText = document.createTextNode(child);
+              el.appendChild(childText);
+            } else {
+              el.appendChild(child);
+            }
+          }
+        }
+
+        if (setParent && typeof setParent.appendChild === 'function') setParent.appendChild(el);
+      }
+
+      return /** @type {*} */(el);
+    }
+
   }
 
   async function runNode(invokeType) {
