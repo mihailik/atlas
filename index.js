@@ -1565,7 +1565,7 @@ function atlas(invokeType) {
 
           activeUsers[shortDID] = {
             user,
-            weight: weight * 0.15,
+            weight: weight * 0.12,
             start: nowSec,
             stop: nowSec + FADE_TIME_MSEC / 1000
           };
@@ -2205,6 +2205,7 @@ function atlas(invokeType) {
 
         /** @type {Set<LabelInfo>[]} */
         const labelsByTiles = [];
+        const labelsByShortDID = {};
 
         const pBuf = new THREE.Vector3();
 
@@ -2225,6 +2226,7 @@ function atlas(invokeType) {
             const tileIndex = xTileIndex + yTileIndex * tileDimensionCount;
             const tileBucket = labelsByTiles[tileIndex] || (labelsByTiles[tileIndex] = new Set());
             tileBucket.add(label);
+            labelsByShortDID[label] = label;
             layerGroup.add(label.group);
           }
         }
@@ -2462,6 +2464,7 @@ function atlas(invokeType) {
                 tileBucket.delete(label);
                 layerGroup.remove(label.group);
                 label.dispose();
+                delete labelsByShortDID[label.user.shortDID];
               }
             }
           }
@@ -2529,6 +2532,7 @@ function atlas(invokeType) {
 
               testArgs.testLabel = {screenX: NaN, screenY: NaN };
               for (const user of allTileUsers) {
+                if (labelsByShortDID[user.shortDID]) continue;
                 pBuf.set(user.x, user.h, user.y);
                 pBuf.project(camera);
 
@@ -2726,7 +2730,7 @@ function atlas(invokeType) {
             offsetBuf[i * 3 + 0] = user.x;
             offsetBuf[i * 3 + 1] = user.h;
             offsetBuf[i * 3 + 2] = user.y;
-            diameterBuf[i] = weight, user.weight;
+            diameterBuf[i] = weight || user.weight;
             colorBuf[i] = user.colorRGB * 256 | 0xFF;
             extraBuf[i * 2 + 0] = start;
             extraBuf[i * 2 + 1] = stop;
