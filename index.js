@@ -661,6 +661,7 @@ function atlas(invokeType) {
             },
             userColorer: defaultUserColorer
           });
+          mesh.frustrumCulled = false;
           scene.add(mesh);
           return mesh;
         }
