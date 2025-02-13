@@ -1471,8 +1471,9 @@ function atlas(invokeType) {
               ' ',
               elem('span', { textContent: '+', color: '#1ca1a1' }),
               unknownsPerSecElem = elem('span', { color: 'cyan' }),
-              elem('span', { textContent: '/', color: '#1ca1a1' }),
-              unknownsTotalElem = elem('span', { color: 'cyan' })
+              elem('span', { textContent: '?/', color: '#1ca1a1' }),
+              unknownsTotalElem = elem('span', { color: 'cyan' }),
+              elem('span', { textContent: '?', color: '#1ca1a1' })
             ]
           }));
           bottomStatusLine.addEventListener('click', () => {
