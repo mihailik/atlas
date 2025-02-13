@@ -883,12 +883,12 @@ function atlas(invokeType) {
       }
 
       function appendToDOM() {
-        let title, titleBar, rightStatus, searchMode;
+        let title, titleBar, subtitleArea, rightStatus, searchMode;
         const root = elem('div', {
           parent: document.body,
           style: `
           position: fixed; left: 0; top: 0; width: 100%; height: 100%;
-          display: grid; grid-template-rows: auto 1fr; grid-template-columns: 1fr;
+          display: grid; grid-template-rows: auto auto 1fr; grid-template-columns: 1fr;
           `,
           children: [
             renderer.domElement,
@@ -947,7 +947,8 @@ function atlas(invokeType) {
                   `
                 })
               ]
-            })
+            }),
+            subtitleArea = elem('div', 'color: gold; z-index: 200; position: relative;')
           ]
         });
         renderer.domElement.style.cssText = `
@@ -958,7 +959,7 @@ function atlas(invokeType) {
         stats.domElement.style.position = 'relative';
 
         const status = createStatusRenderer(rightStatus);
-        return { root, titleBar, title, rightStatus, status };
+        return { root, titleBar, subtitleArea, title, rightStatus, status };
 
         /** @param {HTMLElement} rightStatus */
         function createStatusRenderer(rightStatus) {
@@ -1000,7 +1001,10 @@ function atlas(invokeType) {
           }
         }
 
-        var searchBar, searchInput;
+        /** @type {HTMLElement} */
+        var searchBar;
+        /** @type {HTMLInputElement} */
+        var searchInput;
         function switchToSearch() {
           if (!searchBar) {
             searchBar = elem('div', {
@@ -1012,17 +1016,175 @@ function atlas(invokeType) {
                   position: relative;
                   left: 0; top: 0; width: 100%; height: 100%;
                   background: transparent;
-                  color: white;
+                  color: gold;
                   border: none;
                   outline: none;
                   `,
+                  onkeydown: handleInputEventQueue,
+                  onkeyup: handleInputEventQueue,
+                  onkeypress: handleInputEventQueue,
+                  onmousedown: handleInputEventQueue,
+                  onmouseup: handleInputEventQueue,
+                  onmouseleave: handleInputEventQueue,
+                  onchange: handleInputEventQueue,
+                  oninput: handleInputEventQueue,
                   placeholder: '    find accounts...'
                 })
               ]
             });
           }
-          searchBar.display = 'block';
+          searchBar.style.display = 'block';
           searchInput.focus();
+        }
+
+        var debounceTimeoutSearchInput;
+        /** @param {Event} event */
+        function handleInputEventQueue(event) {
+          clearTimeout(debounceTimeoutSearchInput);
+          debounceTimeoutSearchInput = setTimeout(handleInputEventDebounced, 200);
+        }
+
+        var latestSearchInputApplied;
+        function handleInputEventDebounced() {
+          const currentSearchInputStr = (searchInput.value || '').trim();
+          if (currentSearchInputStr === latestSearchInputApplied) return;
+
+          console.log('search to run: ', currentSearchInputStr);
+          latestSearchInputApplied = currentSearchInputStr;
+          applySearchText(currentSearchInputStr);
+        }
+
+        /** @param {string} searchText */
+        function applySearchText(searchText) {
+          if (!searchText) {
+            reportNoMatches();
+            return;
+          }
+
+          const searchWordRegExp = new RegExp(
+            searchText.split(/\s+/)
+              // sort longer words match first
+              .sort((w1, w2) => w2.length - w1.length || (w1 > w2 ? 1 : w1 < w2 ? -1 : 0))
+              // generate a regexp out of word
+              .map(word => '(' + word.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&') + ')')
+              .join('|'),
+            'gi');
+
+          const searchLetters = [...new Set([...searchText.toLowerCase()].map(l => /[a-z]/i.test(l) ? l : ''))];
+          const searchLettersRegExp = searchLetters?.length ? new RegExp(searchLetters.join('|'), 'gi') : undefined;
+
+          /** @type {[shortDID: string, rank: number][]} */
+          const matches = [];
+          for (const shortDID in users) {
+            const usrTuple = users[shortDID];
+            const shortHandle = usrTuple[0];
+            const displayName = usrTuple[4];
+
+            let matchRank = 0;
+
+            if (displayName) {
+              searchWordRegExp.lastIndex = 0;
+              while (true) {
+                const match = searchWordRegExp.exec(displayName);
+                if (!match) break;
+                matchRank += match[0].length * 2;
+              }
+            }
+
+            searchWordRegExp.lastIndex = 0;
+            while (true) {
+              const match = searchWordRegExp.exec(shortHandle);
+              if (!match) break;
+              matchRank += match[0].length * 2;
+            }
+
+            if (matchRank) matches.push([shortDID, matchRank]);
+          }
+
+          matches.sort((m1, m2) => m2[1] - m1[1]);
+          if (!matches) {
+            reportNoMatches();
+          } else {
+            reportMatches(matches);
+          }
+        }
+
+        function reportNoMatches() {
+          subtitleArea.textContent = 'No matches.';
+        }
+
+        /**
+         * @param {[shortDID: string, rank: number][]} matches
+         */
+        function reportMatches(matches) {
+          subtitleArea.innerHTML = '';
+          let scroller;
+          const scrollerWrapper = elem('div', {
+            parent: subtitleArea,
+            style: `
+            position: absolute;
+            width: 100%;
+            height: 2em;
+            overflow: hidden;
+            font-size: 80%;
+            `,
+            children: [scroller = elem('div', {
+              parent: subtitleArea,
+              style: `
+            position: absolute;
+            overflow: auto;
+            white-space: nowrap;
+            width: 100%;
+            height: 3.5em;
+            `
+            })
+            ]
+          });
+
+          for (let iMatch = 0; iMatch < Math.min(10, matches.length); iMatch++) {
+            const shortDID = matches[iMatch][0];
+            const usrTuple = users[shortDID];
+            const shortHandle = usrTuple[0];
+            const displayName = usrTuple[4];
+            const xSpace = usrTuple[1];
+            const ySpace = usrTuple[2];
+
+            const matchElem = elem('span', {
+              parent: scroller,
+              style: `
+                margin-left: 0.3em;
+                padding: 0px 0.2em 0.1em;
+                cursor: pointer;
+                display: -webkit-inline-box;
+                border: 1px solid rgb(255 215 0 / 28%);
+                border-radius: 1em;
+                background: #ffd70029;
+              `,
+              children: [
+                elem('span', {
+                  textContent: shortHandle,
+                  children: !displayName ? undefined : [
+                    elem('span', {
+                      textContent: ' ' + displayName,
+                      style: `
+                      opacity: 0.6;
+                      `
+                    })
+                  ]
+                })
+              ]
+            });
+
+            matchElem.addEventListener('click', () => {
+              const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, userBounds);
+              const r = Math.sqrt(x * x + y * y);
+              const angle = Math.atan2(y, x);
+              const xPlus = (r + 0.001) * Math.cos(angle);
+              const yPlus = (r + 0.001) * Math.sin(angle);
+              camera.position.set(xPlus, h + 0.0005, yPlus);
+              switchToSearch();
+            });
+          }
         }
 
       }
