@@ -475,11 +475,13 @@ function atlas(invokeType) {
           const [shortHandle, x, y] = users[shortDID];
 
           // offsets
-          const xRatiod = (x - bounds.x.min) / (bounds.x.max - bounds.x.min);
-          const yRatiod = (y - bounds.y.min) / (bounds.y.max - bounds.y.min);
+          const xRatiod = (x - bounds.x.min) / (bounds.x.max - bounds.x.min) - 0.5;
+          const yRatiod = (y - bounds.y.min) / (bounds.y.max - bounds.y.min) - 0.5;
           const r = Math.sqrt(xRatiod * xRatiod + yRatiod * yRatiod);
+          let h = (1 - r * r) * 0.3 - 0.2;
+          //if (r > 0.7 && h < 0.9) h = 1;
 
-          offsets.push(xRatiod - 0.5, (1 - r * r) * 0.2, yRatiod - 0.5);
+          offsets.push(xRatiod, h, yRatiod);
 
           // colors
           colors.push(Math.random(), Math.random(), Math.random(), Math.random());
