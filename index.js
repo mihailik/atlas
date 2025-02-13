@@ -777,18 +777,25 @@ function atlas(invokeType) {
 
         function flashesRenderer() {
           const rend = billboardShaderRenderer({
+            vertexShader: /* glsl */`
+            float startTime = min(extra.x, extra.y);
+            float endTime = max(extra.x, extra.y);
+            float timeRatio = (time - startTime) / (endTime - startTime);
+            float step = 0.1;
+            float timeFunction = timeRatio < step ? timeRatio / step : 1.0 - (timeRatio - step) * (1.0 - step);
+
+            gl_Position.y += timeFunction * timeFunction * timeFunction * 0.01;
+            `,
             fragmentShader: /* glsl */`
             gl_FragColor = tintColor;
 
             float startTime = min(extra.x, extra.y);
             float endTime = max(extra.x, extra.y);
             float timeRatio = (time - startTime) / (endTime - startTime);
+            float step = 0.1;
+            float timeFunction = timeRatio < step ? timeRatio / step : 1.0 - (timeRatio - step) * (1.0 - step);
 
             gl_FragColor = tintColor;
-
-            float step = 0.1;
-
-            float timeFunction = timeRatio < step ? timeRatio / step : 1.0 - (timeRatio - step) * (1.0 - step);
 
             gl_FragColor.a *= timeFunction * timeFunction * timeFunction;
 
@@ -977,11 +984,12 @@ function atlas(invokeType) {
        *  userKeys: K[];
        *  userMapper(i: K, pos: THREE.Vector4, extra: THREE.Vector4): void;
        *  userColorer(i: K): number;
-       *  fragmentShader: string;
+       *  fragmentShader?: string;
+       *  vertexShader?: string;
        * }} _ 
        * @template K
        */
-      function billboardShaderRenderer({ userKeys, userMapper, userColorer, fragmentShader }) {
+      function billboardShaderRenderer({ userKeys, userMapper, userColorer, fragmentShader, vertexShader }) {
         const baseHalf = 1.5 * Math.tan(Math.PI / 6);
         let positions = new Float32Array([
           -baseHalf, 0, -0.5,
@@ -1045,6 +1053,8 @@ function atlas(invokeType) {
               vColor = vec4(float(rInt) / 255.0f, float(gInt) / 255.0f, float(bInt) / 255.0f, float(aInt) / 255.0f);
 
               vFogDist = distance(cameraPosition, offset);
+
+              ${vertexShader || ''}
             }
           `,
           fragmentShader: /* glsl */`
@@ -1086,7 +1096,7 @@ function atlas(invokeType) {
               float diameter = vDiameter;
               vec4 extra = vExtra;
 
-              ${fragmentShader}
+              ${fragmentShader || ''}
             }
           `,
           side: THREE.BackSide,
