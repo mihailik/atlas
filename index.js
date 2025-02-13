@@ -152,19 +152,37 @@ function atlas(invokeType) {
 
   /** @type {typeof firehose} */
   function firehoseWithFallback(callbacks) {
+    let websocketLikesProcessed = 0;
     /** @type {ReturnType<typeof firehose> | undefined} */
     let fallbackHose;
     /** @type {ReturnType<typeof firehose> | undefined} */
-    let websocketHose = firehose({
-      ...callbacks,
-      error: (errorWebSocket) => {
-        websocketHose?.stop();
-        websocketHose = undefined;
-        fallbackHose = firehoseWithFallback.fallbackFirehose(callbacks);
-      }
-    });
+    let websocketHose = startWebsocketHose();
 
     return { stop };
+
+    function startWebsocketHose() {
+      return firehose({
+        like: (who, whose, postID, timeMsec) => {
+          const result = callbacks.like?.(who, whose, postID, timeMsec);
+          websocketLikesProcessed++;
+          return result;
+        },
+        ...callbacks,
+        error: (errorWebSocket) => {
+          if (websocketLikesProcessed) {
+            websocketHose?.stop();
+            websocketHose = undefined;
+            setTimeout(() => {
+              websocketHose = startWebsocketHose();
+            }, 400 + Math.random() * 500);
+          } else {
+            websocketHose?.stop();
+            websocketHose = undefined;
+            fallbackHose = firehoseWithFallback.fallbackFirehose(callbacks);
+          }
+        }
+      });
+    }
 
     function stop() {
       websocketHose?.stop();
@@ -193,14 +211,16 @@ function atlas(invokeType) {
         }
         let now = Date.now();
 
-        let lastTimestamp = 0;
-        for (const entry of firehoseJsonObj) {
-          if (lastTimestamp)
-            await new Promise(resolve => setTimeout(resolve, entry.timestamp - lastTimestamp));
-          if (stopped) return;
-          lastTimestamp = entry.timestamp;
+        while (true) {
+          let lastTimestamp = 0;
+          for (const entry of firehoseJsonObj) {
+            if (lastTimestamp)
+              await new Promise(resolve => setTimeout(resolve, entry.timestamp - lastTimestamp));
+            if (stopped) return;
+            lastTimestamp = entry.timestamp;
 
-          handleMessage(entry);
+            handleMessage(entry);
+          }
         }
 
         function handleMessage(entry) {
@@ -1071,7 +1091,9 @@ function atlas(invokeType) {
             const newSize = Math.max(userColors.length * 2, userKeys.length);
             userOffsets = new Float32Array(newSize * 3);
             userSizes = new Float32Array(newSize);
-            userColors = new Uint32Array(userKeys.length);
+            userColors = new Uint32Array(newSize);
+            userStartMsec = new Float32Array(newSize);
+            userStopMsec = new Float32Array(newSize);
 
             geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(userOffsets, 3));
             geometry.attributes['offset'].needsUpdate = true;
@@ -1092,7 +1114,28 @@ function atlas(invokeType) {
           if (startMsecChanged) geometry.attributes['userStartMsec'].needsUpdate = true;
           if (stopMsecChanged) geometry.attributes['userStopMsec'].needsUpdate = true;
 
-          offsetsChanged = sizesChanged = colorsChanged = false;
+          if (offsetsChanged ||
+            sizesChanged ||
+            colorsChanged ||
+            startMsecChanged ||
+            stopMsecChanged) {
+            console.log('changed: ' +
+              (offsetsChanged ? 'o' : ' ') +
+              (sizesChanged ? 's' : ' ') +
+              (colorsChanged ? 'c' : ' ') +
+              (startMsecChanged ? '<' : ' ') +
+              (stopMsecChanged ? '>' : ' '),
+              ' ',
+              userKeys.length
+            );
+          }
+
+          offsetsChanged =
+            sizesChanged =
+            colorsChanged =
+            startMsecChanged =
+            stopMsecChanged =
+            false;
 
           geometry.instanceCount = userKeys.length;
         }
