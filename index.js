@@ -691,10 +691,9 @@ function atlas(invokeType) {
           function renderFrame() {
             clock.update();
 
-            const now = Date.now();
             let rareMoved = false;
-            if (!lastCameraPos || !(now < lastCameraUpdate + 200)) {
-              lastCameraUpdate = now;
+            if (!lastCameraPos || !(clock.nowMSec < lastCameraUpdate + 200)) {
+              lastCameraUpdate = clock.nowMSec;
               if (!lastCameraPos) lastCameraPos = {
                 x: NaN, y: NaN, z: NaN
               };
@@ -711,15 +710,15 @@ function atlas(invokeType) {
 
             if (!lastVibeCameraPos) {
               lastVibeCameraPos = camera.position.clone();
-              lastVibeTime = now;
+              lastVibeTime = clock.nowMSec;
             } else {
               const vibeDist = Math.sqrt(
                 (camera.position.x - lastVibeCameraPos.x) * (camera.position.x - lastVibeCameraPos.x) +
                 (camera.position.y - lastVibeCameraPos.y) * (camera.position.y - lastVibeCameraPos.y) +
                 (camera.position.z - lastVibeCameraPos.z) * (camera.position.z - lastVibeCameraPos.z));
-              if (Number.isFinite(vibeDist) && vibeDist > 0.1 && (now - lastVibeTime) > 200) {
+              if (Number.isFinite(vibeDist) && vibeDist > 0.1 && (clock.nowMSec - lastVibeTime) > 200) {
                 lastVibeCameraPos.copy(camera.position);
-                lastVibeTime = now;
+                lastVibeTime = clock.nowMSec;
                 try {
                   if (typeof navigator.vibrate === 'function') {
                     navigator.vibrate(30);
@@ -730,8 +729,8 @@ function atlas(invokeType) {
             }
 
             stats.begin();
-            const delta = lastRender ? now - lastRender : 0;
-            lastRender = now;
+            const delta = lastRender ? clock.nowMSec - lastRender : 0;
+            lastRender = clock.nowMSec;
             orbit.controls.update(Math.min(delta / 1000, 0.2));
             fh.tickAll(delta / 1000);
             // shaderState.updateOnFrame(rareMoved);
@@ -747,8 +746,8 @@ function atlas(invokeType) {
               location.hash = '#' + camera.position.x.toFixed(2) + ',' + camera.position.y.toFixed(2) + ',' + camera.position.z.toFixed(2);
             }
 
-            if (!(now - lastBottomStatsUpdate < 1000) && domElements.bottomStatusLine) {
-              lastBottomStatsUpdate = now;
+            if (!(clock.nowMSec - lastBottomStatsUpdate < 1000) && domElements.bottomStatusLine) {
+              lastBottomStatsUpdate = clock.nowMSec;
               domElements.bottomStatusLine.update(fh);
             }
           }
