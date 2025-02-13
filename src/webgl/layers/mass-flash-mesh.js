@@ -231,7 +231,7 @@ export function massFlashMesh({ clock: clockArg, flashes, get }) {
 */
   function updateFlashes(newFlashes) {
     flashes = newFlashes;
-    if (newFlashes.length > geometry.instanceCount || newFlashes.length < Math.max(320, geometry.instanceCount / 2)) {
+    if (newFlashes.length > geometry.instanceCount || Math.max(320, newFlashes.length) < geometry.instanceCount / 2) {
       const newAllocateCount = Math.max(
         Math.floor(newFlashes.length * 1.5),
         newFlashes.length + 300);

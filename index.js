@@ -29003,7 +29003,9 @@ if (edgeAlpha == 0.0) {
             float endTime = max(timeStartStop.x, timeStartStop.y);
             vTimeRatio = (time - startTime) / (endTime - startTime);
 
-            vOffset = quadraticBezier(vTimeRatio, offsetStart, offsetControl, offsetStop);
+            float distanceTimeFunction = sqrt(sqrt(vTimeRatio));
+
+            vOffset = quadraticBezier(distanceTimeFunction, offsetStart, offsetControl, offsetStop);
 
             // DEBUG
             // vOffset = mix(offsetStart, offsetStop, vTimeRatio);
@@ -29031,6 +29033,8 @@ if (edgeAlpha == 0.0) {
 
             vColor = mix(colorStart, colorStop, vTimeRatio);
             vDiameter = mix(diameterStartStop.x, diameterStartStop.y, vTimeRatio);
+
+            // DEBUG?
             if (vTimeRatio > 1.0 || vTimeRatio < 0.0) {
               vDiameter = 0.0;
             }
@@ -29085,24 +29089,31 @@ if (edgeAlpha == 0.0) {
 
               gl_FragColor = tintColor;
 
-              float PI = 3.1415926535897932384626433832795;
-
-              float step = 0.05;
+              float stepIn = 0.05;
+              float stepOut = 0.01;
               float timeFunction =
-                vTimeRatio < step ? vTimeRatio / step :
-                vTimeRatio < step * 2.0 ?
-                  (cos((step * 2.0 - vTimeRatio) * step * PI) + 1.0) / 4.5 + 0.7 :
-                  (1.0 - (vTimeRatio - step * 2.0)) / 2.5 + 0.2;
+                vTimeRatio < stepIn ? vTimeRatio / stepIn :
+                1.0 - vTimeRatio < stepOut ? (vTimeRatio - 1.0) / stepOut :
+                1.0;
 
               gl_FragColor = tintColor;
 
               gl_FragColor.a *= timeFunction;
+
+              // vec2 posR = vec2(vPosition.x, vPosition.z);
+              // float angle = vTimeRatio * 3.14159 * 2.0;
+              // mat2 rotationMatrix = mat2(
+              //   cos(angle), -sin(angle),
+              //   sin(angle), cos(angle)
+              // );
+              // vec2 posRotated = rotationMatrix * posR;
 
               float diagBias = 1.0 - max(abs(vPosition.x), abs(vPosition.z));
               float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
               gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra;
 
               // DEBUG
+              // gl_FragColor = vec4(mix(1.0, 0.0, vTimeRatio), 0.0, mix(0.0, 1.0, vTimeRatio), 1.0);
               // gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
 
             }
@@ -29127,7 +29138,7 @@ if (edgeAlpha == 0.0) {
       const geometry2 = new InstancedBufferGeometry();
       geometry2.setAttribute("position", new Float32BufferAttribute(positions, 3));
       geometry2.setAttribute("offsetStart", new InstancedBufferAttribute(offsetStartBuf, 3));
-      geometry2.setAttribute("offsetStop", new InstancedBufferAttribute(offsetStartBuf, 3));
+      geometry2.setAttribute("offsetStop", new InstancedBufferAttribute(offsetStopBuf, 3));
       geometry2.setAttribute("offsetControl", new InstancedBufferAttribute(offsetControlBuf, 3));
       geometry2.setAttribute("diameterStartStop", new InstancedBufferAttribute(diameterStartStopBuf, 2));
       geometry2.setAttribute("timeStartStop", new InstancedBufferAttribute(timeStartStopBuf, 2));
@@ -29189,7 +29200,7 @@ if (edgeAlpha == 0.0) {
     }
     function updateComets(newSpots) {
       comets = newSpots;
-      if (newSpots.length > geometry.instanceCount || newSpots.length < Math.max(320, geometry.instanceCount / 2)) {
+      if (newSpots.length > geometry.instanceCount || Math.max(320, newSpots.length) < geometry.instanceCount / 2) {
         const newAllocateCount = Math.max(
           Math.floor(newSpots.length * 1.5),
           newSpots.length + 300
@@ -29210,10 +29221,12 @@ if (edgeAlpha == 0.0) {
         oldGeometry.dispose();
       } else {
         populateBuffers();
-        geometry.attributes["offset"].needsUpdate = true;
-        geometry.attributes["diameter"].needsUpdate = true;
-        geometry.attributes["startStop"].needsUpdate = true;
-        geometry.attributes["color"].needsUpdate = true;
+        geometry.attributes["offsetStart"].needsUpdate = true;
+        geometry.attributes["offsetStop"].needsUpdate = true;
+        geometry.attributes["offsetControl"].needsUpdate = true;
+        geometry.attributes["diameterStartStop"].needsUpdate = true;
+        geometry.attributes["timeStartStop"].needsUpdate = true;
+        geometry.attributes["colorStartStop"].needsUpdate = true;
       }
     }
   }
@@ -29422,7 +29435,7 @@ if (edgeAlpha == 0.0) {
     }
     function updateFlashes(newFlashes) {
       flashes = newFlashes;
-      if (newFlashes.length > geometry.instanceCount || newFlashes.length < Math.max(320, geometry.instanceCount / 2)) {
+      if (newFlashes.length > geometry.instanceCount || Math.max(320, newFlashes.length) < geometry.instanceCount / 2) {
         const newAllocateCount = Math.max(
           Math.floor(newFlashes.length * 1.5),
           newFlashes.length + 300
@@ -29456,7 +29469,7 @@ if (edgeAlpha == 0.0) {
   function trackFirehose({ users, clock }) {
     const MAX_WEIGHT = 0.1;
     const FADE_TIME_MSEC = 4e3;
-    const COMET_TIME_MSEC = 600;
+    const COMET_TIME_MSEC = 1e3;
     const activeFlashes = [];
     const activeComets = [];
     const flashMesh = massFlashMesh({
@@ -29479,18 +29492,19 @@ if (edgeAlpha == 0.0) {
       get: (comet, start, stop, control) => {
         const { from, to } = comet;
         start.x = from.x;
-        start.y = from.h * 1.01;
+        start.y = from.h;
         start.z = from.y;
-        start.mass = comet.weight * 0.2;
+        start.mass = comet.weight * 2;
         start.color = from.colorRGB * 256 | 255;
         start.time = comet.start;
         stop.x = to.x;
-        stop.y = to.h * 1.1;
+        stop.y = to.h;
         stop.z = to.y;
-        stop.mass = comet.weight;
+        stop.mass = comet.weight * 3;
         stop.color = start.color;
+        stop.time = comet.stop;
         control.x = (start.x + stop.x) / 2;
-        control.y = (start.y + stop.y) / 2 - 0.4;
+        control.y = (start.y + stop.y) / 2 + 0.05;
         control.z = (start.z + stop.z) / 2;
       }
     });
@@ -29555,9 +29569,9 @@ if (edgeAlpha == 0.0) {
     function cometShortID(fromShortDID, toShortDID, weight) {
       const fromUser = users[fromShortDID];
       const toUser = users[toShortDID];
-      if (!fromUser || !toUser) return;
+      if (!toUser) return;
       addComet(
-        fromUser,
+        fromUser || fromShortDID,
         toUser,
         clock.nowSeconds,
         clock.nowSeconds + COMET_TIME_MSEC / 1e3,
@@ -29636,16 +29650,29 @@ if (edgeAlpha == 0.0) {
           gapIndex = i;
         }
       }
-      const normWeight = Math.min(MAX_WEIGHT, weight * 0.09 + fromUser.weight);
+      let fromUserOrUnknown;
+      if (typeof fromUser === "string") {
+        const toRadius = distance2D(toUser.x, toUser.y, 0, 0);
+        fromUserOrUnknown = {
+          x: toUser.x / toRadius * 1.3,
+          y: toUser.y / toRadius * 1.3,
+          h: toUser.h - 0.1,
+          colorRGB: rndUserColorer(fromUser),
+          weight: toUser.weight * 0.7
+        };
+      } else {
+        fromUserOrUnknown = fromUser;
+      }
+      const normWeight = Math.min(MAX_WEIGHT, weight * 0.09 + fromUserOrUnknown.weight) * 5;
       if (gapIndex >= 0) {
         const reuseComet = activeComets[gapIndex];
-        reuseComet.from = fromUser;
+        reuseComet.from = fromUserOrUnknown;
         reuseComet.to = toUser;
         reuseComet.start = start;
         reuseComet.stop = stop;
         reuseComet.weight = normWeight;
       } else {
-        activeComets.push({ from: fromUser, to: toUser, start, stop, weight: normWeight });
+        activeComets.push({ from: fromUserOrUnknown, to: toUser, start, stop, weight: normWeight });
       }
       cometMesh.updateComets(activeComets);
     }
@@ -29768,6 +29795,7 @@ if (edgeAlpha == 0.0) {
   function renderGeoLabels({ users, tiles, tileDimensionCount, clock }) {
     const ANIMATE_LENGTH_SEC = 0.7;
     const MIN_SCREEN_DISTANCE = 0.5;
+    const MAX_LABELS = 120;
     const avatarTextureLoader = new TextureLoader();
     const avatarRequestQueue = createThrottledQueue(3, 300);
     let avatarRequestSuccesses = 0;
@@ -30078,6 +30106,7 @@ if (edgeAlpha == 0.0) {
           isVisible: (label) => label.visible
         }
       );
+      let labelOverflow = false;
       for (let xIndex = 0; xIndex < tileDimensionCount; xIndex++) {
         for (let yIndex = 0; yIndex < tileDimensionCount; yIndex++) {
           const tileIndex = xIndex + yIndex * tileDimensionCount;
@@ -30118,6 +30147,10 @@ if (edgeAlpha == 0.0) {
             if (nearestLabel(testArgs)) {
               break;
             } else {
+              if (layerGroup.children.length > MAX_LABELS) {
+                labelOverflow = true;
+                break;
+              }
               const label = createLabel(user);
               label.screenX = pBuf.x;
               label.screenY = pBuf.y;
@@ -30125,7 +30158,9 @@ if (edgeAlpha == 0.0) {
               layerGroup.add(label.group);
             }
           }
+          if (labelOverflow) break;
         }
+        if (labelOverflow) break;
       }
       outcome.hitTestCount = numberOfTests;
     }

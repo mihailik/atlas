@@ -21,6 +21,7 @@ import { nearestLabel } from '../tiles/nearest-label';
 export function renderGeoLabels({ users, tiles, tileDimensionCount, clock }) {
   const ANIMATE_LENGTH_SEC = 0.7;
   const MIN_SCREEN_DISTANCE = 0.5;
+  const MAX_LABELS = 120;
   /**
    * @typedef {ReturnType<typeof createLabel>} LabelInfo
    */
@@ -393,6 +394,8 @@ export function renderGeoLabels({ users, tiles, tileDimensionCount, clock }) {
       isVisible: (label) => label.visible
     });
 
+    let labelOverflow = false;
+
     for (let xIndex = 0; xIndex < tileDimensionCount; xIndex++) {
       for (let yIndex = 0; yIndex < tileDimensionCount; yIndex++) {
         const tileIndex = xIndex + yIndex * tileDimensionCount;
@@ -446,6 +449,11 @@ export function renderGeoLabels({ users, tiles, tileDimensionCount, clock }) {
           if (nearestLabel(testArgs)) {
             break;
           } else {
+            if (layerGroup.children.length > MAX_LABELS) {
+              labelOverflow = true;
+              break;
+            }
+
             const label = createLabel(user);
             label.screenX = pBuf.x;
             label.screenY = pBuf.y;
@@ -453,7 +461,10 @@ export function renderGeoLabels({ users, tiles, tileDimensionCount, clock }) {
             layerGroup.add(label.group);
           }
         }
+
+        if (labelOverflow) break;
       }
+      if (labelOverflow) break;
     }
 
     outcome.hitTestCount = numberOfTests;

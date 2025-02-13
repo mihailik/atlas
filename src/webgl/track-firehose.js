@@ -4,6 +4,8 @@ import { Group } from 'three';
 import { firehoseWithFallback } from '../firehose/firehose-with-callback';
 import { massCometMesh } from './layers/mass-comet-mesh';
 import { massFlashMesh } from './layers/mass-flash-mesh';
+import { rndUserColorer } from '../colors/rnd-user-colorer';
+import { distance2D } from '../geometry/distance';
 
 /**
  * @param {{
@@ -16,12 +18,12 @@ export function trackFirehose({ users, clock }) {
   const MAX_WEIGHT = 0.1;
   const FADE_TIME_MSEC = 4000;
   // DEBUG
-  const COMET_TIME_MSEC = 600;
+  const COMET_TIME_MSEC = 1000;
 
   /** @type {{ user: import('..').UserEntry, start: number, stop: number, weight: number }[]} */
   const activeFlashes = [];
 
-  /** @type {{ from: import('..').UserEntry, to: import('..').UserEntry, start: number, stop: number, weight: number }[]} */
+  /** @type {{ from: { x: number, y: number, h: number, colorRGB: number, weight: number }, to: import('..').UserEntry, start: number, stop: number, weight: number }[]} */
   const activeComets = [];
 
   const flashMesh = massFlashMesh({
@@ -45,20 +47,21 @@ export function trackFirehose({ users, clock }) {
     get: (comet, start, stop, control) => {
       const { from, to } = comet;
       start.x = from.x;
-      start.y = from.h * 1.01;
+      start.y = from.h;
       start.z = from.y;
-      start.mass = comet.weight * 0.2;
+      start.mass = comet.weight * 2;
       start.color = from.colorRGB * 256 | 0xFF;
       start.time = comet.start;
 
       stop.x = to.x;
-      stop.y = to.h * 1.1;
+      stop.y = to.h;
       stop.z = to.y;
-      stop.mass = comet.weight;
+      stop.mass = comet.weight * 3;
       stop.color = start.color;
+      stop.time = comet.stop;
 
       control.x = (start.x + stop.x) / 2;
-      control.y = (start.y + stop.y) / 2 - 0.4;
+      control.y = (start.y + stop.y) / 2 + 0.05;
       control.z = (start.z + stop.z) / 2;
     }
   });
@@ -134,10 +137,10 @@ export function trackFirehose({ users, clock }) {
   function cometShortID(fromShortDID, toShortDID, weight) {
     const fromUser = users[fromShortDID];
     const toUser = users[toShortDID];
-    if (!fromUser || !toUser) return;
+    if (!toUser) return;
 
     addComet(
-      fromUser, toUser,
+      fromUser || fromShortDID, toUser,
       clock.nowSeconds,
       clock.nowSeconds + COMET_TIME_MSEC / 1000,
       weight);
@@ -225,7 +228,7 @@ export function trackFirehose({ users, clock }) {
   }
 
   /**
- * @param {import('..').UserEntry} fromUser
+ * @param {import('..').UserEntry | string} fromUser
  * @param {import('..').UserEntry} toUser
  * @param {number} start
  * @param {number} stop
@@ -241,17 +244,35 @@ export function trackFirehose({ users, clock }) {
       }
     }
 
-    const normWeight = Math.min(MAX_WEIGHT, weight * 0.09 + fromUser.weight);
+    /** @type {typeof activeComets[0]['from']} */
+    let fromUserOrUnknown;
+    if (typeof fromUser === 'string') {
+      const toRadius = distance2D(toUser.x, toUser.y, 0, 0);
+
+      fromUserOrUnknown = {
+        x: toUser.x / toRadius * 1.3,
+        y: toUser.y / toRadius * 1.3,
+        h: toUser.h - 0.1,
+        colorRGB: rndUserColorer(fromUser),
+        weight: toUser.weight * 0.7
+      };
+    } else {
+      fromUserOrUnknown = fromUser;
+    }
+
+    const normWeight =
+      Math.min(MAX_WEIGHT, weight * 0.09 + fromUserOrUnknown.weight)
+      * 5;
 
     if (gapIndex >= 0) {
       const reuseComet = activeComets[gapIndex];
-      reuseComet.from = fromUser;
+      reuseComet.from = fromUserOrUnknown;
       reuseComet.to = toUser;
       reuseComet.start = start;
       reuseComet.stop = stop;
       reuseComet.weight = normWeight;
     } else {
-      activeComets.push({ from: fromUser, to: toUser, start, stop, weight: normWeight });
+      activeComets.push({ from: fromUserOrUnknown, to: toUser, start, stop, weight: normWeight });
     }
 
     cometMesh.updateComets(activeComets);

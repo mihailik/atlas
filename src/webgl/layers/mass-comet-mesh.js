@@ -88,7 +88,9 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
             float endTime = max(timeStartStop.x, timeStartStop.y);
             vTimeRatio = (time - startTime) / (endTime - startTime);
 
-            vOffset = quadraticBezier(vTimeRatio, offsetStart, offsetControl, offsetStop);
+            float distanceTimeFunction = sqrt(sqrt(vTimeRatio));
+
+            vOffset = quadraticBezier(distanceTimeFunction, offsetStart, offsetControl, offsetStop);
 
             // DEBUG
             // vOffset = mix(offsetStart, offsetStop, vTimeRatio);
@@ -116,6 +118,8 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
 
             vColor = mix(colorStart, colorStop, vTimeRatio);
             vDiameter = mix(diameterStartStop.x, diameterStartStop.y, vTimeRatio);
+
+            // DEBUG?
             if (vTimeRatio > 1.0 || vTimeRatio < 0.0) {
               vDiameter = 0.0;
             }
@@ -167,24 +171,31 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
 
               gl_FragColor = tintColor;
 
-              float PI = 3.1415926535897932384626433832795;
-
-              float step = 0.05;
+              float stepIn = 0.05;
+              float stepOut = 0.01;
               float timeFunction =
-                vTimeRatio < step ? vTimeRatio / step :
-                vTimeRatio < step * 2.0 ?
-                  (cos((step * 2.0 - vTimeRatio) * step * PI) + 1.0) / 4.5 + 0.7 :
-                  (1.0 - (vTimeRatio - step * 2.0)) / 2.5 + 0.2;
+                vTimeRatio < stepIn ? vTimeRatio / stepIn :
+                1.0 - vTimeRatio < stepOut ? (vTimeRatio - 1.0) / stepOut :
+                1.0;
 
               gl_FragColor = tintColor;
 
               gl_FragColor.a *= timeFunction;
+
+              // vec2 posR = vec2(vPosition.x, vPosition.z);
+              // float angle = vTimeRatio * 3.14159 * 2.0;
+              // mat2 rotationMatrix = mat2(
+              //   cos(angle), -sin(angle),
+              //   sin(angle), cos(angle)
+              // );
+              // vec2 posRotated = rotationMatrix * posR;
 
               float diagBias = 1.0 - max(abs(vPosition.x), abs(vPosition.z));
               float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
               gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra;
 
               // DEBUG
+              // gl_FragColor = vec4(mix(1.0, 0.0, vTimeRatio), 0.0, mix(0.0, 1.0, vTimeRatio), 1.0);
               // gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
 
             }
@@ -219,7 +230,7 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
 
     // these are instanced: one set of values per comet
     geometry.setAttribute('offsetStart', new InstancedBufferAttribute(offsetStartBuf, 3));
-    geometry.setAttribute('offsetStop', new InstancedBufferAttribute(offsetStartBuf, 3));
+    geometry.setAttribute('offsetStop', new InstancedBufferAttribute(offsetStopBuf, 3));
     geometry.setAttribute('offsetControl', new InstancedBufferAttribute(offsetControlBuf, 3));
     geometry.setAttribute('diameterStartStop', new InstancedBufferAttribute(diameterStartStopBuf, 2));
     geometry.setAttribute('timeStartStop', new InstancedBufferAttribute(timeStartStopBuf, 2));
@@ -302,7 +313,7 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
 */
   function updateComets(newSpots) {
     comets = newSpots;
-    if (newSpots.length > geometry.instanceCount || newSpots.length < Math.max(320, geometry.instanceCount / 2)) {
+    if (newSpots.length > geometry.instanceCount || Math.max(320, newSpots.length) < geometry.instanceCount / 2) {
       const newAllocateCount = Math.max(
         Math.floor(newSpots.length * 1.5),
         newSpots.length + 300);
@@ -329,10 +340,12 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
     } else {
       populateBuffers();
 
-      geometry.attributes['offset'].needsUpdate = true;
-      geometry.attributes['diameter'].needsUpdate = true;
-      geometry.attributes['startStop'].needsUpdate = true;
-      geometry.attributes['color'].needsUpdate = true;
+      geometry.attributes['offsetStart'].needsUpdate = true;
+      geometry.attributes['offsetStop'].needsUpdate = true;
+      geometry.attributes['offsetControl'].needsUpdate = true;
+      geometry.attributes['diameterStartStop'].needsUpdate = true;
+      geometry.attributes['timeStartStop'].needsUpdate = true;
+      geometry.attributes['colorStartStop'].needsUpdate = true;
     }
   }
 
