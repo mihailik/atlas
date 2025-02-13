@@ -94,31 +94,32 @@ function atlas(invokeType) {
 
   /**
  * @param {{
- *  testLabel: TLabel,
+ *  testLabel: TestLabel,
  *  tiles: Iterable<TLabel>[],
  *  tileX: number, tileY: number,
  *  tileDimensionCount: number,
- *  isClose: (label1: TLabel, label2: TLabel) => number,
+ *  isCloseTo: (toLabel: TLabel, testLabel: TestLabel) => number,
  *  isVisible: (label: TLabel) => boolean
  * }} _ 
  * @template TLabel
+ * @template TestLabel = TLabel
  */
   function nearestLabel({
     testLabel,
     tiles,
     tileX, tileY,
     tileDimensionCount,
-    isClose,
+    isCloseTo,
     isVisible }) {
     
     const tileLabels = tiles[tileX + tileY * tileDimensionCount];
 
     if (tileLabels) {
       for (const otherLabel of tileLabels) {
-        if (otherLabel === testLabel) break;
+        if (otherLabel === /** @type {*} */(testLabel)) break;
         if (!isVisible(otherLabel)) continue;
 
-        if (isClose(testLabel, otherLabel)) return otherLabel;
+        if (isCloseTo(otherLabel, testLabel)) return otherLabel;
       }
     }
 
@@ -129,7 +130,7 @@ function atlas(invokeType) {
         for (const otherLabel of testTile) {
           if (!isVisible(otherLabel)) continue;
           anyLabelsInTile = true;
-          if (isClose(testLabel, otherLabel)) return otherLabel;
+          if (isCloseTo(otherLabel, testLabel)) return otherLabel;
         }
 
         // if there are no labels in the tile, we must keep looking left
@@ -146,7 +147,7 @@ function atlas(invokeType) {
           for (const otherLabel of testTile) {
             if (!isVisible(otherLabel)) continue;
             anyLabelsInTile = true;
-            if (isClose(testLabel, otherLabel)) return otherLabel;
+            if (isCloseTo(otherLabel, testLabel)) return otherLabel;
           }
 
           // if there are no labels in the tile, we must keep looking left
@@ -2380,7 +2381,7 @@ function atlas(invokeType) {
 
               const scale = cameraPos.distanceTo(group.position) < SCALE_LABELS_CLOSER_THAN ?
                 cameraPos.distanceTo(group.position) / SCALE_LABELS_CLOSER_THAN :
-                1 + (cameraPos.distanceTo(group.position) / SCALE_LABELS_CLOSER_THAN - 1) * 0.3;
+                1 + (cameraPos.distanceTo(group.position) / SCALE_LABELS_CLOSER_THAN - 1) * 0.2;
               group.scale.set(scale, scale, scale);
 
               // 0 to 1 when animation ends
@@ -2506,12 +2507,12 @@ function atlas(invokeType) {
 
         /** @param {THREE.PerspectiveCamera} camera */
         function refreshDynamicLabels(camera) {
-          const testArgs = /** @type {Parameters<typeof nearestLabel<{ screenX: number, screenY: Number, visible?: boolean }>>[0]} */({
+          const testArgs = /** @type {Parameters<typeof nearestLabel<LabelInfo, { screenX: number, screenY: Number, visible?: boolean }>>[0]} */({
             tileDimensionCount,
             tileX: 0, tileY: 0, testLabel: { screenX: NaN, screenY: NaN },
             tiles: labelsByTiles,
-            isClose: (label1, label2) =>
-              Math.max(0, MIN_SCREEN_DISTANCE - distance2D(label1.screenX, label1.screenY, label2.screenX, label2.screenY)),
+            isCloseTo: (toLabel, testLabel) =>
+              Math.max(0, MIN_SCREEN_DISTANCE - labelsDistanceTo(toLabel, testLabel)),
             isVisible: (label) => label.visible
           });
 
@@ -2579,6 +2580,13 @@ function atlas(invokeType) {
           }
         }
 
+        /**
+         * @param {LabelInfo} toLabel
+         * @param {{ screenX: number, screenY: number }} testLabel
+         */
+        function labelsDistanceTo(toLabel, testLabel) {
+          return distance2D(toLabel.screenX, toLabel.screenY, testLabel.screenX, testLabel.screenY);
+        }
       }
 
       /**
