@@ -702,8 +702,8 @@ function atlas(invokeType) {
 
     const continueUpdateUsers = (function () {
 
-      const cursorsJsonPath = require('path').resolve(__dirname, 'db/cursors.json');
-      const usersJsonPath = require('path').resolve(__dirname, 'db/users.json');
+      const cursorsJsonPath = require('path').resolve(__dirname, '../atlas-db/cursors.json');
+      const usersJsonPath = require('path').resolve(__dirname, '../atlas-db/users.json');
       const reportEveryMsec = 30000;
 
       async function continueEnrichUsers(users) {
@@ -929,7 +929,7 @@ function atlas(invokeType) {
       }
 
       async function continueUpdateUsers() {
-        const usersJsonPath = path.resolve(__dirname, 'db/users.json');
+        const usersJsonPath = path.resolve(__dirname, '../atlas-db/users.json');
         const users = JSON.parse(fs.readFileSync(usersJsonPath, 'utf8'));
 
         console.log(
