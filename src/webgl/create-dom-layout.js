@@ -295,18 +295,18 @@ export function createDOMLayout({ canvas3D, statsElem, userCount }) {
      * }} labelsOutcome
      */
     function update(outcome, labelsOutcome) {
-      labelsElem.textContent = labelsOutcome.labelCount.toString();
-      hitTestElem.textContent = labelsOutcome.hitTestCount.toString();
-      avatarImagesElem.textContent = labelsOutcome.avatarImages.toString();
-      avatarRequestsElem.textContent = labelsOutcome.avatarRequestCount.toString();
-      avatarCachedAvatars.textContent = labelsOutcome.allCachedAvatars.toString();
-      flashesElem.textContent = outcome.flashes.toString();
-      likesElem.textContent = outcome.likes.toString();
-      postsElem.textContent = outcome.posts.toString();
-      repostsElem.textContent = outcome.reposts.toString();
-      followsElem.textContent = outcome.follows.toString();
-      unknownsPerSecElem.textContent = outcome.unknowns.toString();
-      unknownsTotalElem.textContent = outcome.unknownsTotal.toString();
+      labelsElem.textContent = labelsOutcome.labelCount.toLocaleString();
+      hitTestElem.textContent = labelsOutcome.hitTestCount.toLocaleString();
+      avatarImagesElem.textContent = labelsOutcome.avatarImages.toLocaleString();
+      avatarRequestsElem.textContent = labelsOutcome.avatarRequestCount.toLocaleString();
+      avatarCachedAvatars.textContent = labelsOutcome.allCachedAvatars.toLocaleString();
+      flashesElem.textContent = outcome.flashes.toLocaleString();
+      likesElem.textContent = outcome.likes.toLocaleString();
+      postsElem.textContent = outcome.posts.toLocaleString();
+      repostsElem.textContent = outcome.reposts.toLocaleString();
+      followsElem.textContent = outcome.follows.toLocaleString();
+      unknownsPerSecElem.textContent = outcome.unknowns.toLocaleString();
+      unknownsTotalElem.textContent = outcome.unknownsTotal.toLocaleString();
       outcome.likes = 0;
       outcome.posts = 0;
       outcome.reposts = 0;
