@@ -2200,7 +2200,7 @@ function atlas(invokeType) {
          */
 
         const avatarTextureLoader = new THREE.TextureLoader();
-        const avatarRequestQueue = createThrottledQueue(2, 400);
+        const avatarRequestQueue = createThrottledQueue(3, 300);
         let avatarRequestSuccesses = 0;
         let avatarRequestFailures = 0;
 
@@ -2435,7 +2435,7 @@ function atlas(invokeType) {
             let avatarCidPromise = avatarCids[user.shortDID];
             if (avatarCidPromise === 'none') return;
             if (typeof avatarCidPromise === 'string') return makeAvatarTexture(avatarCidPromise);
-            if (avatarCidPromise) avatarCidPromise.priority += 10;
+            if (avatarCidPromise) avatarCidPromise.priority += 1;
             else avatarCidPromise = avatarCids[user.shortDID] = avatarRequestQueue.eventually(user.shortDID, getAvatarCid);
 
             avatarCidPromise.then(makeAvatarTexture);
