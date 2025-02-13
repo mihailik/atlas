@@ -496,7 +496,7 @@ function atlas(invokeType) {
           const rgb = new THREE.Color();
           const { mesh } = repeatRenderer({
             positions: (() => {
-              const b = 0.0002;
+              const b = 0.0008;
               return new Float32Array([
                 -b/2, 0, -b/3,
                 0, 0, b * 2/3,
@@ -786,8 +786,8 @@ function atlas(invokeType) {
             void main() {
               gl_FragColor = vColor;
               float dist = distance(vPosition, vec3(0.0));
-              float rad = 0.00004;
-              float areola = rad * 1.4;
+              float rad = 0.00015;
+              float areola = rad * 1.7;
               gl_FragColor.a =
                 dist < rad ? 1.0 :
                 dist > areola ? 0.0 :
@@ -840,173 +840,6 @@ function atlas(invokeType) {
           geometry.setAttribute('color', new THREE.InstancedBufferAttribute(userColors, 1));
           geometry.attributes['color'].needsUpdate = true;
           geometry.instanceCount = userKeys.length;
-        }
-      }
-
-      function webgl_buffergeometry_instancing_demo() {
-        const proximityThreshold = 0.1;
-        const highDetailThreshold = 0.05;
-
-        const b = 0.0002;
-        let positions =
-          [
-            -b, b, -b,
-            -b, 0, b,
-            b, b, b,
-            -b, b, -b,
-            b, 0, -b,
-            b, b, b,
-          ];
-
-        const offsets = [];
-        const colors = [];
-
-        const bounds = getUserCoordBounds(users);
-
-        let instanceCount = 0;
-        const limitSmall = location.search && parseInt(location.search.replace(/^\?/, ''));
-        for (const shortDID in users) {
-          if (limitSmall && instanceCount >= limitSmall) break;
-          instanceCount++;
-          const [shortHandle, xSpace, ySpace] = users[shortDID];
-
-          // offsets
-          var { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, bounds);
-          offsets.push(x, h, y);
-          colors.push(Math.random(), Math.random(), Math.random(), 1);
-        }
-
-        const geometry = new THREE.InstancedBufferGeometry();
-        geometry.instanceCount = instanceCount;
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-        geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(new Float32Array(offsets), 3));
-        geometry.setAttribute('color', new THREE.InstancedBufferAttribute(new Float32Array(colors), 4));
-
-        const material = new THREE.ShaderMaterial({
-          uniforms: {
-            time: { value: 1.0 },
-            camera: { value: new THREE.Vector3(0,0,0) }
-          },
-          vertexShader: `
-		precision highp float;
-
-		uniform float time;
-
-		attribute vec3 offset;
-    attribute vec3 camera;
-		attribute vec4 color;
-
-		varying vec3 vPosition;
-		varying vec4 vColor;
-
-		void main(){
-
-			vColor = color;
-      vec4 targetPosition = projectionMatrix * modelViewMatrix * vec4( position + offset, 1.0 );
-      float proximityThreshold = ${proximityThreshold};
-			gl_Position =
-        targetPosition;
-
-        vColor = distance(targetPosition.xyz, camera) < proximityThreshold
-          ? vec4(1,0,0,1) :
-          color;
-        //vColor = color;
-
-		}
-          `,
-          fragmentShader: `
-    precision highp float;
-
-		uniform float time;
-
-		varying vec3 vPosition;
-		varying vec4 vColor;
-
-		void main() {
-
-			vec4 color = vec4( vColor );
-			color.r += sin( vPosition.x * 10.0 + time ) * 0.5;
-
-			gl_FragColor = vec4(vColor);
-    }
-          `,
-          side: THREE.DoubleSide,
-          forceSinglePass: true,
-        });
-
-        //
-
-        const mesh = new THREE.Mesh(geometry, material);
-        scene.add(mesh);
-
-        return {
-          mesh,
-          bounds,
-          geometry,
-          material,
-          instanceCount,
-          updateOnFrame
-        };
-
-        /** @type {ReturnType<typeof makeProximityTiles>} */
-        var tileProximityIndex;
-
-        /** @type {THREE.Mesh[]} */
-        var proximityBalls;
-
-        function updateOnFrame(rareMoved) {
-          material.uniforms['time'].value = clock.elapsedTime;
-          material.uniforms['camera'].value = camera.position;
-
-          if (rareMoved) {
-            const tileDimension = 16;
-            if (!tileProximityIndex) tileProximityIndex = makeProximityTiles(users, tileDimension);
-
-            const startSearchForNearUsers = Date.now();
-            const [xLowIndex, xHighIndex, yLowIndex, yHighIndex] = tileProximityIndex.findTiles(camera.position.x, camera.position.z, (shortDID, usrTuple) => false);
-            let nextProximityBallIndex = 0;
-            for (let xIndex = xLowIndex; xIndex <= xHighIndex; xIndex++) {
-              for (let yIndex = yLowIndex; yIndex <= yHighIndex; yIndex++) {
-                const tile = tileProximityIndex.tiles[tileProximityIndex.tileIndexXY(xIndex, yIndex)];
-                if (!tile) continue;
-                for (const shortDID of tile) {
-                  const [, xSpace, ySpace] = users[shortDID];
-                  const {x, y, h} = mapUserCoordsToAtlas(xSpace, ySpace, bounds);
-                  const xDist = Math.abs(x - camera.position.x);
-                  const yDist = Math.abs(y - camera.position.z);
-                  const zDist = Math.abs(h - camera.position.y);
-                  const dist = Math.sqrt(xDist * xDist + yDist * yDist + zDist * zDist);
-
-                  if (dist < proximityThreshold) {
-                    if (!proximityBalls) proximityBalls = [];
-
-                    let ball = proximityBalls[nextProximityBallIndex];
-                    if (!ball) {
-                      ball = new THREE.Mesh(
-                        proximityBalls[0]?.geometry || new THREE.TetrahedronGeometry(0.0004, 2),
-                        proximityBalls[0]?.material || new THREE.MeshLambertMaterial({ color: 0xffffff }));
-
-                      ball.position.set(x, h, y);
-                      proximityBalls[nextProximityBallIndex] = ball;
-                      scene.add(ball);
-                    } else {
-                      ball.position.set(x, h, y);
-                      ball.visible = true;
-                    }
-                    nextProximityBallIndex++;
-                  }
-                }
-              }
-            }
-
-            console.log(
-              nextProximityBallIndex + ' near users in ' + (Date.now() - startSearchForNearUsers) + 'ms ', proximityBalls,
-              { xLowIndex, xHighIndex, yLowIndex, yHighIndex });
-
-            for (let i = nextProximityBallIndex; i < proximityBalls?.length; i++) {
-              proximityBalls[i].visible = false;
-            }
-          }
         }
       }
     }
