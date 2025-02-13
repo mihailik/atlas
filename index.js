@@ -2551,7 +2551,7 @@ function atlas(invokeType) {
       function checkUser(shortDID, proximityTo) {
         const now = Date.now();
         if (!lastSaveAdded) lastSaveAdded = now;
-        else if (now - lastSaveAdded > 10000) {
+        else if (now - lastSaveAdded > 20000) {
           lastSaveAdded = now;
           console.log('Saving added users [' + Object.keys(addedUsers).length + ']...');
           const combined = { ...hotUsers, ...addedUsers };
