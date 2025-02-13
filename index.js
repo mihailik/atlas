@@ -902,9 +902,14 @@ function atlas(invokeType) {
               children: [
                 stats.domElement,
                 title = elem('h3', {
-                  style: 'text-align: center; font-weight: 100; margin-left: -29px',
+                  style: `
+                  text-align: center;
+                  font-weight: 100;
+                  align-self: center;
+                  margin: 0.1em;
+                  `,
                   children: [
-                    elem('span', 'display: inline-block; width: 2.2em;'),
+                    elem('span', 'display: inline-block; width: 1em;'),
                     elem('span', { textContent: 'Atlas 3D' }),
                     elem('span', {
                       className: 'search-icon',
@@ -995,8 +1000,29 @@ function atlas(invokeType) {
           }
         }
 
+        var searchBar, searchInput;
         function switchToSearch() {
-
+          if (!searchBar) {
+            searchBar = elem('div', {
+              parent: title,
+              style: 'position: relative; border-bottom: solid 1px #888;',
+              children: [
+                searchInput = elem('input', {
+                  style: `
+                  position: relative;
+                  left: 0; top: 0; width: 100%; height: 100%;
+                  background: transparent;
+                  color: white;
+                  border: none;
+                  outline: none;
+                  `,
+                  placeholder: '    find accounts...'
+                })
+              ]
+            });
+          }
+          searchBar.display = 'block';
+          searchInput.focus();
         }
 
       }
@@ -1436,7 +1462,7 @@ function atlas(invokeType) {
             setParent = /** @type {*} */(style[key]);
           else if (key === 'children')
             appendChildren = /** @type {*} */(style[key]);
-          else if (style[key] == null || typeof style[key] === 'function') continue;
+          else if (style[key] == null || (typeof style[key] === 'function' && !(key in el))) continue;
           if (key in el.style) el.style[key] = /** @type {*} */(style[key]);
           else if (key in el) el[key] = style[key];
         }
