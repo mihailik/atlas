@@ -847,7 +847,8 @@ function atlas(invokeType) {
         const rend = flashesRenderer();
         let updateUsers = false;
 
-        const unknownsSet = new Set();
+        const unknownsLastSet = new Set();
+        const unknownsTotalSet = new Set();
 
         firehoseWithFallback({
           post(author, postID, text, replyTo, replyToThread, timeMsec) {
@@ -879,6 +880,7 @@ function atlas(invokeType) {
           likes: 0,
           follows: 0,
           unknowns: 0,
+          unknownsTotal: 0,
           mesh: rend.mesh,
           tickAll
         };
@@ -969,10 +971,12 @@ function atlas(invokeType) {
 
           const usrTuple = users[shortDID];
           if (!usrTuple) {
-            if (!outcome.unknowns && unknownsSet.size)
-              unknownsSet.clear();
-            unknownsSet.add(shortDID);
-            outcome.unknowns = unknownsSet.size;
+            if (!outcome.unknowns && unknownsLastSet.size)
+              unknownsLastSet.clear();
+            unknownsLastSet.add(shortDID);
+            unknownsTotalSet.add(shortDID);
+            outcome.unknowns = unknownsLastSet.size;
+            outcome.unknownsTotal = unknownsTotalSet.size;
             return;
           }
 
@@ -1106,7 +1110,7 @@ function atlas(invokeType) {
         }
 
         function createBottomStatusLine() {
-          let likesElem, postsElem, repostsElem, followsElem, unknownsElem;
+          let likesElem, postsElem, repostsElem, followsElem, unknownsPerSecElem, unknownsTotalElem;
 
           const bottomStatusLine = /** @type {HTMLDivElement & { update(outcome) }} */(elem('div', {
             style: `
@@ -1133,17 +1137,19 @@ function atlas(invokeType) {
                 })]
               }),
               elem('div', { height: '0.5em'}),
-              'likes: ',
-              likesElem = elem('span', { color: 'gold' }),
-              ', posts: ',
+              'posts+',
               postsElem = elem('span', { color: 'gold' }),
-              ', reposts: ',
+              ' ♡+',
+              likesElem = elem('span', { color: 'gold' }),
+              ' RT+',
               repostsElem = elem('span', { color: 'gold' }),
-              ', follows: ',
+              ' follows+',
               followsElem = elem('span', { color: 'gold' }),
-              ', ',
-              elem('span', { textContent: 'unknown users: ', color: '#1ca1a1' }),
-              unknownsElem = elem('span', { color: 'cyan' })
+              ' ',
+              elem('span', { textContent: 'unknown users: +', color: '#1ca1a1' }),
+              unknownsPerSecElem = elem('span', { color: 'cyan' }),
+              elem('span', { textContent: '/', color: '#1ca1a1' }),
+              unknownsTotalElem = elem('span', { color: 'cyan' })
             ]
           }));
           bottomStatusLine.update = update;
@@ -1154,7 +1160,13 @@ function atlas(invokeType) {
             postsElem.textContent = outcome.posts.toString();
             repostsElem.textContent = outcome.reposts.toString();
             followsElem.textContent = outcome.follows.toString();
-            unknownsElem.textContent = outcome.unknowns.toString();
+            unknownsPerSecElem.textContent = outcome.unknowns.toString();
+            unknownsTotalElem.textContent = outcome.unknownsTotal.toString();
+            outcome.likes = 0;
+            outcome.posts = 0;
+            outcome.reposts = 0;
+            outcome.follows = 0;
+            outcome.unknowns = 0;
           }
 
         }
