@@ -68,7 +68,7 @@
   <script src="index.js"></script>
   <script src="lib.js"></script>
   <script> atlas("libraries") </script>
-  <script src="../atlas-db-jsonp/users/hot.js" defer async></script>
+  <script src="../atlas-db-jsonp/users/hot.js" defer async onerror="hot(new Error('Failed to load users list.'))"></script>
 </body>
 
 </html>
