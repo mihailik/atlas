@@ -157,14 +157,26 @@ function atlas(invokeType) {
     let fallbackHose;
     /** @type {ReturnType<typeof firehose> | undefined} */
     let websocketHose = startWebsocketHose();
+    let restartFirehoseOnQuietTimeout;
+    const QUIET_TIMEOUT_FIREHOSE_RESTART_MSEC = 1000 * 5;
 
     return { stop };
+
+    function restartFirehoseOnQuiet() {
+      websocketHose?.stop();
+      websocketHose = undefined;
+      setTimeout(() => {
+        websocketHose = startWebsocketHose();
+      }, 50 * Math.random() + 50);
+    }
 
     function startWebsocketHose() {
       return firehose({
         like: (who, whose, postID, timeMsec) => {
           const result = callbacks.like?.(who, whose, postID, timeMsec);
           websocketLikesProcessed++;
+          clearTimeout(restartFirehoseOnQuietTimeout);
+          restartFirehoseOnQuietTimeout = setTimeout(restartFirehoseOnQuiet, QUIET_TIMEOUT_FIREHOSE_RESTART_MSEC)
           return result;
         },
         ...callbacks,
