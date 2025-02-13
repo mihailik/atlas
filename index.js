@@ -921,6 +921,40 @@ function atlas(invokeType) {
         return { root, titleBar, title, rightStatus };
       }
 
+      /** @param {HTMLElement} rightStatus */
+      function statusRenderer(rightStatus) {
+        let userThousand, userDigits, cameraPos, cameraMovementIcon, searchIcon;
+
+        rightStatus.innerHTML = '';
+        elem('div', {
+          parent: rightStatus,
+          children: [
+            userThousand = elem('span', { textContent: '0' }),
+            elem('span', { style: 'width: 0.25em' }),
+            userDigits = elem('span', { textContent: '000' }),
+          ]
+        });
+
+        elem('div', {
+          parent: rightStatus,
+          style: `font-size: 80%; opacity: 0.7; transition: opacity 2s;`,
+          children: [
+            cameraPos = elem('span', { textContent: '0.00, 0.00, 0.00' }),
+            elem('span', { style: 'width: 0.25em' }),
+            cameraMovementIcon = elem('span', { textContent: '>' }),
+          ]
+        });
+
+        update();
+
+        return {
+          update
+        };
+
+        function update() {
+        }
+      }
+
       /**
        * @param {HTMLElement} touchElement
        * @param {(xy: { x: number, y: number }) => void} touchCallback
