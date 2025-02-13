@@ -3,37 +3,52 @@
 import { BackSide, Float32BufferAttribute, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial } from 'three';
 
 /**
+ * @template {{ x?: number, y?: number, z?: number, mass?: number, color?: number, start?: number, stop?: number }} TParticle
  * @param {{
- *  clock: ReturnType<typeof import('./clock').makeClock>;
- *  userCount: number;
+ *  clock: { now(): number };
+ *  spots: TParticle[],
+ *  get?: (spot: TParticle, coords: { x: number, y: number, z: number, mass: number, color: number, start: number, stop: number }) => void
  *  fragmentShader?: string;
  *  vertexShader?: string;
  * }} _ 
  */
-export function dynamicShaderRenderer({ clock, userCount, fragmentShader, vertexShader }) {
+export function splashSpotMesh({ clock: clockArg, spots, get, fragmentShader, vertexShader }) {
+  const clock = clockArg || { now: () => Date.now() };
+
+  const dummy = {
+    x: 0,
+    y: 0,
+    z: 0,
+    mass: 0,
+    color: 0,
+    start: 0,
+    stop: 0
+  };
+
   const baseHalf = 1.5 * Math.tan(Math.PI / 6);
   let positions = new Float32Array([
     -baseHalf, 0, -0.5,
     0, 0, 1,
     baseHalf, 0, -0.5
   ]);
-  let offsetBuf = new Float32Array(userCount * 4);
-  let diameterBuf = new Float32Array(userCount);
-  let extraBuf = new Float32Array(userCount * 2);
-  let colorBuf = new Uint32Array(userCount);
+  let offsetBuf = new Float32Array(spots.length * 4);
+  let diameterBuf = new Float32Array(spots.length);
+  let extraBuf = new Float32Array(spots.length * 2);
+  let colorBuf = new Uint32Array(spots.length);
 
+  populateBuffers();
 
-  const geometry = new InstancedBufferGeometry();
+  let geometry = new InstancedBufferGeometry();
   geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
   geometry.setAttribute('offset', new InstancedBufferAttribute(offsetBuf, 3));
   geometry.setAttribute('diameter', new InstancedBufferAttribute(diameterBuf, 1));
   geometry.setAttribute('extra', new InstancedBufferAttribute(extraBuf, 2));
   geometry.setAttribute('color', new InstancedBufferAttribute(colorBuf, 1));
-  geometry.instanceCount = userCount;
+  geometry.instanceCount = spots.length;
 
   const material = new ShaderMaterial({
     uniforms: {
-      time: { value: clock.nowSeconds }
+      time: { value: clock.now() / 1000 }
     },
     vertexShader: /* glsl */`
             precision highp float;
@@ -124,32 +139,85 @@ export function dynamicShaderRenderer({ clock, userCount, fragmentShader, vertex
   });
 
   const mesh = new Mesh(geometry, material);
-  mesh.frustumCulled = false;
+
+  // seems to serve no purpose, but might slow things, let's cut it out for now
+  // mesh.frustumCulled = false;
+
   mesh.onBeforeRender = () => {
-    material.uniforms['time'].value = clock.nowSeconds;
+    material.uniforms['time'].value = clock.now() / 1000;
   };
-  return { mesh, updateUserSet };
+
+  const meshWithUpdates =
+    /** @type {typeof mesh & { updateSpots: typeof updateSpots }} */(
+      mesh
+    );
+  meshWithUpdates.updateSpots = updateSpots;
+
+  return meshWithUpdates;
+
+  function populateBuffers() {
+    for (let i = 0; i < spots.length; i++) {
+      const spot = spots[i];
+
+      // reset the dummy object
+      dummy.x = spot.x || 0;
+      dummy.y = spot.z || 0;
+      dummy.z = spot.y || 0;
+      dummy.mass = spot.mass || 0;
+      dummy.color = spot.color || 0;
+      dummy.start = spot.start || 0;
+      dummy.stop = spot.stop || 0;
+
+      if (typeof get === 'function') get(spot, dummy);
+
+      offsetBuf[i * 3 + 0] = dummy.x;
+      offsetBuf[i * 3 + 1] = dummy.y;
+      offsetBuf[i * 3 + 2] = dummy.z;
+      diameterBuf[i] = dummy.mass;
+      colorBuf[i] = dummy.color;
+      extraBuf[i * 2 + 0] = dummy.start;
+      extraBuf[i * 2 + 1] = dummy.stop;
+    }
+  }
 
   /**
-   * @param {{ user: import('..').UserEntry, weight: number, start: number, stop: number }[]} users
-   */
-  function updateUserSet(users) {
-    for (let i = 0; i < users.length; i++) {
-      const { user, weight, start, stop } = users[i];
-      offsetBuf[i * 3 + 0] = user.x;
-      offsetBuf[i * 3 + 1] = user.h;
-      offsetBuf[i * 3 + 2] = user.y;
-      diameterBuf[i] = weight || user.weight;
-      colorBuf[i] = user.colorRGB * 256 | 0xFF;
-      extraBuf[i * 2 + 0] = start;
-      extraBuf[i * 2 + 1] = stop;
+* @param {TParticle[]} newSpots
+*/
+  function updateSpots(newSpots) {
+    spots = newSpots;
+    if (newSpots.length > geometry.instanceCount || newSpots.length < geometry.instanceCount / 2) {
+      const newAllocateCount = Math.max(
+        Math.floor(newSpots.length * 1.5),
+        newSpots.length + 300);
+
+      offsetBuf = new Float32Array(newAllocateCount * 4);
+      diameterBuf = new Float32Array(newAllocateCount);
+      extraBuf = new Float32Array(newAllocateCount * 2);
+      colorBuf = new Uint32Array(newAllocateCount);
+
+      populateBuffers();
+
+      const oldGeometry = geometry;
+
+      geometry = new InstancedBufferGeometry();
+      geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
+      geometry.setAttribute('offset', new InstancedBufferAttribute(offsetBuf, 3));
+      geometry.setAttribute('diameter', new InstancedBufferAttribute(diameterBuf, 1));
+      geometry.setAttribute('extra', new InstancedBufferAttribute(extraBuf, 2));
+      geometry.setAttribute('color', new InstancedBufferAttribute(colorBuf, 1));
+      geometry.instanceCount = newAllocateCount;
+
+      mesh.geometry = geometry;
+
+      oldGeometry.dispose();
+    } else {
+      populateBuffers();
+
+      geometry.attributes['offset'].needsUpdate = true;
+      geometry.attributes['diameter'].needsUpdate = true;
+      geometry.attributes['extra'].needsUpdate = true;
+      geometry.attributes['color'].needsUpdate = true;
     }
-
-    geometry.attributes['offset'].needsUpdate = true;
-    geometry.attributes['diameter'].needsUpdate = true;
-    geometry.attributes['color'].needsUpdate = true;
-    geometry.attributes['extra'].needsUpdate = true;
-
-    geometry.instanceCount = users.length;
   }
+
 }

@@ -20491,7 +20491,7 @@ void main() {
           position: fixed; left: 0; top: 0; width: 100%; height: 100%;
           display: grid; grid-template-rows: auto auto 1fr auto; grid-template-columns: 1fr;
           opacity: 0.01; pointer-events: none;
-          transition: opacity 5s;
+          transition: opacity 8s;
           `,
       children: [
         canvas3D,
@@ -27633,8 +27633,16 @@ if (edgeAlpha == 0.0) {
   };
   var stats_module_default = Stats;
 
-  // src/webgl/mass-shader-renderer.js
-  function massShaderRenderer({ clock, users }) {
+  // src/webgl/layers/mass-spot-mesh.js
+  function massSpotMesh({ clock: clockArg, spots, get }) {
+    const clock = clockArg || { now: () => Date.now() };
+    const dummy = {
+      x: 0,
+      y: 0,
+      z: 0,
+      mass: 0,
+      color: 0
+    };
     const baseHalf = 1.5 * Math.tan(Math.PI / 6);
     let positions = new Float32Array([
       -baseHalf,
@@ -27647,26 +27655,19 @@ if (edgeAlpha == 0.0) {
       0,
       -0.5
     ]);
-    let offsetBuf = new Float32Array(users.length * 4);
-    let diameterBuf = new Float32Array(users.length);
-    let colorBuf = new Uint32Array(users.length);
-    for (let i = 0; i < users.length; i++) {
-      const user = users[i];
-      offsetBuf[i * 3 + 0] = user.x;
-      offsetBuf[i * 3 + 1] = user.h;
-      offsetBuf[i * 3 + 2] = user.y;
-      diameterBuf[i] = user.weight;
-      colorBuf[i] = user.colorRGB * 256 | 255;
-    }
-    const geometry = new InstancedBufferGeometry();
+    let offsetBuf = new Float32Array(spots.length * 4);
+    let diameterBuf = new Float32Array(spots.length);
+    let colorBuf = new Uint32Array(spots.length);
+    populateBuffers();
+    let geometry = new InstancedBufferGeometry();
     geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
     geometry.setAttribute("offset", new InstancedBufferAttribute(offsetBuf, 3));
     geometry.setAttribute("diameter", new InstancedBufferAttribute(diameterBuf, 1));
     geometry.setAttribute("color", new InstancedBufferAttribute(colorBuf, 1));
-    geometry.instanceCount = users.length;
+    geometry.instanceCount = spots.length;
     const material = new ShaderMaterial({
       uniforms: {
-        time: { value: clock.nowSeconds }
+        time: { value: clock.now() / 1e3 }
       },
       vertexShader: (
         /* glsl */
@@ -27746,11 +27747,58 @@ if (edgeAlpha == 0.0) {
       depthWrite: false
     });
     const mesh = new Mesh(geometry, material);
-    mesh.frustumCulled = false;
     mesh.onBeforeRender = () => {
-      material.uniforms["time"].value = clock.nowSeconds;
+      material.uniforms["time"].value = clock.now() / 1e3;
     };
-    return mesh;
+    const meshWithUpdates = (
+      /** @type {typeof mesh & { updateSpots: typeof updateSpots }} */
+      mesh
+    );
+    meshWithUpdates.updateSpots = updateSpots;
+    return meshWithUpdates;
+    function populateBuffers() {
+      for (let i = 0; i < spots.length; i++) {
+        const spot = spots[i];
+        dummy.x = spot.x || 0;
+        dummy.y = spot.z || 0;
+        dummy.z = spot.y || 0;
+        dummy.mass = spot.mass || 0;
+        dummy.color = spot.color || 0;
+        if (typeof get === "function") get(spot, dummy);
+        offsetBuf[i * 3 + 0] = dummy.x;
+        offsetBuf[i * 3 + 1] = dummy.y;
+        offsetBuf[i * 3 + 2] = dummy.z;
+        diameterBuf[i] = dummy.mass;
+        colorBuf[i] = dummy.color;
+      }
+    }
+    function updateSpots(newSpots) {
+      spots = newSpots;
+      if (newSpots.length > geometry.instanceCount || newSpots.length < geometry.instanceCount / 2) {
+        const newAllocateCount = Math.max(
+          Math.floor(newSpots.length * 1.5),
+          newSpots.length + 300
+        );
+        offsetBuf = new Float32Array(newAllocateCount * 4);
+        diameterBuf = new Float32Array(newAllocateCount);
+        colorBuf = new Uint32Array(newAllocateCount);
+        populateBuffers();
+        const oldGeometry = geometry;
+        geometry = new InstancedBufferGeometry();
+        geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
+        geometry.setAttribute("offset", new InstancedBufferAttribute(offsetBuf, 3));
+        geometry.setAttribute("diameter", new InstancedBufferAttribute(diameterBuf, 1));
+        geometry.setAttribute("color", new InstancedBufferAttribute(colorBuf, 1));
+        geometry.instanceCount = newAllocateCount;
+        mesh.geometry = geometry;
+        oldGeometry.dispose();
+      } else {
+        populateBuffers();
+        geometry.attributes["offset"].needsUpdate = true;
+        geometry.attributes["diameter"].needsUpdate = true;
+        geometry.attributes["color"].needsUpdate = true;
+      }
+    }
   }
 
   // src/webgl/setup-scene.js
@@ -27772,15 +27820,30 @@ if (edgeAlpha == 0.0) {
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     const stats = new stats_module_default();
-    const farUsersMesh = massShaderRenderer({ clock, users });
+    const farUsersMesh = massSpotMesh({
+      clock: { now: () => clock.nowMSec },
+      spots: users,
+      get: (user, dummy) => {
+        dummy.x = user.x;
+        dummy.y = user.h;
+        dummy.z = user.y;
+        dummy.mass = user.weight;
+        dummy.color = user.colorRGB * 256 | 255;
+      }
+    });
     scene.add(farUsersMesh);
     return {
       scene,
       camera,
       lights: { dirLight1, dirLight2, ambientLight },
       renderer,
-      stats
+      stats,
+      updateUsers
     };
+    var addedUsers;
+    function updateUsers(users2) {
+      farUsersMesh.updateSpots(users2);
+    }
   }
 
   // src/webgl/handle-window-resizes.js
@@ -28637,7 +28700,7 @@ if (edgeAlpha == 0.0) {
     return withFallbackPromise;
     function withError(error) {
       return new Promise((resolve) => setTimeout(resolve, 300)).then(
-        () => loadDirect(relativePath.replace(/^\.\.\//, "https://oyin.bo/"), false)
+        () => loadDirect(relativePath.replace(/^\.\.\//, "https://mihailik.github.io/"), false)
       );
     }
     function loadDirect(src, scriptAlreadyExists2) {
@@ -28831,8 +28894,18 @@ if (edgeAlpha == 0.0) {
     }
   }
 
-  // src/webgl/dynamic-shader-renderer.js
-  function dynamicShaderRenderer({ clock, userCount, fragmentShader, vertexShader }) {
+  // src/webgl/layers/splash-spot-mesh.js
+  function splashSpotMesh({ clock: clockArg, spots, get, fragmentShader, vertexShader }) {
+    const clock = clockArg || { now: () => Date.now() };
+    const dummy = {
+      x: 0,
+      y: 0,
+      z: 0,
+      mass: 0,
+      color: 0,
+      start: 0,
+      stop: 0
+    };
     const baseHalf = 1.5 * Math.tan(Math.PI / 6);
     let positions = new Float32Array([
       -baseHalf,
@@ -28845,20 +28918,21 @@ if (edgeAlpha == 0.0) {
       0,
       -0.5
     ]);
-    let offsetBuf = new Float32Array(userCount * 4);
-    let diameterBuf = new Float32Array(userCount);
-    let extraBuf = new Float32Array(userCount * 2);
-    let colorBuf = new Uint32Array(userCount);
-    const geometry = new InstancedBufferGeometry();
+    let offsetBuf = new Float32Array(spots.length * 4);
+    let diameterBuf = new Float32Array(spots.length);
+    let extraBuf = new Float32Array(spots.length * 2);
+    let colorBuf = new Uint32Array(spots.length);
+    populateBuffers();
+    let geometry = new InstancedBufferGeometry();
     geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
     geometry.setAttribute("offset", new InstancedBufferAttribute(offsetBuf, 3));
     geometry.setAttribute("diameter", new InstancedBufferAttribute(diameterBuf, 1));
     geometry.setAttribute("extra", new InstancedBufferAttribute(extraBuf, 2));
     geometry.setAttribute("color", new InstancedBufferAttribute(colorBuf, 1));
-    geometry.instanceCount = userCount;
+    geometry.instanceCount = spots.length;
     const material = new ShaderMaterial({
       uniforms: {
-        time: { value: clock.nowSeconds }
+        time: { value: clock.now() / 1e3 }
       },
       vertexShader: (
         /* glsl */
@@ -28954,27 +29028,64 @@ if (edgeAlpha == 0.0) {
       depthWrite: false
     });
     const mesh = new Mesh(geometry, material);
-    mesh.frustumCulled = false;
     mesh.onBeforeRender = () => {
-      material.uniforms["time"].value = clock.nowSeconds;
+      material.uniforms["time"].value = clock.now() / 1e3;
     };
-    return { mesh, updateUserSet };
-    function updateUserSet(users) {
-      for (let i = 0; i < users.length; i++) {
-        const { user, weight, start, stop } = users[i];
-        offsetBuf[i * 3 + 0] = user.x;
-        offsetBuf[i * 3 + 1] = user.h;
-        offsetBuf[i * 3 + 2] = user.y;
-        diameterBuf[i] = weight || user.weight;
-        colorBuf[i] = user.colorRGB * 256 | 255;
-        extraBuf[i * 2 + 0] = start;
-        extraBuf[i * 2 + 1] = stop;
+    const meshWithUpdates = (
+      /** @type {typeof mesh & { updateSpots: typeof updateSpots }} */
+      mesh
+    );
+    meshWithUpdates.updateSpots = updateSpots;
+    return meshWithUpdates;
+    function populateBuffers() {
+      for (let i = 0; i < spots.length; i++) {
+        const spot = spots[i];
+        dummy.x = spot.x || 0;
+        dummy.y = spot.z || 0;
+        dummy.z = spot.y || 0;
+        dummy.mass = spot.mass || 0;
+        dummy.color = spot.color || 0;
+        dummy.start = spot.start || 0;
+        dummy.stop = spot.stop || 0;
+        if (typeof get === "function") get(spot, dummy);
+        offsetBuf[i * 3 + 0] = dummy.x;
+        offsetBuf[i * 3 + 1] = dummy.y;
+        offsetBuf[i * 3 + 2] = dummy.z;
+        diameterBuf[i] = dummy.mass;
+        colorBuf[i] = dummy.color;
+        extraBuf[i * 2 + 0] = dummy.start;
+        extraBuf[i * 2 + 1] = dummy.stop;
       }
-      geometry.attributes["offset"].needsUpdate = true;
-      geometry.attributes["diameter"].needsUpdate = true;
-      geometry.attributes["color"].needsUpdate = true;
-      geometry.attributes["extra"].needsUpdate = true;
-      geometry.instanceCount = users.length;
+    }
+    function updateSpots(newSpots) {
+      spots = newSpots;
+      if (newSpots.length > geometry.instanceCount || newSpots.length < geometry.instanceCount / 2) {
+        const newAllocateCount = Math.max(
+          Math.floor(newSpots.length * 1.5),
+          newSpots.length + 300
+        );
+        offsetBuf = new Float32Array(newAllocateCount * 4);
+        diameterBuf = new Float32Array(newAllocateCount);
+        extraBuf = new Float32Array(newAllocateCount * 2);
+        colorBuf = new Uint32Array(newAllocateCount);
+        populateBuffers();
+        const oldGeometry = geometry;
+        geometry = new InstancedBufferGeometry();
+        geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
+        geometry.setAttribute("offset", new InstancedBufferAttribute(offsetBuf, 3));
+        geometry.setAttribute("diameter", new InstancedBufferAttribute(diameterBuf, 1));
+        geometry.setAttribute("extra", new InstancedBufferAttribute(extraBuf, 2));
+        geometry.setAttribute("color", new InstancedBufferAttribute(colorBuf, 1));
+        geometry.instanceCount = newAllocateCount;
+        mesh.geometry = geometry;
+        oldGeometry.dispose();
+      } else {
+        populateBuffers();
+        geometry.attributes["offset"].needsUpdate = true;
+        geometry.attributes["diameter"].needsUpdate = true;
+        geometry.attributes["extra"].needsUpdate = true;
+        geometry.attributes["color"].needsUpdate = true;
+      }
     }
   }
 
@@ -28982,9 +29093,20 @@ if (edgeAlpha == 0.0) {
   function trackFirehose({ users, clock }) {
     const MAX_WEIGHT = 0.1;
     const FADE_TIME_MSEC = 4e3;
-    const activeUsers = {};
-    const rend = dynamicShaderRenderer({
-      clock,
+    const activeSplashes = [];
+    const mesh = splashSpotMesh({
+      clock: { now: () => clock.nowMSec },
+      spots: activeSplashes,
+      get: (splash, coords) => {
+        const { user } = splash;
+        coords.x = user.x;
+        coords.y = user.h;
+        coords.z = user.y;
+        coords.mass = splash.weight;
+        coords.color = user.colorRGB * 256 | 255;
+        coords.start = splash.start;
+        coords.stop = splash.stop;
+      },
       vertexShader: (
         /* glsl */
         `
@@ -29031,10 +29153,8 @@ if (edgeAlpha == 0.0) {
             gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra;
 
             `
-      ),
-      userCount: 2e3
+      )
     });
-    let updateUsers = false;
     const unknownsLastSet = /* @__PURE__ */ new Set();
     const unknownsTotalSet = /* @__PURE__ */ new Set();
     const outcome = {
@@ -29045,83 +29165,78 @@ if (edgeAlpha == 0.0) {
       flashes: 0,
       unknowns: 0,
       unknownsTotal: 0,
-      mesh: rend.mesh,
-      tickAll,
+      mesh,
       fallback: false
     };
     firehoseWithFallback({
       post(author, postID, text, replyTo, replyToThread, timeMsec) {
         clock.update();
-        addActiveUser(author, 1, timeMsec);
-        replyTo?.shortDID ? addActiveUser(replyTo.shortDID, 1, timeMsec) : void 0;
-        replyToThread?.shortDID ? addActiveUser(replyToThread.shortDID, 0.5, timeMsec) : void 0;
+        splashShortID(author, 1);
+        replyTo?.shortDID ? splashShortID(replyTo.shortDID, 1) : void 0;
+        replyToThread?.shortDID ? splashShortID(replyToThread.shortDID, 0.5) : void 0;
         outcome.posts++;
       },
       repost(who, whose, postID, timeMsec) {
         clock.update();
-        addActiveUser(who, 0.6, timeMsec);
-        addActiveUser(whose, 0.7, timeMsec);
+        splashShortID(who, 0.6);
+        splashShortID(whose, 0.7);
         outcome.reposts++;
       },
       like(who, whose, postID, timeMsec) {
         clock.update();
-        addActiveUser(who, 0.1, timeMsec);
-        addActiveUser(whose, 0.4, timeMsec);
+        splashShortID(who, 0.1);
+        splashShortID(whose, 0.4);
         outcome.likes++;
       },
       follow(who, whom, timeMsec) {
         clock.update();
-        addActiveUser(who, 0.1, timeMsec);
-        addActiveUser(whom, 1.5, timeMsec);
+        splashShortID(who, 0.1);
+        splashShortID(whom, 1.5);
         outcome.follows++;
       }
     }, () => {
       outcome.fallback = true;
     });
     return outcome;
-    function tickAll(timePassedSec) {
-      const currentSec = clock.nowSeconds;
-      for (const shortDID in activeUsers) {
-        const ball = activeUsers[shortDID];
-        if (currentSec > ball.stop) {
-          delete activeUsers[shortDID];
-          outcome.flashes--;
-          updateUsers = true;
-        }
-      }
-      if (updateUsers) {
-        rend.updateUserSet(Object.values(activeUsers));
-        updateUsers = false;
-      }
-    }
-    function addActiveUser(shortDID, weight, _unused) {
-      const nowSec = clock.nowSeconds;
-      let existingUser = activeUsers[shortDID];
-      if (existingUser) {
-        updateUsers = true;
-        existingUser.weight = Math.min(MAX_WEIGHT, weight * 0.09 + existingUser.weight);
-        existingUser.stop = nowSec + FADE_TIME_MSEC / 1e3;
-        return 2;
-      }
+    function splashShortID(shortDID, weight) {
       const user = users[shortDID];
-      if (!user) {
-        if (!outcome.unknowns && unknownsLastSet.size)
-          unknownsLastSet.clear();
+      if (user) {
+        addUser(user, clock.nowSeconds, clock.nowSeconds + FADE_TIME_MSEC / 1e3, weight);
+      } else {
         unknownsLastSet.add(shortDID);
         unknownsTotalSet.add(shortDID);
-        outcome.unknowns = unknownsLastSet.size;
-        outcome.unknownsTotal = unknownsTotalSet.size;
-        return;
       }
-      activeUsers[shortDID] = {
-        user,
-        weight: weight * 0.09,
-        start: nowSec,
-        stop: nowSec + FADE_TIME_MSEC / 1e3
-      };
-      outcome.flashes++;
-      updateUsers = true;
-      return 1;
+    }
+    function addUser(user, start, stop, weight) {
+      const nowSeconds = clock.nowSeconds;
+      let gapIndex = -1;
+      let userSplash;
+      for (let i = 0; i < activeSplashes.length; i++) {
+        const splash = activeSplashes[i];
+        if (splash.user === user) {
+          userSplash = splash;
+          break;
+        }
+        if (nowSeconds > splash.stop) {
+          gapIndex = i;
+        }
+      }
+      if (userSplash) {
+        userSplash.stop = stop;
+        userSplash.weight = Math.min(MAX_WEIGHT, weight * 0.09 + userSplash.weight);
+      } else {
+        const normWeight = Math.min(MAX_WEIGHT, weight * 0.09 + user.weight);
+        if (gapIndex >= 0) {
+          const reuseSplash = activeSplashes[gapIndex];
+          reuseSplash.user = user;
+          reuseSplash.start = start;
+          reuseSplash.stop = stop;
+          reuseSplash.weight = normWeight;
+        } else {
+          activeSplashes.push({ user, start, stop, weight: normWeight });
+        }
+      }
+      mesh.updateSpots(activeSplashes);
     }
   }
 
@@ -29612,7 +29727,8 @@ if (edgeAlpha == 0.0) {
       scene,
       camera,
       renderer,
-      stats
+      stats,
+      updateUsers
     } = setupScene(usersAndTiles.all, clock);
     const domElements = createDOMLayout({
       canvas3D: renderer.domElement,
@@ -29713,7 +29829,6 @@ if (edgeAlpha == 0.0) {
         const delta = lastRender ? clock.nowMSec - lastRender : 0;
         lastRender = clock.nowMSec;
         orbit.controls?.update?.(Math.min(delta / 1e3, 0.2));
-        firehoseTrackingRenderer.tickAll(delta / 1e3);
         renderer.render(scene, camera);
         stats.end();
         if (rareMoved) {

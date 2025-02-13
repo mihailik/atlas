@@ -65,6 +65,6 @@ export function setupScene(users, clock) {
    * @param {typeof users} users
    */
   function updateUsers(users) {
-    farUsersMesh.updateNodes(users);
+    farUsersMesh.updateSpots(users);
   }
 }

@@ -157,7 +157,7 @@ export async function constructStateAndRun(rawUsers) {
       const delta = lastRender ? clock.nowMSec - lastRender : 0;
       lastRender = clock.nowMSec;
       orbit.controls?.update?.(Math.min(delta / 1000, 0.2));
-      firehoseTrackingRenderer.tickAll(delta / 1000);
+      // firehoseTrackingRenderer.tickAll(delta / 1000);
 
       renderer.render(scene, camera);
       stats.end();

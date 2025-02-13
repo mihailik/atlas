@@ -133,10 +133,10 @@ export function massSpotMesh({ clock: clockArg, spots, get }) {
   };
 
   const meshWithUpdates =
-    /** @type {typeof mesh & { updateNodes: typeof updateNodes }} */(
+    /** @type {typeof mesh & { updateSpots: typeof updateSpots }} */(
       mesh
     );
-  meshWithUpdates.updateNodes = updateNodes;
+  meshWithUpdates.updateSpots = updateSpots;
 
   return meshWithUpdates;
 
@@ -164,7 +164,7 @@ export function massSpotMesh({ clock: clockArg, spots, get }) {
   /**
  * @param {TParticle[]} newSpots
  */
-  function updateNodes(newSpots) {
+  function updateSpots(newSpots) {
     spots = newSpots;
     if (newSpots.length > geometry.instanceCount || newSpots.length < geometry.instanceCount / 2) {
       const newAllocateCount = Math.max(

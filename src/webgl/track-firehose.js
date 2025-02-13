@@ -1,7 +1,7 @@
 // @ts-check
 
 import { firehoseWithFallback } from '../firehose/firehose-with-callback';
-import { dynamicShaderRenderer } from './dynamic-shader-renderer';
+import { splashSpotMesh } from './layers/splash-spot-mesh';
 
 /**
  * @param {{
@@ -13,11 +13,23 @@ export function trackFirehose({ users, clock }) {
 
   const MAX_WEIGHT = 0.1;
   const FADE_TIME_MSEC = 4000;
-  /** @type {{ [shortDID: string]: { user: import('..').UserEntry, weight: number, start: number, stop: number } }} */
-  const activeUsers = {};
 
-  const rend = dynamicShaderRenderer({
-    clock,
+  /** @type {{ user: import('..').UserEntry, start: number, stop: number, weight: number }[]} */
+  const activeSplashes = [];
+
+  const mesh = splashSpotMesh({
+    clock: { now: () => clock.nowMSec },
+    spots: activeSplashes,
+    get: (splash, coords) => {
+      const { user } = splash;
+      coords.x = user.x;
+      coords.y = user.h;
+      coords.z = user.y;
+      coords.mass = splash.weight;
+      coords.color = user.colorRGB * 256 | 0xFF;
+      coords.start = splash.start;
+      coords.stop = splash.stop;
+    },
     vertexShader: /* glsl */`
             float startTime = min(extra.x, extra.y);
             float endTime = max(extra.x, extra.y);
@@ -58,11 +70,8 @@ export function trackFirehose({ users, clock }) {
             float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
             gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra;
 
-            `,
-    userCount: 2000
+            `
   });
-
-  let updateUsers = false;
 
   const unknownsLastSet = new Set();
   const unknownsTotalSet = new Set();
@@ -75,35 +84,34 @@ export function trackFirehose({ users, clock }) {
     flashes: 0,
     unknowns: 0,
     unknownsTotal: 0,
-    mesh: rend.mesh,
-    tickAll,
+    mesh,
     fallback: false
   };
 
   firehoseWithFallback({
     post(author, postID, text, replyTo, replyToThread, timeMsec) {
       clock.update();
-      addActiveUser(author, 1, timeMsec);
-      replyTo?.shortDID ? addActiveUser(replyTo.shortDID, 1, timeMsec) : undefined;
-      replyToThread?.shortDID ? addActiveUser(replyToThread.shortDID, 0.5, timeMsec) : undefined;
+      splashShortID(author, 1);
+      replyTo?.shortDID ? splashShortID(replyTo.shortDID, 1) : undefined;
+      replyToThread?.shortDID ? splashShortID(replyToThread.shortDID, 0.5) : undefined;
       outcome.posts++;
     },
     repost(who, whose, postID, timeMsec) {
       clock.update();
-      addActiveUser(who, 0.6, timeMsec);
-      addActiveUser(whose, 0.7, timeMsec);
+      splashShortID(who, 0.6);
+      splashShortID(whose, 0.7);
       outcome.reposts++;
     },
     like(who, whose, postID, timeMsec) {
       clock.update();
-      addActiveUser(who, 0.1, timeMsec);
-      addActiveUser(whose, 0.4, timeMsec);
+      splashShortID(who, 0.1);
+      splashShortID(whose, 0.4);
       outcome.likes++;
     },
     follow(who, whom, timeMsec) {
       clock.update();
-      addActiveUser(who, 0.1, timeMsec);
-      addActiveUser(whom, 1.5, timeMsec);
+      splashShortID(who, 0.1);
+      splashShortID(whom, 1.5);
       outcome.follows++;
     }
   }, () => {
@@ -112,58 +120,56 @@ export function trackFirehose({ users, clock }) {
 
   return outcome;
 
-  /** @param {number} timePassedSec */
-  function tickAll(timePassedSec) {
-    const currentSec = clock.nowSeconds;
-    for (const shortDID in activeUsers) {
-      const ball = activeUsers[shortDID];
-      if (currentSec > ball.stop) {
-        delete activeUsers[shortDID];
-        outcome.flashes--;
-        updateUsers = true;
-      }
-    }
-
-    if (updateUsers) {
-      rend.updateUserSet(Object.values(activeUsers));
-      updateUsers = false;
+  /** @param {string} shortDID */
+  function splashShortID(shortDID, weight) {
+    const user = users[shortDID];
+    if (user) {
+      addUser(user, clock.nowSeconds, clock.nowSeconds + FADE_TIME_MSEC / 1000, weight);
+    } else {
+      unknownsLastSet.add(shortDID);
+      unknownsTotalSet.add(shortDID);
     }
   }
 
   /**
-   * @param {string} shortDID
-   * @param {number} weight
-   * @param {number} _unused
+   * @param {import('..').UserEntry} user
+   * @param {number} start
+   * @param {number} stop
    */
-  function addActiveUser(shortDID, weight, _unused) {
-    const nowSec = clock.nowSeconds;
-    let existingUser = activeUsers[shortDID];
-    if (existingUser) {
-      updateUsers = true;
-      existingUser.weight = Math.min(MAX_WEIGHT, weight * 0.09 + existingUser.weight);
-      existingUser.stop = nowSec + FADE_TIME_MSEC / 1000;
-      return 2;
+  function addUser(user, start, stop, weight) {
+    const nowSeconds = clock.nowSeconds;
+    let gapIndex = -1;
+    let userSplash;
+    for (let i = 0; i < activeSplashes.length; i++) {
+      const splash = activeSplashes[i];
+      if (splash.user === user) {
+        userSplash = splash;
+        break;
+      }
+
+      if (nowSeconds > splash.stop) {
+        gapIndex = i;
+      }
     }
 
-    const user = users[shortDID];
-    if (!user) {
-      if (!outcome.unknowns && unknownsLastSet.size)
-        unknownsLastSet.clear();
-      unknownsLastSet.add(shortDID);
-      unknownsTotalSet.add(shortDID);
-      outcome.unknowns = unknownsLastSet.size;
-      outcome.unknownsTotal = unknownsTotalSet.size;
-      return;
+    if (userSplash) {
+      userSplash.stop = stop;
+      userSplash.weight = Math.min(MAX_WEIGHT, weight * 0.09 + userSplash.weight);
+    } else {
+      const normWeight = Math.min(MAX_WEIGHT, weight * 0.09 + user.weight);
+
+      if (gapIndex >= 0) {
+        const reuseSplash = activeSplashes[gapIndex];
+        reuseSplash.user = user;
+        reuseSplash.start = start;
+        reuseSplash.stop = stop;
+        reuseSplash.weight = normWeight;
+      } else {
+        activeSplashes.push({ user, start, stop, weight: normWeight });
+      }
     }
 
-    activeUsers[shortDID] = {
-      user,
-      weight: weight * 0.09,
-      start: nowSec,
-      stop: nowSec + FADE_TIME_MSEC / 1000
-    };
-    outcome.flashes++;
-    updateUsers = true;
-    return 1;
+    mesh.updateSpots(activeSplashes);
   }
+
 }
