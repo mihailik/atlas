@@ -16,11 +16,11 @@ function atlas(invokeType) {
   /** @typedef {[handle: string, x: number, y: number, weight: number, displayName?: string]} UserTuple */
 
   /** @param {{
-   *  post(author: string, postID: string, text: string, replyTo?: { shortDID: string, postID: string }, replyToThread?: { shortDID: string, postID: string });
-   *  repost(who: string, whose: string, postID: string);
-   *  like(who: string, whose: string, postID: string);
-   *  follow(who: string, whom: string);
-   *  error(error: Error): void;
+   *  post?(author: string, postID: string, text: string, replyTo?: { shortDID: string, postID: string }, replyToThread?: { shortDID: string, postID: string });
+   *  repost?(who: string, whose: string, postID: string);
+   *  like?(who: string, whose: string, postID: string);
+   *  follow?(who: string, whom: string);
+   *  error?(error: Error): void;
    * }} callbacks */
   function firehose(callbacks) {
     /** @type {typeof import('cbor-x') & {__extended42}} */
@@ -105,6 +105,7 @@ function atlas(invokeType) {
 
     /** @param {FeedRecordTypeMap['app.bsky.feed.like']} likeRecord */
     function handleLike(commitShortDID, likeRecord) {
+      if (typeof callbacks.like !== 'function') return;
       const subject = breakFeedUri(likeRecord.subject?.uri);
       if (!subject) return; // TODO: alert incomplete like
 
@@ -113,6 +114,7 @@ function atlas(invokeType) {
 
     /** @param {FeedRecordTypeMap['app.bsky.graph.follow']} followRecord */
     function handleFollow(commitShortDID, followRecord) {
+      if (typeof callbacks.follow !== 'function') return;
       const whom = shortenDID(followRecord.subject);
       if (!whom) return; // TODO: alert incomplete follow
 
@@ -121,6 +123,7 @@ function atlas(invokeType) {
 
     /** @param {FeedRecordTypeMap['app.bsky.feed.post']} postRecord */
     function handlePost(commitShortDID, postID, postRecord) {
+      if (typeof callbacks.post !== 'function') return;
       const replyTo = breakFeedUri(postRecord.reply?.parent?.uri);
       const replyToThread = postRecord.reply?.root?.uri === postRecord.reply?.parent?.uri ?
         undefined :
@@ -131,6 +134,7 @@ function atlas(invokeType) {
 
     /** @param {FeedRecordTypeMap['app.bsky.feed.repost']} repostRecord */
     function handleRepost(commitShortDID, repostRecord) {
+      if (typeof callbacks.repost !== 'function') return;
       const subject = breakFeedUri(repostRecord.subject?.uri);
       if (!subject) return; // TODO: alert incomplete repost
 
@@ -138,6 +142,7 @@ function atlas(invokeType) {
     }
 
     function handleError(event) {
+      if (typeof callbacks.error !== 'function') return;
       callbacks.error(event);
     }
   }
@@ -427,7 +432,8 @@ function atlas(invokeType) {
         stats,
         clock,
         controls,
-        updateCamera
+        updateCamera,
+        userBounds
       } = setupScene();
 
       const domElements = appendToDOM();
@@ -435,7 +441,23 @@ function atlas(invokeType) {
 
       //const shaderState = webgl_buffergeometry_instancing_demo();
 
+      const fh = trackFirehose(userBounds);
+
       startAnimation();
+
+      /** @param {string} shortDID */
+      function defaultUserColorer(shortDID) {
+        /** @type {THREE.Color} */
+        let rgb;
+        if (!/** @type {*} */(defaultUserColorer).rgb) /** @type {*} */(defaultUserColorer).rgb = rgb = new THREE.Color();
+        else (rgb = /** @type {*} */(defaultUserColorer).rgb).set(0, 0, 0);
+
+        const crc32 = calcCRC32(shortDID);
+        const hue = (Math.abs(crc32) % 2000) / 2000;
+        rgb.offsetHSL(hue, 3, 0.6);
+        const hexColor = rgb.getHex() * 256 + 0xFF;
+        return hexColor;
+      }
 
       function setupScene() {
         const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.00001, 10000);
@@ -462,7 +484,6 @@ function atlas(invokeType) {
 
         const stats = new Stats();
 
-        const clock = new THREE.Clock();
         const controls = new OrbitControls(camera, document.body);
         controls.maxDistance = 40 * 1000;
         controls.enableDamping = true;
@@ -493,7 +514,6 @@ function atlas(invokeType) {
         };
 
         function createFarUsersMesh() {
-          const rgb = new THREE.Color();
           const { mesh } = repeatRenderer({
             positions: (() => {
               const b = 0.0008;
@@ -511,106 +531,109 @@ function atlas(invokeType) {
               pos[1] = h;
               pos[2] = y;
             },
-            userColorer: (shortDID) => {
-              rgb.set(0, 0, 0);
-              const crc32 = calcCRC32(shortDID);
-              rgb.offsetHSL((Math.abs(crc32) % 2000) / 2000, 1, 0.85);
-              return crc32;
-            }
+            userColorer: defaultUserColorer
           });
           scene.add(mesh);
           return mesh;
         }
+      }
 
-        /**
-         * 
-         * @param {{
-         *  proximityTiles: ReturnType<typeof makeProximityTiles>;
-         *  proximityThreshold: number;
-         * }} param0 
-         * @returns 
-         */
-        function createNearUsersMesh({ proximityTiles, proximityThreshold }) {
-          const { mesh, updateUserSet } = repeatRenderer({
-            positions: new Float32Array(geometryVertices(new THREE.SphereGeometry(0.0003, 16, 12))),
-            userKeys: Object.keys(users).sort((shortDID1, shortDID2) => {
-              const [, x1, y1] = users[shortDID1];
-              const [, x2, y2] = users[shortDID2];
-              const centerX = (userBounds.x.min + userBounds.x.max) / 2;
-              const centerY = (userBounds.y.min + userBounds.y.max) / 2;
-              const dist1 = Math.sqrt((x1 - centerX) * (x1 - centerX) + (y1 - centerY) * (y1 - centerY));
-              const dist2 = Math.sqrt((x2 - centerX) * (x2 - centerX) + (y2 - centerY) * (y2 - centerY));
-              return dist1 - dist2;
-            }).slice(0, 1000),
-            userMapper: (shortDID, pos) => {
-              const [, xSpace, ySpace] = users[shortDID];
-              const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, userBounds);
-              pos[0] = x;
-              pos[1] = h;
-              pos[2] = y;
-            },
-            userColorer: (shortDID) => {
-              const crc32 = calcCRC32(shortDID) & 0x808080FF;
-              return crc32;
-            }
-          });
-          scene.add(mesh);
-          return { mesh, updateCamera };
+      /** @param {{x: { min: number, max: number}, y: { min: number, max: number }}} bounds */
+      function trackFirehose(bounds) {
+        const activeUsers = {};
 
-          /** @type {string[] | undefined} */
-          var lastNearbyUserKeys;
+        firehose({
+          post(author, postID, text, replyTo, replyToThread) {
+            addActiveUser(author, 1);
+          },
+          repost(who, whose, postID) {
+            addActiveUser(who, 0.6);
+            addActiveUser(whose, 0.7);
+          },
+          like(who, whose, postID) {
+            addActiveUser(who, 0.1);
+            addActiveUser(whose, 0.4);
+          },
+          follow(who, whom) {
+            addActiveUser(who, 0.1);
+            addActiveUser(whom, 1.5);
+          }
+        });
 
-          /**
-           * @param {THREE.Vector3} cameraPosition
-           */
-          function updateCamera(cameraPosition) {
-            /** @type {string | undefined} */
-            let anyUser;
-            const [xLowIndex, xHighIndex, yLowIndex, yHighIndex] = proximityTiles.findTiles(
-              cameraPosition.x, cameraPosition.z, (shortDID, usrTuple) => isClose(cameraPosition, usrTuple));
-            /** @type {string[]} */
-            const nearbyUserKeys = [];
-            for (let xIndex = xLowIndex; xIndex <= xHighIndex; xIndex++) {
-              for (let yIndex = yLowIndex; yIndex <= yHighIndex; yIndex++) {
-                const tile = proximityTiles.tiles[proximityTiles.tileIndexXY(xIndex, yIndex)];
-                if (!tile) continue;
-                for (const shortDID of tile) {
-                  if (!anyUser) anyUser = shortDID;
-                  const usrTuple = users[shortDID];
-                  if (isClose(cameraPosition, usrTuple)) nearbyUserKeys.push(shortDID);
-                }
-              }
-            }
+        return {
+          tickAll
+        };
 
-            if (!nearbyUserKeys.length && anyUser) {
-              nearbyUserKeys.push(anyUser);
-            }
+        /** @param {number} timePassedSec */
+        function tickAll(timePassedSec) {
+          for (const shortDID in activeUsers) {
+            const ball = activeUsers[shortDID];
+            if (typeof ball?.tick === 'function')
+              ball.tick(timePassedSec);
+          }
+        }
 
-            if (!lastNearbyUserKeys ||
-              nearbyUserKeys.length !== lastNearbyUserKeys.length ||
-              nearbyUserKeys.some((shortDID, i) => shortDID !== /** @type {string[]} */(lastNearbyUserKeys)[i])) {
-              console.log('nearby: ', lastNearbyUserKeys, ' --> ', nearbyUserKeys);
-              lastNearbyUserKeys = nearbyUserKeys;
-              updateUserSet(nearbyUserKeys);
-            }
+        function addActiveUser(shortDID, weight) {
+          let existingUser = activeUsers[shortDID];
+          if (existingUser) {
+            existingUser.addWeight(weight);
+            return;
           }
 
-          /**
-           * @param {THREE.Vector3} cameraPosition
-           * @param {UserTuple} usrTuple
-           */
-          function isClose(cameraPosition, usrTuple) {
-            const { x, y, h } = mapUserCoordsToAtlas(usrTuple[1], usrTuple[2], userBounds);
-            const dist = Math.sqrt(
-              (x - cameraPosition.x) * (x - cameraPosition.x) +
-              (y - cameraPosition.z) * (y - cameraPosition.z) +
-              (h - cameraPosition.y) * (h - cameraPosition.y));
-              
-            return dist <= proximityThreshold
+          const [shortHandle, x, y] = users[shortDID];
+          const { x: xAtlas, y: yAtlas, h: hAtlas } = mapUserCoordsToAtlas(x, y, bounds);
+          const color = defaultUserColorer(shortDID);
+
+          const newUser = createUser(shortDID, shortHandle, xAtlas, yAtlas, hAtlas, weight, color);
+          activeUsers[shortDID] = newUser;
+        }
+
+        /**
+         * @param {string} shortDID
+         * @param {string} shortHandle
+         * @param {number} xAtlas
+         * @param {number} yAtlas
+         * @param {number} hAtlas
+         * @param {number} weight
+         * @param {number} color32rgba
+         */
+        function createUser(shortDID, shortHandle, xAtlas, yAtlas, hAtlas, weight, color32rgba) {
+          const user = {
+            addWeight,
+            tick
+          };
+
+          const ballBaseSize = 0.0008;
+          const ball = new THREE.SphereGeometry(ballBaseSize * 2, 16, 12);
+          const material = new THREE.MeshLambertMaterial({ color: (color32rgba / 256) | 0 });
+          const ballMesh = new THREE.Mesh(ball, material);
+
+          ballMesh.position.set(xAtlas, hAtlas, yAtlas);
+
+          scene.add(ballMesh);
+
+          return user;
+
+          /** @param {number} weightIncrement */
+          function addWeight(weightIncrement) {
+            weight *= 1 + weightIncrement;
+          }
+
+          /** @param {number} timePassedSec */
+          function tick(timePassedSec) {
+            weight -= timePassedSec * 0.1;
+            if (weight < ballBaseSize) {
+              scene.remove(ballMesh);
+              delete activeUsers[shortDID];
+              ball.dispose();
+              material.dispose();
+              return;
+            }
+
+            ballMesh.scale.set(weight, weight, weight);
           }
         }
       }
-      
 
       function appendToDOM() {
         const root = elem('div', { parent: document.body, style: 'position: fixed; left: 0; top: 0; width: 100%; height: 100%;' });
@@ -681,6 +704,7 @@ function atlas(invokeType) {
           const delta = lastRender ? now - lastRender : 0;
           lastRender = now;
           controls.update(delta / 1000);
+          fh.tickAll(delta / 1000);
           // shaderState.updateOnFrame(rareMoved);
 
           renderer.render(scene, camera);
@@ -771,7 +795,11 @@ function atlas(invokeType) {
               uint aInt = (color) % uint(256);
 
               // https://stackoverflow.com/a/22899161/140739
-              vColor = vec4(float(rInt) / 255.0f, float(gInt) / 255.0f, float(bInt) / 255.0f, float(aInt) / 255.0f);
+              vColor = vec4(0);
+              vColor.r = float(rInt) / 255.0f;
+              vColor.g = float(gInt) / 255.0f;
+              vColor.b = float(bInt) / 255.0f;
+              vColor.a = float(aInt) / 255.0f;
 
               vFogDist = distance(cameraPosition, offset);
             }
