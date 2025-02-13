@@ -16,11 +16,11 @@ function atlas(invokeType) {
   /** @typedef {[handle: string, x: number, y: number, weight: number, displayName?: string]} UserTuple */
 
   /** @param {{
-   *  post?(author: string, postID: string, text: string, replyTo?: { shortDID: string, postID: string }, replyToThread?: { shortDID: string, postID: string });
-   *  repost?(who: string, whose: string, postID: string);
-   *  like?(who: string, whose: string, postID: string);
-   *  follow?(who: string, whom: string);
-   *  error?(error: Error): void;
+   *  post?(author: string, postID: string, text: string, replyTo: { shortDID: string, postID: string } | undefined, replyToThread: { shortDID: string, postID: string } | undefined, timeMsec: number);
+   *  repost?(who: string, whose: string, postID: string, timeMsec: number);
+   *  like?(who: string, whose: string, postID: string, timeMsec: number);
+   *  follow?(who: string, whom: string, timeMsec: number);
+   *  error?(error: Error, timeMsec: number): void;
    * }} callbacks */
   function firehose(callbacks) {
     /** @type {typeof import('cbor-x') & {__extended42}} */
@@ -49,6 +49,8 @@ function atlas(invokeType) {
       });
     }
 
+    let now = Date.now();
+
     const wsAddress = bskyService.replace(/^(http|https)\:/, 'wss:') + 'com.atproto.sync.subscribeRepos';
     const ws = new WebSocketImpl(wsAddress);
     ws.addEventListener('message', handleMessage);
@@ -61,6 +63,7 @@ function atlas(invokeType) {
     }
 
     async function handleMessage(event) {
+      now = Date.now();
       if (typeof event.data?.arrayBuffer === 'function')
         return event.data.arrayBuffer().then(convertMessageBuf);
       else if (typeof event.data?.byteLength === 'number')
@@ -109,7 +112,7 @@ function atlas(invokeType) {
       const subject = breakFeedUri(likeRecord.subject?.uri);
       if (!subject) return; // TODO: alert incomplete like
 
-      return callbacks.like(commitShortDID, subject.shortDID, subject.postID);
+      return callbacks.like(commitShortDID, subject.shortDID, subject.postID, now);
     }
 
     /** @param {FeedRecordTypeMap['app.bsky.graph.follow']} followRecord */
@@ -118,7 +121,7 @@ function atlas(invokeType) {
       const whom = shortenDID(followRecord.subject);
       if (!whom) return; // TODO: alert incomplete follow
 
-      return callbacks.follow(commitShortDID, whom);
+      return callbacks.follow(commitShortDID, whom, now);
     }
 
     /** @param {FeedRecordTypeMap['app.bsky.feed.post']} postRecord */
@@ -129,7 +132,7 @@ function atlas(invokeType) {
         undefined :
         breakFeedUri(postRecord.reply?.root?.uri);
 
-      return callbacks.post(commitShortDID, postID, postRecord.text, replyTo, replyToThread);
+      return callbacks.post(commitShortDID, postID, postRecord.text, replyTo, replyToThread, now);
     }
 
     /** @param {FeedRecordTypeMap['app.bsky.feed.repost']} repostRecord */
@@ -138,32 +141,34 @@ function atlas(invokeType) {
       const subject = breakFeedUri(repostRecord.subject?.uri);
       if (!subject) return; // TODO: alert incomplete repost
 
-      return callbacks.repost(commitShortDID, subject.shortDID, subject.postID);
+      return callbacks.repost(commitShortDID, subject.shortDID, subject.postID, now);
     }
 
     function handleError(event) {
       if (typeof callbacks.error !== 'function') return;
-      callbacks.error(event);
+      callbacks.error(event, now);
     }
   }
 
   /** @type {typeof firehose} */
   function firehoseWithFallback(callbacks) {
-    var stopInner;
-    let { stop: stopWebSocket } = firehose({
+    /** @type {ReturnType<typeof firehose> | undefined} */
+    let fallbackHose;
+    /** @type {ReturnType<typeof firehose> | undefined} */
+    let websocketHose = firehose({
       ...callbacks,
       error: (errorWebSocket) => {
-        stopWebSocket();
-        stopWebSocket = undefined;
-        stopInner = firehoseWithFallback.fallbackFirehose(callbacks).stop;
+        websocketHose?.stop();
+        websocketHose = undefined;
+        fallbackHose = firehoseWithFallback.fallbackFirehose(callbacks);
       }
     });
 
     return { stop };
 
     function stop() {
-      stopWebSocket?.();
-      stopInner?.();
+      websocketHose?.stop();
+      fallbackHose?.stop();
     }
   }
 
@@ -186,6 +191,7 @@ function atlas(invokeType) {
         if (typeof firehoseJsonObj?.then === 'function') {
           firehoseJsonObj = await firehoseJsonObj;
         }
+        let now = Date.now();
 
         let lastTimestamp = 0;
         for (const entry of firehoseJsonObj) {
@@ -198,30 +204,31 @@ function atlas(invokeType) {
         }
 
         function handleMessage(entry) {
+          now = Date.now();
           const who = shortenDID(entry.repo);
           switch (entry.$type) {
             case 'app.bsky.feed.like':
               const likeUri = breakFeedUri(entry.subject?.uri);
               if (who && likeUri?.shortDID && likeUri?.postID)
-                callbacks?.like?.(who, likeUri.shortDID, likeUri.postID);
+                callbacks?.like?.(who, likeUri.shortDID, likeUri.postID, now);
               break;
 
             case 'app.bsky.graph.follow':
               const followWhom = shortenDID(entry.subject);
               if (who && followWhom)
-                callbacks?.follow?.(who, followWhom);
+                callbacks?.follow?.(who, followWhom, now);
               break;
 
             case 'app.bsky.feed.post':
               const postUri = breakFeedUri(entry.subject?.uri);
               if (who && postUri?.shortDID && postUri?.postID)
-                callbacks?.post?.(who, postUri.shortDID, postUri.postID);
+                callbacks?.post?.(who, postUri.shortDID, postUri.postID, undefined, undefined, now);
               break;
             
             case 'app.bsky.feed.repost':
               const repostUri = breakFeedUri(entry.subject?.uri);
               if (who && repostUri?.shortDID && repostUri?.postID)
-                callbacks?.repost?.(who, repostUri.shortDID, repostUri.postID);
+                callbacks?.repost?.(who, repostUri.shortDID, repostUri.postID, now);
               break;
 
             default:
@@ -569,6 +576,7 @@ function atlas(invokeType) {
       //const shaderState = webgl_buffergeometry_instancing_demo();
 
       const fh = trackFirehose(userBounds);
+      scene.add(fh.mesh);
 
       startAnimation();
 
@@ -648,7 +656,7 @@ function atlas(invokeType) {
               pos[0] = x;
               pos[1] = h;
               pos[2] = y;
-              pos[3] = 1;
+              pos[3] = 0.001;
             },
             userColorer: defaultUserColorer
           })
@@ -659,106 +667,99 @@ function atlas(invokeType) {
 
       /** @param {{x: { min: number, max: number}, y: { min: number, max: number }}} bounds */
       function trackFirehose(bounds) {
+
+        const MAX_WEIGHT = 0.1;
+        const FADE_TIME_MSEC = 2000;
+        /** @type {{ [shortDID: string]: { x: number, y: number, h: number, weight: number, color: number, startAtMsec: number, fadeAtMsec: number } }} */
         const activeUsers = {};
+        const rend = flashesRenderer();
+        let updateUsers = false;
 
         firehoseWithFallback({
-          post(author, postID, text, replyTo, replyToThread) {
-            addActiveUser(author, 1);
+          post(author, postID, text, replyTo, replyToThread, timeMsec) {
+            addActiveUser(author, 1, timeMsec);
           },
-          repost(who, whose, postID) {
-            addActiveUser(who, 0.6);
-            addActiveUser(whose, 0.7);
+          repost(who, whose, postID, timeMsec) {
+            addActiveUser(who, 0.6, timeMsec);
+            addActiveUser(whose, 0.7, timeMsec);
           },
-          like(who, whose, postID) {
-            addActiveUser(who, 0.1);
-            addActiveUser(whose, 0.4);
+          like(who, whose, postID, timeMsec) {
+            addActiveUser(who, 0.1, timeMsec);
+            addActiveUser(whose, 0.4, timeMsec);
           },
-          follow(who, whom) {
-            addActiveUser(who, 0.1);
-            addActiveUser(whom, 1.5);
+          follow(who, whom, timeMsec) {
+            addActiveUser(who, 0.1, timeMsec);
+            addActiveUser(whom, 1.5, timeMsec);
           }
         });
 
         return {
+          mesh: rend.mesh,
           tickAll
         };
 
+        function flashesRenderer() {
+          const rend = billboardShaderRenderer({
+            fragmentShader: `
+            gl_FragColor = tintColor;
+            gl_FragColor.a = gl_FragColor.a * gl_FragColor.a; //(timeRatio < 0.2 ? timeRatio * 5.0 : 1.0);
+            gl_FragColor.a = gl_FragColor.a * gl_FragColor.a;
+            gl_FragColor.a = gl_FragColor.a * gl_FragColor.a;
+            `,
+            userKeys: Object.keys(users).slice(0, 10* 1000),
+            userMapper: (shortDID, pos) => {
+              const usr = activeUsers[shortDID];
+              if (!usr) return;
+              pos[0] = usr.x;
+              pos[1] = usr.h;
+              pos[2] = usr.y;
+              pos[3] = usr.weight;
+              pos[4] = usr.startAtMsec;
+              pos[5] = usr.fadeAtMsec;
+            },
+            userColorer: (shortDID) => activeUsers[shortDID]?.color
+          });
+          return rend;
+        }
+
         /** @param {number} timePassedSec */
         function tickAll(timePassedSec) {
+          const current = Date.now();
           for (const shortDID in activeUsers) {
             const ball = activeUsers[shortDID];
-            if (typeof ball?.tick === 'function')
-              ball.tick(timePassedSec);
+            if (ball.fadeAtMsec < current) {
+              delete activeUsers[shortDID];
+              updateUsers = true;
+            } 
+          }
+
+          if (updateUsers) {
+            rend.updateUserSet(Object.keys(activeUsers));
+            updateUsers = false;
           }
         }
 
         /**
          * @param {string} shortDID
          * @param {number} weight
+         * @param {number} timestampMsec
          */
-        function addActiveUser(shortDID, weight) {
+        function addActiveUser(shortDID, weight, timestampMsec) {
           let existingUser = activeUsers[shortDID];
           if (existingUser) {
-            existingUser.addWeight(weight);
+            updateUsers = true;
+            existingUser.weight = Math.min(MAX_WEIGHT, weight * 0.1 + existingUser.weight);
+            existingUser.fadeAtMsec = timestampMsec + FADE_TIME_MSEC;
             return;
           }
 
           const usrTuple = users[shortDID];
-          if (!usrTuple) return; // TODO: process unknown users
-          const [shortHandle, x, y] = usrTuple;
-          const { x: xAtlas, y: yAtlas, h: hAtlas } = mapUserCoordsToAtlas(x, y, bounds);
+          if (!usrTuple) return;
+          const { x, y, h } = mapUserCoordsToAtlas(usrTuple[1], usrTuple[2], userBounds);
           const color = defaultUserColorer(shortDID);
 
-          const newUser = createUser(shortDID, shortHandle, xAtlas, yAtlas, hAtlas, weight, color);
-          activeUsers[shortDID] = newUser;
-        }
-
-        /**
-         * @param {string} shortDID
-         * @param {string} shortHandle
-         * @param {number} xAtlas
-         * @param {number} yAtlas
-         * @param {number} hAtlas
-         * @param {number} weight
-         * @param {number} color32rgba
-         */
-        function createUser(shortDID, shortHandle, xAtlas, yAtlas, hAtlas, weight, color32rgba) {
-          const user = {
-            addWeight,
-            tick
-          };
-
-          const ballBaseSize = 0.003;
-          const ball = new THREE.SphereGeometry(ballBaseSize * 2, 16, 12);
-          const baseColor = (color32rgba / 256) | 0;
-          const material = new THREE.MeshLambertMaterial({ color: baseColor });
-          const ballMesh = new THREE.Mesh(ball, material);
-
-          ballMesh.position.set(xAtlas, hAtlas, yAtlas);
-
-          scene.add(ballMesh);
-
-          return user;
-
-          /** @param {number} weightIncrement */
-          function addWeight(weightIncrement) {
-            weight *= 1 + weightIncrement;
-            if (weight > 0.3) weight = 0.3;
-          }
-
-          /** @param {number} timePassedSec */
-          function tick(timePassedSec) {
-            weight -= timePassedSec * 0.2;
-            if (weight < ballBaseSize) {
-              scene.remove(ballMesh);
-              delete activeUsers[shortDID];
-              ball.dispose();
-              material.dispose();
-              return;
-            }
-
-            ballMesh.scale.set(weight, weight, weight);
-          }
+          activeUsers[shortDID] = { x, y, h, weight: weight * 0.1, color, startAtMsec: timestampMsec, fadeAtMsec: timestampMsec + FADE_TIME_MSEC };
+          updateUsers = true;
         }
       }
 
@@ -877,52 +878,72 @@ function atlas(invokeType) {
       /**
        * @param {{
        *  userKeys: K[];
-       *  userMapper(i: K, pos: [x: number, y: number, z: number, diameter: number]): void;
+       *  userMapper(i: K, pos: [x: number, y: number, z: number, diameter: number, startMsec: number, stopMsec: number]): void;
        *  userColorer(i: K): number;
        *  fragmentShader: string;
        * }} _ 
        * @template K
        */
       function billboardShaderRenderer({ userKeys, userMapper, userColorer, fragmentShader }) {
-        const b = 0.0008;
+        const startTime = Date.now();
+        const baseHalf = 1.5 * Math.tan(Math.PI / 6);
         let positions = new Float32Array([
-          -b / 2, 0, -b / 3,
-          0, 0, b * 2 / 3,
-          b / 2, 0, -b / 3
+          -baseHalf, 0, -0.5,
+          0, 0, 1,
+          baseHalf, 0, -0.5
         ]);
         let userOffsets = new Float32Array(userKeys.length * 3);
         let userSizes = new Float32Array(userKeys.length);
+        let userStartMsec = new Float32Array(userKeys.length);
+        let userStopMsec = new Float32Array(userKeys.length);
         let userColors = new Uint32Array(userKeys.length);
         let offsetsChanged = false;
         let sizesChanged = false;
         let colorsChanged = false;
+        let startMsecChanged = false;
+        let stopMsecChanged = false;
 
         populateAttributes(userKeys);
 
         const geometry = new THREE.InstancedBufferGeometry();
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
         geometry.setAttribute('size', new THREE.InstancedBufferAttribute(userSizes, 1));
+        geometry.setAttribute('userStartMsec', new THREE.InstancedBufferAttribute(userStartMsec, 1));
+        geometry.setAttribute('userStopMsec', new THREE.InstancedBufferAttribute(userStopMsec, 1));
         geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(userOffsets, 3));
         geometry.setAttribute('color', new THREE.InstancedBufferAttribute(userColors, 1));
 
         const material = new THREE.ShaderMaterial({
-          uniforms: {},
+          uniforms: {
+            timeMsec: { value: Date.now() }
+          },
           vertexShader: `
             precision highp float;
 
             attribute vec3 offset;
             attribute float size;
+            attribute float userStartMsec;
+            attribute float userStopMsec;
             attribute uint color;
+            attribute float timeMsec;
 
             varying vec3 vPosition;
             varying float vFogDist;
             varying vec4 vColor;
+            varying float vSize;
+            varying float vUserStartMsec;
+            varying float vUserStopMsec;
+            varying float vTimeMsec;
 
             void main(){
               // multiply position.xy by size to scale the billboard
-              gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1) + vec4(position.xz, 0, 0));
+              gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1) + vec4(position.xz * size, 0, 0));
 
               vPosition = position;
+              vSize = size;
+              vUserStartMsec = userStartMsec;
+              vUserStopMsec = userStopMsec;
+              vTimeMsec = timeMsec;
 
               uint rInt = (color / uint(256 * 256 * 256)) % uint(256);
               uint gInt = (color / uint(256 * 256)) % uint(256);
@@ -945,23 +966,33 @@ function atlas(invokeType) {
             varying vec3 vPosition;
             varying vec4 vColor;
             varying float vFogDist;
+            varying float vSize;
+            varying float vUserStartMsec;
+            varying float vUserStopMsec;
+            varying float vTimeMsec;
 
             void main() {
               gl_FragColor = vColor;
               float dist = distance(vPosition, vec3(0.0));
-              float rad = 0.000134;
+              float rad = 0.25;
               float areola = rad * 2.0;
-              float radiusRatio =
+              float bodyRatio =
                 dist < rad ? 1.0 :
                 dist > areola ? 0.0 :
                 (areola - dist) / (areola - rad);
+              float radiusRatio =
+                dist < 0.5 ? 1.0 - dist * 2.0 : 0.0;
 
               float fogStart = 0.5;
               float fogGray = 1.0;
               float fogRatio = vFogDist < fogStart ? 0.0 : vFogDist > fogGray ? 1.0 : (vFogDist - fogStart) / (fogGray - fogStart);
 
-              gl_FragColor.a =radiusRatio;
+              vec4 tintColor = vColor;
+              tintColor.a = radiusRatio;
               gl_FragColor = mix(gl_FragColor, vec4(1,1,1,0.7), fogRatio);
+              gl_FragColor.a = bodyRatio;
+
+              float timeRatio = (vTimeMsec - vUserStartMsec) / (vUserStopMsec - vUserStartMsec);
 
               ${fragmentShader}
             }
@@ -974,22 +1005,28 @@ function atlas(invokeType) {
 
         const mesh = new THREE.Mesh(geometry, material);
         mesh.frustumCulled = false;
+        mesh.onBeforeRender = () => {
+          material.uniforms['timeMsec'].value = Date.now() - startTime;
+        };
         return { mesh, updateUserSet };
 
         /**
          * @param {Parameters<typeof userColorer>[0][]} userKeys
          */
         function populateAttributes(userKeys) {
-          /** @type {[x: number, y: number, z: number, size: number]} */
-          const userPos = [NaN, NaN, NaN, NaN];
+          /** @type {[x: number, y: number, z: number, size: number, startMsec: number, stopMsec: number]} */
+          const userPos = [NaN, NaN, NaN, NaN, NaN, NaN];
 
           for (let i = 0; i < userKeys.length; i++) {
             const user = userKeys[i];
+            userPos[0] = userPos[1] = userPos[2] = userPos[3] = userPos[4] = userPos[5] = NaN;
             userMapper(user, userPos);
             const oldX = userOffsets[i * 3 + 0];
             const oldY = userOffsets[i * 3 + 1];
             const oldZ = userOffsets[i * 3 + 2];
             const oldSize = userSizes[i];
+            const oldStartMsec = userStartMsec[i];
+            const oldStopMsec = userStopMsec[i];
             const oldColor = userColors[i];
 
             userOffsets[i * 3 + 0] = userPos[0];
@@ -997,11 +1034,17 @@ function atlas(invokeType) {
             userOffsets[i * 3 + 2] = userPos[2];
             userSizes[i] = userPos[3];
             userColors[i] = userColorer(user);
+            userStartMsec[i] = userPos[4] - startTime;
+            userStopMsec[i] = userPos[5] - startTime;
 
             if (userOffsets[i * 3 + 0] !== oldX || userOffsets[i * 3 + 1] !== oldY || userOffsets[i * 3 + 2] !== oldZ)
               offsetsChanged = true;
             if (userSizes[i] !== oldSize)
               sizesChanged = true;
+            if (userStartMsec[i] != oldStartMsec)
+              startMsecChanged = true;
+            if (userStopMsec[i] != oldStopMsec)
+              stopMsecChanged = true;
             if (userColors[i] !== oldColor)
               colorsChanged = true;
           }
@@ -1023,12 +1066,18 @@ function atlas(invokeType) {
             geometry.attributes['color'].needsUpdate = true;
             geometry.setAttribute('size', new THREE.InstancedBufferAttribute(userSizes, 1));
             geometry.attributes['size'].needsUpdate = true;
+            geometry.setAttribute('userStartMsec', new THREE.InstancedBufferAttribute(userStartMsec, 1));
+            geometry.attributes['userStartMsec'].needsUpdate = true;
+            geometry.setAttribute('userStopMsec', new THREE.InstancedBufferAttribute(userStopMsec, 1));
+            geometry.attributes['userStopMsec'].needsUpdate = true;
           }
 
           populateAttributes(userKeys);
           if (offsetsChanged) geometry.attributes['offset'].needsUpdate = true;
           if (sizesChanged) geometry.attributes['size'].needsUpdate = true;
           if (colorsChanged) geometry.attributes['color'].needsUpdate = true;
+          if (startMsecChanged) geometry.attributes['userStartMsec'].needsUpdate = true;
+          if (stopMsecChanged) geometry.attributes['userStopMsec'].needsUpdate = true;
 
           offsetsChanged = sizesChanged = colorsChanged = false;
 
