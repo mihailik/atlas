@@ -628,9 +628,19 @@ function atlas(invokeType) {
       } = setupScene();
 
       const domElements = appendToDOM();
-      const controls = setupOrbitControls(camera, domElements.touchElement);
+      const controls = setupOrbitControls(camera);
+      if (location.hash?.length > 3) {
+        const hasCommaParts = location.hash.replace(/^#/, '').split(',');
+        if (hasCommaParts.length === 3) {
+          const [cameraX, cameraY, cameraZ] = hasCommaParts.map(parseFloat);
+          camera.position.set(cameraX, cameraY, cameraZ);
+        }
+      }
 
       handleWindowResizes();
+      handleTouch(document.body, (xy) => {
+        console.log('touch ', xy);
+      });
 
       //const shaderState = webgl_buffergeometry_instancing_demo();
 
@@ -713,10 +723,9 @@ function atlas(invokeType) {
 
       /**
        * @param {THREE.Camera} camera
-       * @param {HTMLElement} touchElement
        */
-      function setupOrbitControls(camera, touchElement) {
-        const controls = new OrbitControls(camera, document.body);
+      function setupOrbitControls(camera) {
+        const controls = new OrbitControls(camera, renderer.domElement);
         let autorotateTimeout1, autorotateTimeout2, autorotateTimeout3;
         controls.addEventListener('start', function () {
           clearTimeout(autorotateTimeout1);
@@ -743,52 +752,9 @@ function atlas(invokeType) {
         controls.enableDamping = true;
         controls.autoRotate = true;
         controls.autoRotateSpeed = 0.2;
-        controls.listenToKeyEvents(touchElement);
-        touchElement.addEventListener('touchstart', handleTouch);
-        touchElement.addEventListener('touchend', handleTouch);
-        touchElement.addEventListener('touchmove', handleTouch);
-        touchElement.addEventListener('mousedown', handleMouse);
-        touchElement.addEventListener('mousemove', handleMouse);
-        touchElement.addEventListener('mouseup', handleMouse);
+        controls.listenToKeyEvents(renderer.domElement);
 
         return controls;
-
-        /** @type {{ x: number, y: number} | undefined} */
-        var touchCoords;
-        var touchTimeout;
-
-        /**@param {TouchEvent} event */
-        function handleTouch(event) {
-          const touches = event.changedTouches || event.targetTouches || event.touches;
-          if (touches?.length) {
-            for (const t of touches) {
-              touchCoords = { x: t.pageX || t.clientX, y: t.pageY || t.clientY };
-              break;
-            }
-          }
-
-          event.preventDefault();
-          if (!touchTimeout) {
-            touchTimeout = setTimeout(processTouch, 100);
-          }
-        }
-
-        /**@param {MouseEvent} event */
-        function handleMouse(event) {
-          touchCoords = { x: event.pageX ?? event.clientX, y: event.pageY ?? event.clientY };
-          event.preventDefault();
-          if (!touchTimeout) {
-            touchTimeout = setTimeout(processTouch, 100);
-          }
-        }
-
-        function processTouch() {
-          touchTimeout = undefined;
-          if (!touchCoords) return;
-
-          console.log('touch ', touchCoords);
-          touchCoords = undefined;
-        }
       }
 
       /** @param {{x: { min: number, max: number}, y: { min: number, max: number }}} bounds */
@@ -917,41 +883,113 @@ function atlas(invokeType) {
       }
 
       function appendToDOM() {
-        const root = elem('div', { parent: document.body, style: 'position: fixed; left: 0; top: 0; width: 100%; height: 100%;' });
+        let title, titleBar, rightStatus;
+        const root = elem('div', {
+          parent: document.body,
+          style: `
+          position: fixed; left: 0; top: 0; width: 100%; height: 100%;
+          display: grid; grid-template-rows: auto 1fr; grid-template-columns: 1fr;
+          `,
+          children: [
+            renderer.domElement,
+            titleBar = elem('div', {
+              style: `
+              background: rgba(0,0,0,0.5); color: gold;
+              display: grid; grid-template-rows: auto; grid-template-columns: auto 1fr auto;
+              z-index: 10;
+              max-height: 5em;`,
+              children: [
+                stats.domElement,
+                title = elem('h3', {
+                  textContent: 'Atlas 3D',
+                  style: 'text-align: center; font-weight: 100; margin-left: -29px'
+                }),
+                rightStatus = elem('div', {
+                  innerHTML: String(Object.keys(users).length) + '<br>users',
+                  fontSize: '80%', alignSelf: 'center', paddingRight: '1em', textAlign: 'center'
+                })
+              ]
+            })
+          ]
+        });
         renderer.domElement.style.cssText = `
         position: fixed;
         left: 0; top: 0; width: 100%; height: 100%;
         `;
         renderer.domElement.className = 'atlas-3d';
-        root.appendChild(renderer.domElement);
         stats.domElement.style.position = 'relative';
+        return { root, titleBar, title, rightStatus };
+      }
 
-        let title, titleBar, rightStatus, touchElement;
-        const container = elem('div', {
-          parent: root,
-          style: `
-          position: fixed; left: 0; top: 0; width: 100%; height: 100%;
-          display: grid; grid-template-rows: auto 1fr; grid-template-columns: 1fr;`,
-          children: [
-            titleBar = elem('div', {
-              style: `
-              background: rgba(0,0,0,0.5); color: gold;
-              display: grid; grid-template-rows: auto; grid-template-columns: auto 1fr auto;
-              max-height: 5em;`,
-              children: [
-                stats.domElement,
-                title = elem('h3', { textContent: 'Atlas 3D', style: 'text-align: center; font-weight: 100; margin-left: -29px' }),
-                rightStatus = elem('div', { innerHTML: String(Object.keys(users).length) + '<br>users', fontSize: '80%', alignSelf: 'center', paddingRight: '1em', textAlign: 'center' })
-              ]
-            }),
-            touchElement = elem('div', {
-              style: `
-              background: transparent;`
-            })
-          ]
-        });
+      /**
+       * @param {HTMLElement} touchElement
+       * @param {(xy: { x: number, y: number }) => void} touchCallback
+       */
+      function handleTouch(touchElement, touchCallback) {
+        touchElement.addEventListener('touchstart', handleTouch);
+        touchElement.addEventListener('touchend', handleTouch);
+        touchElement.addEventListener('touchmove', handleTouch);
+        touchElement.addEventListener('mousedown', handleMouse);
+        touchElement.addEventListener('mousemove', handleMouse);
+        touchElement.addEventListener('mouseup', handleMouse);
 
-        return { root, titleBar, title, rightStatus, touchElement };
+        /** @type {{ x: number, y: number} | undefined} */
+        var touchCoords;
+        var touchTimeout;
+
+        /** @param {Event} event */
+        function genuineUX(event) {
+          /** @typedef {{ parentElement?: El | null }} El */
+          var testElem = /** @type {El | null | undefined} */(event.target);
+          while (testElem && testElem !== document.body) {
+            if (testElem === domElements.titleBar) return true;
+            if (testElem === renderer.domElement) return false;
+            if (testElem === domElements.root) return false;
+            testElem = testElem.parentElement;
+          }
+          return true;
+        }
+
+        /**@param {TouchEvent} event */
+        function handleTouch(event) {
+          if (genuineUX(event)) return;
+
+          const touches = event.changedTouches || event.targetTouches || event.touches;
+          if (touches?.length) {
+            for (const t of touches) {
+              touchCoords = { x: t.pageX || t.clientX, y: t.pageY || t.clientY };
+              break;
+            }
+          }
+
+          event.preventDefault();
+          if (!touchTimeout) {
+            touchTimeout = setTimeout(processTouch, 100);
+          }
+        }
+
+        /**@param {MouseEvent} event */
+        function handleMouse(event) {
+          if (genuineUX(event)) return;
+
+          touchCoords = { x: event.pageX ?? event.clientX, y: event.pageY ?? event.clientY };
+          event.preventDefault();
+          if (!touchTimeout) {
+            touchTimeout = setTimeout(processTouch, 100);
+          }
+        }
+
+        function processTouch() {
+          touchTimeout = undefined;
+          if (!touchCoords) return;
+
+          if (touchCallback) {
+            const passEvent = touchCoords;
+            touchCoords = undefined;
+            if (typeof touchCallback === 'function')
+              touchCallback(passEvent);
+          }
+        }
       }
 
       function handleWindowResizes() {
@@ -982,7 +1020,7 @@ function atlas(invokeType) {
           if (!cameraStatus || !(now < lastCameraUpdate + 200)) {
             lastCameraUpdate = now;
             if (!cameraStatus) cameraStatus = {
-              elem: elem('div', { parent: domElements.rightStatus, fontSize: '80%', opacity: '0.7' }),
+              elem: elem('div', { parent: domElements.rightStatus, fontSize: '80%', opacity: '0.7', transition: 'opacity 2s' }),
               lastPos: { x: NaN, y: NaN, z: NaN }
             };
 
@@ -1008,7 +1046,11 @@ function atlas(invokeType) {
             cameraStatus.lastPos.x = camera.position.x;
             cameraStatus.lastPos.y = camera.position.y;
             cameraStatus.lastPos.z = camera.position.z;
-            cameraStatus.elem.textContent = camera.position.x.toFixed(2) + ', ' + camera.position.y.toFixed(2) + ', ' + camera.position.z.toFixed(2);
+            cameraStatus.elem.textContent =
+              camera.position.x.toFixed(2) + ', ' + camera.position.y.toFixed(2) + ', ' + camera.position.z.toFixed(2) +
+              ' ' + (controls.autoRotate ? '>' : '||');
+            cameraStatus.elem.style.opacity = controls.autoRotate ? '0.4' : '0.7';
+            location.hash = '#' + camera.position.x.toFixed(2) + ',' + camera.position.y.toFixed(2) + ',' + camera.position.z.toFixed(2);
 
             //updateCamera(camera.position);
           }
@@ -1281,14 +1323,24 @@ function atlas(invokeType) {
 
     /**
      * @param {TagName} tagName
-     * @param {(Omit<Partial<HTMLElement['style']> & Partial<HTMLElement>, 'children' | 'parent' | 'parentElement' | 'style'> & { children?: (Element | string | null | void | undefined)[], parent?: Element | null, parentElement?: Element | null, style?: string | Partial<HTMLElement['style']>  })=} [style]
+     * @param {(
+     *  Omit<
+     *    Partial<HTMLElement['style']> &
+     *     Partial<HTMLElementTagNameMap[TagName]
+     *  >, 'children' | 'parent' | 'parentElement' | 'style'> &
+     *  {
+     *    children?: (Element | string | null | void | undefined)[],
+     *    parent?: Element | null, 
+     *    parentElement?: Element | null,
+     *    style?: string | Partial<HTMLElement['style']>
+     *  })=} [style]
      * @returns {HTMLElementTagNameMap[TagName]}
      * @template {string} TagName
      */
     function elem(tagName, style) {
       const el = document.createElement(tagName);
 
-      if (style && typeof style.appendChild === 'function') {
+      if (style && typeof /** @type {*} */(style).appendChild === 'function') {
         const tmp = parent;
         style = /** @type {*} */(parent);
         parent = tmp;
