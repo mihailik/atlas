@@ -863,7 +863,7 @@ function atlas(invokeType) {
             postMesh.position.y = 100 - t * t * 100;
           }
 
-          await new Promise(resolve => setTimeout(resolve, 3500));
+          await new Promise(resolve => setTimeout(resolve, 500));
           for (let i = 0; i < 100; i++) {
             postMesh.scale.x *= 0.97;
             postMesh.scale.y *= 0.97;
