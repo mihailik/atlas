@@ -51,9 +51,9 @@
     return out;
   }
   function read(buf3, offset) {
-    var res = 0, offset = offset || 0, shift = 0, counter = offset, b, l2 = buf3.length;
+    var res = 0, offset = offset || 0, shift = 0, counter = offset, b, l = buf3.length;
     do {
-      if (counter >= l2) {
+      if (counter >= l) {
         read.bytes = 0;
         throw new RangeError("Could not decode varint");
       }
@@ -134,13 +134,13 @@
         }
         return true;
       };
-      coerce = (o2) => {
-        if (o2 instanceof Uint8Array && o2.constructor.name === "Uint8Array")
-          return o2;
-        if (o2 instanceof ArrayBuffer)
-          return new Uint8Array(o2);
-        if (ArrayBuffer.isView(o2)) {
-          return new Uint8Array(o2.buffer, o2.byteOffset, o2.byteLength);
+      coerce = (o) => {
+        if (o instanceof Uint8Array && o.constructor.name === "Uint8Array")
+          return o;
+        if (o instanceof ArrayBuffer)
+          return new Uint8Array(o);
+        if (ArrayBuffer.isView(o)) {
+          return new Uint8Array(o.buffer, o.byteOffset, o.byteLength);
         }
         throw new Error("Unknown type, must be binary type");
       };
@@ -173,15 +173,15 @@
         }
         return new Digest(code, size, digest, bytes);
       };
-      equals2 = (a2, b) => {
-        if (a2 === b) {
+      equals2 = (a, b) => {
+        if (a === b) {
           return true;
         } else {
           const data = (
             /** @type {{code?:unknown, size?:unknown, bytes?:unknown}} */
             b
           );
-          return a2.code === data.code && a2.size === data.size && data.bytes instanceof Uint8Array && equals(a2.bytes, data.bytes);
+          return a.code === data.code && a.size === data.size && data.bytes instanceof Uint8Array && equals(a.bytes, data.bytes);
         }
       };
       Digest = class {
@@ -212,13 +212,13 @@
     for (var j = 0; j < BASE_MAP.length; j++) {
       BASE_MAP[j] = 255;
     }
-    for (var i2 = 0; i2 < ALPHABET.length; i2++) {
-      var x = ALPHABET.charAt(i2);
+    for (var i = 0; i < ALPHABET.length; i++) {
+      var x = ALPHABET.charAt(i);
       var xc = x.charCodeAt(0);
       if (BASE_MAP[xc] !== 255) {
         throw new TypeError(x + " is ambiguous");
       }
-      BASE_MAP[xc] = i2;
+      BASE_MAP[xc] = i;
     }
     var BASE = ALPHABET.length;
     var LEADER = ALPHABET.charAt(0);
@@ -250,8 +250,8 @@
       var b58 = new Uint8Array(size);
       while (pbegin !== pend) {
         var carry = source[pbegin];
-        var i3 = 0;
-        for (var it1 = size - 1; (carry !== 0 || i3 < length3) && it1 !== -1; it1--, i3++) {
+        var i2 = 0;
+        for (var it1 = size - 1; (carry !== 0 || i2 < length3) && it1 !== -1; it1--, i2++) {
           carry += 256 * b58[it1] >>> 0;
           b58[it1] = carry % BASE >>> 0;
           carry = carry / BASE >>> 0;
@@ -259,7 +259,7 @@
         if (carry !== 0) {
           throw new Error("Non-zero carry");
         }
-        length3 = i3;
+        length3 = i2;
         pbegin++;
       }
       var it2 = size - length3;
@@ -296,8 +296,8 @@
         if (carry === 255) {
           return;
         }
-        var i3 = 0;
-        for (var it3 = size - 1; (carry !== 0 || i3 < length3) && it3 !== -1; it3--, i3++) {
+        var i2 = 0;
+        for (var it3 = size - 1; (carry !== 0 || i2 < length3) && it3 !== -1; it3--, i2++) {
           carry += BASE * b256[it3] >>> 0;
           b256[it3] = carry % 256 >>> 0;
           carry = carry / 256 >>> 0;
@@ -305,7 +305,7 @@
         if (carry !== 0) {
           throw new Error("Non-zero carry");
         }
-        length3 = i3;
+        length3 = i2;
         psz++;
       }
       if (source[psz] === " ") {
@@ -499,8 +499,8 @@
       };
       decode4 = (string, alphabet, bitsPerChar, name) => {
         const codes = {};
-        for (let i2 = 0; i2 < alphabet.length; ++i2) {
-          codes[alphabet[i2]] = i2;
+        for (let i = 0; i < alphabet.length; ++i) {
+          codes[alphabet[i]] = i;
         }
         let end = string.length;
         while (string[end - 1] === "=") {
@@ -510,8 +510,8 @@
         let bits = 0;
         let buffer3 = 0;
         let written = 0;
-        for (let i2 = 0; i2 < end; ++i2) {
-          const value = codes[string[i2]];
+        for (let i = 0; i < end; ++i) {
+          const value = codes[string[i]];
           if (value === void 0) {
             throw new SyntaxError(`Non-${name} character`);
           }
@@ -533,8 +533,8 @@
         let out = "";
         let bits = 0;
         let buffer3 = 0;
-        for (let i2 = 0; i2 < data.length; ++i2) {
-          buffer3 = buffer3 << 8 | data[i2];
+        for (let i = 0; i < data.length; ++i) {
+          buffer3 = buffer3 << 8 | data[i];
           bits += 8;
           while (bits > bitsPerChar) {
             bits -= bitsPerChar;
@@ -1018,9 +1018,9 @@
         static inspectBytes(initialBytes) {
           let offset = 0;
           const next = () => {
-            const [i2, length3] = decode2(initialBytes.subarray(offset));
+            const [i, length3] = decode2(initialBytes.subarray(offset));
             offset += length3;
-            return i2;
+            return i;
           };
           let version = (
             /** @type {V} */
@@ -1287,11 +1287,11 @@
               const next = end;
               const nextEmoji = endEmoji;
               const rIIndex = all.lastIndexOf(boundaries_1.CLUSTER_BREAK.REGIONAL_INDICATOR);
-              if (rIIndex > 0 && all.slice(1, rIIndex).every(function(c2) {
-                return c2 === boundaries_1.CLUSTER_BREAK.REGIONAL_INDICATOR;
+              if (rIIndex > 0 && all.slice(1, rIIndex).every(function(c) {
+                return c === boundaries_1.CLUSTER_BREAK.REGIONAL_INDICATOR;
               }) && [boundaries_1.CLUSTER_BREAK.PREPEND, boundaries_1.CLUSTER_BREAK.REGIONAL_INDICATOR].indexOf(previous) === -1) {
-                if (all.filter(function(c2) {
-                  return c2 === boundaries_1.CLUSTER_BREAK.REGIONAL_INDICATOR;
+                if (all.filter(function(c) {
+                  return c === boundaries_1.CLUSTER_BREAK.REGIONAL_INDICATOR;
                 }).length % 2 === 1) {
                   return BreakLastRegional;
                 } else {
@@ -1318,8 +1318,8 @@
                 return NotBreak;
               }
               const previousNonExtendIndex = allEmoji.slice(0, -1).lastIndexOf(boundaries_1.EXTENDED_PICTOGRAPHIC);
-              if (previousNonExtendIndex !== -1 && allEmoji[previousNonExtendIndex] === boundaries_1.EXTENDED_PICTOGRAPHIC && all.slice(previousNonExtendIndex + 1, -2).every(function(c2) {
-                return c2 === boundaries_1.CLUSTER_BREAK.EXTEND;
+              if (previousNonExtendIndex !== -1 && allEmoji[previousNonExtendIndex] === boundaries_1.EXTENDED_PICTOGRAPHIC && all.slice(previousNonExtendIndex + 1, -2).every(function(c) {
+                return c === boundaries_1.CLUSTER_BREAK.EXTEND;
               }) && previous === boundaries_1.CLUSTER_BREAK.ZWJ && nextEmoji === boundaries_1.EXTENDED_PICTOGRAPHIC) {
                 return NotBreak;
               }
@@ -1392,15 +1392,15 @@
               const prevEmoji = Graphemer2.getEmojiProperty(prevCP);
               const mid = [];
               const midEmoji = [];
-              for (let i2 = index + 1; i2 < string3.length; i2++) {
-                if (GraphemerHelper_1.default.isSurrogate(string3, i2 - 1)) {
+              for (let i = index + 1; i < string3.length; i++) {
+                if (GraphemerHelper_1.default.isSurrogate(string3, i - 1)) {
                   continue;
                 }
-                const nextCP = GraphemerHelper_1.default.codePointAt(string3, i2);
+                const nextCP = GraphemerHelper_1.default.codePointAt(string3, i);
                 const next = Graphemer2.getGraphemeBreakProperty(nextCP);
                 const nextEmoji = Graphemer2.getEmojiProperty(nextCP);
                 if (GraphemerHelper_1.default.shouldBreak(prev, mid, next, prevEmoji, midEmoji, nextEmoji)) {
-                  return i2;
+                  return i;
                 }
                 mid.push(next);
                 midEmoji.push(nextEmoji);
@@ -10002,46 +10002,46 @@
         "../../node_modules/iso-datestring-validator/dist/index.js"(exports2) {
           (() => {
             "use strict";
-            var e2 = { d: (t22, r22) => {
-              for (var n22 in r22)
-                e2.o(r22, n22) && !e2.o(t22, n22) && Object.defineProperty(t22, n22, { enumerable: true, get: r22[n22] });
-            }, o: (e22, t22) => Object.prototype.hasOwnProperty.call(e22, t22), r: (e22) => {
-              "undefined" != typeof Symbol && Symbol.toStringTag && Object.defineProperty(e22, Symbol.toStringTag, { value: "Module" }), Object.defineProperty(e22, "__esModule", { value: true });
-            } }, t2 = {};
-            function r2(e22, t22) {
-              return void 0 === t22 && (t22 = "-"), new RegExp("^(?!0{4}" + t22 + "0{2}" + t22 + "0{2})((?=[0-9]{4}" + t22 + "(((0[^2])|1[0-2])|02(?=" + t22 + "(([0-1][0-9])|2[0-8])))" + t22 + "[0-9]{2})|(?=((([13579][26])|([2468][048])|(0[48]))0{2})|([0-9]{2}((((0|[2468])[48])|[2468][048])|([13579][26])))" + t22 + "02" + t22 + "29))([0-9]{4})" + t22 + "(?!((0[469])|11)" + t22 + "31)((0[1,3-9]|1[0-2])|(02(?!" + t22 + "3)))" + t22 + "(0[1-9]|[1-2][0-9]|3[0-1])$").test(e22);
+            var e = { d: (t2, r2) => {
+              for (var n2 in r2)
+                e.o(r2, n2) && !e.o(t2, n2) && Object.defineProperty(t2, n2, { enumerable: true, get: r2[n2] });
+            }, o: (e2, t2) => Object.prototype.hasOwnProperty.call(e2, t2), r: (e2) => {
+              "undefined" != typeof Symbol && Symbol.toStringTag && Object.defineProperty(e2, Symbol.toStringTag, { value: "Module" }), Object.defineProperty(e2, "__esModule", { value: true });
+            } }, t = {};
+            function r(e2, t2) {
+              return void 0 === t2 && (t2 = "-"), new RegExp("^(?!0{4}" + t2 + "0{2}" + t2 + "0{2})((?=[0-9]{4}" + t2 + "(((0[^2])|1[0-2])|02(?=" + t2 + "(([0-1][0-9])|2[0-8])))" + t2 + "[0-9]{2})|(?=((([13579][26])|([2468][048])|(0[48]))0{2})|([0-9]{2}((((0|[2468])[48])|[2468][048])|([13579][26])))" + t2 + "02" + t2 + "29))([0-9]{4})" + t2 + "(?!((0[469])|11)" + t2 + "31)((0[1,3-9]|1[0-2])|(02(?!" + t2 + "3)))" + t2 + "(0[1-9]|[1-2][0-9]|3[0-1])$").test(e2);
             }
-            function n2(e22) {
-              var t22 = /\D/.exec(e22);
-              return t22 ? t22[0] : "";
+            function n(e2) {
+              var t2 = /\D/.exec(e2);
+              return t2 ? t2[0] : "";
             }
-            function i2(e22, t22, r22) {
-              void 0 === t22 && (t22 = ":"), void 0 === r22 && (r22 = false);
-              var i22 = new RegExp("^([0-1]|2(?=([0-3])|4" + t22 + "00))[0-9]" + t22 + "[0-5][0-9](" + t22 + "([0-5]|6(?=0))[0-9])?(.[0-9]{1,9})?$");
-              if (!r22 || !/[Z+\-]/.test(e22))
-                return i22.test(e22);
-              if (/Z$/.test(e22))
-                return i22.test(e22.replace("Z", ""));
-              var o22 = e22.includes("+"), a22 = e22.split(/[+-]/), u22 = a22[0], d22 = a22[1];
-              return i22.test(u22) && function(e3, t3, r3) {
+            function i(e2, t2, r2) {
+              void 0 === t2 && (t2 = ":"), void 0 === r2 && (r2 = false);
+              var i2 = new RegExp("^([0-1]|2(?=([0-3])|4" + t2 + "00))[0-9]" + t2 + "[0-5][0-9](" + t2 + "([0-5]|6(?=0))[0-9])?(.[0-9]{1,9})?$");
+              if (!r2 || !/[Z+\-]/.test(e2))
+                return i2.test(e2);
+              if (/Z$/.test(e2))
+                return i2.test(e2.replace("Z", ""));
+              var o2 = e2.includes("+"), a2 = e2.split(/[+-]/), u2 = a2[0], d2 = a2[1];
+              return i2.test(u2) && function(e3, t3, r3) {
                 return void 0 === r3 && (r3 = ":"), new RegExp(t3 ? "^(0(?!(2" + r3 + "4)|0" + r3 + "3)|1(?=([0-1]|2(?=" + r3 + "[04])|[34](?=" + r3 + "0))))([03469](?=" + r3 + "[03])|[17](?=" + r3 + "0)|2(?=" + r3 + "[04])|5(?=" + r3 + "[034])|8(?=" + r3 + "[04]))" + r3 + "([03](?=0)|4(?=5))[05]$" : "^(0(?=[^0])|1(?=[0-2]))([39](?=" + r3 + "[03])|[0-24-8](?=" + r3 + "00))" + r3 + "[03]0$").test(e3);
-              }(d22, o22, n2(d22));
+              }(d2, o2, n(d2));
             }
-            function o2(e22) {
-              var t22 = e22.split("T"), o22 = t22[0], a22 = t22[1], u22 = r2(o22, n2(o22));
-              if (!a22)
+            function o(e2) {
+              var t2 = e2.split("T"), o2 = t2[0], a2 = t2[1], u2 = r(o2, n(o2));
+              if (!a2)
                 return false;
-              var d22, s2 = (d22 = a22.match(/([^Z+\-\d])(?=\d+\1)/), Array.isArray(d22) ? d22[0] : "");
-              return u22 && i2(a22, s2, true);
+              var d2, s = (d2 = a2.match(/([^Z+\-\d])(?=\d+\1)/), Array.isArray(d2) ? d2[0] : "");
+              return u2 && i(a2, s, true);
             }
-            function a2(e22, t22) {
-              return void 0 === t22 && (t22 = "-"), new RegExp("^[0-9]{4}" + t22 + "(0(?=[^0])|1(?=[0-2]))[0-9]$").test(e22);
+            function a(e2, t2) {
+              return void 0 === t2 && (t2 = "-"), new RegExp("^[0-9]{4}" + t2 + "(0(?=[^0])|1(?=[0-2]))[0-9]$").test(e2);
             }
-            e2.r(t2), e2.d(t2, { isValidDate: () => r2, isValidISODateString: () => o2, isValidTime: () => i2, isValidYearMonth: () => a2 });
-            var u2 = exports2;
-            for (var d2 in t2)
-              u2[d2] = t2[d2];
-            t2.__esModule && Object.defineProperty(u2, "__esModule", { value: true });
+            e.r(t), e.d(t, { isValidDate: () => r, isValidISODateString: () => o, isValidTime: () => i, isValidYearMonth: () => a });
+            var u = exports2;
+            for (var d in t)
+              u[d] = t[d];
+            t.__esModule && Object.defineProperty(u, "__esModule", { value: true });
           })();
         }
       });
@@ -10236,20 +10236,20 @@
         if (labels.length < 2) {
           throw new InvalidHandleError("Handle domain needs at least two parts");
         }
-        for (let i2 = 0; i2 < labels.length; i2++) {
-          const l2 = labels[i2];
-          if (l2.length < 1) {
+        for (let i = 0; i < labels.length; i++) {
+          const l = labels[i];
+          if (l.length < 1) {
             throw new InvalidHandleError("Handle parts can not be empty");
           }
-          if (l2.length > 63) {
+          if (l.length > 63) {
             throw new InvalidHandleError("Handle part too long (max 63 chars)");
           }
-          if (l2.endsWith("-") || l2.startsWith("-")) {
+          if (l.endsWith("-") || l.startsWith("-")) {
             throw new InvalidHandleError(
               "Handle parts can not start or end with hyphens"
             );
           }
-          if (i2 + 1 == labels.length && !/^[a-zA-Z]/.test(l2)) {
+          if (i + 1 == labels.length && !/^[a-zA-Z]/.test(l)) {
             throw new InvalidHandleError(
               "Handle final component (TLD) must start with ASCII letter"
             );
@@ -10302,7 +10302,7 @@
           try {
             NSID.parse(nsid2);
             return true;
-          } catch (e2) {
+          } catch (e) {
             return false;
           }
         }
@@ -10330,21 +10330,21 @@
         if (labels.length < 3) {
           throw new InvalidNsidError("NSID needs at least three parts");
         }
-        for (let i2 = 0; i2 < labels.length; i2++) {
-          const l2 = labels[i2];
-          if (l2.length < 1) {
+        for (let i = 0; i < labels.length; i++) {
+          const l = labels[i];
+          if (l.length < 1) {
             throw new InvalidNsidError("NSID parts can not be empty");
           }
-          if (l2.length > 63) {
+          if (l.length > 63) {
             throw new InvalidNsidError("NSID part too long (max 63 chars)");
           }
-          if (l2.endsWith("-") || l2.startsWith("-")) {
+          if (l.endsWith("-") || l.startsWith("-")) {
             throw new InvalidNsidError("NSID parts can not start or end with hyphen");
           }
-          if (/^[0-9]/.test(l2) && i2 == 0) {
+          if (/^[0-9]/.test(l) && i == 0) {
             throw new InvalidNsidError("NSID first part may not start with a digit");
           }
-          if (!/^[a-zA-Z]+$/.test(l2) && i2 + 1 == labels.length) {
+          if (!/^[a-zA-Z]+$/.test(l) && i + 1 == labels.length) {
             throw new InvalidNsidError("NSID name part must be only letters");
           }
         }
@@ -10556,8 +10556,8 @@
           return util2.objectValues(filtered);
         };
         util2.objectValues = (obj) => {
-          return util2.objectKeys(obj).map(function(e2) {
-            return obj[e2];
+          return util2.objectKeys(obj).map(function(e) {
+            return obj[e];
           });
         };
         util2.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object2) => {
@@ -10620,8 +10620,8 @@
         "set"
       ]);
       var getParsedType = (data) => {
-        const t2 = typeof data;
-        switch (t2) {
+        const t = typeof data;
+        switch (t) {
           case "undefined":
             return ZodParsedType.undefined;
           case "string":
@@ -10721,10 +10721,10 @@
                 fieldErrors._errors.push(mapper(issue));
               } else {
                 let curr = fieldErrors;
-                let i2 = 0;
-                while (i2 < issue.path.length) {
-                  const el = issue.path[i2];
-                  const terminal = i2 === issue.path.length - 1;
+                let i = 0;
+                while (i < issue.path.length) {
+                  const el = issue.path[i];
+                  const terminal = i === issue.path.length - 1;
                   if (!terminal) {
                     curr[el] = curr[el] || { _errors: [] };
                   } else {
@@ -10732,7 +10732,7 @@
                     curr[el]._errors.push(mapper(issue));
                   }
                   curr = curr[el];
-                  i2++;
+                  i++;
                 }
               }
             }
@@ -10922,12 +10922,12 @@
         }
         static mergeArray(status, results) {
           const arrayValue = [];
-          for (const s2 of results) {
-            if (s2.status === "aborted")
+          for (const s of results) {
+            if (s.status === "aborted")
               return INVALID;
-            if (s2.status === "dirty")
+            if (s.status === "dirty")
               status.dirty();
-            arrayValue.push(s2.value);
+            arrayValue.push(s.value);
           }
           return { status: status.value, value: arrayValue };
         }
@@ -12428,14 +12428,14 @@
             }
           }
           if (ctx.common.async) {
-            return Promise.all([...ctx.data].map((item, i2) => {
-              return def2.type._parseAsync(new ParseInputLazyPath(ctx, item, ctx.path, i2));
+            return Promise.all([...ctx.data].map((item, i) => {
+              return def2.type._parseAsync(new ParseInputLazyPath(ctx, item, ctx.path, i));
             })).then((result2) => {
               return ParseStatus.mergeArray(status, result2);
             });
           }
-          const result = [...ctx.data].map((item, i2) => {
-            return def2.type._parseSync(new ParseInputLazyPath(ctx, item, ctx.path, i2));
+          const result = [...ctx.data].map((item, i) => {
+            return def2.type._parseSync(new ParseInputLazyPath(ctx, item, ctx.path, i));
           });
           return ParseStatus.mergeArray(status, result);
         }
@@ -12936,17 +12936,17 @@
           });
         }
       };
-      function mergeValues(a2, b) {
-        const aType = getParsedType(a2);
+      function mergeValues(a, b) {
+        const aType = getParsedType(a);
         const bType = getParsedType(b);
-        if (a2 === b) {
-          return { valid: true, data: a2 };
+        if (a === b) {
+          return { valid: true, data: a };
         } else if (aType === ZodParsedType.object && bType === ZodParsedType.object) {
           const bKeys = util.objectKeys(b);
-          const sharedKeys = util.objectKeys(a2).filter((key) => bKeys.indexOf(key) !== -1);
-          const newObj = { ...a2, ...b };
+          const sharedKeys = util.objectKeys(a).filter((key) => bKeys.indexOf(key) !== -1);
+          const newObj = { ...a, ...b };
           for (const key of sharedKeys) {
-            const sharedValue = mergeValues(a2[key], b[key]);
+            const sharedValue = mergeValues(a[key], b[key]);
             if (!sharedValue.valid) {
               return { valid: false };
             }
@@ -12954,12 +12954,12 @@
           }
           return { valid: true, data: newObj };
         } else if (aType === ZodParsedType.array && bType === ZodParsedType.array) {
-          if (a2.length !== b.length) {
+          if (a.length !== b.length) {
             return { valid: false };
           }
           const newArray = [];
-          for (let index = 0; index < a2.length; index++) {
-            const itemA = a2[index];
+          for (let index = 0; index < a.length; index++) {
+            const itemA = a[index];
             const itemB = b[index];
             const sharedValue = mergeValues(itemA, itemB);
             if (!sharedValue.valid) {
@@ -12968,8 +12968,8 @@
             newArray.push(sharedValue.data);
           }
           return { valid: true, data: newArray };
-        } else if (aType === ZodParsedType.date && bType === ZodParsedType.date && +a2 === +b) {
-          return { valid: true, data: a2 };
+        } else if (aType === ZodParsedType.date && bType === ZodParsedType.date && +a === +b) {
+          return { valid: true, data: a };
         } else {
           return { valid: false };
         }
@@ -13256,7 +13256,7 @@
             }
             return { status: status.value, value: parsedSet };
           }
-          const elements = [...ctx.data.values()].map((item, i2) => valueType._parse(new ParseInputLazyPath(ctx, item, ctx.path, i2)));
+          const elements = [...ctx.data.values()].map((item, i) => valueType._parse(new ParseInputLazyPath(ctx, item, ctx.path, i)));
           if (ctx.common.async) {
             return Promise.all(elements).then((elements2) => finalizeSet(elements2));
           } else {
@@ -13343,13 +13343,13 @@
           if (this._def.returns instanceof ZodPromise) {
             return OK(async (...args) => {
               const error = new ZodError([]);
-              const parsedArgs = await this._def.args.parseAsync(args, params2).catch((e2) => {
-                error.addIssue(makeArgsIssue(args, e2));
+              const parsedArgs = await this._def.args.parseAsync(args, params2).catch((e) => {
+                error.addIssue(makeArgsIssue(args, e));
                 throw error;
               });
               const result = await fn(...parsedArgs);
-              const parsedReturns = await this._def.returns._def.type.parseAsync(result, params2).catch((e2) => {
-                error.addIssue(makeReturnsIssue(result, e2));
+              const parsedReturns = await this._def.returns._def.type.parseAsync(result, params2).catch((e) => {
+                error.addIssue(makeReturnsIssue(result, e));
                 throw error;
               });
               return parsedReturns;
@@ -13890,9 +13890,9 @@
             }
           }
         }
-        static create(a2, b) {
+        static create(a, b) {
           return new ZodPipeline({
-            in: a2,
+            in: a,
             out: b,
             typeName: ZodFirstPartyTypeKind.ZodPipeline
           });
@@ -13903,10 +13903,10 @@
           return ZodAny.create().superRefine((data, ctx) => {
             var _a, _b;
             if (!check(data)) {
-              const p2 = typeof params2 === "function" ? params2(data) : typeof params2 === "string" ? { message: params2 } : params2;
-              const _fatal = (_b = (_a = p2.fatal) !== null && _a !== void 0 ? _a : fatal) !== null && _b !== void 0 ? _b : true;
-              const p22 = typeof p2 === "string" ? { message: p2 } : p2;
-              ctx.addIssue({ code: "custom", ...p22, fatal: _fatal });
+              const p = typeof params2 === "function" ? params2(data) : typeof params2 === "string" ? { message: params2 } : params2;
+              const _fatal = (_b = (_a = p.fatal) !== null && _a !== void 0 ? _a : fatal) !== null && _b !== void 0 ? _b : true;
+              const p2 = typeof p === "string" ? { message: p } : p;
+              ctx.addIssue({ code: "custom", ...p2, fatal: _fatal });
             }
           });
         return ZodAny.create();
@@ -14157,9 +14157,9 @@
       var MSB$13 = 128;
       var REST$13 = 127;
       function read4(buf3, offset) {
-        var res = 0, offset = offset || 0, shift = 0, counter = offset, b, l2 = buf3.length;
+        var res = 0, offset = offset || 0, shift = 0, counter = offset, b, l = buf3.length;
         do {
-          if (counter >= l2) {
+          if (counter >= l) {
             read4.bytes = 0;
             throw new RangeError("Could not decode varint");
           }
@@ -14217,13 +14217,13 @@
         }
         return true;
       };
-      var coerce22 = (o2) => {
-        if (o2 instanceof Uint8Array && o2.constructor.name === "Uint8Array")
-          return o2;
-        if (o2 instanceof ArrayBuffer)
-          return new Uint8Array(o2);
-        if (ArrayBuffer.isView(o2)) {
-          return new Uint8Array(o2.buffer, o2.byteOffset, o2.byteLength);
+      var coerce22 = (o) => {
+        if (o instanceof Uint8Array && o.constructor.name === "Uint8Array")
+          return o;
+        if (o instanceof ArrayBuffer)
+          return new Uint8Array(o);
+        if (ArrayBuffer.isView(o)) {
+          return new Uint8Array(o.buffer, o.byteOffset, o.byteLength);
         }
         throw new Error("Unknown type, must be binary type");
       };
@@ -14249,11 +14249,11 @@
         }
         return new Digest3(code2, size, digest2, bytes2);
       };
-      var equals22 = (a2, b) => {
-        if (a2 === b) {
+      var equals22 = (a, b) => {
+        if (a === b) {
           return true;
         } else {
-          return a2.code === b.code && a2.size === b.size && equals5(a2.bytes, b.bytes);
+          return a.code === b.code && a.size === b.size && equals5(a.bytes, b.bytes);
         }
       };
       var Digest3 = class {
@@ -14277,13 +14277,13 @@
         for (var j = 0; j < BASE_MAP.length; j++) {
           BASE_MAP[j] = 255;
         }
-        for (var i2 = 0; i2 < ALPHABET.length; i2++) {
-          var x = ALPHABET.charAt(i2);
+        for (var i = 0; i < ALPHABET.length; i++) {
+          var x = ALPHABET.charAt(i);
           var xc = x.charCodeAt(0);
           if (BASE_MAP[xc] !== 255) {
             throw new TypeError(x + " is ambiguous");
           }
-          BASE_MAP[xc] = i2;
+          BASE_MAP[xc] = i;
         }
         var BASE = ALPHABET.length;
         var LEADER = ALPHABET.charAt(0);
@@ -14315,8 +14315,8 @@
           var b58 = new Uint8Array(size);
           while (pbegin !== pend) {
             var carry = source[pbegin];
-            var i22 = 0;
-            for (var it1 = size - 1; (carry !== 0 || i22 < length22) && it1 !== -1; it1--, i22++) {
+            var i2 = 0;
+            for (var it1 = size - 1; (carry !== 0 || i2 < length22) && it1 !== -1; it1--, i2++) {
               carry += 256 * b58[it1] >>> 0;
               b58[it1] = carry % BASE >>> 0;
               carry = carry / BASE >>> 0;
@@ -14324,7 +14324,7 @@
             if (carry !== 0) {
               throw new Error("Non-zero carry");
             }
-            length22 = i22;
+            length22 = i2;
             pbegin++;
           }
           var it2 = size - length22;
@@ -14361,8 +14361,8 @@
             if (carry === 255) {
               return;
             }
-            var i22 = 0;
-            for (var it3 = size - 1; (carry !== 0 || i22 < length22) && it3 !== -1; it3--, i22++) {
+            var i2 = 0;
+            for (var it3 = size - 1; (carry !== 0 || i2 < length22) && it3 !== -1; it3--, i2++) {
               carry += BASE * b256[it3] >>> 0;
               b256[it3] = carry % 256 >>> 0;
               carry = carry / 256 >>> 0;
@@ -14370,7 +14370,7 @@
             if (carry !== 0) {
               throw new Error("Non-zero carry");
             }
-            length22 = i22;
+            length22 = i2;
             psz++;
           }
           if (source[psz] === " ") {
@@ -14490,8 +14490,8 @@
       };
       var decode42 = (string3, alphabet2, bitsPerChar, name2) => {
         const codes = {};
-        for (let i2 = 0; i2 < alphabet2.length; ++i2) {
-          codes[alphabet2[i2]] = i2;
+        for (let i = 0; i < alphabet2.length; ++i) {
+          codes[alphabet2[i]] = i;
         }
         let end = string3.length;
         while (string3[end - 1] === "=") {
@@ -14501,8 +14501,8 @@
         let bits = 0;
         let buffer3 = 0;
         let written = 0;
-        for (let i2 = 0; i2 < end; ++i2) {
-          const value = codes[string3[i2]];
+        for (let i = 0; i < end; ++i) {
+          const value = codes[string3[i]];
           if (value === void 0) {
             throw new SyntaxError(`Non-${name2} character`);
           }
@@ -14524,8 +14524,8 @@
         let out = "";
         let bits = 0;
         let buffer3 = 0;
-        for (let i2 = 0; i2 < data.length; ++i2) {
-          buffer3 = buffer3 << 8 | data[i2];
+        for (let i = 0; i < data.length; ++i) {
+          buffer3 = buffer3 << 8 | data[i];
           bits += 8;
           while (bits > bitsPerChar) {
             bits -= bitsPerChar;
@@ -14793,9 +14793,9 @@
         static inspectBytes(initialBytes) {
           let offset = 0;
           const next = () => {
-            const [i2, length22] = decode22(initialBytes.subarray(offset));
+            const [i, length22] = decode22(initialBytes.subarray(offset));
             offset += length22;
-            return i2;
+            return i;
           };
           let version2 = next();
           let codec = DAG_PB_CODE3;
@@ -15040,18 +15040,18 @@ if (cid) {
         base256emoji: () => base256emoji
       });
       var alphabet = Array.from("\u{1F680}\u{1FA90}\u2604\u{1F6F0}\u{1F30C}\u{1F311}\u{1F312}\u{1F313}\u{1F314}\u{1F315}\u{1F316}\u{1F317}\u{1F318}\u{1F30D}\u{1F30F}\u{1F30E}\u{1F409}\u2600\u{1F4BB}\u{1F5A5}\u{1F4BE}\u{1F4BF}\u{1F602}\u2764\u{1F60D}\u{1F923}\u{1F60A}\u{1F64F}\u{1F495}\u{1F62D}\u{1F618}\u{1F44D}\u{1F605}\u{1F44F}\u{1F601}\u{1F525}\u{1F970}\u{1F494}\u{1F496}\u{1F499}\u{1F622}\u{1F914}\u{1F606}\u{1F644}\u{1F4AA}\u{1F609}\u263A\u{1F44C}\u{1F917}\u{1F49C}\u{1F614}\u{1F60E}\u{1F607}\u{1F339}\u{1F926}\u{1F389}\u{1F49E}\u270C\u2728\u{1F937}\u{1F631}\u{1F60C}\u{1F338}\u{1F64C}\u{1F60B}\u{1F497}\u{1F49A}\u{1F60F}\u{1F49B}\u{1F642}\u{1F493}\u{1F929}\u{1F604}\u{1F600}\u{1F5A4}\u{1F603}\u{1F4AF}\u{1F648}\u{1F447}\u{1F3B6}\u{1F612}\u{1F92D}\u2763\u{1F61C}\u{1F48B}\u{1F440}\u{1F62A}\u{1F611}\u{1F4A5}\u{1F64B}\u{1F61E}\u{1F629}\u{1F621}\u{1F92A}\u{1F44A}\u{1F973}\u{1F625}\u{1F924}\u{1F449}\u{1F483}\u{1F633}\u270B\u{1F61A}\u{1F61D}\u{1F634}\u{1F31F}\u{1F62C}\u{1F643}\u{1F340}\u{1F337}\u{1F63B}\u{1F613}\u2B50\u2705\u{1F97A}\u{1F308}\u{1F608}\u{1F918}\u{1F4A6}\u2714\u{1F623}\u{1F3C3}\u{1F490}\u2639\u{1F38A}\u{1F498}\u{1F620}\u261D\u{1F615}\u{1F33A}\u{1F382}\u{1F33B}\u{1F610}\u{1F595}\u{1F49D}\u{1F64A}\u{1F639}\u{1F5E3}\u{1F4AB}\u{1F480}\u{1F451}\u{1F3B5}\u{1F91E}\u{1F61B}\u{1F534}\u{1F624}\u{1F33C}\u{1F62B}\u26BD\u{1F919}\u2615\u{1F3C6}\u{1F92B}\u{1F448}\u{1F62E}\u{1F646}\u{1F37B}\u{1F343}\u{1F436}\u{1F481}\u{1F632}\u{1F33F}\u{1F9E1}\u{1F381}\u26A1\u{1F31E}\u{1F388}\u274C\u270A\u{1F44B}\u{1F630}\u{1F928}\u{1F636}\u{1F91D}\u{1F6B6}\u{1F4B0}\u{1F353}\u{1F4A2}\u{1F91F}\u{1F641}\u{1F6A8}\u{1F4A8}\u{1F92C}\u2708\u{1F380}\u{1F37A}\u{1F913}\u{1F619}\u{1F49F}\u{1F331}\u{1F616}\u{1F476}\u{1F974}\u25B6\u27A1\u2753\u{1F48E}\u{1F4B8}\u2B07\u{1F628}\u{1F31A}\u{1F98B}\u{1F637}\u{1F57A}\u26A0\u{1F645}\u{1F61F}\u{1F635}\u{1F44E}\u{1F932}\u{1F920}\u{1F927}\u{1F4CC}\u{1F535}\u{1F485}\u{1F9D0}\u{1F43E}\u{1F352}\u{1F617}\u{1F911}\u{1F30A}\u{1F92F}\u{1F437}\u260E\u{1F4A7}\u{1F62F}\u{1F486}\u{1F446}\u{1F3A4}\u{1F647}\u{1F351}\u2744\u{1F334}\u{1F4A3}\u{1F438}\u{1F48C}\u{1F4CD}\u{1F940}\u{1F922}\u{1F445}\u{1F4A1}\u{1F4A9}\u{1F450}\u{1F4F8}\u{1F47B}\u{1F910}\u{1F92E}\u{1F3BC}\u{1F975}\u{1F6A9}\u{1F34E}\u{1F34A}\u{1F47C}\u{1F48D}\u{1F4E3}\u{1F942}");
-      var alphabetBytesToChars = alphabet.reduce((p2, c2, i2) => {
-        p2[i2] = c2;
-        return p2;
+      var alphabetBytesToChars = alphabet.reduce((p, c, i) => {
+        p[i] = c;
+        return p;
       }, []);
-      var alphabetCharsToBytes = alphabet.reduce((p2, c2, i2) => {
-        p2[c2.codePointAt(0)] = i2;
-        return p2;
+      var alphabetCharsToBytes = alphabet.reduce((p, c, i) => {
+        p[c.codePointAt(0)] = i;
+        return p;
       }, []);
       function encode32(data) {
-        return data.reduce((p2, c2) => {
-          p2 += alphabetBytesToChars[c2];
-          return p2;
+        return data.reduce((p, c) => {
+          p += alphabetBytesToChars[c];
+          return p;
         }, "");
       }
       function decode52(str) {
@@ -15156,15 +15156,15 @@ if (cid) {
       });
       var ascii = createCodec("ascii", "a", (buf3) => {
         let string3 = "a";
-        for (let i2 = 0; i2 < buf3.length; i2++) {
-          string3 += String.fromCharCode(buf3[i2]);
+        for (let i = 0; i < buf3.length; i++) {
+          string3 += String.fromCharCode(buf3[i]);
         }
         return string3;
       }, (str) => {
         str = str.substring(1);
         const buf3 = new Uint8Array(str.length);
-        for (let i2 = 0; i2 < str.length; i2++) {
-          buf3[i2] = str.charCodeAt(i2);
+        for (let i = 0; i < str.length; i++) {
+          buf3[i] = str.charCodeAt(i);
         }
         return buf3;
       });
@@ -15767,9 +15767,9 @@ if (cid) {
           }
         }
         const itemsDef = def2.items;
-        for (let i2 = 0; i2 < value.length; i2++) {
-          const itemValue = value[i2];
-          const itemPath = `${path}/${i2}`;
+        for (let i = 0; i < value.length; i++) {
+          const itemValue = value[i];
+          const itemPath = `${path}/${i}`;
           const res = validateOneOf(lexicons2, itemPath, itemsDef, itemValue);
           if (!res.success) {
             return res;
@@ -16263,15 +16263,15 @@ if (cid) {
         add(doc) {
           try {
             lexiconDoc.parse(doc);
-          } catch (e2) {
-            if (e2 instanceof ZodError) {
+          } catch (e) {
+            if (e instanceof ZodError) {
               throw new LexiconDocMalformedError(
                 `Failed to parse schema definition ${doc.id}`,
                 doc,
-                e2.issues
+                e.issues
               );
             } else {
-              throw e2;
+              throw e;
             }
           }
           const validatedDoc = doc;
@@ -16735,20 +16735,20 @@ if (cid) {
             try {
               const str = new TextDecoder().decode(data);
               return jsonStringToLex(str);
-            } catch (e2) {
+            } catch (e) {
               throw new XRPCError(
                 2,
-                `Failed to parse response body: ${String(e2)}`
+                `Failed to parse response body: ${String(e)}`
               );
             }
           }
           if (mimeType.startsWith("text/") && data?.byteLength) {
             try {
               return new TextDecoder().decode(data);
-            } catch (e2) {
+            } catch (e) {
               throw new XRPCError(
                 2,
-                `Failed to parse response body: ${String(e2)}`
+                `Failed to parse response body: ${String(e)}`
               );
             }
           }
@@ -16819,11 +16819,11 @@ if (cid) {
           if (resCode === 200) {
             try {
               this.baseClient.lex.assertValidXrpcOutput(methodNsid, res.body);
-            } catch (e2) {
-              if (e2 instanceof ValidationError) {
-                throw new XRPCInvalidResponseError(methodNsid, e2, res.body);
+            } catch (e) {
+              if (e instanceof ValidationError) {
+                throw new XRPCInvalidResponseError(methodNsid, e, res.body);
               } else {
-                throw e2;
+                throw e;
               }
             }
             return new XRPCResponse(res.body, res.headers);
@@ -16857,8 +16857,8 @@ if (cid) {
             headers: Object.fromEntries(res.headers.entries()),
             body: httpResponseBodyParse(res.headers.get("content-type"), resBody)
           };
-        } catch (e2) {
-          throw new XRPCError(1, String(e2));
+        } catch (e) {
+          throw new XRPCError(1, String(e));
         }
       }
       function isErrorResponseBody(v) {
@@ -23469,73 +23469,73 @@ if (cid) {
       __export2(disableAccountInvites_exports, {
         toKnownErr: () => toKnownErr
       });
-      function toKnownErr(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var disableInviteCodes_exports = {};
       __export2(disableInviteCodes_exports, {
         toKnownErr: () => toKnownErr2
       });
-      function toKnownErr2(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr2(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var enableAccountInvites_exports = {};
       __export2(enableAccountInvites_exports, {
         toKnownErr: () => toKnownErr3
       });
-      function toKnownErr3(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr3(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getInviteCodes_exports = {};
       __export2(getInviteCodes_exports, {
         toKnownErr: () => toKnownErr4
       });
-      function toKnownErr4(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr4(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getModerationAction_exports = {};
       __export2(getModerationAction_exports, {
         toKnownErr: () => toKnownErr5
       });
-      function toKnownErr5(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr5(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getModerationActions_exports = {};
       __export2(getModerationActions_exports, {
         toKnownErr: () => toKnownErr6
       });
-      function toKnownErr6(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr6(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getModerationReport_exports = {};
       __export2(getModerationReport_exports, {
         toKnownErr: () => toKnownErr7
       });
-      function toKnownErr7(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr7(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getModerationReports_exports = {};
       __export2(getModerationReports_exports, {
         toKnownErr: () => toKnownErr8
       });
-      function toKnownErr8(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr8(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getRecord_exports = {};
       __export2(getRecord_exports, {
@@ -23547,12 +23547,12 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr9(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "RecordNotFound")
-            return new RecordNotFoundError(e2);
+      function toKnownErr9(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "RecordNotFound")
+            return new RecordNotFoundError(e);
         }
-        return e2;
+        return e;
       }
       var getRepo_exports = {};
       __export2(getRepo_exports, {
@@ -23564,12 +23564,12 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr10(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "RepoNotFound")
-            return new RepoNotFoundError(e2);
+      function toKnownErr10(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "RepoNotFound")
+            return new RepoNotFoundError(e);
         }
-        return e2;
+        return e;
       }
       var rebaseRepo_exports = {};
       __export2(rebaseRepo_exports, {
@@ -23587,50 +23587,50 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr11(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "InvalidSwap")
-            return new InvalidSwapError(e2);
-          if (e2.error === "ConcurrentWrites")
-            return new ConcurrentWritesError(e2);
+      function toKnownErr11(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "InvalidSwap")
+            return new InvalidSwapError(e);
+          if (e.error === "ConcurrentWrites")
+            return new ConcurrentWritesError(e);
         }
-        return e2;
+        return e;
       }
       var resolveModerationReports_exports = {};
       __export2(resolveModerationReports_exports, {
         toKnownErr: () => toKnownErr12
       });
-      function toKnownErr12(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr12(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var reverseModerationAction_exports = {};
       __export2(reverseModerationAction_exports, {
         toKnownErr: () => toKnownErr13
       });
-      function toKnownErr13(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr13(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var searchRepos_exports = {};
       __export2(searchRepos_exports, {
         toKnownErr: () => toKnownErr14
       });
-      function toKnownErr14(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr14(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var sendEmail_exports = {};
       __export2(sendEmail_exports, {
         toKnownErr: () => toKnownErr15
       });
-      function toKnownErr15(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr15(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var takeModerationAction_exports = {};
       __export2(takeModerationAction_exports, {
@@ -23642,66 +23642,66 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr16(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "SubjectHasAction")
-            return new SubjectHasActionError(e2);
+      function toKnownErr16(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "SubjectHasAction")
+            return new SubjectHasActionError(e);
         }
-        return e2;
+        return e;
       }
       var updateAccountEmail_exports = {};
       __export2(updateAccountEmail_exports, {
         toKnownErr: () => toKnownErr17
       });
-      function toKnownErr17(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr17(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var updateAccountHandle_exports = {};
       __export2(updateAccountHandle_exports, {
         toKnownErr: () => toKnownErr18
       });
-      function toKnownErr18(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr18(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var resolveHandle_exports = {};
       __export2(resolveHandle_exports, {
         toKnownErr: () => toKnownErr19
       });
-      function toKnownErr19(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr19(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var updateHandle_exports = {};
       __export2(updateHandle_exports, {
         toKnownErr: () => toKnownErr20
       });
-      function toKnownErr20(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr20(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var queryLabels_exports = {};
       __export2(queryLabels_exports, {
         toKnownErr: () => toKnownErr21
       });
-      function toKnownErr21(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr21(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var createReport_exports = {};
       __export2(createReport_exports, {
         toKnownErr: () => toKnownErr22
       });
-      function toKnownErr22(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr22(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var applyWrites_exports = {};
       __export2(applyWrites_exports, {
@@ -23725,12 +23725,12 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr23(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "InvalidSwap")
-            return new InvalidSwapError2(e2);
+      function toKnownErr23(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "InvalidSwap")
+            return new InvalidSwapError2(e);
         }
-        return e2;
+        return e;
       }
       function isCreate(v) {
         return isObj2(v) && hasProp2(v, "$type") && v.$type === "com.atproto.repo.applyWrites#create";
@@ -23760,12 +23760,12 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr24(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "InvalidSwap")
-            return new InvalidSwapError3(e2);
+      function toKnownErr24(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "InvalidSwap")
+            return new InvalidSwapError3(e);
         }
-        return e2;
+        return e;
       }
       var deleteRecord_exports = {};
       __export2(deleteRecord_exports, {
@@ -23777,30 +23777,30 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr25(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "InvalidSwap")
-            return new InvalidSwapError4(e2);
+      function toKnownErr25(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "InvalidSwap")
+            return new InvalidSwapError4(e);
         }
-        return e2;
+        return e;
       }
       var describeRepo_exports = {};
       __export2(describeRepo_exports, {
         toKnownErr: () => toKnownErr26
       });
-      function toKnownErr26(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr26(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getRecord_exports2 = {};
       __export2(getRecord_exports2, {
         toKnownErr: () => toKnownErr27
       });
-      function toKnownErr27(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr27(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var listRecords_exports = {};
       __export2(listRecords_exports, {
@@ -23808,10 +23808,10 @@ if (cid) {
         toKnownErr: () => toKnownErr28,
         validateRecord: () => validateRecord
       });
-      function toKnownErr28(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr28(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       function isRecord(v) {
         return isObj2(v) && hasProp2(v, "$type") && v.$type === "com.atproto.repo.listRecords#record";
@@ -23829,12 +23829,12 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr29(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "InvalidSwap")
-            return new InvalidSwapError5(e2);
+      function toKnownErr29(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "InvalidSwap")
+            return new InvalidSwapError5(e);
         }
-        return e2;
+        return e;
       }
       var rebaseRepo_exports2 = {};
       __export2(rebaseRepo_exports2, {
@@ -23852,23 +23852,23 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr30(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "InvalidSwap")
-            return new InvalidSwapError6(e2);
-          if (e2.error === "ConcurrentWrites")
-            return new ConcurrentWritesError2(e2);
+      function toKnownErr30(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "InvalidSwap")
+            return new InvalidSwapError6(e);
+          if (e.error === "ConcurrentWrites")
+            return new ConcurrentWritesError2(e);
         }
-        return e2;
+        return e;
       }
       var uploadBlob_exports = {};
       __export2(uploadBlob_exports, {
         toKnownErr: () => toKnownErr31
       });
-      function toKnownErr31(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr31(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var createAccount_exports = {};
       __export2(createAccount_exports, {
@@ -23916,24 +23916,24 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr32(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "InvalidHandle")
-            return new InvalidHandleError2(e2);
-          if (e2.error === "InvalidPassword")
-            return new InvalidPasswordError(e2);
-          if (e2.error === "InvalidInviteCode")
-            return new InvalidInviteCodeError(e2);
-          if (e2.error === "HandleNotAvailable")
-            return new HandleNotAvailableError(e2);
-          if (e2.error === "UnsupportedDomain")
-            return new UnsupportedDomainError(e2);
-          if (e2.error === "UnresolvableDid")
-            return new UnresolvableDidError(e2);
-          if (e2.error === "IncompatibleDidDoc")
-            return new IncompatibleDidDocError(e2);
+      function toKnownErr32(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "InvalidHandle")
+            return new InvalidHandleError2(e);
+          if (e.error === "InvalidPassword")
+            return new InvalidPasswordError(e);
+          if (e.error === "InvalidInviteCode")
+            return new InvalidInviteCodeError(e);
+          if (e.error === "HandleNotAvailable")
+            return new HandleNotAvailableError(e);
+          if (e.error === "UnsupportedDomain")
+            return new UnsupportedDomainError(e);
+          if (e.error === "UnresolvableDid")
+            return new UnresolvableDidError(e);
+          if (e.error === "IncompatibleDidDoc")
+            return new IncompatibleDidDocError(e);
         }
-        return e2;
+        return e;
       }
       var createAppPassword_exports = {};
       __export2(createAppPassword_exports, {
@@ -23947,12 +23947,12 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr33(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "AccountTakedown")
-            return new AccountTakedownError(e2);
+      function toKnownErr33(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "AccountTakedown")
+            return new AccountTakedownError(e);
         }
-        return e2;
+        return e;
       }
       function isAppPassword(v) {
         return isObj2(v) && hasProp2(v, "$type") && v.$type === "com.atproto.server.createAppPassword#appPassword";
@@ -23967,10 +23967,10 @@ if (cid) {
       __export2(createInviteCode_exports, {
         toKnownErr: () => toKnownErr34
       });
-      function toKnownErr34(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr34(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var createInviteCodes_exports = {};
       __export2(createInviteCodes_exports, {
@@ -23978,10 +23978,10 @@ if (cid) {
         toKnownErr: () => toKnownErr35,
         validateAccountCodes: () => validateAccountCodes
       });
-      function toKnownErr35(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr35(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       function isAccountCodes(v) {
         return isObj2(v) && hasProp2(v, "$type") && v.$type === "com.atproto.server.createInviteCodes#accountCodes";
@@ -24002,12 +24002,12 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr36(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "AccountTakedown")
-            return new AccountTakedownError2(e2);
+      function toKnownErr36(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "AccountTakedown")
+            return new AccountTakedownError2(e);
         }
-        return e2;
+        return e;
       }
       var deleteAccount_exports = {};
       __export2(deleteAccount_exports, {
@@ -24025,23 +24025,23 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr37(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "ExpiredToken")
-            return new ExpiredTokenError(e2);
-          if (e2.error === "InvalidToken")
-            return new InvalidTokenError(e2);
+      function toKnownErr37(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "ExpiredToken")
+            return new ExpiredTokenError(e);
+          if (e.error === "InvalidToken")
+            return new InvalidTokenError(e);
         }
-        return e2;
+        return e;
       }
       var deleteSession_exports = {};
       __export2(deleteSession_exports, {
         toKnownErr: () => toKnownErr38
       });
-      function toKnownErr38(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr38(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var describeServer_exports = {};
       __export2(describeServer_exports, {
@@ -24049,10 +24049,10 @@ if (cid) {
         toKnownErr: () => toKnownErr39,
         validateLinks: () => validateLinks
       });
-      function toKnownErr39(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr39(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       function isLinks(v) {
         return isObj2(v) && hasProp2(v, "$type") && v.$type === "com.atproto.server.describeServer#links";
@@ -24070,21 +24070,21 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr40(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "DuplicateCreate")
-            return new DuplicateCreateError(e2);
+      function toKnownErr40(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "DuplicateCreate")
+            return new DuplicateCreateError(e);
         }
-        return e2;
+        return e;
       }
       var getSession_exports = {};
       __export2(getSession_exports, {
         toKnownErr: () => toKnownErr41
       });
-      function toKnownErr41(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr41(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var listAppPasswords_exports = {};
       __export2(listAppPasswords_exports, {
@@ -24098,12 +24098,12 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr42(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "AccountTakedown")
-            return new AccountTakedownError3(e2);
+      function toKnownErr42(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "AccountTakedown")
+            return new AccountTakedownError3(e);
         }
-        return e2;
+        return e;
       }
       function isAppPassword2(v) {
         return isObj2(v) && hasProp2(v, "$type") && v.$type === "com.atproto.server.listAppPasswords#appPassword";
@@ -24121,30 +24121,30 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr43(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "AccountTakedown")
-            return new AccountTakedownError4(e2);
+      function toKnownErr43(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "AccountTakedown")
+            return new AccountTakedownError4(e);
         }
-        return e2;
+        return e;
       }
       var requestAccountDelete_exports = {};
       __export2(requestAccountDelete_exports, {
         toKnownErr: () => toKnownErr44
       });
-      function toKnownErr44(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr44(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var requestPasswordReset_exports = {};
       __export2(requestPasswordReset_exports, {
         toKnownErr: () => toKnownErr45
       });
-      function toKnownErr45(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr45(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var resetPassword_exports = {};
       __export2(resetPassword_exports, {
@@ -24162,59 +24162,59 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr46(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "ExpiredToken")
-            return new ExpiredTokenError2(e2);
-          if (e2.error === "InvalidToken")
-            return new InvalidTokenError2(e2);
+      function toKnownErr46(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "ExpiredToken")
+            return new ExpiredTokenError2(e);
+          if (e.error === "InvalidToken")
+            return new InvalidTokenError2(e);
         }
-        return e2;
+        return e;
       }
       var revokeAppPassword_exports = {};
       __export2(revokeAppPassword_exports, {
         toKnownErr: () => toKnownErr47
       });
-      function toKnownErr47(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr47(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getBlob_exports = {};
       __export2(getBlob_exports, {
         toKnownErr: () => toKnownErr48
       });
-      function toKnownErr48(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr48(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getBlocks_exports = {};
       __export2(getBlocks_exports, {
         toKnownErr: () => toKnownErr49
       });
-      function toKnownErr49(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr49(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getCheckout_exports = {};
       __export2(getCheckout_exports, {
         toKnownErr: () => toKnownErr50
       });
-      function toKnownErr50(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr50(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getCommitPath_exports = {};
       __export2(getCommitPath_exports, {
         toKnownErr: () => toKnownErr51
       });
-      function toKnownErr51(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr51(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getHead_exports = {};
       __export2(getHead_exports, {
@@ -24226,39 +24226,39 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr52(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "HeadNotFound")
-            return new HeadNotFoundError(e2);
+      function toKnownErr52(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "HeadNotFound")
+            return new HeadNotFoundError(e);
         }
-        return e2;
+        return e;
       }
       var getRecord_exports3 = {};
       __export2(getRecord_exports3, {
         toKnownErr: () => toKnownErr53
       });
-      function toKnownErr53(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr53(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getRepo_exports2 = {};
       __export2(getRepo_exports2, {
         toKnownErr: () => toKnownErr54
       });
-      function toKnownErr54(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr54(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var listBlobs_exports = {};
       __export2(listBlobs_exports, {
         toKnownErr: () => toKnownErr55
       });
-      function toKnownErr55(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr55(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var listRepos_exports = {};
       __export2(listRepos_exports, {
@@ -24266,10 +24266,10 @@ if (cid) {
         toKnownErr: () => toKnownErr56,
         validateRepo: () => validateRepo
       });
-      function toKnownErr56(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr56(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       function isRepo(v) {
         return isObj2(v) && hasProp2(v, "$type") && v.$type === "com.atproto.sync.listRepos#repo";
@@ -24281,82 +24281,82 @@ if (cid) {
       __export2(notifyOfUpdate_exports, {
         toKnownErr: () => toKnownErr57
       });
-      function toKnownErr57(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr57(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var requestCrawl_exports = {};
       __export2(requestCrawl_exports, {
         toKnownErr: () => toKnownErr58
       });
-      function toKnownErr58(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr58(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getPreferences_exports = {};
       __export2(getPreferences_exports, {
         toKnownErr: () => toKnownErr59
       });
-      function toKnownErr59(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr59(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getProfile_exports = {};
       __export2(getProfile_exports, {
         toKnownErr: () => toKnownErr60
       });
-      function toKnownErr60(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr60(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getProfiles_exports = {};
       __export2(getProfiles_exports, {
         toKnownErr: () => toKnownErr61
       });
-      function toKnownErr61(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr61(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getSuggestions_exports = {};
       __export2(getSuggestions_exports, {
         toKnownErr: () => toKnownErr62
       });
-      function toKnownErr62(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr62(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var putPreferences_exports = {};
       __export2(putPreferences_exports, {
         toKnownErr: () => toKnownErr63
       });
-      function toKnownErr63(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr63(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var searchActors_exports = {};
       __export2(searchActors_exports, {
         toKnownErr: () => toKnownErr64
       });
-      function toKnownErr64(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr64(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var searchActorsTypeahead_exports = {};
       __export2(searchActorsTypeahead_exports, {
         toKnownErr: () => toKnownErr65
       });
-      function toKnownErr65(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr65(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var describeFeedGenerator_exports = {};
       __export2(describeFeedGenerator_exports, {
@@ -24366,10 +24366,10 @@ if (cid) {
         validateFeed: () => validateFeed,
         validateLinks: () => validateLinks2
       });
-      function toKnownErr66(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr66(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       function isFeed(v) {
         return isObj2(v) && hasProp2(v, "$type") && v.$type === "app.bsky.feed.describeFeedGenerator#feed";
@@ -24387,10 +24387,10 @@ if (cid) {
       __export2(getActorFeeds_exports, {
         toKnownErr: () => toKnownErr67
       });
-      function toKnownErr67(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr67(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getActorLikes_exports = {};
       __export2(getActorLikes_exports, {
@@ -24408,14 +24408,14 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr68(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "BlockedActor")
-            return new BlockedActorError(e2);
-          if (e2.error === "BlockedByActor")
-            return new BlockedByActorError(e2);
+      function toKnownErr68(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "BlockedActor")
+            return new BlockedActorError(e);
+          if (e.error === "BlockedByActor")
+            return new BlockedByActorError(e);
         }
-        return e2;
+        return e;
       }
       var getAuthorFeed_exports = {};
       __export2(getAuthorFeed_exports, {
@@ -24433,14 +24433,14 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr69(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "BlockedActor")
-            return new BlockedActorError2(e2);
-          if (e2.error === "BlockedByActor")
-            return new BlockedByActorError2(e2);
+      function toKnownErr69(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "BlockedActor")
+            return new BlockedActorError2(e);
+          if (e.error === "BlockedByActor")
+            return new BlockedByActorError2(e);
         }
-        return e2;
+        return e;
       }
       var getFeed_exports = {};
       __export2(getFeed_exports, {
@@ -24452,30 +24452,30 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr70(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "UnknownFeed")
-            return new UnknownFeedError(e2);
+      function toKnownErr70(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "UnknownFeed")
+            return new UnknownFeedError(e);
         }
-        return e2;
+        return e;
       }
       var getFeedGenerator_exports = {};
       __export2(getFeedGenerator_exports, {
         toKnownErr: () => toKnownErr71
       });
-      function toKnownErr71(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr71(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getFeedGenerators_exports = {};
       __export2(getFeedGenerators_exports, {
         toKnownErr: () => toKnownErr72
       });
-      function toKnownErr72(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr72(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getFeedSkeleton_exports = {};
       __export2(getFeedSkeleton_exports, {
@@ -24487,12 +24487,12 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr73(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "UnknownFeed")
-            return new UnknownFeedError2(e2);
+      function toKnownErr73(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "UnknownFeed")
+            return new UnknownFeedError2(e);
         }
-        return e2;
+        return e;
       }
       var getLikes_exports = {};
       __export2(getLikes_exports, {
@@ -24500,10 +24500,10 @@ if (cid) {
         toKnownErr: () => toKnownErr74,
         validateLike: () => validateLike
       });
-      function toKnownErr74(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr74(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       function isLike(v) {
         return isObj2(v) && hasProp2(v, "$type") && v.$type === "app.bsky.feed.getLikes#like";
@@ -24521,147 +24521,147 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr75(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "NotFound")
-            return new NotFoundError(e2);
+      function toKnownErr75(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "NotFound")
+            return new NotFoundError(e);
         }
-        return e2;
+        return e;
       }
       var getPosts_exports = {};
       __export2(getPosts_exports, {
         toKnownErr: () => toKnownErr76
       });
-      function toKnownErr76(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr76(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getRepostedBy_exports = {};
       __export2(getRepostedBy_exports, {
         toKnownErr: () => toKnownErr77
       });
-      function toKnownErr77(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr77(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getTimeline_exports = {};
       __export2(getTimeline_exports, {
         toKnownErr: () => toKnownErr78
       });
-      function toKnownErr78(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr78(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getBlocks_exports2 = {};
       __export2(getBlocks_exports2, {
         toKnownErr: () => toKnownErr79
       });
-      function toKnownErr79(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr79(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getFollowers_exports = {};
       __export2(getFollowers_exports, {
         toKnownErr: () => toKnownErr80
       });
-      function toKnownErr80(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr80(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getFollows_exports = {};
       __export2(getFollows_exports, {
         toKnownErr: () => toKnownErr81
       });
-      function toKnownErr81(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr81(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getList_exports = {};
       __export2(getList_exports, {
         toKnownErr: () => toKnownErr82
       });
-      function toKnownErr82(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr82(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getListMutes_exports = {};
       __export2(getListMutes_exports, {
         toKnownErr: () => toKnownErr83
       });
-      function toKnownErr83(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr83(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getLists_exports = {};
       __export2(getLists_exports, {
         toKnownErr: () => toKnownErr84
       });
-      function toKnownErr84(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr84(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getMutes_exports = {};
       __export2(getMutes_exports, {
         toKnownErr: () => toKnownErr85
       });
-      function toKnownErr85(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr85(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var muteActor_exports = {};
       __export2(muteActor_exports, {
         toKnownErr: () => toKnownErr86
       });
-      function toKnownErr86(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr86(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var muteActorList_exports = {};
       __export2(muteActorList_exports, {
         toKnownErr: () => toKnownErr87
       });
-      function toKnownErr87(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr87(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var unmuteActor_exports = {};
       __export2(unmuteActor_exports, {
         toKnownErr: () => toKnownErr88
       });
-      function toKnownErr88(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr88(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var unmuteActorList_exports = {};
       __export2(unmuteActorList_exports, {
         toKnownErr: () => toKnownErr89
       });
-      function toKnownErr89(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr89(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getUnreadCount_exports = {};
       __export2(getUnreadCount_exports, {
         toKnownErr: () => toKnownErr90
       });
-      function toKnownErr90(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr90(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var listNotifications_exports = {};
       __export2(listNotifications_exports, {
@@ -24669,10 +24669,10 @@ if (cid) {
         toKnownErr: () => toKnownErr91,
         validateNotification: () => validateNotification
       });
-      function toKnownErr91(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr91(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       function isNotification(v) {
         return isObj2(v) && hasProp2(v, "$type") && v.$type === "app.bsky.notification.listNotifications#notification";
@@ -24687,46 +24687,46 @@ if (cid) {
       __export2(registerPush_exports, {
         toKnownErr: () => toKnownErr92
       });
-      function toKnownErr92(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr92(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var updateSeen_exports = {};
       __export2(updateSeen_exports, {
         toKnownErr: () => toKnownErr93
       });
-      function toKnownErr93(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr93(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var applyLabels_exports = {};
       __export2(applyLabels_exports, {
         toKnownErr: () => toKnownErr94
       });
-      function toKnownErr94(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr94(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getPopular_exports = {};
       __export2(getPopular_exports, {
         toKnownErr: () => toKnownErr95
       });
-      function toKnownErr95(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr95(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getPopularFeedGenerators_exports = {};
       __export2(getPopularFeedGenerators_exports, {
         toKnownErr: () => toKnownErr96
       });
-      function toKnownErr96(e2) {
-        if (e2 instanceof XRPCError) {
+      function toKnownErr96(e) {
+        if (e instanceof XRPCError) {
         }
-        return e2;
+        return e;
       }
       var getTimelineSkeleton_exports = {};
       __export2(getTimelineSkeleton_exports, {
@@ -24738,12 +24738,12 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr97(e2) {
-        if (e2 instanceof XRPCError) {
-          if (e2.error === "UnknownFeed")
-            return new UnknownFeedError3(e2);
+      function toKnownErr97(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "UnknownFeed")
+            return new UnknownFeedError3(e);
         }
-        return e2;
+        return e;
       }
       var defs_exports = {};
       __export2(defs_exports, {
@@ -25595,93 +25595,93 @@ if (cid) {
           this._service = service;
         }
         disableAccountInvites(data, opts) {
-          return this._service.xrpc.call("com.atproto.admin.disableAccountInvites", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr(e2);
+          return this._service.xrpc.call("com.atproto.admin.disableAccountInvites", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr(e);
           });
         }
         disableInviteCodes(data, opts) {
-          return this._service.xrpc.call("com.atproto.admin.disableInviteCodes", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr2(e2);
+          return this._service.xrpc.call("com.atproto.admin.disableInviteCodes", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr2(e);
           });
         }
         enableAccountInvites(data, opts) {
-          return this._service.xrpc.call("com.atproto.admin.enableAccountInvites", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr3(e2);
+          return this._service.xrpc.call("com.atproto.admin.enableAccountInvites", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr3(e);
           });
         }
         getInviteCodes(params2, opts) {
-          return this._service.xrpc.call("com.atproto.admin.getInviteCodes", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr4(e2);
+          return this._service.xrpc.call("com.atproto.admin.getInviteCodes", params2, void 0, opts).catch((e) => {
+            throw toKnownErr4(e);
           });
         }
         getModerationAction(params2, opts) {
-          return this._service.xrpc.call("com.atproto.admin.getModerationAction", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr5(e2);
+          return this._service.xrpc.call("com.atproto.admin.getModerationAction", params2, void 0, opts).catch((e) => {
+            throw toKnownErr5(e);
           });
         }
         getModerationActions(params2, opts) {
-          return this._service.xrpc.call("com.atproto.admin.getModerationActions", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr6(e2);
+          return this._service.xrpc.call("com.atproto.admin.getModerationActions", params2, void 0, opts).catch((e) => {
+            throw toKnownErr6(e);
           });
         }
         getModerationReport(params2, opts) {
-          return this._service.xrpc.call("com.atproto.admin.getModerationReport", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr7(e2);
+          return this._service.xrpc.call("com.atproto.admin.getModerationReport", params2, void 0, opts).catch((e) => {
+            throw toKnownErr7(e);
           });
         }
         getModerationReports(params2, opts) {
-          return this._service.xrpc.call("com.atproto.admin.getModerationReports", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr8(e2);
+          return this._service.xrpc.call("com.atproto.admin.getModerationReports", params2, void 0, opts).catch((e) => {
+            throw toKnownErr8(e);
           });
         }
         getRecord(params2, opts) {
-          return this._service.xrpc.call("com.atproto.admin.getRecord", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr9(e2);
+          return this._service.xrpc.call("com.atproto.admin.getRecord", params2, void 0, opts).catch((e) => {
+            throw toKnownErr9(e);
           });
         }
         getRepo(params2, opts) {
-          return this._service.xrpc.call("com.atproto.admin.getRepo", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr10(e2);
+          return this._service.xrpc.call("com.atproto.admin.getRepo", params2, void 0, opts).catch((e) => {
+            throw toKnownErr10(e);
           });
         }
         rebaseRepo(data, opts) {
-          return this._service.xrpc.call("com.atproto.admin.rebaseRepo", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr11(e2);
+          return this._service.xrpc.call("com.atproto.admin.rebaseRepo", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr11(e);
           });
         }
         resolveModerationReports(data, opts) {
-          return this._service.xrpc.call("com.atproto.admin.resolveModerationReports", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr12(e2);
+          return this._service.xrpc.call("com.atproto.admin.resolveModerationReports", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr12(e);
           });
         }
         reverseModerationAction(data, opts) {
-          return this._service.xrpc.call("com.atproto.admin.reverseModerationAction", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr13(e2);
+          return this._service.xrpc.call("com.atproto.admin.reverseModerationAction", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr13(e);
           });
         }
         searchRepos(params2, opts) {
-          return this._service.xrpc.call("com.atproto.admin.searchRepos", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr14(e2);
+          return this._service.xrpc.call("com.atproto.admin.searchRepos", params2, void 0, opts).catch((e) => {
+            throw toKnownErr14(e);
           });
         }
         sendEmail(data, opts) {
-          return this._service.xrpc.call("com.atproto.admin.sendEmail", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr15(e2);
+          return this._service.xrpc.call("com.atproto.admin.sendEmail", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr15(e);
           });
         }
         takeModerationAction(data, opts) {
-          return this._service.xrpc.call("com.atproto.admin.takeModerationAction", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr16(e2);
+          return this._service.xrpc.call("com.atproto.admin.takeModerationAction", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr16(e);
           });
         }
         updateAccountEmail(data, opts) {
-          return this._service.xrpc.call("com.atproto.admin.updateAccountEmail", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr17(e2);
+          return this._service.xrpc.call("com.atproto.admin.updateAccountEmail", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr17(e);
           });
         }
         updateAccountHandle(data, opts) {
-          return this._service.xrpc.call("com.atproto.admin.updateAccountHandle", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr18(e2);
+          return this._service.xrpc.call("com.atproto.admin.updateAccountHandle", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr18(e);
           });
         }
       };
@@ -25690,13 +25690,13 @@ if (cid) {
           this._service = service;
         }
         resolveHandle(params2, opts) {
-          return this._service.xrpc.call("com.atproto.identity.resolveHandle", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr19(e2);
+          return this._service.xrpc.call("com.atproto.identity.resolveHandle", params2, void 0, opts).catch((e) => {
+            throw toKnownErr19(e);
           });
         }
         updateHandle(data, opts) {
-          return this._service.xrpc.call("com.atproto.identity.updateHandle", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr20(e2);
+          return this._service.xrpc.call("com.atproto.identity.updateHandle", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr20(e);
           });
         }
       };
@@ -25705,8 +25705,8 @@ if (cid) {
           this._service = service;
         }
         queryLabels(params2, opts) {
-          return this._service.xrpc.call("com.atproto.label.queryLabels", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr21(e2);
+          return this._service.xrpc.call("com.atproto.label.queryLabels", params2, void 0, opts).catch((e) => {
+            throw toKnownErr21(e);
           });
         }
       };
@@ -25715,8 +25715,8 @@ if (cid) {
           this._service = service;
         }
         createReport(data, opts) {
-          return this._service.xrpc.call("com.atproto.moderation.createReport", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr22(e2);
+          return this._service.xrpc.call("com.atproto.moderation.createReport", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr22(e);
           });
         }
       };
@@ -25725,48 +25725,48 @@ if (cid) {
           this._service = service;
         }
         applyWrites(data, opts) {
-          return this._service.xrpc.call("com.atproto.repo.applyWrites", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr23(e2);
+          return this._service.xrpc.call("com.atproto.repo.applyWrites", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr23(e);
           });
         }
         createRecord(data, opts) {
-          return this._service.xrpc.call("com.atproto.repo.createRecord", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr24(e2);
+          return this._service.xrpc.call("com.atproto.repo.createRecord", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr24(e);
           });
         }
         deleteRecord(data, opts) {
-          return this._service.xrpc.call("com.atproto.repo.deleteRecord", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr25(e2);
+          return this._service.xrpc.call("com.atproto.repo.deleteRecord", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr25(e);
           });
         }
         describeRepo(params2, opts) {
-          return this._service.xrpc.call("com.atproto.repo.describeRepo", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr26(e2);
+          return this._service.xrpc.call("com.atproto.repo.describeRepo", params2, void 0, opts).catch((e) => {
+            throw toKnownErr26(e);
           });
         }
         getRecord(params2, opts) {
-          return this._service.xrpc.call("com.atproto.repo.getRecord", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr27(e2);
+          return this._service.xrpc.call("com.atproto.repo.getRecord", params2, void 0, opts).catch((e) => {
+            throw toKnownErr27(e);
           });
         }
         listRecords(params2, opts) {
-          return this._service.xrpc.call("com.atproto.repo.listRecords", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr28(e2);
+          return this._service.xrpc.call("com.atproto.repo.listRecords", params2, void 0, opts).catch((e) => {
+            throw toKnownErr28(e);
           });
         }
         putRecord(data, opts) {
-          return this._service.xrpc.call("com.atproto.repo.putRecord", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr29(e2);
+          return this._service.xrpc.call("com.atproto.repo.putRecord", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr29(e);
           });
         }
         rebaseRepo(data, opts) {
-          return this._service.xrpc.call("com.atproto.repo.rebaseRepo", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr30(e2);
+          return this._service.xrpc.call("com.atproto.repo.rebaseRepo", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr30(e);
           });
         }
         uploadBlob(data, opts) {
-          return this._service.xrpc.call("com.atproto.repo.uploadBlob", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr31(e2);
+          return this._service.xrpc.call("com.atproto.repo.uploadBlob", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr31(e);
           });
         }
       };
@@ -25775,83 +25775,83 @@ if (cid) {
           this._service = service;
         }
         createAccount(data, opts) {
-          return this._service.xrpc.call("com.atproto.server.createAccount", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr32(e2);
+          return this._service.xrpc.call("com.atproto.server.createAccount", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr32(e);
           });
         }
         createAppPassword(data, opts) {
-          return this._service.xrpc.call("com.atproto.server.createAppPassword", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr33(e2);
+          return this._service.xrpc.call("com.atproto.server.createAppPassword", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr33(e);
           });
         }
         createInviteCode(data, opts) {
-          return this._service.xrpc.call("com.atproto.server.createInviteCode", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr34(e2);
+          return this._service.xrpc.call("com.atproto.server.createInviteCode", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr34(e);
           });
         }
         createInviteCodes(data, opts) {
-          return this._service.xrpc.call("com.atproto.server.createInviteCodes", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr35(e2);
+          return this._service.xrpc.call("com.atproto.server.createInviteCodes", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr35(e);
           });
         }
         createSession(data, opts) {
-          return this._service.xrpc.call("com.atproto.server.createSession", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr36(e2);
+          return this._service.xrpc.call("com.atproto.server.createSession", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr36(e);
           });
         }
         deleteAccount(data, opts) {
-          return this._service.xrpc.call("com.atproto.server.deleteAccount", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr37(e2);
+          return this._service.xrpc.call("com.atproto.server.deleteAccount", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr37(e);
           });
         }
         deleteSession(data, opts) {
-          return this._service.xrpc.call("com.atproto.server.deleteSession", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr38(e2);
+          return this._service.xrpc.call("com.atproto.server.deleteSession", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr38(e);
           });
         }
         describeServer(params2, opts) {
-          return this._service.xrpc.call("com.atproto.server.describeServer", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr39(e2);
+          return this._service.xrpc.call("com.atproto.server.describeServer", params2, void 0, opts).catch((e) => {
+            throw toKnownErr39(e);
           });
         }
         getAccountInviteCodes(params2, opts) {
-          return this._service.xrpc.call("com.atproto.server.getAccountInviteCodes", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr40(e2);
+          return this._service.xrpc.call("com.atproto.server.getAccountInviteCodes", params2, void 0, opts).catch((e) => {
+            throw toKnownErr40(e);
           });
         }
         getSession(params2, opts) {
-          return this._service.xrpc.call("com.atproto.server.getSession", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr41(e2);
+          return this._service.xrpc.call("com.atproto.server.getSession", params2, void 0, opts).catch((e) => {
+            throw toKnownErr41(e);
           });
         }
         listAppPasswords(params2, opts) {
-          return this._service.xrpc.call("com.atproto.server.listAppPasswords", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr42(e2);
+          return this._service.xrpc.call("com.atproto.server.listAppPasswords", params2, void 0, opts).catch((e) => {
+            throw toKnownErr42(e);
           });
         }
         refreshSession(data, opts) {
-          return this._service.xrpc.call("com.atproto.server.refreshSession", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr43(e2);
+          return this._service.xrpc.call("com.atproto.server.refreshSession", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr43(e);
           });
         }
         requestAccountDelete(data, opts) {
-          return this._service.xrpc.call("com.atproto.server.requestAccountDelete", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr44(e2);
+          return this._service.xrpc.call("com.atproto.server.requestAccountDelete", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr44(e);
           });
         }
         requestPasswordReset(data, opts) {
-          return this._service.xrpc.call("com.atproto.server.requestPasswordReset", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr45(e2);
+          return this._service.xrpc.call("com.atproto.server.requestPasswordReset", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr45(e);
           });
         }
         resetPassword(data, opts) {
-          return this._service.xrpc.call("com.atproto.server.resetPassword", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr46(e2);
+          return this._service.xrpc.call("com.atproto.server.resetPassword", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr46(e);
           });
         }
         revokeAppPassword(data, opts) {
-          return this._service.xrpc.call("com.atproto.server.revokeAppPassword", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr47(e2);
+          return this._service.xrpc.call("com.atproto.server.revokeAppPassword", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr47(e);
           });
         }
       };
@@ -25860,58 +25860,58 @@ if (cid) {
           this._service = service;
         }
         getBlob(params2, opts) {
-          return this._service.xrpc.call("com.atproto.sync.getBlob", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr48(e2);
+          return this._service.xrpc.call("com.atproto.sync.getBlob", params2, void 0, opts).catch((e) => {
+            throw toKnownErr48(e);
           });
         }
         getBlocks(params2, opts) {
-          return this._service.xrpc.call("com.atproto.sync.getBlocks", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr49(e2);
+          return this._service.xrpc.call("com.atproto.sync.getBlocks", params2, void 0, opts).catch((e) => {
+            throw toKnownErr49(e);
           });
         }
         getCheckout(params2, opts) {
-          return this._service.xrpc.call("com.atproto.sync.getCheckout", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr50(e2);
+          return this._service.xrpc.call("com.atproto.sync.getCheckout", params2, void 0, opts).catch((e) => {
+            throw toKnownErr50(e);
           });
         }
         getCommitPath(params2, opts) {
-          return this._service.xrpc.call("com.atproto.sync.getCommitPath", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr51(e2);
+          return this._service.xrpc.call("com.atproto.sync.getCommitPath", params2, void 0, opts).catch((e) => {
+            throw toKnownErr51(e);
           });
         }
         getHead(params2, opts) {
-          return this._service.xrpc.call("com.atproto.sync.getHead", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr52(e2);
+          return this._service.xrpc.call("com.atproto.sync.getHead", params2, void 0, opts).catch((e) => {
+            throw toKnownErr52(e);
           });
         }
         getRecord(params2, opts) {
-          return this._service.xrpc.call("com.atproto.sync.getRecord", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr53(e2);
+          return this._service.xrpc.call("com.atproto.sync.getRecord", params2, void 0, opts).catch((e) => {
+            throw toKnownErr53(e);
           });
         }
         getRepo(params2, opts) {
-          return this._service.xrpc.call("com.atproto.sync.getRepo", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr54(e2);
+          return this._service.xrpc.call("com.atproto.sync.getRepo", params2, void 0, opts).catch((e) => {
+            throw toKnownErr54(e);
           });
         }
         listBlobs(params2, opts) {
-          return this._service.xrpc.call("com.atproto.sync.listBlobs", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr55(e2);
+          return this._service.xrpc.call("com.atproto.sync.listBlobs", params2, void 0, opts).catch((e) => {
+            throw toKnownErr55(e);
           });
         }
         listRepos(params2, opts) {
-          return this._service.xrpc.call("com.atproto.sync.listRepos", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr56(e2);
+          return this._service.xrpc.call("com.atproto.sync.listRepos", params2, void 0, opts).catch((e) => {
+            throw toKnownErr56(e);
           });
         }
         notifyOfUpdate(data, opts) {
-          return this._service.xrpc.call("com.atproto.sync.notifyOfUpdate", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr57(e2);
+          return this._service.xrpc.call("com.atproto.sync.notifyOfUpdate", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr57(e);
           });
         }
         requestCrawl(data, opts) {
-          return this._service.xrpc.call("com.atproto.sync.requestCrawl", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr58(e2);
+          return this._service.xrpc.call("com.atproto.sync.requestCrawl", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr58(e);
           });
         }
       };
@@ -25939,38 +25939,38 @@ if (cid) {
           this.profile = new ProfileRecord(service);
         }
         getPreferences(params2, opts) {
-          return this._service.xrpc.call("app.bsky.actor.getPreferences", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr59(e2);
+          return this._service.xrpc.call("app.bsky.actor.getPreferences", params2, void 0, opts).catch((e) => {
+            throw toKnownErr59(e);
           });
         }
         getProfile(params2, opts) {
-          return this._service.xrpc.call("app.bsky.actor.getProfile", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr60(e2);
+          return this._service.xrpc.call("app.bsky.actor.getProfile", params2, void 0, opts).catch((e) => {
+            throw toKnownErr60(e);
           });
         }
         getProfiles(params2, opts) {
-          return this._service.xrpc.call("app.bsky.actor.getProfiles", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr61(e2);
+          return this._service.xrpc.call("app.bsky.actor.getProfiles", params2, void 0, opts).catch((e) => {
+            throw toKnownErr61(e);
           });
         }
         getSuggestions(params2, opts) {
-          return this._service.xrpc.call("app.bsky.actor.getSuggestions", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr62(e2);
+          return this._service.xrpc.call("app.bsky.actor.getSuggestions", params2, void 0, opts).catch((e) => {
+            throw toKnownErr62(e);
           });
         }
         putPreferences(data, opts) {
-          return this._service.xrpc.call("app.bsky.actor.putPreferences", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr63(e2);
+          return this._service.xrpc.call("app.bsky.actor.putPreferences", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr63(e);
           });
         }
         searchActors(params2, opts) {
-          return this._service.xrpc.call("app.bsky.actor.searchActors", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr64(e2);
+          return this._service.xrpc.call("app.bsky.actor.searchActors", params2, void 0, opts).catch((e) => {
+            throw toKnownErr64(e);
           });
         }
         searchActorsTypeahead(params2, opts) {
-          return this._service.xrpc.call("app.bsky.actor.searchActorsTypeahead", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr65(e2);
+          return this._service.xrpc.call("app.bsky.actor.searchActorsTypeahead", params2, void 0, opts).catch((e) => {
+            throw toKnownErr65(e);
           });
         }
       };
@@ -26025,68 +26025,68 @@ if (cid) {
           this.repost = new RepostRecord(service);
         }
         describeFeedGenerator(params2, opts) {
-          return this._service.xrpc.call("app.bsky.feed.describeFeedGenerator", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr66(e2);
+          return this._service.xrpc.call("app.bsky.feed.describeFeedGenerator", params2, void 0, opts).catch((e) => {
+            throw toKnownErr66(e);
           });
         }
         getActorFeeds(params2, opts) {
-          return this._service.xrpc.call("app.bsky.feed.getActorFeeds", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr67(e2);
+          return this._service.xrpc.call("app.bsky.feed.getActorFeeds", params2, void 0, opts).catch((e) => {
+            throw toKnownErr67(e);
           });
         }
         getActorLikes(params2, opts) {
-          return this._service.xrpc.call("app.bsky.feed.getActorLikes", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr68(e2);
+          return this._service.xrpc.call("app.bsky.feed.getActorLikes", params2, void 0, opts).catch((e) => {
+            throw toKnownErr68(e);
           });
         }
         getAuthorFeed(params2, opts) {
-          return this._service.xrpc.call("app.bsky.feed.getAuthorFeed", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr69(e2);
+          return this._service.xrpc.call("app.bsky.feed.getAuthorFeed", params2, void 0, opts).catch((e) => {
+            throw toKnownErr69(e);
           });
         }
         getFeed(params2, opts) {
-          return this._service.xrpc.call("app.bsky.feed.getFeed", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr70(e2);
+          return this._service.xrpc.call("app.bsky.feed.getFeed", params2, void 0, opts).catch((e) => {
+            throw toKnownErr70(e);
           });
         }
         getFeedGenerator(params2, opts) {
-          return this._service.xrpc.call("app.bsky.feed.getFeedGenerator", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr71(e2);
+          return this._service.xrpc.call("app.bsky.feed.getFeedGenerator", params2, void 0, opts).catch((e) => {
+            throw toKnownErr71(e);
           });
         }
         getFeedGenerators(params2, opts) {
-          return this._service.xrpc.call("app.bsky.feed.getFeedGenerators", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr72(e2);
+          return this._service.xrpc.call("app.bsky.feed.getFeedGenerators", params2, void 0, opts).catch((e) => {
+            throw toKnownErr72(e);
           });
         }
         getFeedSkeleton(params2, opts) {
-          return this._service.xrpc.call("app.bsky.feed.getFeedSkeleton", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr73(e2);
+          return this._service.xrpc.call("app.bsky.feed.getFeedSkeleton", params2, void 0, opts).catch((e) => {
+            throw toKnownErr73(e);
           });
         }
         getLikes(params2, opts) {
-          return this._service.xrpc.call("app.bsky.feed.getLikes", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr74(e2);
+          return this._service.xrpc.call("app.bsky.feed.getLikes", params2, void 0, opts).catch((e) => {
+            throw toKnownErr74(e);
           });
         }
         getPostThread(params2, opts) {
-          return this._service.xrpc.call("app.bsky.feed.getPostThread", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr75(e2);
+          return this._service.xrpc.call("app.bsky.feed.getPostThread", params2, void 0, opts).catch((e) => {
+            throw toKnownErr75(e);
           });
         }
         getPosts(params2, opts) {
-          return this._service.xrpc.call("app.bsky.feed.getPosts", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr76(e2);
+          return this._service.xrpc.call("app.bsky.feed.getPosts", params2, void 0, opts).catch((e) => {
+            throw toKnownErr76(e);
           });
         }
         getRepostedBy(params2, opts) {
-          return this._service.xrpc.call("app.bsky.feed.getRepostedBy", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr77(e2);
+          return this._service.xrpc.call("app.bsky.feed.getRepostedBy", params2, void 0, opts).catch((e) => {
+            throw toKnownErr77(e);
           });
         }
         getTimeline(params2, opts) {
-          return this._service.xrpc.call("app.bsky.feed.getTimeline", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr78(e2);
+          return this._service.xrpc.call("app.bsky.feed.getTimeline", params2, void 0, opts).catch((e) => {
+            throw toKnownErr78(e);
           });
         }
       };
@@ -26247,58 +26247,58 @@ if (cid) {
           this.listitem = new ListitemRecord(service);
         }
         getBlocks(params2, opts) {
-          return this._service.xrpc.call("app.bsky.graph.getBlocks", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr79(e2);
+          return this._service.xrpc.call("app.bsky.graph.getBlocks", params2, void 0, opts).catch((e) => {
+            throw toKnownErr79(e);
           });
         }
         getFollowers(params2, opts) {
-          return this._service.xrpc.call("app.bsky.graph.getFollowers", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr80(e2);
+          return this._service.xrpc.call("app.bsky.graph.getFollowers", params2, void 0, opts).catch((e) => {
+            throw toKnownErr80(e);
           });
         }
         getFollows(params2, opts) {
-          return this._service.xrpc.call("app.bsky.graph.getFollows", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr81(e2);
+          return this._service.xrpc.call("app.bsky.graph.getFollows", params2, void 0, opts).catch((e) => {
+            throw toKnownErr81(e);
           });
         }
         getList(params2, opts) {
-          return this._service.xrpc.call("app.bsky.graph.getList", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr82(e2);
+          return this._service.xrpc.call("app.bsky.graph.getList", params2, void 0, opts).catch((e) => {
+            throw toKnownErr82(e);
           });
         }
         getListMutes(params2, opts) {
-          return this._service.xrpc.call("app.bsky.graph.getListMutes", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr83(e2);
+          return this._service.xrpc.call("app.bsky.graph.getListMutes", params2, void 0, opts).catch((e) => {
+            throw toKnownErr83(e);
           });
         }
         getLists(params2, opts) {
-          return this._service.xrpc.call("app.bsky.graph.getLists", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr84(e2);
+          return this._service.xrpc.call("app.bsky.graph.getLists", params2, void 0, opts).catch((e) => {
+            throw toKnownErr84(e);
           });
         }
         getMutes(params2, opts) {
-          return this._service.xrpc.call("app.bsky.graph.getMutes", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr85(e2);
+          return this._service.xrpc.call("app.bsky.graph.getMutes", params2, void 0, opts).catch((e) => {
+            throw toKnownErr85(e);
           });
         }
         muteActor(data, opts) {
-          return this._service.xrpc.call("app.bsky.graph.muteActor", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr86(e2);
+          return this._service.xrpc.call("app.bsky.graph.muteActor", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr86(e);
           });
         }
         muteActorList(data, opts) {
-          return this._service.xrpc.call("app.bsky.graph.muteActorList", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr87(e2);
+          return this._service.xrpc.call("app.bsky.graph.muteActorList", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr87(e);
           });
         }
         unmuteActor(data, opts) {
-          return this._service.xrpc.call("app.bsky.graph.unmuteActor", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr88(e2);
+          return this._service.xrpc.call("app.bsky.graph.unmuteActor", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr88(e);
           });
         }
         unmuteActorList(data, opts) {
-          return this._service.xrpc.call("app.bsky.graph.unmuteActorList", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr89(e2);
+          return this._service.xrpc.call("app.bsky.graph.unmuteActorList", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr89(e);
           });
         }
       };
@@ -26455,23 +26455,23 @@ if (cid) {
           this._service = service;
         }
         getUnreadCount(params2, opts) {
-          return this._service.xrpc.call("app.bsky.notification.getUnreadCount", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr90(e2);
+          return this._service.xrpc.call("app.bsky.notification.getUnreadCount", params2, void 0, opts).catch((e) => {
+            throw toKnownErr90(e);
           });
         }
         listNotifications(params2, opts) {
-          return this._service.xrpc.call("app.bsky.notification.listNotifications", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr91(e2);
+          return this._service.xrpc.call("app.bsky.notification.listNotifications", params2, void 0, opts).catch((e) => {
+            throw toKnownErr91(e);
           });
         }
         registerPush(data, opts) {
-          return this._service.xrpc.call("app.bsky.notification.registerPush", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr92(e2);
+          return this._service.xrpc.call("app.bsky.notification.registerPush", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr92(e);
           });
         }
         updateSeen(data, opts) {
-          return this._service.xrpc.call("app.bsky.notification.updateSeen", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr93(e2);
+          return this._service.xrpc.call("app.bsky.notification.updateSeen", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr93(e);
           });
         }
       };
@@ -26485,13 +26485,13 @@ if (cid) {
           this._service = service;
         }
         applyLabels(data, opts) {
-          return this._service.xrpc.call("app.bsky.unspecced.applyLabels", opts?.qp, data, opts).catch((e2) => {
-            throw toKnownErr94(e2);
+          return this._service.xrpc.call("app.bsky.unspecced.applyLabels", opts?.qp, data, opts).catch((e) => {
+            throw toKnownErr94(e);
           });
         }
         getPopular(params2, opts) {
-          return this._service.xrpc.call("app.bsky.unspecced.getPopular", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr95(e2);
+          return this._service.xrpc.call("app.bsky.unspecced.getPopular", params2, void 0, opts).catch((e) => {
+            throw toKnownErr95(e);
           });
         }
         getPopularFeedGenerators(params2, opts) {
@@ -26500,13 +26500,13 @@ if (cid) {
             params2,
             void 0,
             opts
-          ).catch((e2) => {
-            throw toKnownErr96(e2);
+          ).catch((e) => {
+            throw toKnownErr96(e);
           });
         }
         getTimelineSkeleton(params2, opts) {
-          return this._service.xrpc.call("app.bsky.unspecced.getTimelineSkeleton", params2, void 0, opts).catch((e2) => {
-            throw toKnownErr97(e2);
+          return this._service.xrpc.call("app.bsky.unspecced.getTimelineSkeleton", params2, void 0, opts).catch((e) => {
+            throw toKnownErr97(e);
           });
         }
       };
@@ -26551,9 +26551,9 @@ if (cid) {
               email: opts.email
             };
             return res;
-          } catch (e2) {
+          } catch (e) {
             this.session = void 0;
-            throw e2;
+            throw e;
           } finally {
             if (this.session) {
               this._persistSession?.("create", this.session);
@@ -26576,9 +26576,9 @@ if (cid) {
               email: res.data.email
             };
             return res;
-          } catch (e2) {
+          } catch (e) {
             this.session = void 0;
-            throw e2;
+            throw e;
           } finally {
             if (this.session) {
               this._persistSession?.("create", this.session);
@@ -26597,9 +26597,9 @@ if (cid) {
             this.session.email = res.data.email;
             this.session.handle = res.data.handle;
             return res;
-          } catch (e2) {
+          } catch (e) {
             this.session = void 0;
-            throw e2;
+            throw e;
           } finally {
             if (this.session) {
               this._persistSession?.("create", this.session);
@@ -26725,8 +26725,8 @@ if (cid) {
         slice(start, end) {
           return decoder2.decode(this.utf8.slice(start, end));
         }
-        utf16IndexToUtf8Index(i2) {
-          return encoder.encode(this.utf16.slice(0, i2)).byteLength;
+        utf16IndexToUtf8Index(i) {
+          return encoder.encode(this.utf16.slice(0, i)).byteLength;
         }
         toString() {
           return this.utf16;
@@ -28303,11 +28303,11 @@ if (cid) {
       }
       function isValidDomain(str) {
         return !!tlds_default.find((tld) => {
-          const i2 = str.lastIndexOf(tld);
-          if (i2 === -1) {
+          const i = str.lastIndexOf(tld);
+          if (i === -1) {
             return false;
           }
-          return str.charAt(i2 - 1) === "." && i2 === str.length - tld.length;
+          return str.charAt(i - 1) === "." && i === str.length - tld.length;
         });
       }
       var RichTextSegment = class {
@@ -28476,7 +28476,7 @@ if (cid) {
           }
         }
       };
-      var facetSort = (a2, b) => a2.index.byteStart - b.index.byteStart;
+      var facetSort = (a, b) => a.index.byteStart - b.index.byteStart;
       function entitiesToFacets(text, entities) {
         const facets = [];
         for (const ent of entities) {
@@ -29296,7 +29296,7 @@ if (cid) {
             return;
           }
           const isSelf = label.src === this.did;
-          const labeler = isSelf ? void 0 : opts.labelers.find((s2) => s2.labeler.did === label.src);
+          const labeler = isSelf ? void 0 : opts.labelers.find((s) => s.labeler.did === label.src);
           let labelPref = "ignore";
           if (!labelDef.configurable) {
             labelPref = labelDef.preferences[0];
@@ -29355,7 +29355,7 @@ if (cid) {
           if (!this.causes.length) {
             return mod;
           }
-          this.causes.sort((a2, b) => a2.priority - b.priority);
+          this.causes.sort((a, b) => a.priority - b.priority);
           mod.cause = this.causes[0];
           mod.additionalCauses = this.causes.slice(1);
           if (mod.cause.type === "blocking" || mod.cause.type === "blocked-by" || mod.cause.type === "block-other") {
@@ -29503,15 +29503,15 @@ if (cid) {
         return ModerationDecision.noop();
       }
       function takeHighestPriorityDecision(...decisions) {
-        const filtered = decisions.filter((d2) => !!d2);
+        const filtered = decisions.filter((d) => !!d);
         if (filtered.length === 0) {
           return ModerationDecision.noop();
         }
-        filtered.sort((a2, b) => {
-          if (a2.cause && b.cause) {
-            return a2.cause.priority - b.cause.priority;
+        filtered.sort((a, b) => {
+          if (a.cause && b.cause) {
+            return a.cause.priority - b.cause.priority;
           }
-          if (a2.cause) {
+          if (a.cause) {
             return -1;
           }
           if (b.cause) {
@@ -29993,12 +29993,12 @@ if (cid) {
                 record: updated,
                 swapRecord: existing?.data.cid || null
               });
-            } catch (e2) {
-              if (retriesRemaining > 0 && e2 instanceof putRecord_exports.InvalidSwapError) {
+            } catch (e) {
+              if (retriesRemaining > 0 && e instanceof putRecord_exports.InvalidSwapError) {
                 retriesRemaining--;
                 continue;
               } else {
-                throw e2;
+                throw e;
               }
             }
             break;
@@ -30038,9 +30038,9 @@ if (cid) {
     return out;
   }
   function read2(buf3, offset) {
-    var res = 0, offset = offset || 0, shift = 0, counter = offset, b, l2 = buf3.length;
+    var res = 0, offset = offset || 0, shift = 0, counter = offset, b, l = buf3.length;
     do {
-      if (counter >= l2) {
+      if (counter >= l) {
         read2.bytes = 0;
         throw new RangeError("Could not decode varint");
       }
@@ -30121,13 +30121,13 @@ if (cid) {
         }
         return true;
       };
-      coerce2 = (o2) => {
-        if (o2 instanceof Uint8Array && o2.constructor.name === "Uint8Array")
-          return o2;
-        if (o2 instanceof ArrayBuffer)
-          return new Uint8Array(o2);
-        if (ArrayBuffer.isView(o2)) {
-          return new Uint8Array(o2.buffer, o2.byteOffset, o2.byteLength);
+      coerce2 = (o) => {
+        if (o instanceof Uint8Array && o.constructor.name === "Uint8Array")
+          return o;
+        if (o instanceof ArrayBuffer)
+          return new Uint8Array(o);
+        if (ArrayBuffer.isView(o)) {
+          return new Uint8Array(o.buffer, o.byteOffset, o.byteLength);
         }
         throw new Error("Unknown type, must be binary type");
       };
@@ -30160,15 +30160,15 @@ if (cid) {
         }
         return new Digest2(code, size, digest, bytes);
       };
-      equals4 = (a2, b) => {
-        if (a2 === b) {
+      equals4 = (a, b) => {
+        if (a === b) {
           return true;
         } else {
           const data = (
             /** @type {{code?:unknown, size?:unknown, bytes?:unknown}} */
             b
           );
-          return a2.code === data.code && a2.size === data.size && data.bytes instanceof Uint8Array && equals3(a2.bytes, data.bytes);
+          return a.code === data.code && a.size === data.size && data.bytes instanceof Uint8Array && equals3(a.bytes, data.bytes);
         }
       };
       Digest2 = class {
@@ -30199,13 +30199,13 @@ if (cid) {
     for (var j = 0; j < BASE_MAP.length; j++) {
       BASE_MAP[j] = 255;
     }
-    for (var i2 = 0; i2 < ALPHABET.length; i2++) {
-      var x = ALPHABET.charAt(i2);
+    for (var i = 0; i < ALPHABET.length; i++) {
+      var x = ALPHABET.charAt(i);
       var xc = x.charCodeAt(0);
       if (BASE_MAP[xc] !== 255) {
         throw new TypeError(x + " is ambiguous");
       }
-      BASE_MAP[xc] = i2;
+      BASE_MAP[xc] = i;
     }
     var BASE = ALPHABET.length;
     var LEADER = ALPHABET.charAt(0);
@@ -30237,8 +30237,8 @@ if (cid) {
       var b58 = new Uint8Array(size);
       while (pbegin !== pend) {
         var carry = source[pbegin];
-        var i3 = 0;
-        for (var it1 = size - 1; (carry !== 0 || i3 < length3) && it1 !== -1; it1--, i3++) {
+        var i2 = 0;
+        for (var it1 = size - 1; (carry !== 0 || i2 < length3) && it1 !== -1; it1--, i2++) {
           carry += 256 * b58[it1] >>> 0;
           b58[it1] = carry % BASE >>> 0;
           carry = carry / BASE >>> 0;
@@ -30246,7 +30246,7 @@ if (cid) {
         if (carry !== 0) {
           throw new Error("Non-zero carry");
         }
-        length3 = i3;
+        length3 = i2;
         pbegin++;
       }
       var it2 = size - length3;
@@ -30283,8 +30283,8 @@ if (cid) {
         if (carry === 255) {
           return;
         }
-        var i3 = 0;
-        for (var it3 = size - 1; (carry !== 0 || i3 < length3) && it3 !== -1; it3--, i3++) {
+        var i2 = 0;
+        for (var it3 = size - 1; (carry !== 0 || i2 < length3) && it3 !== -1; it3--, i2++) {
           carry += BASE * b256[it3] >>> 0;
           b256[it3] = carry % 256 >>> 0;
           carry = carry / 256 >>> 0;
@@ -30292,7 +30292,7 @@ if (cid) {
         if (carry !== 0) {
           throw new Error("Non-zero carry");
         }
-        length3 = i3;
+        length3 = i2;
         psz++;
       }
       if (source[psz] === " ") {
@@ -30486,8 +30486,8 @@ if (cid) {
       };
       decode8 = (string, alphabet, bitsPerChar, name) => {
         const codes = {};
-        for (let i2 = 0; i2 < alphabet.length; ++i2) {
-          codes[alphabet[i2]] = i2;
+        for (let i = 0; i < alphabet.length; ++i) {
+          codes[alphabet[i]] = i;
         }
         let end = string.length;
         while (string[end - 1] === "=") {
@@ -30497,8 +30497,8 @@ if (cid) {
         let bits = 0;
         let buffer3 = 0;
         let written = 0;
-        for (let i2 = 0; i2 < end; ++i2) {
-          const value = codes[string[i2]];
+        for (let i = 0; i < end; ++i) {
+          const value = codes[string[i]];
           if (value === void 0) {
             throw new SyntaxError(`Non-${name} character`);
           }
@@ -30520,8 +30520,8 @@ if (cid) {
         let out = "";
         let bits = 0;
         let buffer3 = 0;
-        for (let i2 = 0; i2 < data.length; ++i2) {
-          buffer3 = buffer3 << 8 | data[i2];
+        for (let i = 0; i < data.length; ++i) {
+          buffer3 = buffer3 << 8 | data[i];
           bits += 8;
           while (bits > bitsPerChar) {
             bits -= bitsPerChar;
@@ -31005,9 +31005,9 @@ if (cid) {
         static inspectBytes(initialBytes) {
           let offset = 0;
           const next = () => {
-            const [i2, length3] = decode6(initialBytes.subarray(offset));
+            const [i, length3] = decode6(initialBytes.subarray(offset));
             offset += length3;
-            return i2;
+            return i;
           };
           let version = (
             /** @type {V} */
@@ -31294,11 +31294,11 @@ if (cid) {
     if (isBuffer2(b1) && isBuffer2(b2)) {
       return b1.compare(b2);
     }
-    for (let i2 = 0; i2 < b1.length; i2++) {
-      if (b1[i2] === b2[i2]) {
+    for (let i = 0; i < b1.length; i++) {
+      if (b1[i] === b2[i]) {
         continue;
       }
-      return b1[i2] < b2[i2] ? -1 : 1;
+      return b1[i] < b2[i] ? -1 : 1;
     }
     return 0;
   }
@@ -31307,15 +31307,15 @@ if (cid) {
     const length3 = string.length;
     let leadSurrogate = null;
     const bytes = [];
-    for (let i2 = 0; i2 < length3; ++i2) {
-      codePoint = string.charCodeAt(i2);
+    for (let i = 0; i < length3; ++i) {
+      codePoint = string.charCodeAt(i);
       if (codePoint > 55295 && codePoint < 57344) {
         if (!leadSurrogate) {
           if (codePoint > 56319) {
             if ((units -= 3) > -1)
               bytes.push(239, 191, 189);
             continue;
-          } else if (i2 + 1 === length3) {
+          } else if (i + 1 === length3) {
             if ((units -= 3) > -1)
               bytes.push(239, 191, 189);
             continue;
@@ -31421,9 +31421,9 @@ if (cid) {
       return String.fromCharCode.apply(String, codePoints);
     }
     let res = "";
-    let i2 = 0;
-    while (i2 < len) {
-      res += String.fromCharCode.apply(String, codePoints.slice(i2, i2 += MAX_ARGUMENTS_LENGTH));
+    let i = 0;
+    while (i < len) {
+      res += String.fromCharCode.apply(String, codePoints.slice(i, i += MAX_ARGUMENTS_LENGTH));
     }
     return res;
   }
@@ -31455,7 +31455,7 @@ if (cid) {
         return bytes.slice(start, end);
       };
       concat = useBuffer ? (chunks, length3) => {
-        chunks = chunks.map((c2) => c2 instanceof Uint8Array ? c2 : globalThis.Buffer.from(c2));
+        chunks = chunks.map((c) => c instanceof Uint8Array ? c : globalThis.Buffer.from(c));
         return asU8A(globalThis.Buffer.concat(chunks, length3));
       } : (chunks, length3) => {
         const out = new Uint8Array(length3);
@@ -31806,11 +31806,11 @@ if (cid) {
     return toToken(data, pos, 5, readUint32(data, pos + 1, options));
   }
   function decodeBytes64(data, pos, _minor, options) {
-    const l2 = readUint64(data, pos + 1, options);
-    if (typeof l2 === "bigint") {
+    const l = readUint64(data, pos + 1, options);
+    if (typeof l === "bigint") {
       throw new Error(`${decodeErrPrefix} 64-bit integer bytes lengths not supported`);
     }
-    return toToken(data, pos, 9, l2);
+    return toToken(data, pos, 9, l);
   }
   function tokenBytes(token) {
     if (token.encodedBytes === void 0) {
@@ -31865,11 +31865,11 @@ if (cid) {
     return toToken2(data, pos, 5, readUint32(data, pos + 1, options), options);
   }
   function decodeString64(data, pos, _minor, options) {
-    const l2 = readUint64(data, pos + 1, options);
-    if (typeof l2 === "bigint") {
+    const l = readUint64(data, pos + 1, options);
+    if (typeof l === "bigint") {
       throw new Error(`${decodeErrPrefix} 64-bit integer string lengths not supported`);
     }
-    return toToken2(data, pos, 9, l2, options);
+    return toToken2(data, pos, 9, l, options);
   }
   var encodeString;
   var init_string = __esm({
@@ -31900,11 +31900,11 @@ if (cid) {
     return toToken3(data, pos, 5, readUint32(data, pos + 1, options));
   }
   function decodeArray64(data, pos, _minor, options) {
-    const l2 = readUint64(data, pos + 1, options);
-    if (typeof l2 === "bigint") {
+    const l = readUint64(data, pos + 1, options);
+    if (typeof l === "bigint") {
       throw new Error(`${decodeErrPrefix} 64-bit integer array lengths not supported`);
     }
-    return toToken3(data, pos, 9, l2);
+    return toToken3(data, pos, 9, l);
   }
   function decodeArrayIndefinite(data, pos, _minor, options) {
     if (options.allowIndefinite === false) {
@@ -31944,11 +31944,11 @@ if (cid) {
     return toToken4(data, pos, 5, readUint32(data, pos + 1, options));
   }
   function decodeMap64(data, pos, _minor, options) {
-    const l2 = readUint64(data, pos + 1, options);
-    if (typeof l2 === "bigint") {
+    const l = readUint64(data, pos + 1, options);
+    if (typeof l === "bigint") {
       throw new Error(`${decodeErrPrefix} 64-bit integer map lengths not supported`);
     }
-    return toToken4(data, pos, 9, l2);
+    return toToken4(data, pos, 9, l);
   }
   function decodeMapIndefinite(data, pos, _minor, options) {
     if (options.allowIndefinite === false) {
@@ -32247,8 +32247,8 @@ if (cid) {
       init_common();
       init_byte_utils();
       jump = [];
-      for (let i2 = 0; i2 <= 23; i2++) {
-        jump[i2] = invalidMinor;
+      for (let i = 0; i <= 23; i++) {
+        jump[i] = invalidMinor;
       }
       jump[24] = decodeUint8;
       jump[25] = decodeUint16;
@@ -32258,8 +32258,8 @@ if (cid) {
       jump[29] = invalidMinor;
       jump[30] = invalidMinor;
       jump[31] = invalidMinor;
-      for (let i2 = 32; i2 <= 55; i2++) {
-        jump[i2] = invalidMinor;
+      for (let i = 32; i <= 55; i++) {
+        jump[i] = invalidMinor;
       }
       jump[56] = decodeNegint8;
       jump[57] = decodeNegint16;
@@ -32269,8 +32269,8 @@ if (cid) {
       jump[61] = invalidMinor;
       jump[62] = invalidMinor;
       jump[63] = invalidMinor;
-      for (let i2 = 64; i2 <= 87; i2++) {
-        jump[i2] = decodeBytesCompact;
+      for (let i = 64; i <= 87; i++) {
+        jump[i] = decodeBytesCompact;
       }
       jump[88] = decodeBytes8;
       jump[89] = decodeBytes16;
@@ -32280,8 +32280,8 @@ if (cid) {
       jump[93] = invalidMinor;
       jump[94] = invalidMinor;
       jump[95] = errorer("indefinite length bytes/strings are not supported");
-      for (let i2 = 96; i2 <= 119; i2++) {
-        jump[i2] = decodeStringCompact;
+      for (let i = 96; i <= 119; i++) {
+        jump[i] = decodeStringCompact;
       }
       jump[120] = decodeString8;
       jump[121] = decodeString16;
@@ -32291,8 +32291,8 @@ if (cid) {
       jump[125] = invalidMinor;
       jump[126] = invalidMinor;
       jump[127] = errorer("indefinite length bytes/strings are not supported");
-      for (let i2 = 128; i2 <= 151; i2++) {
-        jump[i2] = decodeArrayCompact;
+      for (let i = 128; i <= 151; i++) {
+        jump[i] = decodeArrayCompact;
       }
       jump[152] = decodeArray8;
       jump[153] = decodeArray16;
@@ -32302,8 +32302,8 @@ if (cid) {
       jump[157] = invalidMinor;
       jump[158] = invalidMinor;
       jump[159] = decodeArrayIndefinite;
-      for (let i2 = 160; i2 <= 183; i2++) {
-        jump[i2] = decodeMapCompact;
+      for (let i = 160; i <= 183; i++) {
+        jump[i] = decodeMapCompact;
       }
       jump[184] = decodeMap8;
       jump[185] = decodeMap16;
@@ -32313,8 +32313,8 @@ if (cid) {
       jump[189] = invalidMinor;
       jump[190] = invalidMinor;
       jump[191] = decodeMapIndefinite;
-      for (let i2 = 192; i2 <= 215; i2++) {
-        jump[i2] = decodeTagCompact;
+      for (let i = 192; i <= 215; i++) {
+        jump[i] = decodeTagCompact;
       }
       jump[216] = decodeTag8;
       jump[217] = decodeTag16;
@@ -32324,8 +32324,8 @@ if (cid) {
       jump[221] = invalidMinor;
       jump[222] = invalidMinor;
       jump[223] = invalidMinor;
-      for (let i2 = 224; i2 <= 243; i2++) {
-        jump[i2] = errorer("simple values are not supported");
+      for (let i = 224; i <= 243; i++) {
+        jump[i] = errorer("simple values are not supported");
       }
       jump[244] = invalidMinor;
       jump[245] = invalidMinor;
@@ -32340,11 +32340,11 @@ if (cid) {
       jump[254] = invalidMinor;
       jump[255] = decodeBreak;
       quick = [];
-      for (let i2 = 0; i2 < 24; i2++) {
-        quick[i2] = new Token(Type.uint, i2, 1);
+      for (let i = 0; i < 24; i++) {
+        quick[i] = new Token(Type.uint, i, 1);
       }
-      for (let i2 = -1; i2 >= -24; i2--) {
-        quick[31 - i2] = new Token(Type.negint, i2, 1);
+      for (let i = -1; i >= -24; i--) {
+        quick[31 - i] = new Token(Type.negint, i, 1);
       }
       quick[64] = new Token(Type.bytes, new Uint8Array(0), 1);
       quick[96] = new Token(Type.string, "", 1);
@@ -32467,12 +32467,12 @@ if (cid) {
           this.parent = parent;
         }
         includes(obj) {
-          let p2 = this;
+          let p = this;
           do {
-            if (p2.obj === obj) {
+            if (p.obj === obj) {
               return true;
             }
-          } while (p2 = p2.parent);
+          } while (p = p.parent);
           return false;
         }
         static createCheck(stack, obj) {
@@ -32540,9 +32540,9 @@ if (cid) {
           }
           refStack = Ref.createCheck(refStack, obj);
           const entries = [];
-          let i2 = 0;
-          for (const e2 of obj) {
-            entries[i2++] = objectToTokens(e2, options, refStack);
+          let i = 0;
+          for (const e of obj) {
+            entries[i++] = objectToTokens(e, options, refStack);
           }
           if (options.addBreakTokens) {
             return [
@@ -32571,9 +32571,9 @@ if (cid) {
           }
           refStack = Ref.createCheck(refStack, obj);
           const entries = [];
-          let i2 = 0;
+          let i = 0;
           for (const key of keys) {
-            entries[i2++] = [
+            entries[i++] = [
               objectToTokens(key, options, refStack),
               objectToTokens(isMap ? obj.get(key) : obj[key], options, refStack)
             ];
@@ -32603,7 +32603,7 @@ if (cid) {
   // node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/decode.js
   function tokenToArray(token, tokeniser, options) {
     const arr = [];
-    for (let i2 = 0; i2 < token.value; i2++) {
+    for (let i = 0; i < token.value; i++) {
       const value = tokensToObject(tokeniser, options);
       if (value === BREAK) {
         if (token.value === Infinity) {
@@ -32612,9 +32612,9 @@ if (cid) {
         throw new Error(`${decodeErrPrefix} got unexpected break to lengthed array`);
       }
       if (value === DONE) {
-        throw new Error(`${decodeErrPrefix} found array but not enough entries (got ${i2}, expected ${token.value})`);
+        throw new Error(`${decodeErrPrefix} found array but not enough entries (got ${i}, expected ${token.value})`);
       }
-      arr[i2] = value;
+      arr[i] = value;
     }
     return arr;
   }
@@ -32622,7 +32622,7 @@ if (cid) {
     const useMaps = options.useMaps === true;
     const obj = useMaps ? void 0 : {};
     const m = useMaps ? /* @__PURE__ */ new Map() : void 0;
-    for (let i2 = 0; i2 < token.value; i2++) {
+    for (let i = 0; i < token.value; i++) {
       const key = tokensToObject(tokeniser, options);
       if (key === BREAK) {
         if (token.value === Infinity) {
@@ -32631,7 +32631,7 @@ if (cid) {
         throw new Error(`${decodeErrPrefix} got unexpected break to lengthed map`);
       }
       if (key === DONE) {
-        throw new Error(`${decodeErrPrefix} found map but not enough entries (got ${i2} [no key], expected ${token.value})`);
+        throw new Error(`${decodeErrPrefix} found map but not enough entries (got ${i} [no key], expected ${token.value})`);
       }
       if (useMaps !== true && typeof key !== "string") {
         throw new Error(`${decodeErrPrefix} non-string keys not supported (got ${typeof key})`);
@@ -32643,7 +32643,7 @@ if (cid) {
       }
       const value = tokensToObject(tokeniser, options);
       if (value === DONE) {
-        throw new Error(`${decodeErrPrefix} found map but not enough entries (got ${i2} [no value], expected ${token.value})`);
+        throw new Error(`${decodeErrPrefix} found map but not enough entries (got ${i} [no value], expected ${token.value})`);
       }
       if (useMaps) {
         m.set(key, value);
@@ -32961,9 +32961,9 @@ if (cid) {
       var MSB3 = 128;
       var REST3 = 127;
       function read4(buf3, offset) {
-        var res = 0, offset = offset || 0, shift = 0, counter = offset, b, l2 = buf3.length;
+        var res = 0, offset = offset || 0, shift = 0, counter = offset, b, l = buf3.length;
         do {
-          if (counter >= l2 || shift > 49) {
+          if (counter >= l || shift > 49) {
             read4.bytes = 0;
             throw new RangeError("Could not decode varint");
           }
@@ -33011,12 +33011,12 @@ if (cid) {
     if (!bytes.length) {
       throw new Error("Unexpected end of data");
     }
-    const i2 = import_varint3.default.decode(bytes);
+    const i = import_varint3.default.decode(bytes);
     seeker.seek(
       /** @type {number} */
       import_varint3.default.decode.bytes
     );
-    return i2;
+    return i;
   }
   function decodeV2Header(bytes) {
     const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -33199,7 +33199,7 @@ if (cid) {
         }
         have += chunk.length;
       }
-      currentChunk = new Uint8Array(bufa.reduce((p2, c2) => p2 + c2.length, 0));
+      currentChunk = new Uint8Array(bufa.reduce((p, c) => p + c.length, 0));
       let off = 0;
       for (const b of bufa) {
         currentChunk.set(b, off);
@@ -34398,11 +34398,11 @@ if (cid) {
     if (isBuffer4(b1) && isBuffer4(b2)) {
       return b1.compare(b2);
     }
-    for (let i2 = 0; i2 < b1.length; i2++) {
-      if (b1[i2] === b2[i2]) {
+    for (let i = 0; i < b1.length; i++) {
+      if (b1[i] === b2[i]) {
         continue;
       }
-      return b1[i2] < b2[i2] ? -1 : 1;
+      return b1[i] < b2[i] ? -1 : 1;
     }
     return 0;
   }
@@ -34411,15 +34411,15 @@ if (cid) {
     const length3 = string.length;
     let leadSurrogate = null;
     const bytes = [];
-    for (let i2 = 0; i2 < length3; ++i2) {
-      codePoint = string.charCodeAt(i2);
+    for (let i = 0; i < length3; ++i) {
+      codePoint = string.charCodeAt(i);
       if (codePoint > 55295 && codePoint < 57344) {
         if (!leadSurrogate) {
           if (codePoint > 56319) {
             if ((units -= 3) > -1)
               bytes.push(239, 191, 189);
             continue;
-          } else if (i2 + 1 === length3) {
+          } else if (i + 1 === length3) {
             if ((units -= 3) > -1)
               bytes.push(239, 191, 189);
             continue;
@@ -34525,9 +34525,9 @@ if (cid) {
       return String.fromCharCode.apply(String, codePoints);
     }
     let res = "";
-    let i2 = 0;
-    while (i2 < len) {
-      res += String.fromCharCode.apply(String, codePoints.slice(i2, i2 += MAX_ARGUMENTS_LENGTH2));
+    let i = 0;
+    while (i < len) {
+      res += String.fromCharCode.apply(String, codePoints.slice(i, i += MAX_ARGUMENTS_LENGTH2));
     }
     return res;
   }
@@ -34559,7 +34559,7 @@ if (cid) {
         return bytes.slice(start, end);
       };
       concat2 = useBuffer2 ? (chunks, length3) => {
-        chunks = chunks.map((c2) => c2 instanceof Uint8Array ? c2 : globalThis.Buffer.from(c2));
+        chunks = chunks.map((c) => c instanceof Uint8Array ? c : globalThis.Buffer.from(c));
         return asU8A2(globalThis.Buffer.concat(chunks, length3));
       } : (chunks, length3) => {
         const out = new Uint8Array(length3);
@@ -34910,11 +34910,11 @@ if (cid) {
     return toToken5(data, pos, 5, readUint322(data, pos + 1, options));
   }
   function decodeBytes642(data, pos, _minor, options) {
-    const l2 = readUint642(data, pos + 1, options);
-    if (typeof l2 === "bigint") {
+    const l = readUint642(data, pos + 1, options);
+    if (typeof l === "bigint") {
       throw new Error(`${decodeErrPrefix2} 64-bit integer bytes lengths not supported`);
     }
-    return toToken5(data, pos, 9, l2);
+    return toToken5(data, pos, 9, l);
   }
   function tokenBytes2(token) {
     if (token.encodedBytes === void 0) {
@@ -34969,11 +34969,11 @@ if (cid) {
     return toToken6(data, pos, 5, readUint322(data, pos + 1, options), options);
   }
   function decodeString642(data, pos, _minor, options) {
-    const l2 = readUint642(data, pos + 1, options);
-    if (typeof l2 === "bigint") {
+    const l = readUint642(data, pos + 1, options);
+    if (typeof l === "bigint") {
       throw new Error(`${decodeErrPrefix2} 64-bit integer string lengths not supported`);
     }
-    return toToken6(data, pos, 9, l2, options);
+    return toToken6(data, pos, 9, l, options);
   }
   var encodeString2;
   var init_string2 = __esm({
@@ -35004,11 +35004,11 @@ if (cid) {
     return toToken7(data, pos, 5, readUint322(data, pos + 1, options));
   }
   function decodeArray642(data, pos, _minor, options) {
-    const l2 = readUint642(data, pos + 1, options);
-    if (typeof l2 === "bigint") {
+    const l = readUint642(data, pos + 1, options);
+    if (typeof l === "bigint") {
       throw new Error(`${decodeErrPrefix2} 64-bit integer array lengths not supported`);
     }
-    return toToken7(data, pos, 9, l2);
+    return toToken7(data, pos, 9, l);
   }
   function decodeArrayIndefinite2(data, pos, _minor, options) {
     if (options.allowIndefinite === false) {
@@ -35048,11 +35048,11 @@ if (cid) {
     return toToken8(data, pos, 5, readUint322(data, pos + 1, options));
   }
   function decodeMap642(data, pos, _minor, options) {
-    const l2 = readUint642(data, pos + 1, options);
-    if (typeof l2 === "bigint") {
+    const l = readUint642(data, pos + 1, options);
+    if (typeof l === "bigint") {
       throw new Error(`${decodeErrPrefix2} 64-bit integer map lengths not supported`);
     }
-    return toToken8(data, pos, 9, l2);
+    return toToken8(data, pos, 9, l);
   }
   function decodeMapIndefinite2(data, pos, _minor, options) {
     if (options.allowIndefinite === false) {
@@ -35351,8 +35351,8 @@ if (cid) {
       init_common2();
       init_byte_utils2();
       jump2 = [];
-      for (let i2 = 0; i2 <= 23; i2++) {
-        jump2[i2] = invalidMinor2;
+      for (let i = 0; i <= 23; i++) {
+        jump2[i] = invalidMinor2;
       }
       jump2[24] = decodeUint82;
       jump2[25] = decodeUint162;
@@ -35362,8 +35362,8 @@ if (cid) {
       jump2[29] = invalidMinor2;
       jump2[30] = invalidMinor2;
       jump2[31] = invalidMinor2;
-      for (let i2 = 32; i2 <= 55; i2++) {
-        jump2[i2] = invalidMinor2;
+      for (let i = 32; i <= 55; i++) {
+        jump2[i] = invalidMinor2;
       }
       jump2[56] = decodeNegint82;
       jump2[57] = decodeNegint162;
@@ -35373,8 +35373,8 @@ if (cid) {
       jump2[61] = invalidMinor2;
       jump2[62] = invalidMinor2;
       jump2[63] = invalidMinor2;
-      for (let i2 = 64; i2 <= 87; i2++) {
-        jump2[i2] = decodeBytesCompact2;
+      for (let i = 64; i <= 87; i++) {
+        jump2[i] = decodeBytesCompact2;
       }
       jump2[88] = decodeBytes82;
       jump2[89] = decodeBytes162;
@@ -35384,8 +35384,8 @@ if (cid) {
       jump2[93] = invalidMinor2;
       jump2[94] = invalidMinor2;
       jump2[95] = errorer2("indefinite length bytes/strings are not supported");
-      for (let i2 = 96; i2 <= 119; i2++) {
-        jump2[i2] = decodeStringCompact2;
+      for (let i = 96; i <= 119; i++) {
+        jump2[i] = decodeStringCompact2;
       }
       jump2[120] = decodeString82;
       jump2[121] = decodeString162;
@@ -35395,8 +35395,8 @@ if (cid) {
       jump2[125] = invalidMinor2;
       jump2[126] = invalidMinor2;
       jump2[127] = errorer2("indefinite length bytes/strings are not supported");
-      for (let i2 = 128; i2 <= 151; i2++) {
-        jump2[i2] = decodeArrayCompact2;
+      for (let i = 128; i <= 151; i++) {
+        jump2[i] = decodeArrayCompact2;
       }
       jump2[152] = decodeArray82;
       jump2[153] = decodeArray162;
@@ -35406,8 +35406,8 @@ if (cid) {
       jump2[157] = invalidMinor2;
       jump2[158] = invalidMinor2;
       jump2[159] = decodeArrayIndefinite2;
-      for (let i2 = 160; i2 <= 183; i2++) {
-        jump2[i2] = decodeMapCompact2;
+      for (let i = 160; i <= 183; i++) {
+        jump2[i] = decodeMapCompact2;
       }
       jump2[184] = decodeMap82;
       jump2[185] = decodeMap162;
@@ -35417,8 +35417,8 @@ if (cid) {
       jump2[189] = invalidMinor2;
       jump2[190] = invalidMinor2;
       jump2[191] = decodeMapIndefinite2;
-      for (let i2 = 192; i2 <= 215; i2++) {
-        jump2[i2] = decodeTagCompact2;
+      for (let i = 192; i <= 215; i++) {
+        jump2[i] = decodeTagCompact2;
       }
       jump2[216] = decodeTag82;
       jump2[217] = decodeTag162;
@@ -35428,8 +35428,8 @@ if (cid) {
       jump2[221] = invalidMinor2;
       jump2[222] = invalidMinor2;
       jump2[223] = invalidMinor2;
-      for (let i2 = 224; i2 <= 243; i2++) {
-        jump2[i2] = errorer2("simple values are not supported");
+      for (let i = 224; i <= 243; i++) {
+        jump2[i] = errorer2("simple values are not supported");
       }
       jump2[244] = invalidMinor2;
       jump2[245] = invalidMinor2;
@@ -35444,11 +35444,11 @@ if (cid) {
       jump2[254] = invalidMinor2;
       jump2[255] = decodeBreak2;
       quick2 = [];
-      for (let i2 = 0; i2 < 24; i2++) {
-        quick2[i2] = new Token2(Type2.uint, i2, 1);
+      for (let i = 0; i < 24; i++) {
+        quick2[i] = new Token2(Type2.uint, i, 1);
       }
-      for (let i2 = -1; i2 >= -24; i2--) {
-        quick2[31 - i2] = new Token2(Type2.negint, i2, 1);
+      for (let i = -1; i >= -24; i--) {
+        quick2[31 - i] = new Token2(Type2.negint, i, 1);
       }
       quick2[64] = new Token2(Type2.bytes, new Uint8Array(0), 1);
       quick2[96] = new Token2(Type2.string, "", 1);
@@ -35518,12 +35518,12 @@ if (cid) {
           this.parent = parent;
         }
         includes(obj) {
-          let p2 = this;
+          let p = this;
           do {
-            if (p2.obj === obj) {
+            if (p.obj === obj) {
               return true;
             }
-          } while (p2 = p2.parent);
+          } while (p = p.parent);
           return false;
         }
         static createCheck(stack, obj) {
@@ -35591,9 +35591,9 @@ if (cid) {
           }
           refStack = Ref2.createCheck(refStack, obj);
           const entries = [];
-          let i2 = 0;
-          for (const e2 of obj) {
-            entries[i2++] = objectToTokens2(e2, options, refStack);
+          let i = 0;
+          for (const e of obj) {
+            entries[i++] = objectToTokens2(e, options, refStack);
           }
           if (options.addBreakTokens) {
             return [
@@ -35622,9 +35622,9 @@ if (cid) {
           }
           refStack = Ref2.createCheck(refStack, obj);
           const entries = [];
-          let i2 = 0;
+          let i = 0;
           for (const key of keys) {
-            entries[i2++] = [
+            entries[i++] = [
               objectToTokens2(key, options, refStack),
               objectToTokens2(isMap ? obj.get(key) : obj[key], options, refStack)
             ];
@@ -35982,9 +35982,9 @@ You can use close({ resize: true }) to resize header`);
               throw new Error("Indefinite length not supported for byte or text strings");
             case 4:
               let array = [];
-              let value, i2 = 0;
+              let value, i = 0;
               while ((value = read3()) != STOP_CODE) {
-                array[i2++] = value;
+                array[i++] = value;
               }
               return majorType == 4 ? array : majorType == 3 ? array.join("") : Buffer.concat(array);
             case 5:
@@ -36040,17 +36040,17 @@ You can use close({ resize: true }) to resize header`);
         return readFixedString(token);
       case 4:
         let array = new Array(token);
-        for (let i2 = 0; i2 < token; i2++)
-          array[i2] = read3();
+        for (let i = 0; i < token; i++)
+          array[i] = read3();
         return array;
       case 5:
         if (currentDecoder.mapsAsObjects) {
           let object = {};
           if (currentDecoder.keyMap)
-            for (let i2 = 0; i2 < token; i2++)
+            for (let i = 0; i < token; i++)
               object[safeKey(currentDecoder.decodeKey(read3()))] = read3();
           else
-            for (let i2 = 0; i2 < token; i2++)
+            for (let i = 0; i < token; i++)
               object[safeKey(read3())] = read3();
           return object;
         } else {
@@ -36060,10 +36060,10 @@ You can use close({ resize: true }) to resize header`);
           }
           let map = /* @__PURE__ */ new Map();
           if (currentDecoder.keyMap)
-            for (let i2 = 0; i2 < token; i2++)
+            for (let i = 0; i < token; i++)
               map.set(currentDecoder.decodeKey(read3()), read3());
           else
-            for (let i2 = 0; i2 < token; i2++)
+            for (let i = 0; i < token; i++)
               map.set(read3(), read3());
           return map;
         }
@@ -36083,20 +36083,20 @@ You can use close({ resize: true }) to resize header`);
               recordDefinition(id, structure2);
               let object = {};
               if (currentDecoder.keyMap)
-                for (let i2 = 2; i2 < length3; i2++) {
-                  let key = currentDecoder.decodeKey(structure2[i2 - 2]);
+                for (let i = 2; i < length3; i++) {
+                  let key = currentDecoder.decodeKey(structure2[i - 2]);
                   object[safeKey(key)] = read3();
                 }
               else
-                for (let i2 = 2; i2 < length3; i2++) {
-                  let key = structure2[i2 - 2];
+                for (let i = 2; i < length3; i++) {
+                  let key = structure2[i - 2];
                   object[safeKey(key)] = read3();
                 }
               return object;
             } else if (token == RECORD_DEFINITIONS_ID) {
               let length3 = readJustLength();
               let id = read3();
-              for (let i2 = 2; i2 < length3; i2++) {
+              for (let i = 2; i < length3; i++) {
                 recordDefinition(id++, read3());
               }
               return read3();
@@ -36122,8 +36122,8 @@ You can use close({ resize: true }) to resize header`);
             return extension(read3());
         } else {
           let input = read3();
-          for (let i2 = 0; i2 < currentExtensionRanges.length; i2++) {
-            let value = currentExtensionRanges[i2](token, input);
+          for (let i = 0; i < currentExtensionRanges.length; i++) {
+            let value = currentExtensionRanges[i](token, input);
             if (value !== void 0)
               return value;
           }
@@ -36193,11 +36193,11 @@ You can use close({ resize: true }) to resize header`);
       }
       let object = {};
       if (currentDecoder.keyMap)
-        for (let i2 = 0; i2 < length3; i2++)
-          object[safeKey(currentDecoder.decodeKey(this[i2]))] = read3();
+        for (let i = 0; i < length3; i++)
+          object[safeKey(currentDecoder.decodeKey(this[i]))] = read3();
       else
-        for (let i2 = 0; i2 < length3; i2++) {
-          object[safeKey(this[i2])] = read3();
+        for (let i = 0; i < length3; i++) {
+          object[safeKey(this[i])] = read3();
         }
       return object;
     }
@@ -36256,13 +36256,13 @@ You can use close({ resize: true }) to resize header`);
   function longStringInJS(length3) {
     let start = position;
     let bytes = new Array(length3);
-    for (let i2 = 0; i2 < length3; i2++) {
+    for (let i = 0; i < length3; i++) {
       const byte = src3[position++];
       if ((byte & 128) > 0) {
         position = start;
         return;
       }
-      bytes[i2] = byte;
+      bytes[i] = byte;
     }
     return fromCharCode.apply(String, bytes);
   }
@@ -36272,134 +36272,134 @@ You can use close({ resize: true }) to resize header`);
         if (length3 === 0)
           return "";
         else {
-          let a2 = src3[position++];
-          if ((a2 & 128) > 1) {
+          let a = src3[position++];
+          if ((a & 128) > 1) {
             position -= 1;
             return;
           }
-          return fromCharCode(a2);
+          return fromCharCode(a);
         }
       } else {
-        let a2 = src3[position++];
+        let a = src3[position++];
         let b = src3[position++];
-        if ((a2 & 128) > 0 || (b & 128) > 0) {
+        if ((a & 128) > 0 || (b & 128) > 0) {
           position -= 2;
           return;
         }
         if (length3 < 3)
-          return fromCharCode(a2, b);
-        let c2 = src3[position++];
-        if ((c2 & 128) > 0) {
+          return fromCharCode(a, b);
+        let c = src3[position++];
+        if ((c & 128) > 0) {
           position -= 3;
           return;
         }
-        return fromCharCode(a2, b, c2);
+        return fromCharCode(a, b, c);
       }
     } else {
-      let a2 = src3[position++];
+      let a = src3[position++];
       let b = src3[position++];
-      let c2 = src3[position++];
-      let d2 = src3[position++];
-      if ((a2 & 128) > 0 || (b & 128) > 0 || (c2 & 128) > 0 || (d2 & 128) > 0) {
+      let c = src3[position++];
+      let d = src3[position++];
+      if ((a & 128) > 0 || (b & 128) > 0 || (c & 128) > 0 || (d & 128) > 0) {
         position -= 4;
         return;
       }
       if (length3 < 6) {
         if (length3 === 4)
-          return fromCharCode(a2, b, c2, d2);
+          return fromCharCode(a, b, c, d);
         else {
-          let e2 = src3[position++];
-          if ((e2 & 128) > 0) {
+          let e = src3[position++];
+          if ((e & 128) > 0) {
             position -= 5;
             return;
           }
-          return fromCharCode(a2, b, c2, d2, e2);
+          return fromCharCode(a, b, c, d, e);
         }
       } else if (length3 < 8) {
-        let e2 = src3[position++];
+        let e = src3[position++];
         let f = src3[position++];
-        if ((e2 & 128) > 0 || (f & 128) > 0) {
+        if ((e & 128) > 0 || (f & 128) > 0) {
           position -= 6;
           return;
         }
         if (length3 < 7)
-          return fromCharCode(a2, b, c2, d2, e2, f);
-        let g2 = src3[position++];
-        if ((g2 & 128) > 0) {
+          return fromCharCode(a, b, c, d, e, f);
+        let g = src3[position++];
+        if ((g & 128) > 0) {
           position -= 7;
           return;
         }
-        return fromCharCode(a2, b, c2, d2, e2, f, g2);
+        return fromCharCode(a, b, c, d, e, f, g);
       } else {
-        let e2 = src3[position++];
+        let e = src3[position++];
         let f = src3[position++];
-        let g2 = src3[position++];
-        let h2 = src3[position++];
-        if ((e2 & 128) > 0 || (f & 128) > 0 || (g2 & 128) > 0 || (h2 & 128) > 0) {
+        let g = src3[position++];
+        let h = src3[position++];
+        if ((e & 128) > 0 || (f & 128) > 0 || (g & 128) > 0 || (h & 128) > 0) {
           position -= 8;
           return;
         }
         if (length3 < 10) {
           if (length3 === 8)
-            return fromCharCode(a2, b, c2, d2, e2, f, g2, h2);
+            return fromCharCode(a, b, c, d, e, f, g, h);
           else {
-            let i2 = src3[position++];
-            if ((i2 & 128) > 0) {
+            let i = src3[position++];
+            if ((i & 128) > 0) {
               position -= 9;
               return;
             }
-            return fromCharCode(a2, b, c2, d2, e2, f, g2, h2, i2);
+            return fromCharCode(a, b, c, d, e, f, g, h, i);
           }
         } else if (length3 < 12) {
-          let i2 = src3[position++];
+          let i = src3[position++];
           let j = src3[position++];
-          if ((i2 & 128) > 0 || (j & 128) > 0) {
+          if ((i & 128) > 0 || (j & 128) > 0) {
             position -= 10;
             return;
           }
           if (length3 < 11)
-            return fromCharCode(a2, b, c2, d2, e2, f, g2, h2, i2, j);
+            return fromCharCode(a, b, c, d, e, f, g, h, i, j);
           let k = src3[position++];
           if ((k & 128) > 0) {
             position -= 11;
             return;
           }
-          return fromCharCode(a2, b, c2, d2, e2, f, g2, h2, i2, j, k);
+          return fromCharCode(a, b, c, d, e, f, g, h, i, j, k);
         } else {
-          let i2 = src3[position++];
+          let i = src3[position++];
           let j = src3[position++];
           let k = src3[position++];
-          let l2 = src3[position++];
-          if ((i2 & 128) > 0 || (j & 128) > 0 || (k & 128) > 0 || (l2 & 128) > 0) {
+          let l = src3[position++];
+          if ((i & 128) > 0 || (j & 128) > 0 || (k & 128) > 0 || (l & 128) > 0) {
             position -= 12;
             return;
           }
           if (length3 < 14) {
             if (length3 === 12)
-              return fromCharCode(a2, b, c2, d2, e2, f, g2, h2, i2, j, k, l2);
+              return fromCharCode(a, b, c, d, e, f, g, h, i, j, k, l);
             else {
               let m = src3[position++];
               if ((m & 128) > 0) {
                 position -= 13;
                 return;
               }
-              return fromCharCode(a2, b, c2, d2, e2, f, g2, h2, i2, j, k, l2, m);
+              return fromCharCode(a, b, c, d, e, f, g, h, i, j, k, l, m);
             }
           } else {
             let m = src3[position++];
-            let n2 = src3[position++];
-            if ((m & 128) > 0 || (n2 & 128) > 0) {
+            let n = src3[position++];
+            if ((m & 128) > 0 || (n & 128) > 0) {
               position -= 14;
               return;
             }
             if (length3 < 15)
-              return fromCharCode(a2, b, c2, d2, e2, f, g2, h2, i2, j, k, l2, m, n2);
-            let o2 = src3[position++];
-            if ((o2 & 128) > 0) {
+              return fromCharCode(a, b, c, d, e, f, g, h, i, j, k, l, m, n);
+            let o = src3[position++];
+            if ((o & 128) > 0) {
               position -= 15;
               return;
             }
-            return fromCharCode(a2, b, c2, d2, e2, f, g2, h2, i2, j, k, l2, m, n2, o2);
+            return fromCharCode(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o);
           }
         }
       }
@@ -36432,12 +36432,12 @@ You can use close({ resize: true }) to resize header`);
     u8Array[0] = 0;
     return f32Array[0];
   }
-  function combine(a2, b) {
-    if (typeof a2 === "string")
-      return a2 + b;
-    if (a2 instanceof Array)
-      return a2.concat(b);
-    return Object.assign({}, a2, b);
+  function combine(a, b) {
+    if (typeof a === "string")
+      return a + b;
+    if (a instanceof Array)
+      return a.concat(b);
+    return Object.assign({}, a, b);
   }
   function getPackedValues() {
     if (!packedValues) {
@@ -36470,8 +36470,8 @@ You can use close({ resize: true }) to resize header`);
         let elements = buffer3.length >> sizeShift;
         let ta = new TypedArray(elements);
         let method = dv[dvMethod];
-        for (let i2 = 0; i2 < elements; i2++) {
-          ta[i2] = method.call(dv, i2 << sizeShift, littleEndian);
+        for (let i = 0; i < elements; i++) {
+          ta[i] = method.call(dv, i << sizeShift, littleEndian);
         }
         return ta;
       };
@@ -36480,7 +36480,7 @@ You can use close({ resize: true }) to resize header`);
   function readBundleExt() {
     let length3 = readJustLength();
     let bundlePosition = position + read3();
-    for (let i2 = 2; i2 < length3; i2++) {
+    for (let i = 2; i < length3; i++) {
       let bundleLength = readJustLength();
       position += bundleLength;
     }
@@ -36663,7 +36663,7 @@ You can use close({ resize: true }) to resize header`);
           if (this._keyMap) {
             switch (res.constructor.name) {
               case "Array":
-                return res.map((r2) => this.decodeKeys(r2));
+                return res.map((r) => this.decodeKeys(r));
             }
           }
           return res;
@@ -36763,8 +36763,8 @@ You can use close({ resize: true }) to resize header`);
       };
       currentExtensions[2] = (buffer3) => {
         let value = BigInt(0);
-        for (let i2 = 0, l2 = buffer3.byteLength; i2 < l2; i2++) {
-          value = BigInt(buffer3[i2]) + value << BigInt(8);
+        for (let i = 0, l = buffer3.byteLength; i < l; i++) {
+          value = BigInt(buffer3[i]) + value << BigInt(8);
         }
         return value;
       };
@@ -36791,9 +36791,9 @@ You can use close({ resize: true }) to resize header`);
         let structure = data[1];
         recordDefinition(data[0], structure);
         let object = {};
-        for (let i2 = 2; i2 < length3; i2++) {
-          let key = structure[i2 - 2];
-          object[safeKey(key)] = data[i2];
+        for (let i = 2; i < length3; i++) {
+          let key = structure[i - 2];
+          object[safeKey(key)] = data[i];
         }
         return object;
       };
@@ -36906,12 +36906,12 @@ You can use close({ resize: true }) to resize header`);
         Float64Array
       ];
       typedArrayTags = [64, 68, 69, 70, 71, 72, 77, 78, 79, 85, 86];
-      for (let i2 = 0; i2 < typedArrays.length; i2++) {
-        registerTypedArray(typedArrays[i2], typedArrayTags[i2]);
+      for (let i = 0; i < typedArrays.length; i++) {
+        registerTypedArray(typedArrays[i], typedArrayTags[i]);
       }
       mult10 = new Array(147);
-      for (let i2 = 0; i2 < 256; i2++) {
-        mult10[i2] = +("1e" + Math.floor(45.15 - i2 * 0.30103));
+      for (let i = 0; i < 256; i++) {
+        mult10[i] = +("1e" + Math.floor(45.15 - i * 0.30103));
       }
       defaultDecoder = new Decoder3({ useRecords: false });
       decode12 = defaultDecoder.decode;
@@ -36994,8 +36994,8 @@ You can use close({ resize: true }) to resize header`);
       case "object":
         if (value) {
           if (value instanceof Array) {
-            for (let i2 = 0, l2 = value.length; i2 < l2; i2++) {
-              findRepetitiveStrings(value[i2], packedValues2);
+            for (let i = 0, l = value.length; i < l; i++) {
+              findRepetitiveStrings(value[i], packedValues2);
             }
           } else {
             let includeKeys = !packedValues2.encoder.useRecords;
@@ -37052,7 +37052,7 @@ You can use close({ resize: true }) to resize header`);
     let nextId;
     let distanceToMove = idsToInsert.length * 2;
     let lastEnd = serialized.length - distanceToMove;
-    idsToInsert.sort((a2, b) => a2.offset > b.offset ? 1 : -1);
+    idsToInsert.sort((a, b) => a.offset > b.offset ? 1 : -1);
     for (let id = 0; id < idsToInsert.length; id++) {
       let referee = idsToInsert[id];
       referee.id = id;
@@ -37144,8 +37144,8 @@ You can use close({ resize: true }) to resize header`);
           let sharedPackedObjectMap2;
           if (sharedValues) {
             sharedPackedObjectMap2 = /* @__PURE__ */ Object.create(null);
-            for (let i2 = 0, l2 = sharedValues.length; i2 < l2; i2++) {
-              sharedPackedObjectMap2[sharedValues[i2]] = i2;
+            for (let i = 0, l = sharedValues.length; i < l; i++) {
+              sharedPackedObjectMap2[sharedValues[i]] = i;
             }
           }
           let recordIdsToRemove = [];
@@ -37155,7 +37155,7 @@ You can use close({ resize: true }) to resize header`);
             if (this._keyMap && !this._mapped) {
               switch (value.constructor.name) {
                 case "Array":
-                  value = value.map((r2) => this.encodeKeys(r2));
+                  value = value.map((r) => this.encodeKeys(r));
                   break;
               }
             }
@@ -37195,8 +37195,8 @@ You can use close({ resize: true }) to resize header`);
                 let sharedValues2 = encoder.sharedValues = sharedData.packedValues;
                 if (sharedValues2) {
                   sharedPackedObjectMap2 = {};
-                  for (let i2 = 0, l2 = sharedValues2.length; i2 < l2; i2++)
-                    sharedPackedObjectMap2[sharedValues2[i2]] = i2;
+                  for (let i = 0, l = sharedValues2.length; i < l; i++)
+                    sharedPackedObjectMap2[sharedValues2[i]] = i;
                 }
               }
               let sharedStructuresLength = sharedStructures.length;
@@ -37204,14 +37204,14 @@ You can use close({ resize: true }) to resize header`);
                 sharedStructuresLength = maxSharedStructures;
               if (!sharedStructures.transitions) {
                 sharedStructures.transitions = /* @__PURE__ */ Object.create(null);
-                for (let i2 = 0; i2 < sharedStructuresLength; i2++) {
-                  let keys = sharedStructures[i2];
+                for (let i = 0; i < sharedStructuresLength; i++) {
+                  let keys = sharedStructures[i];
                   if (!keys)
                     continue;
                   let nextTransition, transition = sharedStructures.transitions;
-                  for (let j = 0, l2 = keys.length; j < l2; j++) {
+                  for (let j = 0, l = keys.length; j < l; j++) {
                     if (transition[RECORD_SYMBOL] === void 0)
-                      transition[RECORD_SYMBOL] = i2;
+                      transition[RECORD_SYMBOL] = i;
                     let key = keys[j];
                     nextTransition = transition[key];
                     if (!nextTransition) {
@@ -37219,7 +37219,7 @@ You can use close({ resize: true }) to resize header`);
                     }
                     transition = nextTransition;
                   }
-                  transition[RECORD_SYMBOL] = i2 | 1048576;
+                  transition[RECORD_SYMBOL] = i | 1048576;
                 }
               }
               if (!isSequential)
@@ -37246,8 +37246,8 @@ You can use close({ resize: true }) to resize header`);
                 writeArrayHeader(0);
                 writeArrayHeader(0);
                 packedObjectMap2 = Object.create(sharedPackedObjectMap2 || null);
-                for (let i2 = 0, l2 = valuesArray.length; i2 < l2; i2++) {
-                  packedObjectMap2[valuesArray[i2]] = i2;
+                for (let i = 0, l = valuesArray.length; i < l; i++) {
+                  packedObjectMap2[valuesArray[i]] = i;
                 }
               }
             }
@@ -37288,8 +37288,8 @@ You can use close({ resize: true }) to resize header`);
                   if (recordIdsToRemove.length > 0)
                     recordIdsToRemove = [];
                 } else if (recordIdsToRemove.length > 0 && !isSequential) {
-                  for (let i2 = 0, l2 = recordIdsToRemove.length; i2 < l2; i2++) {
-                    recordIdsToRemove[i2][RECORD_SYMBOL] = void 0;
+                  for (let i = 0, l = recordIdsToRemove.length; i < l; i++) {
+                    recordIdsToRemove[i][RECORD_SYMBOL] = void 0;
                   }
                   recordIdsToRemove = [];
                 }
@@ -37398,17 +37398,17 @@ You can use close({ resize: true }) to resize header`);
               if (position2 + maxBytes > safeEnd)
                 target = makeRoom(position2 + maxBytes);
               if (strLength < 64 || !encodeUtf8) {
-                let i2, c1, c2, strPosition = position2 + headerSize;
-                for (i2 = 0; i2 < strLength; i2++) {
-                  c1 = value.charCodeAt(i2);
+                let i, c1, c2, strPosition = position2 + headerSize;
+                for (i = 0; i < strLength; i++) {
+                  c1 = value.charCodeAt(i);
                   if (c1 < 128) {
                     target[strPosition++] = c1;
                   } else if (c1 < 2048) {
                     target[strPosition++] = c1 >> 6 | 192;
                     target[strPosition++] = c1 & 63 | 128;
-                  } else if ((c1 & 64512) === 55296 && ((c2 = value.charCodeAt(i2 + 1)) & 64512) === 56320) {
+                  } else if ((c1 & 64512) === 55296 && ((c2 = value.charCodeAt(i + 1)) & 64512) === 56320) {
                     c1 = 65536 + ((c1 & 1023) << 10) + (c2 & 1023);
-                    i2++;
+                    i++;
                     target[strPosition++] = c1 >> 18 | 240;
                     target[strPosition++] = c1 >> 12 & 63 | 128;
                     target[strPosition++] = c1 >> 6 & 63 | 128;
@@ -37526,8 +37526,8 @@ You can use close({ resize: true }) to resize header`);
                   } else {
                     writeArrayHeader(length3);
                   }
-                  for (let i2 = 0; i2 < length3; i2++) {
-                    encode9(value[i2]);
+                  for (let i = 0; i < length3; i++) {
+                    encode9(value[i]);
                   }
                 } else if (constructor === Map) {
                   if (this.mapsAsObjects ? this.useTag259ForMaps !== false : this.useTag259ForMaps) {
@@ -37562,10 +37562,10 @@ You can use close({ resize: true }) to resize header`);
                     }
                   }
                 } else {
-                  for (let i2 = 0, l2 = extensions.length; i2 < l2; i2++) {
-                    let extensionClass = extensionClasses[i2];
+                  for (let i = 0, l = extensions.length; i < l; i++) {
+                    let extensionClass = extensionClasses[i];
                     if (value instanceof extensionClass) {
-                      let extension = extensions[i2];
+                      let extension = extensions[i];
                       let tag = extension.tag;
                       if (tag == void 0)
                         tag = extension.getTag && extension.getTag.call(this, value);
@@ -37657,14 +37657,14 @@ You can use close({ resize: true }) to resize header`);
             }
             let key;
             if (encoder.keyMap) {
-              for (let i2 = 0; i2 < length3; i2++) {
-                encode9(encoder.encodeKey(keys[i2]));
-                encode9(vals[i2]);
+              for (let i = 0; i < length3; i++) {
+                encode9(encoder.encodeKey(keys[i]));
+                encode9(vals[i]);
               }
             } else {
-              for (let i2 = 0; i2 < length3; i2++) {
-                encode9(keys[i2]);
-                encode9(vals[i2]);
+              for (let i = 0; i < length3; i++) {
+                encode9(keys[i]);
+                encode9(vals[i]);
               }
             }
           } : (object, safePrototype) => {
@@ -37698,8 +37698,8 @@ You can use close({ resize: true }) to resize header`);
             if (this.keyMap) {
               keys = Object.keys(object).map((k) => this.encodeKey(k));
               length3 = keys.length;
-              for (let i2 = 0; i2 < length3; i2++) {
-                let key = keys[i2];
+              for (let i = 0; i < length3; i++) {
+                let key = keys[i];
                 nextTransition = transition[key];
                 if (!nextTransition) {
                   nextTransition = transition[key] = /* @__PURE__ */ Object.create(null);
@@ -37749,10 +37749,10 @@ You can use close({ resize: true }) to resize header`);
                 target[position2++] = recordId >> 8 | 224;
                 target[position2++] = recordId & 255;
                 transition = structures.transitions;
-                for (let i2 = 0; i2 < length3; i2++) {
+                for (let i = 0; i < length3; i++) {
                   if (transition[RECORD_SYMBOL] === void 0 || transition[RECORD_SYMBOL] & 1048576)
                     transition[RECORD_SYMBOL] = recordId;
-                  transition = transition[keys[i2]];
+                  transition = transition[keys[i]];
                 }
                 transition[RECORD_SYMBOL] = recordId | 1048576;
                 hasSharedUpdate = true;
@@ -37840,8 +37840,8 @@ You can use close({ resize: true }) to resize header`);
             } else if (constructor === Array) {
               let length3 = object.length;
               writeArrayHeader(length3);
-              for (let i2 = 0; i2 < length3; i2++) {
-                let value = object[i2];
+              for (let i = 0; i < length3; i++) {
+                let value = object[i];
                 if (value && (typeof value === "object" || position2 - start > chunkThreshold)) {
                   if (iterateProperties.element)
                     yield* encodeObjectAsIterable(value, iterateProperties.element);
@@ -37967,7 +37967,7 @@ You can use close({ resize: true }) to resize header`);
             this.sharedVersion = sharedData.version;
             this.structures.nextId = this.structures.length;
           } else {
-            structuresCopy.forEach((structure, i2) => this.structures[i2] = structure);
+            structuresCopy.forEach((structure, i) => this.structures[i] = structure);
           }
           return saveResults;
         }
@@ -38096,8 +38096,8 @@ You can use close({ resize: true }) to resize header`);
               writeArrayHeader(0);
               writeArrayHeader(0);
               packedObjectMap = Object.create(sharedPackedObjectMap || null);
-              for (let i2 = 0, l2 = valuesArray.length; i2 < l2; i2++) {
-                packedObjectMap[valuesArray[i2]] = i2;
+              for (let i = 0, l = valuesArray.length; i < l; i++) {
+                packedObjectMap[valuesArray[i]] = i;
               }
             }
             if (sharedStructures) {
@@ -38456,8 +38456,8 @@ You can use close({ resize: true }) to resize header`);
           if (listenerArray !== void 0) {
             event.target = this;
             const array = listenerArray.slice(0);
-            for (let i2 = 0, l2 = array.length; i2 < l2; i2++) {
-              array[i2].call(this, event);
+            for (let i = 0, l = array.length; i < l; i++) {
+              array[i].call(this, event);
             }
             event.target = null;
           }
@@ -38478,8 +38478,8 @@ You can use close({ resize: true }) to resize header`);
       function clamp2(value, min, max) {
         return Math.max(min, Math.min(max, value));
       }
-      function euclideanModulo2(n2, m) {
-        return (n2 % m + m) % m;
+      function euclideanModulo2(n, m) {
+        return (n % m + m) % m;
       }
       function mapLinear2(x, a1, a2, b1, b2) {
         return b1 + (x - a1) * (b2 - b1) / (a2 - a1);
@@ -38491,8 +38491,8 @@ You can use close({ resize: true }) to resize header`);
           return 0;
         }
       }
-      function lerp2(x, y, t2) {
-        return (1 - t2) * x + t2 * y;
+      function lerp2(x, y, t) {
+        return (1 - t) * x + t * y;
       }
       function damp2(x, y, lambda, dt) {
         return lerp2(x, y, 1 - Math.exp(-lambda * dt));
@@ -38525,13 +38525,13 @@ You can use close({ resize: true }) to resize header`);
       function randFloatSpread2(range) {
         return range * (0.5 - Math.random());
       }
-      function seededRandom2(s2) {
-        if (s2 !== void 0)
-          _seed2 = s2;
-        let t2 = _seed2 += 1831565813;
-        t2 = Math.imul(t2 ^ t2 >>> 15, t2 | 1);
-        t2 ^= t2 + Math.imul(t2 ^ t2 >>> 7, t2 | 61);
-        return ((t2 ^ t2 >>> 14) >>> 0) / 4294967296;
+      function seededRandom2(s) {
+        if (s !== void 0)
+          _seed2 = s;
+        let t = _seed2 += 1831565813;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
       }
       function degToRad2(degrees) {
         return degrees * DEG2RAD2;
@@ -38548,35 +38548,35 @@ You can use close({ resize: true }) to resize header`);
       function floorPowerOfTwo2(value) {
         return Math.pow(2, Math.floor(Math.log(value) / Math.LN2));
       }
-      function setQuaternionFromProperEuler2(q, a2, b, c2, order) {
+      function setQuaternionFromProperEuler2(q, a, b, c, order) {
         const cos = Math.cos;
         const sin = Math.sin;
-        const c22 = cos(b / 2);
+        const c2 = cos(b / 2);
         const s2 = sin(b / 2);
-        const c13 = cos((a2 + c2) / 2);
-        const s13 = sin((a2 + c2) / 2);
-        const c1_3 = cos((a2 - c2) / 2);
-        const s1_3 = sin((a2 - c2) / 2);
-        const c3_1 = cos((c2 - a2) / 2);
-        const s3_1 = sin((c2 - a2) / 2);
+        const c13 = cos((a + c) / 2);
+        const s13 = sin((a + c) / 2);
+        const c1_3 = cos((a - c) / 2);
+        const s1_3 = sin((a - c) / 2);
+        const c3_1 = cos((c - a) / 2);
+        const s3_1 = sin((c - a) / 2);
         switch (order) {
           case "XYX":
-            q.set(c22 * s13, s2 * c1_3, s2 * s1_3, c22 * c13);
+            q.set(c2 * s13, s2 * c1_3, s2 * s1_3, c2 * c13);
             break;
           case "YZY":
-            q.set(s2 * s1_3, c22 * s13, s2 * c1_3, c22 * c13);
+            q.set(s2 * s1_3, c2 * s13, s2 * c1_3, c2 * c13);
             break;
           case "ZXZ":
-            q.set(s2 * c1_3, s2 * s1_3, c22 * s13, c22 * c13);
+            q.set(s2 * c1_3, s2 * s1_3, c2 * s13, c2 * c13);
             break;
           case "XZX":
-            q.set(c22 * s13, s2 * s3_1, s2 * c3_1, c22 * c13);
+            q.set(c2 * s13, s2 * s3_1, s2 * c3_1, c2 * c13);
             break;
           case "YXY":
-            q.set(s2 * c3_1, c22 * s13, s2 * s3_1, c22 * c13);
+            q.set(s2 * c3_1, c2 * s13, s2 * s3_1, c2 * c13);
             break;
           case "ZYZ":
-            q.set(s2 * s3_1, s2 * c3_1, c22 * s13, c22 * c13);
+            q.set(s2 * s3_1, s2 * c3_1, c2 * s13, c2 * c13);
             break;
           default:
             console.warn("THREE.MathUtils: .setQuaternionFromProperEuler() encountered an unknown order: " + order);
@@ -38720,19 +38720,19 @@ You can use close({ resize: true }) to resize header`);
           this.y += v.y;
           return this;
         }
-        addScalar(s2) {
-          this.x += s2;
-          this.y += s2;
+        addScalar(s) {
+          this.x += s;
+          this.y += s;
           return this;
         }
-        addVectors(a2, b) {
-          this.x = a2.x + b.x;
-          this.y = a2.y + b.y;
+        addVectors(a, b) {
+          this.x = a.x + b.x;
+          this.y = a.y + b.y;
           return this;
         }
-        addScaledVector(v, s2) {
-          this.x += v.x * s2;
-          this.y += v.y * s2;
+        addScaledVector(v, s) {
+          this.x += v.x * s;
+          this.y += v.y * s;
           return this;
         }
         sub(v) {
@@ -38740,14 +38740,14 @@ You can use close({ resize: true }) to resize header`);
           this.y -= v.y;
           return this;
         }
-        subScalar(s2) {
-          this.x -= s2;
-          this.y -= s2;
+        subScalar(s) {
+          this.x -= s;
+          this.y -= s;
           return this;
         }
-        subVectors(a2, b) {
-          this.x = a2.x - b.x;
-          this.y = a2.y - b.y;
+        subVectors(a, b) {
+          this.x = a.x - b.x;
+          this.y = a.y - b.y;
           return this;
         }
         multiply(v) {
@@ -38770,9 +38770,9 @@ You can use close({ resize: true }) to resize header`);
         }
         applyMatrix3(m) {
           const x = this.x, y = this.y;
-          const e2 = m.elements;
-          this.x = e2[0] * x + e2[3] * y + e2[6];
-          this.y = e2[1] * x + e2[4] * y + e2[7];
+          const e = m.elements;
+          this.x = e[0] * x + e[3] * y + e[6];
+          this.y = e[1] * x + e[4] * y + e[7];
           return this;
         }
         min(v) {
@@ -38895,11 +38895,11 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         rotateAround(center, angle) {
-          const c2 = Math.cos(angle), s2 = Math.sin(angle);
+          const c = Math.cos(angle), s = Math.sin(angle);
           const x = this.x - center.x;
           const y = this.y - center.y;
-          this.x = x * c2 - y * s2 + center.x;
-          this.y = x * s2 + y * c2 + center.y;
+          this.x = x * c - y * s + center.x;
+          this.y = x * s + y * c + center.y;
           return this;
         }
         random() {
@@ -38998,8 +38998,8 @@ You can use close({ resize: true }) to resize header`);
         premultiply(m) {
           return this.multiplyMatrices(m, this);
         }
-        multiplyMatrices(a2, b) {
-          const ae = a2.elements;
+        multiplyMatrices(a, b) {
+          const ae = a.elements;
           const be = b.elements;
           const te = this.elements;
           const a11 = ae[0], a12 = ae[3], a13 = ae[6];
@@ -39019,23 +39019,23 @@ You can use close({ resize: true }) to resize header`);
           te[8] = a31 * b13 + a32 * b23 + a33 * b33;
           return this;
         }
-        multiplyScalar(s2) {
+        multiplyScalar(s) {
           const te = this.elements;
-          te[0] *= s2;
-          te[3] *= s2;
-          te[6] *= s2;
-          te[1] *= s2;
-          te[4] *= s2;
-          te[7] *= s2;
-          te[2] *= s2;
-          te[5] *= s2;
-          te[8] *= s2;
+          te[0] *= s;
+          te[3] *= s;
+          te[6] *= s;
+          te[1] *= s;
+          te[4] *= s;
+          te[7] *= s;
+          te[2] *= s;
+          te[5] *= s;
+          te[8] *= s;
           return this;
         }
         determinant() {
           const te = this.elements;
-          const a2 = te[0], b = te[1], c2 = te[2], d2 = te[3], e2 = te[4], f = te[5], g2 = te[6], h2 = te[7], i2 = te[8];
-          return a2 * e2 * i2 - a2 * f * h2 - b * d2 * i2 + b * f * g2 + c2 * d2 * h2 - c2 * e2 * g2;
+          const a = te[0], b = te[1], c = te[2], d = te[3], e = te[4], f = te[5], g = te[6], h = te[7], i = te[8];
+          return a * e * i - a * f * h - b * d * i + b * f * g + c * d * h - c * e * g;
         }
         invert() {
           const te = this.elements, n11 = te[0], n21 = te[1], n31 = te[2], n12 = te[3], n22 = te[4], n32 = te[5], n13 = te[6], n23 = te[7], n33 = te[8], t11 = n33 * n22 - n32 * n23, t12 = n32 * n13 - n33 * n12, t13 = n23 * n12 - n22 * n13, det = n11 * t11 + n21 * t12 + n31 * t13;
@@ -39070,29 +39070,29 @@ You can use close({ resize: true }) to resize header`);
         getNormalMatrix(matrix4) {
           return this.setFromMatrix4(matrix4).invert().transpose();
         }
-        transposeIntoArray(r2) {
+        transposeIntoArray(r) {
           const m = this.elements;
-          r2[0] = m[0];
-          r2[1] = m[3];
-          r2[2] = m[6];
-          r2[3] = m[1];
-          r2[4] = m[4];
-          r2[5] = m[7];
-          r2[6] = m[2];
-          r2[7] = m[5];
-          r2[8] = m[8];
+          r[0] = m[0];
+          r[1] = m[3];
+          r[2] = m[6];
+          r[3] = m[1];
+          r[4] = m[4];
+          r[5] = m[7];
+          r[6] = m[2];
+          r[7] = m[5];
+          r[8] = m[8];
           return this;
         }
         setUvTransform(tx, ty, sx, sy, rotation, cx, cy) {
-          const c2 = Math.cos(rotation);
-          const s2 = Math.sin(rotation);
+          const c = Math.cos(rotation);
+          const s = Math.sin(rotation);
           this.set(
-            sx * c2,
-            sx * s2,
-            -sx * (c2 * cx + s2 * cy) + cx + tx,
-            -sy * s2,
-            sy * c2,
-            -sy * (-s2 * cx + c2 * cy) + cy + ty,
+            sx * c,
+            sx * s,
+            -sx * (c * cx + s * cy) + cx + tx,
+            -sy * s,
+            sy * c,
+            -sy * (-s * cx + c * cy) + cy + ty,
             0,
             0,
             1
@@ -39142,14 +39142,14 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         makeRotation(theta) {
-          const c2 = Math.cos(theta);
-          const s2 = Math.sin(theta);
+          const c = Math.cos(theta);
+          const s = Math.sin(theta);
           this.set(
-            c2,
-            -s2,
+            c,
+            -s,
             0,
-            s2,
-            c2,
+            s,
+            c,
             0,
             0,
             0,
@@ -39175,15 +39175,15 @@ You can use close({ resize: true }) to resize header`);
         equals(matrix) {
           const te = this.elements;
           const me = matrix.elements;
-          for (let i2 = 0; i2 < 9; i2++) {
-            if (te[i2] !== me[i2])
+          for (let i = 0; i < 9; i++) {
+            if (te[i] !== me[i])
               return false;
           }
           return true;
         }
         fromArray(array, offset = 0) {
-          for (let i2 = 0; i2 < 9; i2++) {
-            this.elements[i2] = array[i2 + offset];
+          for (let i = 0; i < 9; i++) {
+            this.elements[i] = array[i + offset];
           }
           return this;
         }
@@ -39206,8 +39206,8 @@ You can use close({ resize: true }) to resize header`);
       };
       var _m32 = /* @__PURE__ */ new Matrix32();
       function arrayNeedsUint322(array) {
-        for (let i2 = array.length - 1; i2 >= 0; --i2) {
-          if (array[i2] >= 65535)
+        for (let i = array.length - 1; i >= 0; --i) {
+          if (array[i] >= 65535)
             return true;
         }
         return false;
@@ -39241,11 +39241,11 @@ You can use close({ resize: true }) to resize header`);
         _cache2[message] = true;
         console.warn(message);
       }
-      function SRGBToLinear2(c2) {
-        return c2 < 0.04045 ? c2 * 0.0773993808 : Math.pow(c2 * 0.9478672986 + 0.0521327014, 2.4);
+      function SRGBToLinear2(c) {
+        return c < 0.04045 ? c * 0.0773993808 : Math.pow(c * 0.9478672986 + 0.0521327014, 2.4);
       }
-      function LinearToSRGB2(c2) {
-        return c2 < 31308e-7 ? c2 * 12.92 : 1.055 * Math.pow(c2, 0.41666) - 0.055;
+      function LinearToSRGB2(c) {
+        return c < 31308e-7 ? c * 12.92 : 1.055 * Math.pow(c, 0.41666) - 0.055;
       }
       var LINEAR_SRGB_TO_LINEAR_DISPLAY_P32 = /* @__PURE__ */ new Matrix32().fromArray([
         0.8224621,
@@ -39360,18 +39360,18 @@ You can use close({ resize: true }) to resize header`);
             context.drawImage(image, 0, 0, image.width, image.height);
             const imageData = context.getImageData(0, 0, image.width, image.height);
             const data = imageData.data;
-            for (let i2 = 0; i2 < data.length; i2++) {
-              data[i2] = SRGBToLinear2(data[i2] / 255) * 255;
+            for (let i = 0; i < data.length; i++) {
+              data[i] = SRGBToLinear2(data[i] / 255) * 255;
             }
             context.putImageData(imageData, 0, 0);
             return canvas;
           } else if (image.data) {
             const data = image.data.slice(0);
-            for (let i2 = 0; i2 < data.length; i2++) {
+            for (let i = 0; i < data.length; i++) {
               if (data instanceof Uint8Array || data instanceof Uint8ClampedArray) {
-                data[i2] = Math.floor(SRGBToLinear2(data[i2] / 255) * 255);
+                data[i] = Math.floor(SRGBToLinear2(data[i] / 255) * 255);
               } else {
-                data[i2] = SRGBToLinear2(data[i2]);
+                data[i] = SRGBToLinear2(data[i]);
               }
             }
             return {
@@ -39412,11 +39412,11 @@ You can use close({ resize: true }) to resize header`);
             let url;
             if (Array.isArray(data)) {
               url = [];
-              for (let i2 = 0, l2 = data.length; i2 < l2; i2++) {
-                if (data[i2].isDataTexture) {
-                  url.push(serializeImage2(data[i2].image));
+              for (let i = 0, l = data.length; i < l; i++) {
+                if (data[i].isDataTexture) {
+                  url.push(serializeImage2(data[i].image));
                 } else {
-                  url.push(serializeImage2(data[i2]));
+                  url.push(serializeImage2(data[i]));
                 }
               }
             } else {
@@ -39734,25 +39734,25 @@ You can use close({ resize: true }) to resize header`);
           this.w += v.w;
           return this;
         }
-        addScalar(s2) {
-          this.x += s2;
-          this.y += s2;
-          this.z += s2;
-          this.w += s2;
+        addScalar(s) {
+          this.x += s;
+          this.y += s;
+          this.z += s;
+          this.w += s;
           return this;
         }
-        addVectors(a2, b) {
-          this.x = a2.x + b.x;
-          this.y = a2.y + b.y;
-          this.z = a2.z + b.z;
-          this.w = a2.w + b.w;
+        addVectors(a, b) {
+          this.x = a.x + b.x;
+          this.y = a.y + b.y;
+          this.z = a.z + b.z;
+          this.w = a.w + b.w;
           return this;
         }
-        addScaledVector(v, s2) {
-          this.x += v.x * s2;
-          this.y += v.y * s2;
-          this.z += v.z * s2;
-          this.w += v.w * s2;
+        addScaledVector(v, s) {
+          this.x += v.x * s;
+          this.y += v.y * s;
+          this.z += v.z * s;
+          this.w += v.w * s;
           return this;
         }
         sub(v) {
@@ -39762,18 +39762,18 @@ You can use close({ resize: true }) to resize header`);
           this.w -= v.w;
           return this;
         }
-        subScalar(s2) {
-          this.x -= s2;
-          this.y -= s2;
-          this.z -= s2;
-          this.w -= s2;
+        subScalar(s) {
+          this.x -= s;
+          this.y -= s;
+          this.z -= s;
+          this.w -= s;
           return this;
         }
-        subVectors(a2, b) {
-          this.x = a2.x - b.x;
-          this.y = a2.y - b.y;
-          this.z = a2.z - b.z;
-          this.w = a2.w - b.w;
+        subVectors(a, b) {
+          this.x = a.x - b.x;
+          this.y = a.y - b.y;
+          this.z = a.z - b.z;
+          this.w = a.w - b.w;
           return this;
         }
         multiply(v) {
@@ -39792,11 +39792,11 @@ You can use close({ resize: true }) to resize header`);
         }
         applyMatrix4(m) {
           const x = this.x, y = this.y, z = this.z, w = this.w;
-          const e2 = m.elements;
-          this.x = e2[0] * x + e2[4] * y + e2[8] * z + e2[12] * w;
-          this.y = e2[1] * x + e2[5] * y + e2[9] * z + e2[13] * w;
-          this.z = e2[2] * x + e2[6] * y + e2[10] * z + e2[14] * w;
-          this.w = e2[3] * x + e2[7] * y + e2[11] * z + e2[15] * w;
+          const e = m.elements;
+          this.x = e[0] * x + e[4] * y + e[8] * z + e[12] * w;
+          this.y = e[1] * x + e[5] * y + e[9] * z + e[13] * w;
+          this.z = e[2] * x + e[6] * y + e[10] * z + e[14] * w;
+          this.w = e[3] * x + e[7] * y + e[11] * z + e[15] * w;
           return this;
         }
         divideScalar(scalar) {
@@ -39804,15 +39804,15 @@ You can use close({ resize: true }) to resize header`);
         }
         setAxisAngleFromQuaternion(q) {
           this.w = 2 * Math.acos(q.w);
-          const s2 = Math.sqrt(1 - q.w * q.w);
-          if (s2 < 1e-4) {
+          const s = Math.sqrt(1 - q.w * q.w);
+          if (s < 1e-4) {
             this.x = 1;
             this.y = 0;
             this.z = 0;
           } else {
-            this.x = q.x / s2;
-            this.y = q.y / s2;
-            this.z = q.z / s2;
+            this.x = q.x / s;
+            this.y = q.y / s;
+            this.z = q.z / s;
           }
           return this;
         }
@@ -39865,12 +39865,12 @@ You can use close({ resize: true }) to resize header`);
             this.set(x, y, z, angle);
             return this;
           }
-          let s2 = Math.sqrt((m32 - m23) * (m32 - m23) + (m13 - m31) * (m13 - m31) + (m21 - m12) * (m21 - m12));
-          if (Math.abs(s2) < 1e-3)
-            s2 = 1;
-          this.x = (m32 - m23) / s2;
-          this.y = (m13 - m31) / s2;
-          this.z = (m21 - m12) / s2;
+          let s = Math.sqrt((m32 - m23) * (m32 - m23) + (m13 - m31) * (m13 - m31) + (m21 - m12) * (m21 - m12));
+          if (Math.abs(s) < 1e-3)
+            s = 1;
+          this.x = (m32 - m23) / s;
+          this.y = (m13 - m31) / s;
+          this.z = (m21 - m12) / s;
           this.w = Math.acos((m11 + m22 + m33 - 1) / 2);
           return this;
         }
@@ -40131,9 +40131,9 @@ You can use close({ resize: true }) to resize header`);
           this.isWebGLMultipleRenderTargets = true;
           const texture = this.texture;
           this.texture = [];
-          for (let i2 = 0; i2 < count; i2++) {
-            this.texture[i2] = texture.clone();
-            this.texture[i2].isRenderTargetTexture = true;
+          for (let i = 0; i < count; i++) {
+            this.texture[i] = texture.clone();
+            this.texture[i].isRenderTargetTexture = true;
           }
         }
         setSize(width, height, depth = 1) {
@@ -40141,10 +40141,10 @@ You can use close({ resize: true }) to resize header`);
             this.width = width;
             this.height = height;
             this.depth = depth;
-            for (let i2 = 0, il = this.texture.length; i2 < il; i2++) {
-              this.texture[i2].image.width = width;
-              this.texture[i2].image.height = height;
-              this.texture[i2].image.depth = depth;
+            for (let i = 0, il = this.texture.length; i < il; i++) {
+              this.texture[i].image.width = width;
+              this.texture[i].image.height = height;
+              this.texture[i].image.depth = depth;
             }
             this.dispose();
           }
@@ -40164,9 +40164,9 @@ You can use close({ resize: true }) to resize header`);
           if (source.depthTexture !== null)
             this.depthTexture = source.depthTexture.clone();
           this.texture.length = 0;
-          for (let i2 = 0, il = source.texture.length; i2 < il; i2++) {
-            this.texture[i2] = source.texture[i2].clone();
-            this.texture[i2].isRenderTargetTexture = true;
+          for (let i = 0, il = source.texture.length; i < il; i++) {
+            this.texture[i] = source.texture[i].clone();
+            this.texture[i].isRenderTargetTexture = true;
           }
           return this;
         }
@@ -40179,17 +40179,17 @@ You can use close({ resize: true }) to resize header`);
           this._z = z;
           this._w = w;
         }
-        static slerpFlat(dst, dstOffset, src0, srcOffset0, src1, srcOffset1, t2) {
+        static slerpFlat(dst, dstOffset, src0, srcOffset0, src1, srcOffset1, t) {
           let x0 = src0[srcOffset0 + 0], y0 = src0[srcOffset0 + 1], z0 = src0[srcOffset0 + 2], w0 = src0[srcOffset0 + 3];
           const x1 = src1[srcOffset1 + 0], y1 = src1[srcOffset1 + 1], z1 = src1[srcOffset1 + 2], w1 = src1[srcOffset1 + 3];
-          if (t2 === 0) {
+          if (t === 0) {
             dst[dstOffset + 0] = x0;
             dst[dstOffset + 1] = y0;
             dst[dstOffset + 2] = z0;
             dst[dstOffset + 3] = w0;
             return;
           }
-          if (t2 === 1) {
+          if (t === 1) {
             dst[dstOffset + 0] = x1;
             dst[dstOffset + 1] = y1;
             dst[dstOffset + 2] = z1;
@@ -40197,19 +40197,19 @@ You can use close({ resize: true }) to resize header`);
             return;
           }
           if (w0 !== w1 || x0 !== x1 || y0 !== y1 || z0 !== z1) {
-            let s2 = 1 - t2;
+            let s = 1 - t;
             const cos = x0 * x1 + y0 * y1 + z0 * z1 + w0 * w1, dir = cos >= 0 ? 1 : -1, sqrSin = 1 - cos * cos;
             if (sqrSin > Number.EPSILON) {
               const sin = Math.sqrt(sqrSin), len = Math.atan2(sin, cos * dir);
-              s2 = Math.sin(s2 * len) / sin;
-              t2 = Math.sin(t2 * len) / sin;
+              s = Math.sin(s * len) / sin;
+              t = Math.sin(t * len) / sin;
             }
-            const tDir = t2 * dir;
-            x0 = x0 * s2 + x1 * tDir;
-            y0 = y0 * s2 + y1 * tDir;
-            z0 = z0 * s2 + z1 * tDir;
-            w0 = w0 * s2 + w1 * tDir;
-            if (s2 === 1 - t2) {
+            const tDir = t * dir;
+            x0 = x0 * s + x1 * tDir;
+            y0 = y0 * s + y1 * tDir;
+            z0 = z0 * s + z1 * tDir;
+            w0 = w0 * s + w1 * tDir;
+            if (s === 1 - t) {
               const f = 1 / Math.sqrt(x0 * x0 + y0 * y0 + z0 * z0 + w0 * w0);
               x0 *= f;
               y0 *= f;
@@ -40339,10 +40339,10 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         setFromAxisAngle(axis, angle) {
-          const halfAngle = angle / 2, s2 = Math.sin(halfAngle);
-          this._x = axis.x * s2;
-          this._y = axis.y * s2;
-          this._z = axis.z * s2;
+          const halfAngle = angle / 2, s = Math.sin(halfAngle);
+          this._x = axis.x * s;
+          this._y = axis.y * s;
+          this._z = axis.z * s;
           this._w = Math.cos(halfAngle);
           this._onChangeCallback();
           return this;
@@ -40350,53 +40350,53 @@ You can use close({ resize: true }) to resize header`);
         setFromRotationMatrix(m) {
           const te = m.elements, m11 = te[0], m12 = te[4], m13 = te[8], m21 = te[1], m22 = te[5], m23 = te[9], m31 = te[2], m32 = te[6], m33 = te[10], trace = m11 + m22 + m33;
           if (trace > 0) {
-            const s2 = 0.5 / Math.sqrt(trace + 1);
-            this._w = 0.25 / s2;
-            this._x = (m32 - m23) * s2;
-            this._y = (m13 - m31) * s2;
-            this._z = (m21 - m12) * s2;
+            const s = 0.5 / Math.sqrt(trace + 1);
+            this._w = 0.25 / s;
+            this._x = (m32 - m23) * s;
+            this._y = (m13 - m31) * s;
+            this._z = (m21 - m12) * s;
           } else if (m11 > m22 && m11 > m33) {
-            const s2 = 2 * Math.sqrt(1 + m11 - m22 - m33);
-            this._w = (m32 - m23) / s2;
-            this._x = 0.25 * s2;
-            this._y = (m12 + m21) / s2;
-            this._z = (m13 + m31) / s2;
+            const s = 2 * Math.sqrt(1 + m11 - m22 - m33);
+            this._w = (m32 - m23) / s;
+            this._x = 0.25 * s;
+            this._y = (m12 + m21) / s;
+            this._z = (m13 + m31) / s;
           } else if (m22 > m33) {
-            const s2 = 2 * Math.sqrt(1 + m22 - m11 - m33);
-            this._w = (m13 - m31) / s2;
-            this._x = (m12 + m21) / s2;
-            this._y = 0.25 * s2;
-            this._z = (m23 + m32) / s2;
+            const s = 2 * Math.sqrt(1 + m22 - m11 - m33);
+            this._w = (m13 - m31) / s;
+            this._x = (m12 + m21) / s;
+            this._y = 0.25 * s;
+            this._z = (m23 + m32) / s;
           } else {
-            const s2 = 2 * Math.sqrt(1 + m33 - m11 - m22);
-            this._w = (m21 - m12) / s2;
-            this._x = (m13 + m31) / s2;
-            this._y = (m23 + m32) / s2;
-            this._z = 0.25 * s2;
+            const s = 2 * Math.sqrt(1 + m33 - m11 - m22);
+            this._w = (m21 - m12) / s;
+            this._x = (m13 + m31) / s;
+            this._y = (m23 + m32) / s;
+            this._z = 0.25 * s;
           }
           this._onChangeCallback();
           return this;
         }
         setFromUnitVectors(vFrom, vTo) {
-          let r2 = vFrom.dot(vTo) + 1;
-          if (r2 < Number.EPSILON) {
-            r2 = 0;
+          let r = vFrom.dot(vTo) + 1;
+          if (r < Number.EPSILON) {
+            r = 0;
             if (Math.abs(vFrom.x) > Math.abs(vFrom.z)) {
               this._x = -vFrom.y;
               this._y = vFrom.x;
               this._z = 0;
-              this._w = r2;
+              this._w = r;
             } else {
               this._x = 0;
               this._y = -vFrom.z;
               this._z = vFrom.y;
-              this._w = r2;
+              this._w = r;
             }
           } else {
             this._x = vFrom.y * vTo.z - vFrom.z * vTo.y;
             this._y = vFrom.z * vTo.x - vFrom.x * vTo.z;
             this._z = vFrom.x * vTo.y - vFrom.y * vTo.x;
-            this._w = r2;
+            this._w = r;
           }
           return this.normalize();
         }
@@ -40407,8 +40407,8 @@ You can use close({ resize: true }) to resize header`);
           const angle = this.angleTo(q);
           if (angle === 0)
             return this;
-          const t2 = Math.min(1, step / angle);
-          this.slerp(q, t2);
+          const t = Math.min(1, step / angle);
+          this.slerp(q, t);
           return this;
         }
         identity() {
@@ -40434,18 +40434,18 @@ You can use close({ resize: true }) to resize header`);
           return Math.sqrt(this._x * this._x + this._y * this._y + this._z * this._z + this._w * this._w);
         }
         normalize() {
-          let l2 = this.length();
-          if (l2 === 0) {
+          let l = this.length();
+          if (l === 0) {
             this._x = 0;
             this._y = 0;
             this._z = 0;
             this._w = 1;
           } else {
-            l2 = 1 / l2;
-            this._x = this._x * l2;
-            this._y = this._y * l2;
-            this._z = this._z * l2;
-            this._w = this._w * l2;
+            l = 1 / l;
+            this._x = this._x * l;
+            this._y = this._y * l;
+            this._z = this._z * l;
+            this._w = this._w * l;
           }
           this._onChangeCallback();
           return this;
@@ -40456,8 +40456,8 @@ You can use close({ resize: true }) to resize header`);
         premultiply(q) {
           return this.multiplyQuaternions(q, this);
         }
-        multiplyQuaternions(a2, b) {
-          const qax = a2._x, qay = a2._y, qaz = a2._z, qaw = a2._w;
+        multiplyQuaternions(a, b) {
+          const qax = a._x, qay = a._y, qaz = a._z, qaw = a._w;
           const qbx = b._x, qby = b._y, qbz = b._z, qbw = b._w;
           this._x = qax * qbw + qaw * qbx + qay * qbz - qaz * qby;
           this._y = qay * qbw + qaw * qby + qaz * qbx - qax * qbz;
@@ -40466,10 +40466,10 @@ You can use close({ resize: true }) to resize header`);
           this._onChangeCallback();
           return this;
         }
-        slerp(qb, t2) {
-          if (t2 === 0)
+        slerp(qb, t) {
+          if (t === 0)
             return this;
-          if (t2 === 1)
+          if (t === 1)
             return this.copy(qb);
           const x = this._x, y = this._y, z = this._z, w = this._w;
           let cosHalfTheta = w * qb._w + x * qb._x + y * qb._y + z * qb._z;
@@ -40491,18 +40491,18 @@ You can use close({ resize: true }) to resize header`);
           }
           const sqrSinHalfTheta = 1 - cosHalfTheta * cosHalfTheta;
           if (sqrSinHalfTheta <= Number.EPSILON) {
-            const s2 = 1 - t2;
-            this._w = s2 * w + t2 * this._w;
-            this._x = s2 * x + t2 * this._x;
-            this._y = s2 * y + t2 * this._y;
-            this._z = s2 * z + t2 * this._z;
+            const s = 1 - t;
+            this._w = s * w + t * this._w;
+            this._x = s * x + t * this._x;
+            this._y = s * y + t * this._y;
+            this._z = s * z + t * this._z;
             this.normalize();
             this._onChangeCallback();
             return this;
           }
           const sinHalfTheta = Math.sqrt(sqrSinHalfTheta);
           const halfTheta = Math.atan2(sinHalfTheta, cosHalfTheta);
-          const ratioA = Math.sin((1 - t2) * halfTheta) / sinHalfTheta, ratioB = Math.sin(t2 * halfTheta) / sinHalfTheta;
+          const ratioA = Math.sin((1 - t) * halfTheta) / sinHalfTheta, ratioB = Math.sin(t * halfTheta) / sinHalfTheta;
           this._w = w * ratioA + this._w * ratioB;
           this._x = x * ratioA + this._x * ratioB;
           this._y = y * ratioA + this._y * ratioB;
@@ -40510,8 +40510,8 @@ You can use close({ resize: true }) to resize header`);
           this._onChangeCallback();
           return this;
         }
-        slerpQuaternions(qa, qb, t2) {
-          return this.copy(qa).slerp(qb, t2);
+        slerpQuaternions(qa, qb, t) {
+          return this.copy(qa).slerp(qb, t);
         }
         random() {
           const u1 = Math.random();
@@ -40643,22 +40643,22 @@ You can use close({ resize: true }) to resize header`);
           this.z += v.z;
           return this;
         }
-        addScalar(s2) {
-          this.x += s2;
-          this.y += s2;
-          this.z += s2;
+        addScalar(s) {
+          this.x += s;
+          this.y += s;
+          this.z += s;
           return this;
         }
-        addVectors(a2, b) {
-          this.x = a2.x + b.x;
-          this.y = a2.y + b.y;
-          this.z = a2.z + b.z;
+        addVectors(a, b) {
+          this.x = a.x + b.x;
+          this.y = a.y + b.y;
+          this.z = a.z + b.z;
           return this;
         }
-        addScaledVector(v, s2) {
-          this.x += v.x * s2;
-          this.y += v.y * s2;
-          this.z += v.z * s2;
+        addScaledVector(v, s) {
+          this.x += v.x * s;
+          this.y += v.y * s;
+          this.z += v.z * s;
           return this;
         }
         sub(v) {
@@ -40667,16 +40667,16 @@ You can use close({ resize: true }) to resize header`);
           this.z -= v.z;
           return this;
         }
-        subScalar(s2) {
-          this.x -= s2;
-          this.y -= s2;
-          this.z -= s2;
+        subScalar(s) {
+          this.x -= s;
+          this.y -= s;
+          this.z -= s;
           return this;
         }
-        subVectors(a2, b) {
-          this.x = a2.x - b.x;
-          this.y = a2.y - b.y;
-          this.z = a2.z - b.z;
+        subVectors(a, b) {
+          this.x = a.x - b.x;
+          this.y = a.y - b.y;
+          this.z = a.z - b.z;
           return this;
         }
         multiply(v) {
@@ -40691,10 +40691,10 @@ You can use close({ resize: true }) to resize header`);
           this.z *= scalar;
           return this;
         }
-        multiplyVectors(a2, b) {
-          this.x = a2.x * b.x;
-          this.y = a2.y * b.y;
-          this.z = a2.z * b.z;
+        multiplyVectors(a, b) {
+          this.x = a.x * b.x;
+          this.y = a.y * b.y;
+          this.z = a.z * b.z;
           return this;
         }
         applyEuler(euler) {
@@ -40705,10 +40705,10 @@ You can use close({ resize: true }) to resize header`);
         }
         applyMatrix3(m) {
           const x = this.x, y = this.y, z = this.z;
-          const e2 = m.elements;
-          this.x = e2[0] * x + e2[3] * y + e2[6] * z;
-          this.y = e2[1] * x + e2[4] * y + e2[7] * z;
-          this.z = e2[2] * x + e2[5] * y + e2[8] * z;
+          const e = m.elements;
+          this.x = e[0] * x + e[3] * y + e[6] * z;
+          this.y = e[1] * x + e[4] * y + e[7] * z;
+          this.z = e[2] * x + e[5] * y + e[8] * z;
           return this;
         }
         applyNormalMatrix(m) {
@@ -40716,11 +40716,11 @@ You can use close({ resize: true }) to resize header`);
         }
         applyMatrix4(m) {
           const x = this.x, y = this.y, z = this.z;
-          const e2 = m.elements;
-          const w = 1 / (e2[3] * x + e2[7] * y + e2[11] * z + e2[15]);
-          this.x = (e2[0] * x + e2[4] * y + e2[8] * z + e2[12]) * w;
-          this.y = (e2[1] * x + e2[5] * y + e2[9] * z + e2[13]) * w;
-          this.z = (e2[2] * x + e2[6] * y + e2[10] * z + e2[14]) * w;
+          const e = m.elements;
+          const w = 1 / (e[3] * x + e[7] * y + e[11] * z + e[15]);
+          this.x = (e[0] * x + e[4] * y + e[8] * z + e[12]) * w;
+          this.y = (e[1] * x + e[5] * y + e[9] * z + e[13]) * w;
+          this.z = (e[2] * x + e[6] * y + e[10] * z + e[14]) * w;
           return this;
         }
         applyQuaternion(q) {
@@ -40743,10 +40743,10 @@ You can use close({ resize: true }) to resize header`);
         }
         transformDirection(m) {
           const x = this.x, y = this.y, z = this.z;
-          const e2 = m.elements;
-          this.x = e2[0] * x + e2[4] * y + e2[8] * z;
-          this.y = e2[1] * x + e2[5] * y + e2[9] * z;
-          this.z = e2[2] * x + e2[6] * y + e2[10] * z;
+          const e = m.elements;
+          this.x = e[0] * x + e[4] * y + e[8] * z;
+          this.y = e[1] * x + e[5] * y + e[9] * z;
+          this.z = e[2] * x + e[6] * y + e[10] * z;
           return this.normalize();
         }
         divide(v) {
@@ -40850,8 +40850,8 @@ You can use close({ resize: true }) to resize header`);
         cross(v) {
           return this.crossVectors(this, v);
         }
-        crossVectors(a2, b) {
-          const ax = a2.x, ay = a2.y, az = a2.z;
+        crossVectors(a, b) {
+          const ax = a.x, ay = a.y, az = a.z;
           const bx = b.x, by = b.y, bz = b.z;
           this.x = ay * bz - az * by;
           this.y = az * bx - ax * bz;
@@ -40889,8 +40889,8 @@ You can use close({ resize: true }) to resize header`);
         manhattanDistanceTo(v) {
           return Math.abs(this.x - v.x) + Math.abs(this.y - v.y) + Math.abs(this.z - v.z);
         }
-        setFromSpherical(s2) {
-          return this.setFromSphericalCoords(s2.radius, s2.phi, s2.theta);
+        setFromSpherical(s) {
+          return this.setFromSphericalCoords(s.radius, s.phi, s.theta);
         }
         setFromSphericalCoords(radius, phi, theta) {
           const sinPhiRadius = Math.sin(phi) * radius;
@@ -40899,8 +40899,8 @@ You can use close({ resize: true }) to resize header`);
           this.z = sinPhiRadius * Math.cos(theta);
           return this;
         }
-        setFromCylindrical(c2) {
-          return this.setFromCylindricalCoords(c2.radius, c2.theta, c2.y);
+        setFromCylindrical(c) {
+          return this.setFromCylindricalCoords(c.radius, c.theta, c.y);
         }
         setFromCylindricalCoords(radius, theta, y) {
           this.x = radius * Math.sin(theta);
@@ -40909,10 +40909,10 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         setFromMatrixPosition(m) {
-          const e2 = m.elements;
-          this.x = e2[12];
-          this.y = e2[13];
-          this.z = e2[14];
+          const e = m.elements;
+          this.x = e[12];
+          this.y = e[13];
+          this.z = e[14];
           return this;
         }
         setFromMatrixScale(m) {
@@ -40930,16 +40930,16 @@ You can use close({ resize: true }) to resize header`);
         setFromMatrix3Column(m, index) {
           return this.fromArray(m.elements, index * 3);
         }
-        setFromEuler(e2) {
-          this.x = e2._x;
-          this.y = e2._y;
-          this.z = e2._z;
+        setFromEuler(e) {
+          this.x = e._x;
+          this.y = e._y;
+          this.z = e._z;
           return this;
         }
-        setFromColor(c2) {
-          this.x = c2.r;
-          this.y = c2.g;
-          this.z = c2.b;
+        setFromColor(c) {
+          this.x = c.r;
+          this.y = c.g;
+          this.z = c.b;
           return this;
         }
         equals(v) {
@@ -40970,12 +40970,12 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         randomDirection() {
-          const u2 = (Math.random() - 0.5) * 2;
-          const t2 = Math.random() * Math.PI * 2;
-          const f = Math.sqrt(1 - u2 ** 2);
-          this.x = f * Math.cos(t2);
-          this.y = f * Math.sin(t2);
-          this.z = u2;
+          const u = (Math.random() - 0.5) * 2;
+          const t = Math.random() * Math.PI * 2;
+          const f = Math.sqrt(1 - u ** 2);
+          this.x = f * Math.cos(t);
+          this.y = f * Math.sin(t);
+          this.z = u;
           return this;
         }
         *[Symbol.iterator]() {
@@ -40999,22 +40999,22 @@ You can use close({ resize: true }) to resize header`);
         }
         setFromArray(array) {
           this.makeEmpty();
-          for (let i2 = 0, il = array.length; i2 < il; i2 += 3) {
-            this.expandByPoint(_vector$a2.fromArray(array, i2));
+          for (let i = 0, il = array.length; i < il; i += 3) {
+            this.expandByPoint(_vector$a2.fromArray(array, i));
           }
           return this;
         }
         setFromBufferAttribute(attribute) {
           this.makeEmpty();
-          for (let i2 = 0, il = attribute.count; i2 < il; i2++) {
-            this.expandByPoint(_vector$a2.fromBufferAttribute(attribute, i2));
+          for (let i = 0, il = attribute.count; i < il; i++) {
+            this.expandByPoint(_vector$a2.fromBufferAttribute(attribute, i));
           }
           return this;
         }
         setFromPoints(points) {
           this.makeEmpty();
-          for (let i2 = 0, il = points.length; i2 < il; i2++) {
-            this.expandByPoint(points[i2]);
+          for (let i = 0, il = points.length; i < il; i++) {
+            this.expandByPoint(points[i]);
           }
           return this;
         }
@@ -41079,8 +41079,8 @@ You can use close({ resize: true }) to resize header`);
             if (geometry !== void 0) {
               if (precise && geometry.attributes !== void 0 && geometry.attributes.position !== void 0) {
                 const position3 = geometry.attributes.position;
-                for (let i2 = 0, l2 = position3.count; i2 < l2; i2++) {
-                  _vector$a2.fromBufferAttribute(position3, i2).applyMatrix4(object.matrixWorld);
+                for (let i = 0, l = position3.count; i < l; i++) {
+                  _vector$a2.fromBufferAttribute(position3, i).applyMatrix4(object.matrixWorld);
                   this.expandByPoint(_vector$a2);
                 }
               } else {
@@ -41094,8 +41094,8 @@ You can use close({ resize: true }) to resize header`);
             }
           }
           const children = object.children;
-          for (let i2 = 0, l2 = children.length; i2 < l2; i2++) {
-            this.expandByObject(children[i2], precise);
+          for (let i = 0, l = children.length; i < l; i++) {
+            this.expandByObject(children[i], precise);
           }
           return this;
         }
@@ -41269,13 +41269,13 @@ You can use close({ resize: true }) to resize header`);
       var _triangleNormal2 = /* @__PURE__ */ new Vector32();
       var _testAxis2 = /* @__PURE__ */ new Vector32();
       function satForAxes2(axes, v0, v1, v2, extents) {
-        for (let i2 = 0, j = axes.length - 3; i2 <= j; i2 += 3) {
-          _testAxis2.fromArray(axes, i2);
-          const r2 = extents.x * Math.abs(_testAxis2.x) + extents.y * Math.abs(_testAxis2.y) + extents.z * Math.abs(_testAxis2.z);
+        for (let i = 0, j = axes.length - 3; i <= j; i += 3) {
+          _testAxis2.fromArray(axes, i);
+          const r = extents.x * Math.abs(_testAxis2.x) + extents.y * Math.abs(_testAxis2.y) + extents.z * Math.abs(_testAxis2.z);
           const p0 = v0.dot(_testAxis2);
           const p1 = v1.dot(_testAxis2);
           const p2 = v2.dot(_testAxis2);
-          if (Math.max(-Math.max(p0, p1, p2), Math.min(p0, p1, p2)) > r2) {
+          if (Math.max(-Math.max(p0, p1, p2), Math.min(p0, p1, p2)) > r) {
             return false;
           }
         }
@@ -41302,8 +41302,8 @@ You can use close({ resize: true }) to resize header`);
             _box$22.setFromPoints(points).getCenter(center);
           }
           let maxRadiusSq = 0;
-          for (let i2 = 0, il = points.length; i2 < il; i2++) {
-            maxRadiusSq = Math.max(maxRadiusSq, center.distanceToSquared(points[i2]));
+          for (let i = 0, il = points.length; i < il; i++) {
+            maxRadiusSq = Math.max(maxRadiusSq, center.distanceToSquared(points[i]));
           }
           this.radius = Math.sqrt(maxRadiusSq);
           return this;
@@ -41426,15 +41426,15 @@ You can use close({ resize: true }) to resize header`);
           this.direction.copy(ray.direction);
           return this;
         }
-        at(t2, target2) {
-          return target2.copy(this.origin).addScaledVector(this.direction, t2);
+        at(t, target2) {
+          return target2.copy(this.origin).addScaledVector(this.direction, t);
         }
         lookAt(v) {
           this.direction.copy(v).sub(this.origin).normalize();
           return this;
         }
-        recast(t2) {
-          this.origin.copy(this.at(t2, _vector$92));
+        recast(t) {
+          this.origin.copy(this.at(t, _vector$92));
           return this;
         }
         closestPointToPoint(point, target2) {
@@ -41464,7 +41464,7 @@ You can use close({ resize: true }) to resize header`);
           const a01 = -this.direction.dot(_segDir2);
           const b0 = _diff2.dot(this.direction);
           const b1 = -_diff2.dot(_segDir2);
-          const c2 = _diff2.lengthSq();
+          const c = _diff2.lengthSq();
           const det = Math.abs(1 - a01 * a01);
           let s0, s1, sqrDist, extDet;
           if (det > 0) {
@@ -41477,36 +41477,36 @@ You can use close({ resize: true }) to resize header`);
                   const invDet = 1 / det;
                   s0 *= invDet;
                   s1 *= invDet;
-                  sqrDist = s0 * (s0 + a01 * s1 + 2 * b0) + s1 * (a01 * s0 + s1 + 2 * b1) + c2;
+                  sqrDist = s0 * (s0 + a01 * s1 + 2 * b0) + s1 * (a01 * s0 + s1 + 2 * b1) + c;
                 } else {
                   s1 = segExtent;
                   s0 = Math.max(0, -(a01 * s1 + b0));
-                  sqrDist = -s0 * s0 + s1 * (s1 + 2 * b1) + c2;
+                  sqrDist = -s0 * s0 + s1 * (s1 + 2 * b1) + c;
                 }
               } else {
                 s1 = -segExtent;
                 s0 = Math.max(0, -(a01 * s1 + b0));
-                sqrDist = -s0 * s0 + s1 * (s1 + 2 * b1) + c2;
+                sqrDist = -s0 * s0 + s1 * (s1 + 2 * b1) + c;
               }
             } else {
               if (s1 <= -extDet) {
                 s0 = Math.max(0, -(-a01 * segExtent + b0));
                 s1 = s0 > 0 ? -segExtent : Math.min(Math.max(-segExtent, -b1), segExtent);
-                sqrDist = -s0 * s0 + s1 * (s1 + 2 * b1) + c2;
+                sqrDist = -s0 * s0 + s1 * (s1 + 2 * b1) + c;
               } else if (s1 <= extDet) {
                 s0 = 0;
                 s1 = Math.min(Math.max(-segExtent, -b1), segExtent);
-                sqrDist = s1 * (s1 + 2 * b1) + c2;
+                sqrDist = s1 * (s1 + 2 * b1) + c;
               } else {
                 s0 = Math.max(0, -(a01 * segExtent + b0));
                 s1 = s0 > 0 ? segExtent : Math.min(Math.max(-segExtent, -b1), segExtent);
-                sqrDist = -s0 * s0 + s1 * (s1 + 2 * b1) + c2;
+                sqrDist = -s0 * s0 + s1 * (s1 + 2 * b1) + c;
               }
             }
           } else {
             s1 = a01 > 0 ? -segExtent : segExtent;
             s0 = Math.max(0, -(a01 * s1 + b0));
-            sqrDist = -s0 * s0 + s1 * (s1 + 2 * b1) + c2;
+            sqrDist = -s0 * s0 + s1 * (s1 + 2 * b1) + c;
           }
           if (optionalPointOnRay) {
             optionalPointOnRay.copy(this.origin).addScaledVector(this.direction, s0);
@@ -41543,15 +41543,15 @@ You can use close({ resize: true }) to resize header`);
             }
             return null;
           }
-          const t2 = -(this.origin.dot(plane.normal) + plane.constant) / denominator;
-          return t2 >= 0 ? t2 : null;
+          const t = -(this.origin.dot(plane.normal) + plane.constant) / denominator;
+          return t >= 0 ? t : null;
         }
         intersectPlane(plane, target2) {
-          const t2 = this.distanceToPlane(plane);
-          if (t2 === null) {
+          const t = this.distanceToPlane(plane);
+          if (t === null) {
             return null;
           }
-          return this.at(t2, target2);
+          return this.at(t, target2);
         }
         intersectsPlane(plane) {
           const distToPoint = plane.distanceToPoint(this.origin);
@@ -41608,9 +41608,9 @@ You can use close({ resize: true }) to resize header`);
         intersectsBox(box) {
           return this.intersectBox(box, _vector$92) !== null;
         }
-        intersectTriangle(a2, b, c2, backfaceCulling, target2) {
-          _edge12.subVectors(b, a2);
-          _edge22.subVectors(c2, a2);
+        intersectTriangle(a, b, c, backfaceCulling, target2) {
+          _edge12.subVectors(b, a);
+          _edge22.subVectors(c, a);
           _normal$12.crossVectors(_edge12, _edge22);
           let DdN = this.direction.dot(_normal$12);
           let sign2;
@@ -41624,7 +41624,7 @@ You can use close({ resize: true }) to resize header`);
           } else {
             return null;
           }
-          _diff2.subVectors(this.origin, a2);
+          _diff2.subVectors(this.origin, a);
           const DdQxE2 = sign2 * this.direction.dot(_edge22.crossVectors(_diff2, _edge22));
           if (DdQxE2 < 0) {
             return null;
@@ -41827,74 +41827,74 @@ You can use close({ resize: true }) to resize header`);
         makeRotationFromEuler(euler) {
           const te = this.elements;
           const x = euler.x, y = euler.y, z = euler.z;
-          const a2 = Math.cos(x), b = Math.sin(x);
-          const c2 = Math.cos(y), d2 = Math.sin(y);
-          const e2 = Math.cos(z), f = Math.sin(z);
+          const a = Math.cos(x), b = Math.sin(x);
+          const c = Math.cos(y), d = Math.sin(y);
+          const e = Math.cos(z), f = Math.sin(z);
           if (euler.order === "XYZ") {
-            const ae = a2 * e2, af = a2 * f, be = b * e2, bf = b * f;
-            te[0] = c2 * e2;
-            te[4] = -c2 * f;
-            te[8] = d2;
-            te[1] = af + be * d2;
-            te[5] = ae - bf * d2;
-            te[9] = -b * c2;
-            te[2] = bf - ae * d2;
-            te[6] = be + af * d2;
-            te[10] = a2 * c2;
+            const ae = a * e, af = a * f, be = b * e, bf = b * f;
+            te[0] = c * e;
+            te[4] = -c * f;
+            te[8] = d;
+            te[1] = af + be * d;
+            te[5] = ae - bf * d;
+            te[9] = -b * c;
+            te[2] = bf - ae * d;
+            te[6] = be + af * d;
+            te[10] = a * c;
           } else if (euler.order === "YXZ") {
-            const ce = c2 * e2, cf = c2 * f, de = d2 * e2, df = d2 * f;
+            const ce = c * e, cf = c * f, de = d * e, df = d * f;
             te[0] = ce + df * b;
             te[4] = de * b - cf;
-            te[8] = a2 * d2;
-            te[1] = a2 * f;
-            te[5] = a2 * e2;
+            te[8] = a * d;
+            te[1] = a * f;
+            te[5] = a * e;
             te[9] = -b;
             te[2] = cf * b - de;
             te[6] = df + ce * b;
-            te[10] = a2 * c2;
+            te[10] = a * c;
           } else if (euler.order === "ZXY") {
-            const ce = c2 * e2, cf = c2 * f, de = d2 * e2, df = d2 * f;
+            const ce = c * e, cf = c * f, de = d * e, df = d * f;
             te[0] = ce - df * b;
-            te[4] = -a2 * f;
+            te[4] = -a * f;
             te[8] = de + cf * b;
             te[1] = cf + de * b;
-            te[5] = a2 * e2;
+            te[5] = a * e;
             te[9] = df - ce * b;
-            te[2] = -a2 * d2;
+            te[2] = -a * d;
             te[6] = b;
-            te[10] = a2 * c2;
+            te[10] = a * c;
           } else if (euler.order === "ZYX") {
-            const ae = a2 * e2, af = a2 * f, be = b * e2, bf = b * f;
-            te[0] = c2 * e2;
-            te[4] = be * d2 - af;
-            te[8] = ae * d2 + bf;
-            te[1] = c2 * f;
-            te[5] = bf * d2 + ae;
-            te[9] = af * d2 - be;
-            te[2] = -d2;
-            te[6] = b * c2;
-            te[10] = a2 * c2;
+            const ae = a * e, af = a * f, be = b * e, bf = b * f;
+            te[0] = c * e;
+            te[4] = be * d - af;
+            te[8] = ae * d + bf;
+            te[1] = c * f;
+            te[5] = bf * d + ae;
+            te[9] = af * d - be;
+            te[2] = -d;
+            te[6] = b * c;
+            te[10] = a * c;
           } else if (euler.order === "YZX") {
-            const ac = a2 * c2, ad = a2 * d2, bc = b * c2, bd = b * d2;
-            te[0] = c2 * e2;
+            const ac = a * c, ad = a * d, bc = b * c, bd = b * d;
+            te[0] = c * e;
             te[4] = bd - ac * f;
             te[8] = bc * f + ad;
             te[1] = f;
-            te[5] = a2 * e2;
-            te[9] = -b * e2;
-            te[2] = -d2 * e2;
+            te[5] = a * e;
+            te[9] = -b * e;
+            te[2] = -d * e;
             te[6] = ad * f + bc;
             te[10] = ac - bd * f;
           } else if (euler.order === "XZY") {
-            const ac = a2 * c2, ad = a2 * d2, bc = b * c2, bd = b * d2;
-            te[0] = c2 * e2;
+            const ac = a * c, ad = a * d, bc = b * c, bd = b * d;
+            te[0] = c * e;
             te[4] = -f;
-            te[8] = d2 * e2;
+            te[8] = d * e;
             te[1] = ac * f + bd;
-            te[5] = a2 * e2;
+            te[5] = a * e;
             te[9] = ad * f - bc;
             te[2] = bc * f - ad;
-            te[6] = b * e2;
+            te[6] = b * e;
             te[10] = bd * f + ac;
           }
           te[3] = 0;
@@ -41945,8 +41945,8 @@ You can use close({ resize: true }) to resize header`);
         premultiply(m) {
           return this.multiplyMatrices(m, this);
         }
-        multiplyMatrices(a2, b) {
-          const ae = a2.elements;
+        multiplyMatrices(a, b) {
+          const ae = a.elements;
           const be = b.elements;
           const te = this.elements;
           const a11 = ae[0], a12 = ae[4], a13 = ae[8], a14 = ae[12];
@@ -41975,24 +41975,24 @@ You can use close({ resize: true }) to resize header`);
           te[15] = a41 * b14 + a42 * b24 + a43 * b34 + a44 * b44;
           return this;
         }
-        multiplyScalar(s2) {
+        multiplyScalar(s) {
           const te = this.elements;
-          te[0] *= s2;
-          te[4] *= s2;
-          te[8] *= s2;
-          te[12] *= s2;
-          te[1] *= s2;
-          te[5] *= s2;
-          te[9] *= s2;
-          te[13] *= s2;
-          te[2] *= s2;
-          te[6] *= s2;
-          te[10] *= s2;
-          te[14] *= s2;
-          te[3] *= s2;
-          te[7] *= s2;
-          te[11] *= s2;
-          te[15] *= s2;
+          te[0] *= s;
+          te[4] *= s;
+          te[8] *= s;
+          te[12] *= s;
+          te[1] *= s;
+          te[5] *= s;
+          te[9] *= s;
+          te[13] *= s;
+          te[2] *= s;
+          te[6] *= s;
+          te[10] *= s;
+          te[14] *= s;
+          te[3] *= s;
+          te[7] *= s;
+          te[11] *= s;
+          te[15] *= s;
           return this;
         }
         determinant() {
@@ -42130,19 +42130,19 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         makeRotationX(theta) {
-          const c2 = Math.cos(theta), s2 = Math.sin(theta);
+          const c = Math.cos(theta), s = Math.sin(theta);
           this.set(
             1,
             0,
             0,
             0,
             0,
-            c2,
-            -s2,
+            c,
+            -s,
             0,
             0,
-            s2,
-            c2,
+            s,
+            c,
             0,
             0,
             0,
@@ -42152,19 +42152,19 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         makeRotationY(theta) {
-          const c2 = Math.cos(theta), s2 = Math.sin(theta);
+          const c = Math.cos(theta), s = Math.sin(theta);
           this.set(
-            c2,
+            c,
             0,
-            s2,
+            s,
             0,
             0,
             1,
             0,
             0,
-            -s2,
+            -s,
             0,
-            c2,
+            c,
             0,
             0,
             0,
@@ -42174,14 +42174,14 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         makeRotationZ(theta) {
-          const c2 = Math.cos(theta), s2 = Math.sin(theta);
+          const c = Math.cos(theta), s = Math.sin(theta);
           this.set(
-            c2,
-            -s2,
+            c,
+            -s,
             0,
             0,
-            s2,
-            c2,
+            s,
+            c,
             0,
             0,
             0,
@@ -42196,23 +42196,23 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         makeRotationAxis(axis, angle) {
-          const c2 = Math.cos(angle);
-          const s2 = Math.sin(angle);
-          const t2 = 1 - c2;
+          const c = Math.cos(angle);
+          const s = Math.sin(angle);
+          const t = 1 - c;
           const x = axis.x, y = axis.y, z = axis.z;
-          const tx = t2 * x, ty = t2 * y;
+          const tx = t * x, ty = t * y;
           this.set(
-            tx * x + c2,
-            tx * y - s2 * z,
-            tx * z + s2 * y,
+            tx * x + c,
+            tx * y - s * z,
+            tx * z + s * y,
             0,
-            tx * y + s2 * z,
-            ty * y + c2,
-            ty * z - s2 * x,
+            tx * y + s * z,
+            ty * y + c,
+            ty * z - s * x,
             0,
-            tx * z - s2 * y,
-            ty * z + s2 * x,
-            t2 * z * z + c2,
+            tx * z - s * y,
+            ty * z + s * x,
+            t * z * z + c,
             0,
             0,
             0,
@@ -42323,21 +42323,21 @@ You can use close({ resize: true }) to resize header`);
           const te = this.elements;
           const x = 2 * near / (right - left);
           const y = 2 * near / (top - bottom);
-          const a2 = (right + left) / (right - left);
+          const a = (right + left) / (right - left);
           const b = (top + bottom) / (top - bottom);
-          let c2, d2;
+          let c, d;
           if (coordinateSystem === WebGLCoordinateSystem2) {
-            c2 = -(far + near) / (far - near);
-            d2 = -2 * far * near / (far - near);
+            c = -(far + near) / (far - near);
+            d = -2 * far * near / (far - near);
           } else if (coordinateSystem === WebGPUCoordinateSystem2) {
-            c2 = -far / (far - near);
-            d2 = -far * near / (far - near);
+            c = -far / (far - near);
+            d = -far * near / (far - near);
           } else {
             throw new Error("THREE.Matrix4.makePerspective(): Invalid coordinate system: " + coordinateSystem);
           }
           te[0] = x;
           te[4] = 0;
-          te[8] = a2;
+          te[8] = a;
           te[12] = 0;
           te[1] = 0;
           te[5] = y;
@@ -42345,8 +42345,8 @@ You can use close({ resize: true }) to resize header`);
           te[13] = 0;
           te[2] = 0;
           te[6] = 0;
-          te[10] = c2;
-          te[14] = d2;
+          te[10] = c;
+          te[14] = d;
           te[3] = 0;
           te[7] = 0;
           te[11] = -1;
@@ -42356,17 +42356,17 @@ You can use close({ resize: true }) to resize header`);
         makeOrthographic(left, right, top, bottom, near, far, coordinateSystem = WebGLCoordinateSystem2) {
           const te = this.elements;
           const w = 1 / (right - left);
-          const h2 = 1 / (top - bottom);
-          const p2 = 1 / (far - near);
+          const h = 1 / (top - bottom);
+          const p = 1 / (far - near);
           const x = (right + left) * w;
-          const y = (top + bottom) * h2;
+          const y = (top + bottom) * h;
           let z, zInv;
           if (coordinateSystem === WebGLCoordinateSystem2) {
-            z = (far + near) * p2;
-            zInv = -2 * p2;
+            z = (far + near) * p;
+            zInv = -2 * p;
           } else if (coordinateSystem === WebGPUCoordinateSystem2) {
-            z = near * p2;
-            zInv = -1 * p2;
+            z = near * p;
+            zInv = -1 * p;
           } else {
             throw new Error("THREE.Matrix4.makeOrthographic(): Invalid coordinate system: " + coordinateSystem);
           }
@@ -42375,7 +42375,7 @@ You can use close({ resize: true }) to resize header`);
           te[8] = 0;
           te[12] = -x;
           te[1] = 0;
-          te[5] = 2 * h2;
+          te[5] = 2 * h;
           te[9] = 0;
           te[13] = -y;
           te[2] = 0;
@@ -42391,15 +42391,15 @@ You can use close({ resize: true }) to resize header`);
         equals(matrix) {
           const te = this.elements;
           const me = matrix.elements;
-          for (let i2 = 0; i2 < 16; i2++) {
-            if (te[i2] !== me[i2])
+          for (let i = 0; i < 16; i++) {
+            if (te[i] !== me[i])
               return false;
           }
           return true;
         }
         fromArray(array, offset = 0) {
-          for (let i2 = 0; i2 < 16; i2++) {
-            this.elements[i2] = array[i2 + offset];
+          for (let i = 0; i < 16; i++) {
+            this.elements[i] = array[i + offset];
           }
           return this;
         }
@@ -42803,8 +42803,8 @@ You can use close({ resize: true }) to resize header`);
         }
         add(object) {
           if (arguments.length > 1) {
-            for (let i2 = 0; i2 < arguments.length; i2++) {
-              this.add(arguments[i2]);
+            for (let i = 0; i < arguments.length; i++) {
+              this.add(arguments[i]);
             }
             return this;
           }
@@ -42826,8 +42826,8 @@ You can use close({ resize: true }) to resize header`);
         }
         remove(object) {
           if (arguments.length > 1) {
-            for (let i2 = 0; i2 < arguments.length; i2++) {
-              this.remove(arguments[i2]);
+            for (let i = 0; i < arguments.length; i++) {
+              this.remove(arguments[i]);
             }
             return this;
           }
@@ -42870,8 +42870,8 @@ You can use close({ resize: true }) to resize header`);
         getObjectByProperty(name, value) {
           if (this[name] === value)
             return this;
-          for (let i2 = 0, l2 = this.children.length; i2 < l2; i2++) {
-            const child = this.children[i2];
+          for (let i = 0, l = this.children.length; i < l; i++) {
+            const child = this.children[i];
             const object = child.getObjectByProperty(name, value);
             if (object !== void 0) {
               return object;
@@ -42883,8 +42883,8 @@ You can use close({ resize: true }) to resize header`);
           let result = [];
           if (this[name] === value)
             result.push(this);
-          for (let i2 = 0, l2 = this.children.length; i2 < l2; i2++) {
-            const childResult = this.children[i2].getObjectsByProperty(name, value);
+          for (let i = 0, l = this.children.length; i < l; i++) {
+            const childResult = this.children[i].getObjectsByProperty(name, value);
             if (childResult.length > 0) {
               result = result.concat(childResult);
             }
@@ -42907,16 +42907,16 @@ You can use close({ resize: true }) to resize header`);
         }
         getWorldDirection(target2) {
           this.updateWorldMatrix(true, false);
-          const e2 = this.matrixWorld.elements;
-          return target2.set(e2[8], e2[9], e2[10]).normalize();
+          const e = this.matrixWorld.elements;
+          return target2.set(e[8], e[9], e[10]).normalize();
         }
         raycast() {
         }
         traverse(callback) {
           callback(this);
           const children = this.children;
-          for (let i2 = 0, l2 = children.length; i2 < l2; i2++) {
-            children[i2].traverse(callback);
+          for (let i = 0, l = children.length; i < l; i++) {
+            children[i].traverse(callback);
           }
         }
         traverseVisible(callback) {
@@ -42924,8 +42924,8 @@ You can use close({ resize: true }) to resize header`);
             return;
           callback(this);
           const children = this.children;
-          for (let i2 = 0, l2 = children.length; i2 < l2; i2++) {
-            children[i2].traverseVisible(callback);
+          for (let i = 0, l = children.length; i < l; i++) {
+            children[i].traverseVisible(callback);
           }
         }
         traverseAncestors(callback) {
@@ -42952,8 +42952,8 @@ You can use close({ resize: true }) to resize header`);
             force = true;
           }
           const children = this.children;
-          for (let i2 = 0, l2 = children.length; i2 < l2; i2++) {
-            const child = children[i2];
+          for (let i = 0, l = children.length; i < l; i++) {
+            const child = children[i];
             if (child.matrixWorldAutoUpdate === true || force === true) {
               child.updateMatrixWorld(force);
             }
@@ -42973,8 +42973,8 @@ You can use close({ resize: true }) to resize header`);
           }
           if (updateChildren === true) {
             const children = this.children;
-            for (let i2 = 0, l2 = children.length; i2 < l2; i2++) {
-              const child = children[i2];
+            for (let i = 0, l = children.length; i < l; i++) {
+              const child = children[i];
               if (child.matrixWorldAutoUpdate === true) {
                 child.updateWorldMatrix(false, true);
               }
@@ -43053,8 +43053,8 @@ You can use close({ resize: true }) to resize header`);
             if (parameters !== void 0 && parameters.shapes !== void 0) {
               const shapes = parameters.shapes;
               if (Array.isArray(shapes)) {
-                for (let i2 = 0, l2 = shapes.length; i2 < l2; i2++) {
-                  const shape = shapes[i2];
+                for (let i = 0, l = shapes.length; i < l; i++) {
+                  const shape = shapes[i];
                   serialize(meta.shapes, shape);
                 }
               } else {
@@ -43073,8 +43073,8 @@ You can use close({ resize: true }) to resize header`);
           if (this.material !== void 0) {
             if (Array.isArray(this.material)) {
               const uuids = [];
-              for (let i2 = 0, l2 = this.material.length; i2 < l2; i2++) {
-                uuids.push(serialize(meta.materials, this.material[i2]));
+              for (let i = 0, l = this.material.length; i < l; i++) {
+                uuids.push(serialize(meta.materials, this.material[i]));
               }
               object.material = uuids;
             } else {
@@ -43083,14 +43083,14 @@ You can use close({ resize: true }) to resize header`);
           }
           if (this.children.length > 0) {
             object.children = [];
-            for (let i2 = 0; i2 < this.children.length; i2++) {
-              object.children.push(this.children[i2].toJSON(meta).object);
+            for (let i = 0; i < this.children.length; i++) {
+              object.children.push(this.children[i].toJSON(meta).object);
             }
           }
           if (this.animations.length > 0) {
             object.animations = [];
-            for (let i2 = 0; i2 < this.animations.length; i2++) {
-              const animation = this.animations[i2];
+            for (let i = 0; i < this.animations.length; i++) {
+              const animation = this.animations[i];
               object.animations.push(serialize(meta.animations, animation));
             }
           }
@@ -43156,8 +43156,8 @@ You can use close({ resize: true }) to resize header`);
           this.animations = source.animations.slice();
           this.userData = JSON.parse(JSON.stringify(source.userData));
           if (recursive === true) {
-            for (let i2 = 0; i2 < source.children.length; i2++) {
-              const child = source.children[i2];
+            for (let i = 0; i < source.children.length; i++) {
+              const child = source.children[i];
               this.add(child.clone());
             }
           }
@@ -43179,14 +43179,14 @@ You can use close({ resize: true }) to resize header`);
       var _vcp2 = /* @__PURE__ */ new Vector32();
       var warnedGetUV2 = false;
       var Triangle2 = class _Triangle {
-        constructor(a2 = new Vector32(), b = new Vector32(), c2 = new Vector32()) {
-          this.a = a2;
+        constructor(a = new Vector32(), b = new Vector32(), c = new Vector32()) {
+          this.a = a;
           this.b = b;
-          this.c = c2;
+          this.c = c;
         }
-        static getNormal(a2, b, c2, target2) {
-          target2.subVectors(c2, b);
-          _v0$12.subVectors(a2, b);
+        static getNormal(a, b, c, target2) {
+          target2.subVectors(c, b);
+          _v0$12.subVectors(a, b);
           target2.cross(_v0$12);
           const targetLengthSq = target2.lengthSq();
           if (targetLengthSq > 0) {
@@ -43196,10 +43196,10 @@ You can use close({ resize: true }) to resize header`);
         }
         // static/instance method to calculate barycentric coordinates
         // based on: http://www.blackpawn.com/texts/pointinpoly/default.html
-        static getBarycoord(point, a2, b, c2, target2) {
-          _v0$12.subVectors(c2, a2);
-          _v1$32.subVectors(b, a2);
-          _v2$22.subVectors(point, a2);
+        static getBarycoord(point, a, b, c, target2) {
+          _v0$12.subVectors(c, a);
+          _v1$32.subVectors(b, a);
+          _v2$22.subVectors(point, a);
           const dot00 = _v0$12.dot(_v0$12);
           const dot01 = _v0$12.dot(_v1$32);
           const dot02 = _v0$12.dot(_v2$22);
@@ -43210,12 +43210,12 @@ You can use close({ resize: true }) to resize header`);
             return target2.set(-2, -1, -1);
           }
           const invDenom = 1 / denom;
-          const u2 = (dot11 * dot02 - dot01 * dot12) * invDenom;
+          const u = (dot11 * dot02 - dot01 * dot12) * invDenom;
           const v = (dot00 * dot12 - dot01 * dot02) * invDenom;
-          return target2.set(1 - u2 - v, v, u2);
+          return target2.set(1 - u - v, v, u);
         }
-        static containsPoint(point, a2, b, c2) {
-          this.getBarycoord(point, a2, b, c2, _v3$12);
+        static containsPoint(point, a, b, c) {
+          this.getBarycoord(point, a, b, c, _v3$12);
           return _v3$12.x >= 0 && _v3$12.y >= 0 && _v3$12.x + _v3$12.y <= 1;
         }
         static getUV(point, p1, p2, p3, uv1, uv2, uv3, target2) {
@@ -43233,15 +43233,15 @@ You can use close({ resize: true }) to resize header`);
           target2.addScaledVector(v3, _v3$12.z);
           return target2;
         }
-        static isFrontFacing(a2, b, c2, direction) {
-          _v0$12.subVectors(c2, b);
-          _v1$32.subVectors(a2, b);
+        static isFrontFacing(a, b, c, direction) {
+          _v0$12.subVectors(c, b);
+          _v1$32.subVectors(a, b);
           return _v0$12.cross(_v1$32).dot(direction) < 0 ? true : false;
         }
-        set(a2, b, c2) {
-          this.a.copy(a2);
+        set(a, b, c) {
+          this.a.copy(a);
           this.b.copy(b);
-          this.c.copy(c2);
+          this.c.copy(c);
           return this;
         }
         setFromPointsAndIndices(points, i0, i1, i2) {
@@ -43301,18 +43301,18 @@ You can use close({ resize: true }) to resize header`);
         intersectsBox(box) {
           return box.intersectsTriangle(this);
         }
-        closestPointToPoint(p2, target2) {
-          const a2 = this.a, b = this.b, c2 = this.c;
+        closestPointToPoint(p, target2) {
+          const a = this.a, b = this.b, c = this.c;
           let v, w;
-          _vab2.subVectors(b, a2);
-          _vac2.subVectors(c2, a2);
-          _vap2.subVectors(p2, a2);
+          _vab2.subVectors(b, a);
+          _vac2.subVectors(c, a);
+          _vap2.subVectors(p, a);
           const d1 = _vab2.dot(_vap2);
           const d2 = _vac2.dot(_vap2);
           if (d1 <= 0 && d2 <= 0) {
-            return target2.copy(a2);
+            return target2.copy(a);
           }
-          _vbp2.subVectors(p2, b);
+          _vbp2.subVectors(p, b);
           const d3 = _vab2.dot(_vbp2);
           const d4 = _vac2.dot(_vbp2);
           if (d3 >= 0 && d4 <= d3) {
@@ -43321,29 +43321,29 @@ You can use close({ resize: true }) to resize header`);
           const vc = d1 * d4 - d3 * d2;
           if (vc <= 0 && d1 >= 0 && d3 <= 0) {
             v = d1 / (d1 - d3);
-            return target2.copy(a2).addScaledVector(_vab2, v);
+            return target2.copy(a).addScaledVector(_vab2, v);
           }
-          _vcp2.subVectors(p2, c2);
+          _vcp2.subVectors(p, c);
           const d5 = _vab2.dot(_vcp2);
           const d6 = _vac2.dot(_vcp2);
           if (d6 >= 0 && d5 <= d6) {
-            return target2.copy(c2);
+            return target2.copy(c);
           }
           const vb = d5 * d2 - d1 * d6;
           if (vb <= 0 && d2 >= 0 && d6 <= 0) {
             w = d2 / (d2 - d6);
-            return target2.copy(a2).addScaledVector(_vac2, w);
+            return target2.copy(a).addScaledVector(_vac2, w);
           }
           const va = d3 * d6 - d5 * d4;
           if (va <= 0 && d4 - d3 >= 0 && d5 - d6 >= 0) {
-            _vbc2.subVectors(c2, b);
+            _vbc2.subVectors(c, b);
             w = (d4 - d3) / (d4 - d3 + (d5 - d6));
             return target2.copy(b).addScaledVector(_vbc2, w);
           }
           const denom = 1 / (va + vb + vc);
           v = vb * denom;
           w = vc * denom;
-          return target2.copy(a2).addScaledVector(_vab2, v).addScaledVector(_vac2, w);
+          return target2.copy(a).addScaledVector(_vab2, v).addScaledVector(_vac2, w);
         }
         equals(triangle) {
           return triangle.a.equals(this.a) && triangle.b.equals(this.b) && triangle.c.equals(this.c);
@@ -43706,10 +43706,10 @@ You can use close({ resize: true }) to resize header`);
           const srcPlanes = source.clippingPlanes;
           let dstPlanes = null;
           if (srcPlanes !== null) {
-            const n2 = srcPlanes.length;
-            dstPlanes = new Array(n2);
-            for (let i2 = 0; i2 !== n2; ++i2) {
-              dstPlanes[i2] = srcPlanes[i2].clone();
+            const n = srcPlanes.length;
+            dstPlanes = new Array(n);
+            for (let i = 0; i !== n; ++i) {
+              dstPlanes[i] = srcPlanes[i].clone();
             }
           }
           this.clippingPlanes = dstPlanes;
@@ -43892,30 +43892,30 @@ You can use close({ resize: true }) to resize header`);
       };
       var _hslA2 = { h: 0, s: 0, l: 0 };
       var _hslB2 = { h: 0, s: 0, l: 0 };
-      function hue2rgb2(p2, q, t2) {
-        if (t2 < 0)
-          t2 += 1;
-        if (t2 > 1)
-          t2 -= 1;
-        if (t2 < 1 / 6)
-          return p2 + (q - p2) * 6 * t2;
-        if (t2 < 1 / 2)
+      function hue2rgb2(p, q, t) {
+        if (t < 0)
+          t += 1;
+        if (t > 1)
+          t -= 1;
+        if (t < 1 / 6)
+          return p + (q - p) * 6 * t;
+        if (t < 1 / 2)
           return q;
-        if (t2 < 2 / 3)
-          return p2 + (q - p2) * 6 * (2 / 3 - t2);
-        return p2;
+        if (t < 2 / 3)
+          return p + (q - p) * 6 * (2 / 3 - t);
+        return p;
       }
       var Color2 = class {
-        constructor(r2, g2, b) {
+        constructor(r, g, b) {
           this.isColor = true;
           this.r = 1;
           this.g = 1;
           this.b = 1;
-          return this.set(r2, g2, b);
+          return this.set(r, g, b);
         }
-        set(r2, g2, b) {
-          if (g2 === void 0 && b === void 0) {
-            const value = r2;
+        set(r, g, b) {
+          if (g === void 0 && b === void 0) {
+            const value = r;
             if (value && value.isColor) {
               this.copy(value);
             } else if (typeof value === "number") {
@@ -43924,7 +43924,7 @@ You can use close({ resize: true }) to resize header`);
               this.setStyle(value);
             }
           } else {
-            this.setRGB(r2, g2, b);
+            this.setRGB(r, g, b);
           }
           return this;
         }
@@ -43942,25 +43942,25 @@ You can use close({ resize: true }) to resize header`);
           ColorManagement2.toWorkingColorSpace(this, colorSpace);
           return this;
         }
-        setRGB(r2, g2, b, colorSpace = ColorManagement2.workingColorSpace) {
-          this.r = r2;
-          this.g = g2;
+        setRGB(r, g, b, colorSpace = ColorManagement2.workingColorSpace) {
+          this.r = r;
+          this.g = g;
           this.b = b;
           ColorManagement2.toWorkingColorSpace(this, colorSpace);
           return this;
         }
-        setHSL(h2, s2, l2, colorSpace = ColorManagement2.workingColorSpace) {
-          h2 = euclideanModulo2(h2, 1);
-          s2 = clamp2(s2, 0, 1);
-          l2 = clamp2(l2, 0, 1);
-          if (s2 === 0) {
-            this.r = this.g = this.b = l2;
+        setHSL(h, s, l, colorSpace = ColorManagement2.workingColorSpace) {
+          h = euclideanModulo2(h, 1);
+          s = clamp2(s, 0, 1);
+          l = clamp2(l, 0, 1);
+          if (s === 0) {
+            this.r = this.g = this.b = l;
           } else {
-            const p2 = l2 <= 0.5 ? l2 * (1 + s2) : l2 + s2 - l2 * s2;
-            const q = 2 * l2 - p2;
-            this.r = hue2rgb2(q, p2, h2 + 1 / 3);
-            this.g = hue2rgb2(q, p2, h2);
-            this.b = hue2rgb2(q, p2, h2 - 1 / 3);
+            const p = l <= 0.5 ? l * (1 + s) : l + s - l * s;
+            const q = 2 * l - p;
+            this.r = hue2rgb2(q, p, h + 1 / 3);
+            this.g = hue2rgb2(q, p, h);
+            this.b = hue2rgb2(q, p, h - 1 / 3);
           }
           ColorManagement2.toWorkingColorSpace(this, colorSpace);
           return this;
@@ -44082,9 +44082,9 @@ You can use close({ resize: true }) to resize header`);
         }
         getHSL(target2, colorSpace = ColorManagement2.workingColorSpace) {
           ColorManagement2.fromWorkingColorSpace(_color2.copy(this), colorSpace);
-          const r2 = _color2.r, g2 = _color2.g, b = _color2.b;
-          const max = Math.max(r2, g2, b);
-          const min = Math.min(r2, g2, b);
+          const r = _color2.r, g = _color2.g, b = _color2.b;
+          const max = Math.max(r, g, b);
+          const min = Math.min(r, g, b);
           let hue, saturation;
           const lightness = (min + max) / 2;
           if (min === max) {
@@ -44094,14 +44094,14 @@ You can use close({ resize: true }) to resize header`);
             const delta = max - min;
             saturation = lightness <= 0.5 ? delta / (max + min) : delta / (2 - max - min);
             switch (max) {
-              case r2:
-                hue = (g2 - b) / delta + (g2 < b ? 6 : 0);
+              case r:
+                hue = (g - b) / delta + (g < b ? 6 : 0);
                 break;
-              case g2:
-                hue = (b - r2) / delta + 2;
+              case g:
+                hue = (b - r) / delta + 2;
                 break;
               case b:
-                hue = (r2 - g2) / delta + 4;
+                hue = (r - g) / delta + 4;
                 break;
             }
             hue /= 6;
@@ -44120,17 +44120,17 @@ You can use close({ resize: true }) to resize header`);
         }
         getStyle(colorSpace = SRGBColorSpace2) {
           ColorManagement2.fromWorkingColorSpace(_color2.copy(this), colorSpace);
-          const r2 = _color2.r, g2 = _color2.g, b = _color2.b;
+          const r = _color2.r, g = _color2.g, b = _color2.b;
           if (colorSpace !== SRGBColorSpace2) {
-            return `color(${colorSpace} ${r2.toFixed(3)} ${g2.toFixed(3)} ${b.toFixed(3)})`;
+            return `color(${colorSpace} ${r.toFixed(3)} ${g.toFixed(3)} ${b.toFixed(3)})`;
           }
-          return `rgb(${Math.round(r2 * 255)},${Math.round(g2 * 255)},${Math.round(b * 255)})`;
+          return `rgb(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)})`;
         }
-        offsetHSL(h2, s2, l2) {
+        offsetHSL(h, s, l) {
           this.getHSL(_hslA2);
-          _hslA2.h += h2;
-          _hslA2.s += s2;
-          _hslA2.l += l2;
+          _hslA2.h += h;
+          _hslA2.s += s;
+          _hslA2.l += l;
           this.setHSL(_hslA2.h, _hslA2.s, _hslA2.l);
           return this;
         }
@@ -44146,10 +44146,10 @@ You can use close({ resize: true }) to resize header`);
           this.b = color1.b + color2.b;
           return this;
         }
-        addScalar(s2) {
-          this.r += s2;
-          this.g += s2;
-          this.b += s2;
+        addScalar(s) {
+          this.r += s;
+          this.g += s;
+          this.b += s;
           return this;
         }
         sub(color) {
@@ -44164,10 +44164,10 @@ You can use close({ resize: true }) to resize header`);
           this.b *= color.b;
           return this;
         }
-        multiplyScalar(s2) {
-          this.r *= s2;
-          this.g *= s2;
-          this.b *= s2;
+        multiplyScalar(s) {
+          this.r *= s;
+          this.g *= s;
+          this.b *= s;
           return this;
         }
         lerp(color, alpha) {
@@ -44185,10 +44185,10 @@ You can use close({ resize: true }) to resize header`);
         lerpHSL(color, alpha) {
           this.getHSL(_hslA2);
           color.getHSL(_hslB2);
-          const h2 = lerp2(_hslA2.h, _hslB2.h, alpha);
-          const s2 = lerp2(_hslA2.s, _hslB2.s, alpha);
-          const l2 = lerp2(_hslA2.l, _hslB2.l, alpha);
-          this.setHSL(h2, s2, l2);
+          const h = lerp2(_hslA2.h, _hslB2.h, alpha);
+          const s = lerp2(_hslA2.s, _hslB2.s, alpha);
+          const l = lerp2(_hslA2.l, _hslB2.l, alpha);
+          this.setHSL(h, s, l);
           return this;
         }
         setFromVector3(v) {
@@ -44198,15 +44198,15 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         applyMatrix3(m) {
-          const r2 = this.r, g2 = this.g, b = this.b;
-          const e2 = m.elements;
-          this.r = e2[0] * r2 + e2[3] * g2 + e2[6] * b;
-          this.g = e2[1] * r2 + e2[4] * g2 + e2[7] * b;
-          this.b = e2[2] * r2 + e2[5] * g2 + e2[8] * b;
+          const r = this.r, g = this.g, b = this.b;
+          const e = m.elements;
+          this.r = e[0] * r + e[3] * g + e[6] * b;
+          this.g = e[1] * r + e[4] * g + e[7] * b;
+          this.b = e[2] * r + e[5] * g + e[8] * b;
           return this;
         }
-        equals(c2) {
-          return c2.r === this.r && c2.g === this.g && c2.b === this.b;
+        equals(c) {
+          return c.r === this.r && c.g === this.g && c.b === this.b;
         }
         fromArray(array, offset = 0) {
           this.r = array[offset];
@@ -44290,64 +44290,64 @@ You can use close({ resize: true }) to resize header`);
         const uint32View = new Uint32Array(buffer3);
         const baseTable = new Uint32Array(512);
         const shiftTable = new Uint32Array(512);
-        for (let i2 = 0; i2 < 256; ++i2) {
-          const e2 = i2 - 127;
-          if (e2 < -27) {
-            baseTable[i2] = 0;
-            baseTable[i2 | 256] = 32768;
-            shiftTable[i2] = 24;
-            shiftTable[i2 | 256] = 24;
-          } else if (e2 < -14) {
-            baseTable[i2] = 1024 >> -e2 - 14;
-            baseTable[i2 | 256] = 1024 >> -e2 - 14 | 32768;
-            shiftTable[i2] = -e2 - 1;
-            shiftTable[i2 | 256] = -e2 - 1;
-          } else if (e2 <= 15) {
-            baseTable[i2] = e2 + 15 << 10;
-            baseTable[i2 | 256] = e2 + 15 << 10 | 32768;
-            shiftTable[i2] = 13;
-            shiftTable[i2 | 256] = 13;
-          } else if (e2 < 128) {
-            baseTable[i2] = 31744;
-            baseTable[i2 | 256] = 64512;
-            shiftTable[i2] = 24;
-            shiftTable[i2 | 256] = 24;
+        for (let i = 0; i < 256; ++i) {
+          const e = i - 127;
+          if (e < -27) {
+            baseTable[i] = 0;
+            baseTable[i | 256] = 32768;
+            shiftTable[i] = 24;
+            shiftTable[i | 256] = 24;
+          } else if (e < -14) {
+            baseTable[i] = 1024 >> -e - 14;
+            baseTable[i | 256] = 1024 >> -e - 14 | 32768;
+            shiftTable[i] = -e - 1;
+            shiftTable[i | 256] = -e - 1;
+          } else if (e <= 15) {
+            baseTable[i] = e + 15 << 10;
+            baseTable[i | 256] = e + 15 << 10 | 32768;
+            shiftTable[i] = 13;
+            shiftTable[i | 256] = 13;
+          } else if (e < 128) {
+            baseTable[i] = 31744;
+            baseTable[i | 256] = 64512;
+            shiftTable[i] = 24;
+            shiftTable[i | 256] = 24;
           } else {
-            baseTable[i2] = 31744;
-            baseTable[i2 | 256] = 64512;
-            shiftTable[i2] = 13;
-            shiftTable[i2 | 256] = 13;
+            baseTable[i] = 31744;
+            baseTable[i | 256] = 64512;
+            shiftTable[i] = 13;
+            shiftTable[i | 256] = 13;
           }
         }
         const mantissaTable = new Uint32Array(2048);
         const exponentTable = new Uint32Array(64);
         const offsetTable = new Uint32Array(64);
-        for (let i2 = 1; i2 < 1024; ++i2) {
-          let m = i2 << 13;
-          let e2 = 0;
+        for (let i = 1; i < 1024; ++i) {
+          let m = i << 13;
+          let e = 0;
           while ((m & 8388608) === 0) {
             m <<= 1;
-            e2 -= 8388608;
+            e -= 8388608;
           }
           m &= ~8388608;
-          e2 += 947912704;
-          mantissaTable[i2] = m | e2;
+          e += 947912704;
+          mantissaTable[i] = m | e;
         }
-        for (let i2 = 1024; i2 < 2048; ++i2) {
-          mantissaTable[i2] = 939524096 + (i2 - 1024 << 13);
+        for (let i = 1024; i < 2048; ++i) {
+          mantissaTable[i] = 939524096 + (i - 1024 << 13);
         }
-        for (let i2 = 1; i2 < 31; ++i2) {
-          exponentTable[i2] = i2 << 23;
+        for (let i = 1; i < 31; ++i) {
+          exponentTable[i] = i << 23;
         }
         exponentTable[31] = 1199570944;
         exponentTable[32] = 2147483648;
-        for (let i2 = 33; i2 < 63; ++i2) {
-          exponentTable[i2] = 2147483648 + (i2 - 32 << 23);
+        for (let i = 33; i < 63; ++i) {
+          exponentTable[i] = 2147483648 + (i - 32 << 23);
         }
         exponentTable[63] = 3347054592;
-        for (let i2 = 1; i2 < 64; ++i2) {
-          if (i2 !== 32) {
-            offsetTable[i2] = 1024;
+        for (let i = 1; i < 64; ++i) {
+          if (i !== 32) {
+            offsetTable[i] = 1024;
           }
         }
         return {
@@ -44366,8 +44366,8 @@ You can use close({ resize: true }) to resize header`);
         val = clamp2(val, -65504, 65504);
         _tables.floatView[0] = val;
         const f = _tables.uint32View[0];
-        const e2 = f >> 23 & 511;
-        return _tables.baseTable[e2] + ((f & 8388607) >> _tables.shiftTable[e2]);
+        const e = f >> 23 & 511;
+        return _tables.baseTable[e] + ((f & 8388607) >> _tables.shiftTable[e]);
       }
       function fromHalfFloat(val) {
         const m = val >> 10;
@@ -44419,8 +44419,8 @@ You can use close({ resize: true }) to resize header`);
         copyAt(index1, attribute, index2) {
           index1 *= this.itemSize;
           index2 *= attribute.itemSize;
-          for (let i2 = 0, l2 = this.itemSize; i2 < l2; i2++) {
-            this.array[index1 + i2] = attribute.array[index2 + i2];
+          for (let i = 0, l = this.itemSize; i < l; i++) {
+            this.array[index1 + i] = attribute.array[index2 + i];
           }
           return this;
         }
@@ -44430,41 +44430,41 @@ You can use close({ resize: true }) to resize header`);
         }
         applyMatrix3(m) {
           if (this.itemSize === 2) {
-            for (let i2 = 0, l2 = this.count; i2 < l2; i2++) {
-              _vector2$12.fromBufferAttribute(this, i2);
+            for (let i = 0, l = this.count; i < l; i++) {
+              _vector2$12.fromBufferAttribute(this, i);
               _vector2$12.applyMatrix3(m);
-              this.setXY(i2, _vector2$12.x, _vector2$12.y);
+              this.setXY(i, _vector2$12.x, _vector2$12.y);
             }
           } else if (this.itemSize === 3) {
-            for (let i2 = 0, l2 = this.count; i2 < l2; i2++) {
-              _vector$82.fromBufferAttribute(this, i2);
+            for (let i = 0, l = this.count; i < l; i++) {
+              _vector$82.fromBufferAttribute(this, i);
               _vector$82.applyMatrix3(m);
-              this.setXYZ(i2, _vector$82.x, _vector$82.y, _vector$82.z);
+              this.setXYZ(i, _vector$82.x, _vector$82.y, _vector$82.z);
             }
           }
           return this;
         }
         applyMatrix4(m) {
-          for (let i2 = 0, l2 = this.count; i2 < l2; i2++) {
-            _vector$82.fromBufferAttribute(this, i2);
+          for (let i = 0, l = this.count; i < l; i++) {
+            _vector$82.fromBufferAttribute(this, i);
             _vector$82.applyMatrix4(m);
-            this.setXYZ(i2, _vector$82.x, _vector$82.y, _vector$82.z);
+            this.setXYZ(i, _vector$82.x, _vector$82.y, _vector$82.z);
           }
           return this;
         }
         applyNormalMatrix(m) {
-          for (let i2 = 0, l2 = this.count; i2 < l2; i2++) {
-            _vector$82.fromBufferAttribute(this, i2);
+          for (let i = 0, l = this.count; i < l; i++) {
+            _vector$82.fromBufferAttribute(this, i);
             _vector$82.applyNormalMatrix(m);
-            this.setXYZ(i2, _vector$82.x, _vector$82.y, _vector$82.z);
+            this.setXYZ(i, _vector$82.x, _vector$82.y, _vector$82.z);
           }
           return this;
         }
         transformDirection(m) {
-          for (let i2 = 0, l2 = this.count; i2 < l2; i2++) {
-            _vector$82.fromBufferAttribute(this, i2);
+          for (let i = 0, l = this.count; i < l; i++) {
+            _vector$82.fromBufferAttribute(this, i);
             _vector$82.transformDirection(m);
-            this.setXYZ(i2, _vector$82.x, _vector$82.y, _vector$82.z);
+            this.setXYZ(i, _vector$82.x, _vector$82.y, _vector$82.z);
           }
           return this;
         }
@@ -44859,8 +44859,8 @@ You can use close({ resize: true }) to resize header`);
         }
         setFromPoints(points) {
           const position3 = [];
-          for (let i2 = 0, l2 = points.length; i2 < l2; i2++) {
-            const point = points[i2];
+          for (let i = 0, l = points.length; i < l; i++) {
+            const point = points[i];
             position3.push(point.x, point.y, point.z || 0);
           }
           this.setAttribute("position", new Float32BufferAttribute2(position3, 3));
@@ -44883,8 +44883,8 @@ You can use close({ resize: true }) to resize header`);
           if (position3 !== void 0) {
             this.boundingBox.setFromBufferAttribute(position3);
             if (morphAttributesPosition) {
-              for (let i2 = 0, il = morphAttributesPosition.length; i2 < il; i2++) {
-                const morphAttribute = morphAttributesPosition[i2];
+              for (let i = 0, il = morphAttributesPosition.length; i < il; i++) {
+                const morphAttribute = morphAttributesPosition[i];
                 _box$12.setFromBufferAttribute(morphAttribute);
                 if (this.morphTargetsRelative) {
                   _vector$72.addVectors(this.boundingBox.min, _box$12.min);
@@ -44919,8 +44919,8 @@ You can use close({ resize: true }) to resize header`);
             const center = this.boundingSphere.center;
             _box$12.setFromBufferAttribute(position3);
             if (morphAttributesPosition) {
-              for (let i2 = 0, il = morphAttributesPosition.length; i2 < il; i2++) {
-                const morphAttribute = morphAttributesPosition[i2];
+              for (let i = 0, il = morphAttributesPosition.length; i < il; i++) {
+                const morphAttribute = morphAttributesPosition[i];
                 _boxMorphTargets2.setFromBufferAttribute(morphAttribute);
                 if (this.morphTargetsRelative) {
                   _vector$72.addVectors(_box$12.min, _boxMorphTargets2.min);
@@ -44935,13 +44935,13 @@ You can use close({ resize: true }) to resize header`);
             }
             _box$12.getCenter(center);
             let maxRadiusSq = 0;
-            for (let i2 = 0, il = position3.count; i2 < il; i2++) {
-              _vector$72.fromBufferAttribute(position3, i2);
+            for (let i = 0, il = position3.count; i < il; i++) {
+              _vector$72.fromBufferAttribute(position3, i);
               maxRadiusSq = Math.max(maxRadiusSq, center.distanceToSquared(_vector$72));
             }
             if (morphAttributesPosition) {
-              for (let i2 = 0, il = morphAttributesPosition.length; i2 < il; i2++) {
-                const morphAttribute = morphAttributesPosition[i2];
+              for (let i = 0, il = morphAttributesPosition.length; i < il; i++) {
+                const morphAttribute = morphAttributesPosition[i];
                 const morphTargetsRelative = this.morphTargetsRelative;
                 for (let j = 0, jl = morphAttribute.count; j < jl; j++) {
                   _vector$72.fromBufferAttribute(morphAttribute, j);
@@ -44976,33 +44976,33 @@ You can use close({ resize: true }) to resize header`);
           }
           const tangents = this.getAttribute("tangent").array;
           const tan1 = [], tan2 = [];
-          for (let i2 = 0; i2 < nVertices; i2++) {
-            tan1[i2] = new Vector32();
-            tan2[i2] = new Vector32();
+          for (let i = 0; i < nVertices; i++) {
+            tan1[i] = new Vector32();
+            tan2[i] = new Vector32();
           }
           const vA = new Vector32(), vB = new Vector32(), vC = new Vector32(), uvA = new Vector22(), uvB = new Vector22(), uvC = new Vector22(), sdir = new Vector32(), tdir = new Vector32();
-          function handleTriangle(a2, b, c2) {
-            vA.fromArray(positions, a2 * 3);
+          function handleTriangle(a, b, c) {
+            vA.fromArray(positions, a * 3);
             vB.fromArray(positions, b * 3);
-            vC.fromArray(positions, c2 * 3);
-            uvA.fromArray(uvs, a2 * 2);
+            vC.fromArray(positions, c * 3);
+            uvA.fromArray(uvs, a * 2);
             uvB.fromArray(uvs, b * 2);
-            uvC.fromArray(uvs, c2 * 2);
+            uvC.fromArray(uvs, c * 2);
             vB.sub(vA);
             vC.sub(vA);
             uvB.sub(uvA);
             uvC.sub(uvA);
-            const r2 = 1 / (uvB.x * uvC.y - uvC.x * uvB.y);
-            if (!isFinite(r2))
+            const r = 1 / (uvB.x * uvC.y - uvC.x * uvB.y);
+            if (!isFinite(r))
               return;
-            sdir.copy(vB).multiplyScalar(uvC.y).addScaledVector(vC, -uvB.y).multiplyScalar(r2);
-            tdir.copy(vC).multiplyScalar(uvB.x).addScaledVector(vB, -uvC.x).multiplyScalar(r2);
-            tan1[a2].add(sdir);
+            sdir.copy(vB).multiplyScalar(uvC.y).addScaledVector(vC, -uvB.y).multiplyScalar(r);
+            tdir.copy(vC).multiplyScalar(uvB.x).addScaledVector(vB, -uvC.x).multiplyScalar(r);
+            tan1[a].add(sdir);
             tan1[b].add(sdir);
-            tan1[c2].add(sdir);
-            tan2[a2].add(tdir);
+            tan1[c].add(sdir);
+            tan2[a].add(tdir);
             tan2[b].add(tdir);
-            tan2[c2].add(tdir);
+            tan2[c].add(tdir);
           }
           let groups = this.groups;
           if (groups.length === 0) {
@@ -45011,8 +45011,8 @@ You can use close({ resize: true }) to resize header`);
               count: indices.length
             }];
           }
-          for (let i2 = 0, il = groups.length; i2 < il; ++i2) {
-            const group = groups[i2];
+          for (let i = 0, il = groups.length; i < il; ++i) {
+            const group = groups[i];
             const start = group.start;
             const count = group.count;
             for (let j = start, jl = start + count; j < jl; j += 3) {
@@ -45024,14 +45024,14 @@ You can use close({ resize: true }) to resize header`);
             }
           }
           const tmp2 = new Vector32(), tmp22 = new Vector32();
-          const n2 = new Vector32(), n22 = new Vector32();
+          const n = new Vector32(), n2 = new Vector32();
           function handleVertex(v) {
-            n2.fromArray(normals, v * 3);
-            n22.copy(n2);
-            const t2 = tan1[v];
-            tmp2.copy(t2);
-            tmp2.sub(n2.multiplyScalar(n2.dot(t2))).normalize();
-            tmp22.crossVectors(n22, t2);
+            n.fromArray(normals, v * 3);
+            n2.copy(n);
+            const t = tan1[v];
+            tmp2.copy(t);
+            tmp2.sub(n.multiplyScalar(n.dot(t))).normalize();
+            tmp22.crossVectors(n2, t);
             const test = tmp22.dot(tan2[v]);
             const w = test < 0 ? -1 : 1;
             tangents[v * 4] = tmp2.x;
@@ -45039,8 +45039,8 @@ You can use close({ resize: true }) to resize header`);
             tangents[v * 4 + 2] = tmp2.z;
             tangents[v * 4 + 3] = w;
           }
-          for (let i2 = 0, il = groups.length; i2 < il; ++i2) {
-            const group = groups[i2];
+          for (let i = 0, il = groups.length; i < il; ++i) {
+            const group = groups[i];
             const start = group.start;
             const count = group.count;
             for (let j = start, jl = start + count; j < jl; j += 3) {
@@ -45059,18 +45059,18 @@ You can use close({ resize: true }) to resize header`);
               normalAttribute = new BufferAttribute2(new Float32Array(positionAttribute.count * 3), 3);
               this.setAttribute("normal", normalAttribute);
             } else {
-              for (let i2 = 0, il = normalAttribute.count; i2 < il; i2++) {
-                normalAttribute.setXYZ(i2, 0, 0, 0);
+              for (let i = 0, il = normalAttribute.count; i < il; i++) {
+                normalAttribute.setXYZ(i, 0, 0, 0);
               }
             }
             const pA = new Vector32(), pB = new Vector32(), pC = new Vector32();
             const nA = new Vector32(), nB = new Vector32(), nC = new Vector32();
             const cb = new Vector32(), ab = new Vector32();
             if (index) {
-              for (let i2 = 0, il = index.count; i2 < il; i2 += 3) {
-                const vA = index.getX(i2 + 0);
-                const vB = index.getX(i2 + 1);
-                const vC = index.getX(i2 + 2);
+              for (let i = 0, il = index.count; i < il; i += 3) {
+                const vA = index.getX(i + 0);
+                const vB = index.getX(i + 1);
+                const vC = index.getX(i + 2);
                 pA.fromBufferAttribute(positionAttribute, vA);
                 pB.fromBufferAttribute(positionAttribute, vB);
                 pC.fromBufferAttribute(positionAttribute, vC);
@@ -45088,16 +45088,16 @@ You can use close({ resize: true }) to resize header`);
                 normalAttribute.setXYZ(vC, nC.x, nC.y, nC.z);
               }
             } else {
-              for (let i2 = 0, il = positionAttribute.count; i2 < il; i2 += 3) {
-                pA.fromBufferAttribute(positionAttribute, i2 + 0);
-                pB.fromBufferAttribute(positionAttribute, i2 + 1);
-                pC.fromBufferAttribute(positionAttribute, i2 + 2);
+              for (let i = 0, il = positionAttribute.count; i < il; i += 3) {
+                pA.fromBufferAttribute(positionAttribute, i + 0);
+                pB.fromBufferAttribute(positionAttribute, i + 1);
+                pC.fromBufferAttribute(positionAttribute, i + 2);
                 cb.subVectors(pC, pB);
                 ab.subVectors(pA, pB);
                 cb.cross(ab);
-                normalAttribute.setXYZ(i2 + 0, cb.x, cb.y, cb.z);
-                normalAttribute.setXYZ(i2 + 1, cb.x, cb.y, cb.z);
-                normalAttribute.setXYZ(i2 + 2, cb.x, cb.y, cb.z);
+                normalAttribute.setXYZ(i + 0, cb.x, cb.y, cb.z);
+                normalAttribute.setXYZ(i + 1, cb.x, cb.y, cb.z);
+                normalAttribute.setXYZ(i + 2, cb.x, cb.y, cb.z);
               }
             }
             this.normalizeNormals();
@@ -45106,10 +45106,10 @@ You can use close({ resize: true }) to resize header`);
         }
         normalizeNormals() {
           const normals = this.attributes.normal;
-          for (let i2 = 0, il = normals.count; i2 < il; i2++) {
-            _vector$72.fromBufferAttribute(normals, i2);
+          for (let i = 0, il = normals.count; i < il; i++) {
+            _vector$72.fromBufferAttribute(normals, i);
             _vector$72.normalize();
-            normals.setXYZ(i2, _vector$72.x, _vector$72.y, _vector$72.z);
+            normals.setXYZ(i, _vector$72.x, _vector$72.y, _vector$72.z);
           }
         }
         toNonIndexed() {
@@ -45119,11 +45119,11 @@ You can use close({ resize: true }) to resize header`);
             const normalized = attribute.normalized;
             const array2 = new array.constructor(indices2.length * itemSize);
             let index = 0, index2 = 0;
-            for (let i2 = 0, l2 = indices2.length; i2 < l2; i2++) {
+            for (let i = 0, l = indices2.length; i < l; i++) {
               if (attribute.isInterleavedBufferAttribute) {
-                index = indices2[i2] * attribute.data.stride + attribute.offset;
+                index = indices2[i] * attribute.data.stride + attribute.offset;
               } else {
-                index = indices2[i2] * itemSize;
+                index = indices2[i] * itemSize;
               }
               for (let j = 0; j < itemSize; j++) {
                 array2[index2++] = array[index++];
@@ -45147,8 +45147,8 @@ You can use close({ resize: true }) to resize header`);
           for (const name in morphAttributes) {
             const morphArray = [];
             const morphAttribute = morphAttributes[name];
-            for (let i2 = 0, il = morphAttribute.length; i2 < il; i2++) {
-              const attribute = morphAttribute[i2];
+            for (let i = 0, il = morphAttribute.length; i < il; i++) {
+              const attribute = morphAttribute[i];
               const newAttribute = convertBufferAttribute(attribute, indices);
               morphArray.push(newAttribute);
             }
@@ -45156,8 +45156,8 @@ You can use close({ resize: true }) to resize header`);
           }
           geometry2.morphTargetsRelative = this.morphTargetsRelative;
           const groups = this.groups;
-          for (let i2 = 0, l2 = groups.length; i2 < l2; i2++) {
-            const group = groups[i2];
+          for (let i = 0, l = groups.length; i < l; i++) {
+            const group = groups[i];
             geometry2.addGroup(group.start, group.count, group.materialIndex);
           }
           return geometry2;
@@ -45202,8 +45202,8 @@ You can use close({ resize: true }) to resize header`);
           for (const key in this.morphAttributes) {
             const attributeArray = this.morphAttributes[key];
             const array = [];
-            for (let i2 = 0, il = attributeArray.length; i2 < il; i2++) {
-              const attribute = attributeArray[i2];
+            for (let i = 0, il = attributeArray.length; i < il; i++) {
+              const attribute = attributeArray[i];
               array.push(attribute.toJSON(data.data));
             }
             if (array.length > 0) {
@@ -45253,15 +45253,15 @@ You can use close({ resize: true }) to resize header`);
           for (const name in morphAttributes) {
             const array = [];
             const morphAttribute = morphAttributes[name];
-            for (let i2 = 0, l2 = morphAttribute.length; i2 < l2; i2++) {
-              array.push(morphAttribute[i2].clone(data));
+            for (let i = 0, l = morphAttribute.length; i < l; i++) {
+              array.push(morphAttribute[i].clone(data));
             }
             this.morphAttributes[name] = array;
           }
           this.morphTargetsRelative = source.morphTargetsRelative;
           const groups = source.groups;
-          for (let i2 = 0, l2 = groups.length; i2 < l2; i2++) {
-            const group = groups[i2];
+          for (let i = 0, l = groups.length; i < l; i++) {
+            const group = groups[i];
             this.addGroup(group.start, group.count, group.materialIndex);
           }
           const boundingBox = source.boundingBox;
@@ -45345,9 +45345,9 @@ You can use close({ resize: true }) to resize header`);
           const morphInfluences = this.morphTargetInfluences;
           if (morphPosition && morphInfluences) {
             _morphA2.set(0, 0, 0);
-            for (let i2 = 0, il = morphPosition.length; i2 < il; i2++) {
-              const influence = morphInfluences[i2];
-              const morphAttribute = morphPosition[i2];
+            for (let i = 0, il = morphPosition.length; i < il; i++) {
+              const influence = morphInfluences[i];
+              const morphAttribute = morphPosition[i];
               if (influence === 0)
                 continue;
               _tempA2.fromBufferAttribute(morphAttribute, index);
@@ -45399,16 +45399,16 @@ You can use close({ resize: true }) to resize header`);
           const drawRange = geometry.drawRange;
           if (index !== null) {
             if (Array.isArray(material)) {
-              for (let i2 = 0, il = groups.length; i2 < il; i2++) {
-                const group = groups[i2];
+              for (let i = 0, il = groups.length; i < il; i++) {
+                const group = groups[i];
                 const groupMaterial = material[group.materialIndex];
                 const start = Math.max(group.start, drawRange.start);
                 const end = Math.min(index.count, Math.min(group.start + group.count, drawRange.start + drawRange.count));
                 for (let j = start, jl = end; j < jl; j += 3) {
-                  const a2 = index.getX(j);
+                  const a = index.getX(j);
                   const b = index.getX(j + 1);
-                  const c2 = index.getX(j + 2);
-                  intersection = checkGeometryIntersection2(this, groupMaterial, raycaster, rayLocalSpace, uv, uv1, normal, a2, b, c2);
+                  const c = index.getX(j + 2);
+                  intersection = checkGeometryIntersection2(this, groupMaterial, raycaster, rayLocalSpace, uv, uv1, normal, a, b, c);
                   if (intersection) {
                     intersection.faceIndex = Math.floor(j / 3);
                     intersection.face.materialIndex = group.materialIndex;
@@ -45419,29 +45419,29 @@ You can use close({ resize: true }) to resize header`);
             } else {
               const start = Math.max(0, drawRange.start);
               const end = Math.min(index.count, drawRange.start + drawRange.count);
-              for (let i2 = start, il = end; i2 < il; i2 += 3) {
-                const a2 = index.getX(i2);
-                const b = index.getX(i2 + 1);
-                const c2 = index.getX(i2 + 2);
-                intersection = checkGeometryIntersection2(this, material, raycaster, rayLocalSpace, uv, uv1, normal, a2, b, c2);
+              for (let i = start, il = end; i < il; i += 3) {
+                const a = index.getX(i);
+                const b = index.getX(i + 1);
+                const c = index.getX(i + 2);
+                intersection = checkGeometryIntersection2(this, material, raycaster, rayLocalSpace, uv, uv1, normal, a, b, c);
                 if (intersection) {
-                  intersection.faceIndex = Math.floor(i2 / 3);
+                  intersection.faceIndex = Math.floor(i / 3);
                   intersects2.push(intersection);
                 }
               }
             }
           } else if (position3 !== void 0) {
             if (Array.isArray(material)) {
-              for (let i2 = 0, il = groups.length; i2 < il; i2++) {
-                const group = groups[i2];
+              for (let i = 0, il = groups.length; i < il; i++) {
+                const group = groups[i];
                 const groupMaterial = material[group.materialIndex];
                 const start = Math.max(group.start, drawRange.start);
                 const end = Math.min(position3.count, Math.min(group.start + group.count, drawRange.start + drawRange.count));
                 for (let j = start, jl = end; j < jl; j += 3) {
-                  const a2 = j;
+                  const a = j;
                   const b = j + 1;
-                  const c2 = j + 2;
-                  intersection = checkGeometryIntersection2(this, groupMaterial, raycaster, rayLocalSpace, uv, uv1, normal, a2, b, c2);
+                  const c = j + 2;
+                  intersection = checkGeometryIntersection2(this, groupMaterial, raycaster, rayLocalSpace, uv, uv1, normal, a, b, c);
                   if (intersection) {
                     intersection.faceIndex = Math.floor(j / 3);
                     intersection.face.materialIndex = group.materialIndex;
@@ -45452,13 +45452,13 @@ You can use close({ resize: true }) to resize header`);
             } else {
               const start = Math.max(0, drawRange.start);
               const end = Math.min(position3.count, drawRange.start + drawRange.count);
-              for (let i2 = start, il = end; i2 < il; i2 += 3) {
-                const a2 = i2;
-                const b = i2 + 1;
-                const c2 = i2 + 2;
-                intersection = checkGeometryIntersection2(this, material, raycaster, rayLocalSpace, uv, uv1, normal, a2, b, c2);
+              for (let i = start, il = end; i < il; i += 3) {
+                const a = i;
+                const b = i + 1;
+                const c = i + 2;
+                intersection = checkGeometryIntersection2(this, material, raycaster, rayLocalSpace, uv, uv1, normal, a, b, c);
                 if (intersection) {
-                  intersection.faceIndex = Math.floor(i2 / 3);
+                  intersection.faceIndex = Math.floor(i / 3);
                   intersects2.push(intersection);
                 }
               }
@@ -45486,38 +45486,38 @@ You can use close({ resize: true }) to resize header`);
           object
         };
       }
-      function checkGeometryIntersection2(object, material, raycaster, ray, uv, uv1, normal, a2, b, c2) {
-        object.getVertexPosition(a2, _vA$12);
+      function checkGeometryIntersection2(object, material, raycaster, ray, uv, uv1, normal, a, b, c) {
+        object.getVertexPosition(a, _vA$12);
         object.getVertexPosition(b, _vB$12);
-        object.getVertexPosition(c2, _vC$12);
+        object.getVertexPosition(c, _vC$12);
         const intersection = checkIntersection2(object, material, raycaster, ray, _vA$12, _vB$12, _vC$12, _intersectionPoint2);
         if (intersection) {
           if (uv) {
-            _uvA$12.fromBufferAttribute(uv, a2);
+            _uvA$12.fromBufferAttribute(uv, a);
             _uvB$12.fromBufferAttribute(uv, b);
-            _uvC$12.fromBufferAttribute(uv, c2);
+            _uvC$12.fromBufferAttribute(uv, c);
             intersection.uv = Triangle2.getInterpolation(_intersectionPoint2, _vA$12, _vB$12, _vC$12, _uvA$12, _uvB$12, _uvC$12, new Vector22());
           }
           if (uv1) {
-            _uvA$12.fromBufferAttribute(uv1, a2);
+            _uvA$12.fromBufferAttribute(uv1, a);
             _uvB$12.fromBufferAttribute(uv1, b);
-            _uvC$12.fromBufferAttribute(uv1, c2);
+            _uvC$12.fromBufferAttribute(uv1, c);
             intersection.uv1 = Triangle2.getInterpolation(_intersectionPoint2, _vA$12, _vB$12, _vC$12, _uvA$12, _uvB$12, _uvC$12, new Vector22());
             intersection.uv2 = intersection.uv1;
           }
           if (normal) {
-            _normalA2.fromBufferAttribute(normal, a2);
+            _normalA2.fromBufferAttribute(normal, a);
             _normalB2.fromBufferAttribute(normal, b);
-            _normalC2.fromBufferAttribute(normal, c2);
+            _normalC2.fromBufferAttribute(normal, c);
             intersection.normal = Triangle2.getInterpolation(_intersectionPoint2, _vA$12, _vB$12, _vC$12, _normalA2, _normalB2, _normalC2, new Vector32());
             if (intersection.normal.dot(ray.direction) > 0) {
               intersection.normal.multiplyScalar(-1);
             }
           }
           const face = {
-            a: a2,
+            a,
             b,
-            c: c2,
+            c,
             normal: new Vector32(),
             materialIndex: 0
           };
@@ -45558,7 +45558,7 @@ You can use close({ resize: true }) to resize header`);
           this.setAttribute("position", new Float32BufferAttribute2(vertices, 3));
           this.setAttribute("normal", new Float32BufferAttribute2(normals, 3));
           this.setAttribute("uv", new Float32BufferAttribute2(uvs, 2));
-          function buildPlane(u2, v, w, udir, vdir, width2, height2, depth2, gridX, gridY, materialIndex) {
+          function buildPlane(u, v, w, udir, vdir, width2, height2, depth2, gridX, gridY, materialIndex) {
             const segmentWidth = width2 / gridX;
             const segmentHeight = height2 / gridY;
             const widthHalf = width2 / 2;
@@ -45573,11 +45573,11 @@ You can use close({ resize: true }) to resize header`);
               const y = iy * segmentHeight - heightHalf;
               for (let ix = 0; ix < gridX1; ix++) {
                 const x = ix * segmentWidth - widthHalf;
-                vector[u2] = x * udir;
+                vector[u] = x * udir;
                 vector[v] = y * vdir;
                 vector[w] = depthHalf;
                 vertices.push(vector.x, vector.y, vector.z);
-                vector[u2] = 0;
+                vector[u] = 0;
                 vector[v] = 0;
                 vector[w] = depth2 > 0 ? 1 : -1;
                 normals.push(vector.x, vector.y, vector.z);
@@ -45588,12 +45588,12 @@ You can use close({ resize: true }) to resize header`);
             }
             for (let iy = 0; iy < gridY; iy++) {
               for (let ix = 0; ix < gridX; ix++) {
-                const a2 = numberOfVertices + ix + gridX1 * iy;
+                const a = numberOfVertices + ix + gridX1 * iy;
                 const b = numberOfVertices + ix + gridX1 * (iy + 1);
-                const c2 = numberOfVertices + (ix + 1) + gridX1 * (iy + 1);
-                const d2 = numberOfVertices + (ix + 1) + gridX1 * iy;
-                indices.push(a2, b, d2);
-                indices.push(b, c2, d2);
+                const c = numberOfVertices + (ix + 1) + gridX1 * (iy + 1);
+                const d = numberOfVertices + (ix + 1) + gridX1 * iy;
+                indices.push(a, b, d);
+                indices.push(b, c, d);
                 groupCount += 6;
               }
             }
@@ -45613,21 +45613,21 @@ You can use close({ resize: true }) to resize header`);
       };
       function cloneUniforms2(src4) {
         const dst = {};
-        for (const u2 in src4) {
-          dst[u2] = {};
-          for (const p2 in src4[u2]) {
-            const property = src4[u2][p2];
+        for (const u in src4) {
+          dst[u] = {};
+          for (const p in src4[u]) {
+            const property = src4[u][p];
             if (property && (property.isColor || property.isMatrix3 || property.isMatrix4 || property.isVector2 || property.isVector3 || property.isVector4 || property.isTexture || property.isQuaternion)) {
               if (property.isRenderTargetTexture) {
                 console.warn("UniformsUtils: Textures of render targets cannot be cloned via cloneUniforms() or mergeUniforms().");
-                dst[u2][p2] = null;
+                dst[u][p] = null;
               } else {
-                dst[u2][p2] = property.clone();
+                dst[u][p] = property.clone();
               }
             } else if (Array.isArray(property)) {
-              dst[u2][p2] = property.slice();
+              dst[u][p] = property.slice();
             } else {
-              dst[u2][p2] = property;
+              dst[u][p] = property;
             }
           }
         }
@@ -45635,18 +45635,18 @@ You can use close({ resize: true }) to resize header`);
       }
       function mergeUniforms2(uniforms) {
         const merged = {};
-        for (let u2 = 0; u2 < uniforms.length; u2++) {
-          const tmp2 = cloneUniforms2(uniforms[u2]);
-          for (const p2 in tmp2) {
-            merged[p2] = tmp2[p2];
+        for (let u = 0; u < uniforms.length; u++) {
+          const tmp2 = cloneUniforms2(uniforms[u]);
+          for (const p in tmp2) {
+            merged[p] = tmp2[p];
           }
         }
         return merged;
       }
       function cloneUniformsGroups2(src4) {
         const dst = [];
-        for (let u2 = 0; u2 < src4.length; u2++) {
-          dst.push(src4[u2].clone());
+        for (let u = 0; u < src4.length; u++) {
+          dst.push(src4[u].clone());
         }
         return dst;
       }
@@ -45798,8 +45798,8 @@ You can use close({ resize: true }) to resize header`);
         }
         getWorldDirection(target2) {
           this.updateWorldMatrix(true, false);
-          const e2 = this.matrixWorld.elements;
-          return target2.set(-e2[8], -e2[9], -e2[10]).normalize();
+          const e = this.matrixWorld.elements;
+          return target2.set(-e[8], -e[9], -e[10]).normalize();
         }
         updateMatrixWorld(force) {
           super.updateMatrixWorld(force);
@@ -46177,8 +46177,8 @@ You can use close({ resize: true }) to resize header`);
         }
         clear(renderer, color, depth, stencil) {
           const currentRenderTarget = renderer.getRenderTarget();
-          for (let i2 = 0; i2 < 6; i2++) {
-            renderer.setRenderTarget(this, i2);
+          for (let i = 0; i < 6; i++) {
+            renderer.setRenderTarget(this, i);
             renderer.clear(color, depth, stencil);
           }
           renderer.setRenderTarget(currentRenderTarget);
@@ -46208,9 +46208,9 @@ You can use close({ resize: true }) to resize header`);
           this.constant = -point.dot(this.normal);
           return this;
         }
-        setFromCoplanarPoints(a2, b, c2) {
-          const normal = _vector12.subVectors(c2, b).cross(_vector22.subVectors(a2, b)).normalize();
-          this.setFromNormalAndCoplanarPoint(normal, a2);
+        setFromCoplanarPoints(a, b, c) {
+          const normal = _vector12.subVectors(c, b).cross(_vector22.subVectors(a, b)).normalize();
+          this.setFromNormalAndCoplanarPoint(normal, a);
           return this;
         }
         copy(plane) {
@@ -46247,11 +46247,11 @@ You can use close({ resize: true }) to resize header`);
             }
             return null;
           }
-          const t2 = -(line.start.dot(this.normal) + this.constant) / denominator;
-          if (t2 < 0 || t2 > 1) {
+          const t = -(line.start.dot(this.normal) + this.constant) / denominator;
+          if (t < 0 || t > 1) {
             return null;
           }
-          return target2.copy(line.start).addScaledVector(direction, t2);
+          return target2.copy(line.start).addScaledVector(direction, t);
         }
         intersectsLine(line) {
           const startSign = this.distanceToPoint(line.start);
@@ -46303,8 +46303,8 @@ You can use close({ resize: true }) to resize header`);
         }
         copy(frustum) {
           const planes = this.planes;
-          for (let i2 = 0; i2 < 6; i2++) {
-            planes[i2].copy(frustum.planes[i2]);
+          for (let i = 0; i < 6; i++) {
+            planes[i].copy(frustum.planes[i]);
           }
           return this;
         }
@@ -46352,8 +46352,8 @@ You can use close({ resize: true }) to resize header`);
           const planes = this.planes;
           const center = sphere.center;
           const negRadius = -sphere.radius;
-          for (let i2 = 0; i2 < 6; i2++) {
-            const distance = planes[i2].distanceToPoint(center);
+          for (let i = 0; i < 6; i++) {
+            const distance = planes[i].distanceToPoint(center);
             if (distance < negRadius) {
               return false;
             }
@@ -46362,8 +46362,8 @@ You can use close({ resize: true }) to resize header`);
         }
         intersectsBox(box) {
           const planes = this.planes;
-          for (let i2 = 0; i2 < 6; i2++) {
-            const plane = planes[i2];
+          for (let i = 0; i < 6; i++) {
+            const plane = planes[i];
             _vector$62.x = plane.normal.x > 0 ? box.max.x : box.min.x;
             _vector$62.y = plane.normal.y > 0 ? box.max.y : box.min.y;
             _vector$62.z = plane.normal.z > 0 ? box.max.z : box.min.z;
@@ -46375,8 +46375,8 @@ You can use close({ resize: true }) to resize header`);
         }
         containsPoint(point) {
           const planes = this.planes;
-          for (let i2 = 0; i2 < 6; i2++) {
-            if (planes[i2].distanceToPoint(point) < 0) {
+          for (let i = 0; i < 6; i++) {
+            if (planes[i].distanceToPoint(point) < 0) {
               return false;
             }
           }
@@ -46564,12 +46564,12 @@ You can use close({ resize: true }) to resize header`);
           }
           for (let iy = 0; iy < gridY; iy++) {
             for (let ix = 0; ix < gridX; ix++) {
-              const a2 = ix + gridX1 * iy;
+              const a = ix + gridX1 * iy;
               const b = ix + gridX1 * (iy + 1);
-              const c2 = ix + 1 + gridX1 * (iy + 1);
-              const d2 = ix + 1 + gridX1 * iy;
-              indices.push(a2, b, d2);
-              indices.push(b, c2, d2);
+              const c = ix + 1 + gridX1 * (iy + 1);
+              const d = ix + 1 + gridX1 * iy;
+              indices.push(a, b, d);
+              indices.push(b, c, d);
             }
           }
           this.setIndex(indices);
@@ -47511,10 +47511,10 @@ You can use close({ resize: true }) to resize header`);
           const newAttributes = [];
           const enabledAttributes = [];
           const attributeDivisors = [];
-          for (let i2 = 0; i2 < maxVertexAttributes; i2++) {
-            newAttributes[i2] = 0;
-            enabledAttributes[i2] = 0;
-            attributeDivisors[i2] = 0;
+          for (let i = 0; i < maxVertexAttributes; i++) {
+            newAttributes[i] = 0;
+            enabledAttributes[i] = 0;
+            attributeDivisors[i] = 0;
           }
           return {
             // for backward compatibility on non-VAO support browser
@@ -47590,8 +47590,8 @@ You can use close({ resize: true }) to resize header`);
         }
         function initAttributes() {
           const newAttributes = currentState.newAttributes;
-          for (let i2 = 0, il = newAttributes.length; i2 < il; i2++) {
-            newAttributes[i2] = 0;
+          for (let i = 0, il = newAttributes.length; i < il; i++) {
+            newAttributes[i] = 0;
           }
         }
         function enableAttribute(attribute) {
@@ -47615,10 +47615,10 @@ You can use close({ resize: true }) to resize header`);
         function disableUnusedAttributes() {
           const newAttributes = currentState.newAttributes;
           const enabledAttributes = currentState.enabledAttributes;
-          for (let i2 = 0, il = enabledAttributes.length; i2 < il; i2++) {
-            if (enabledAttributes[i2] !== newAttributes[i2]) {
-              gl.disableVertexAttribArray(i2);
-              enabledAttributes[i2] = 0;
+          for (let i = 0, il = enabledAttributes.length; i < il; i++) {
+            if (enabledAttributes[i] !== newAttributes[i]) {
+              gl.disableVertexAttribArray(i);
+              enabledAttributes[i] = 0;
             }
           }
         }
@@ -47663,51 +47663,51 @@ You can use close({ resize: true }) to resize header`);
                   const stride = data.stride;
                   const offset = geometryAttribute.offset;
                   if (data.isInstancedInterleavedBuffer) {
-                    for (let i2 = 0; i2 < programAttribute.locationSize; i2++) {
-                      enableAttributeAndDivisor(programAttribute.location + i2, data.meshPerAttribute);
+                    for (let i = 0; i < programAttribute.locationSize; i++) {
+                      enableAttributeAndDivisor(programAttribute.location + i, data.meshPerAttribute);
                     }
                     if (object.isInstancedMesh !== true && geometry._maxInstanceCount === void 0) {
                       geometry._maxInstanceCount = data.meshPerAttribute * data.count;
                     }
                   } else {
-                    for (let i2 = 0; i2 < programAttribute.locationSize; i2++) {
-                      enableAttribute(programAttribute.location + i2);
+                    for (let i = 0; i < programAttribute.locationSize; i++) {
+                      enableAttribute(programAttribute.location + i);
                     }
                   }
                   gl.bindBuffer(gl.ARRAY_BUFFER, buffer3);
-                  for (let i2 = 0; i2 < programAttribute.locationSize; i2++) {
+                  for (let i = 0; i < programAttribute.locationSize; i++) {
                     vertexAttribPointer(
-                      programAttribute.location + i2,
+                      programAttribute.location + i,
                       size / programAttribute.locationSize,
                       type,
                       normalized,
                       stride * bytesPerElement,
-                      (offset + size / programAttribute.locationSize * i2) * bytesPerElement,
+                      (offset + size / programAttribute.locationSize * i) * bytesPerElement,
                       integer
                     );
                   }
                 } else {
                   if (geometryAttribute.isInstancedBufferAttribute) {
-                    for (let i2 = 0; i2 < programAttribute.locationSize; i2++) {
-                      enableAttributeAndDivisor(programAttribute.location + i2, geometryAttribute.meshPerAttribute);
+                    for (let i = 0; i < programAttribute.locationSize; i++) {
+                      enableAttributeAndDivisor(programAttribute.location + i, geometryAttribute.meshPerAttribute);
                     }
                     if (object.isInstancedMesh !== true && geometry._maxInstanceCount === void 0) {
                       geometry._maxInstanceCount = geometryAttribute.meshPerAttribute * geometryAttribute.count;
                     }
                   } else {
-                    for (let i2 = 0; i2 < programAttribute.locationSize; i2++) {
-                      enableAttribute(programAttribute.location + i2);
+                    for (let i = 0; i < programAttribute.locationSize; i++) {
+                      enableAttribute(programAttribute.location + i);
                     }
                   }
                   gl.bindBuffer(gl.ARRAY_BUFFER, buffer3);
-                  for (let i2 = 0; i2 < programAttribute.locationSize; i2++) {
+                  for (let i = 0; i < programAttribute.locationSize; i++) {
                     vertexAttribPointer(
-                      programAttribute.location + i2,
+                      programAttribute.location + i,
                       size / programAttribute.locationSize,
                       type,
                       normalized,
                       size * bytesPerElement,
-                      size / programAttribute.locationSize * i2 * bytesPerElement,
+                      size / programAttribute.locationSize * i * bytesPerElement,
                       integer
                     );
                   }
@@ -47941,8 +47941,8 @@ You can use close({ resize: true }) to resize header`);
             let dstArray = materialProperties.clippingState || null;
             uniform.value = dstArray;
             dstArray = projectPlanes(planes, camera, lGlobal, useCache);
-            for (let i2 = 0; i2 !== lGlobal; ++i2) {
-              dstArray[i2] = globalState[i2];
+            for (let i = 0; i !== lGlobal; ++i) {
+              dstArray[i] = globalState[i];
             }
             materialProperties.clippingState = dstArray;
             this.numIntersection = clipIntersection ? this.numPlanes : 0;
@@ -47968,8 +47968,8 @@ You can use close({ resize: true }) to resize header`);
               if (dstArray === null || dstArray.length < flatSize) {
                 dstArray = new Float32Array(flatSize);
               }
-              for (let i2 = 0, i4 = dstOffset; i2 !== nPlanes; ++i2, i4 += 4) {
-                plane.copy(planes[i2]).applyMatrix4(viewMatrix, viewNormalMatrix);
+              for (let i = 0, i4 = dstOffset; i !== nPlanes; ++i, i4 += 4) {
+                plane.copy(planes[i]).applyMatrix4(viewMatrix, viewNormalMatrix);
                 plane.normal.toArray(dstArray, i4);
                 dstArray[i4 + 3] = plane.constant;
               }
@@ -48232,8 +48232,8 @@ You can use close({ resize: true }) to resize header`);
             this._blurMaterial.dispose();
           if (this._pingPongRenderTarget !== null)
             this._pingPongRenderTarget.dispose();
-          for (let i2 = 0; i2 < this._lodPlanes.length; i2++) {
-            this._lodPlanes[i2].dispose();
+          for (let i = 0; i < this._lodPlanes.length; i++) {
+            this._lodPlanes[i].dispose();
           }
         }
         _cleanup(outputTarget) {
@@ -48313,20 +48313,20 @@ You can use close({ resize: true }) to resize header`);
             backgroundMaterial.color.copy(_clearColor2);
             useSolidColor = true;
           }
-          for (let i2 = 0; i2 < 6; i2++) {
-            const col = i2 % 3;
+          for (let i = 0; i < 6; i++) {
+            const col = i % 3;
             if (col === 0) {
-              cubeCamera.up.set(0, upSign[i2], 0);
-              cubeCamera.lookAt(forwardSign[i2], 0, 0);
+              cubeCamera.up.set(0, upSign[i], 0);
+              cubeCamera.lookAt(forwardSign[i], 0, 0);
             } else if (col === 1) {
-              cubeCamera.up.set(0, 0, upSign[i2]);
-              cubeCamera.lookAt(0, forwardSign[i2], 0);
+              cubeCamera.up.set(0, 0, upSign[i]);
+              cubeCamera.lookAt(0, forwardSign[i], 0);
             } else {
-              cubeCamera.up.set(0, upSign[i2], 0);
-              cubeCamera.lookAt(0, 0, forwardSign[i2]);
+              cubeCamera.up.set(0, upSign[i], 0);
+              cubeCamera.lookAt(0, 0, forwardSign[i]);
             }
             const size = this._cubeSize;
-            _setViewport2(cubeUVRenderTarget, col * size, i2 > 2 ? size : 0, size, size);
+            _setViewport2(cubeUVRenderTarget, col * size, i > 2 ? size : 0, size, size);
             renderer.setRenderTarget(cubeUVRenderTarget);
             if (useSolidColor) {
               renderer.render(backgroundBox, cubeCamera);
@@ -48365,10 +48365,10 @@ You can use close({ resize: true }) to resize header`);
           const renderer = this._renderer;
           const autoClear = renderer.autoClear;
           renderer.autoClear = false;
-          for (let i2 = 1; i2 < this._lodPlanes.length; i2++) {
-            const sigma = Math.sqrt(this._sigmas[i2] * this._sigmas[i2] - this._sigmas[i2 - 1] * this._sigmas[i2 - 1]);
-            const poleAxis = _axisDirections2[(i2 - 1) % _axisDirections2.length];
-            this._blur(cubeUVRenderTarget, i2 - 1, i2, sigma, poleAxis);
+          for (let i = 1; i < this._lodPlanes.length; i++) {
+            const sigma = Math.sqrt(this._sigmas[i] * this._sigmas[i] - this._sigmas[i - 1] * this._sigmas[i - 1]);
+            const poleAxis = _axisDirections2[(i - 1) % _axisDirections2.length];
+            this._blur(cubeUVRenderTarget, i - 1, i, sigma, poleAxis);
           }
           renderer.autoClear = autoClear;
         }
@@ -48420,18 +48420,18 @@ You can use close({ resize: true }) to resize header`);
           }
           const weights = [];
           let sum = 0;
-          for (let i2 = 0; i2 < MAX_SAMPLES2; ++i2) {
-            const x2 = i2 / sigmaPixels;
+          for (let i = 0; i < MAX_SAMPLES2; ++i) {
+            const x2 = i / sigmaPixels;
             const weight = Math.exp(-x2 * x2 / 2);
             weights.push(weight);
-            if (i2 === 0) {
+            if (i === 0) {
               sum += weight;
-            } else if (i2 < samples) {
+            } else if (i < samples) {
               sum += 2 * weight;
             }
           }
-          for (let i2 = 0; i2 < weights.length; i2++) {
-            weights[i2] = weights[i2] / sum;
+          for (let i = 0; i < weights.length; i++) {
+            weights[i] = weights[i] / sum;
           }
           blurUniforms["envMap"].value = targetIn.texture;
           blurUniforms["samples"].value = samples;
@@ -48457,13 +48457,13 @@ You can use close({ resize: true }) to resize header`);
         const sigmas = [];
         let lod = lodMax;
         const totalLods = lodMax - LOD_MIN2 + 1 + EXTRA_LOD_SIGMA2.length;
-        for (let i2 = 0; i2 < totalLods; i2++) {
+        for (let i = 0; i < totalLods; i++) {
           const sizeLod = Math.pow(2, lod);
           sizeLods.push(sizeLod);
           let sigma = 1 / sizeLod;
-          if (i2 > lodMax - LOD_MIN2) {
-            sigma = EXTRA_LOD_SIGMA2[i2 - lodMax + LOD_MIN2 - 1];
-          } else if (i2 === 0) {
+          if (i > lodMax - LOD_MIN2) {
+            sigma = EXTRA_LOD_SIGMA2[i - lodMax + LOD_MIN2 - 1];
+          } else if (i === 0) {
             sigma = 0;
           }
           sigmas.push(sigma);
@@ -48790,8 +48790,8 @@ You can use close({ resize: true }) to resize header`);
         function isCubeTextureComplete(image) {
           let count = 0;
           const length3 = 6;
-          for (let i2 = 0; i2 < length3; i2++) {
-            if (image[i2] !== void 0)
+          for (let i = 0; i < length3; i++) {
+            if (image[i] !== void 0)
               count++;
           }
           return count === length3;
@@ -48886,8 +48886,8 @@ You can use close({ resize: true }) to resize header`);
           }
           for (const name in geometry.morphAttributes) {
             const array = geometry.morphAttributes[name];
-            for (let i2 = 0, l2 = array.length; i2 < l2; i2++) {
-              attributes.remove(array[i2]);
+            for (let i = 0, l = array.length; i < l; i++) {
+              attributes.remove(array[i]);
             }
           }
           geometry.removeEventListener("dispose", onGeometryDispose);
@@ -48919,8 +48919,8 @@ You can use close({ resize: true }) to resize header`);
           const morphAttributes = geometry.morphAttributes;
           for (const name in morphAttributes) {
             const array = morphAttributes[name];
-            for (let i2 = 0, l2 = array.length; i2 < l2; i2++) {
-              attributes.update(array[i2], gl.ARRAY_BUFFER);
+            for (let i = 0, l = array.length; i < l; i++) {
+              attributes.update(array[i], gl.ARRAY_BUFFER);
             }
           }
         }
@@ -48932,20 +48932,20 @@ You can use close({ resize: true }) to resize header`);
           if (geometryIndex !== null) {
             const array = geometryIndex.array;
             version = geometryIndex.version;
-            for (let i2 = 0, l2 = array.length; i2 < l2; i2 += 3) {
-              const a2 = array[i2 + 0];
-              const b = array[i2 + 1];
-              const c2 = array[i2 + 2];
-              indices.push(a2, b, b, c2, c2, a2);
+            for (let i = 0, l = array.length; i < l; i += 3) {
+              const a = array[i + 0];
+              const b = array[i + 1];
+              const c = array[i + 2];
+              indices.push(a, b, b, c, c, a);
             }
           } else if (geometryPosition !== void 0) {
             const array = geometryPosition.array;
             version = geometryPosition.version;
-            for (let i2 = 0, l2 = array.length / 3 - 1; i2 < l2; i2 += 3) {
-              const a2 = i2 + 0;
-              const b = i2 + 1;
-              const c2 = i2 + 2;
-              indices.push(a2, b, b, c2, c2, a2);
+            for (let i = 0, l = array.length / 3 - 1; i < l; i += 3) {
+              const a = i + 0;
+              const b = i + 1;
+              const c = i + 2;
+              indices.push(a, b, b, c, c, a);
             }
           } else {
             return;
@@ -49065,11 +49065,11 @@ You can use close({ resize: true }) to resize header`);
           update
         };
       }
-      function numericalSort2(a2, b) {
-        return a2[0] - b[0];
+      function numericalSort2(a, b) {
+        return a[0] - b[0];
       }
-      function absNumericalSort2(a2, b) {
-        return Math.abs(b[1]) - Math.abs(a2[1]);
+      function absNumericalSort2(a, b) {
+        return Math.abs(b[1]) - Math.abs(a[1]);
       }
       function WebGLMorphtargets2(gl, capabilities, textures) {
         const influencesList = {};
@@ -49077,8 +49077,8 @@ You can use close({ resize: true }) to resize header`);
         const morphTextures = /* @__PURE__ */ new WeakMap();
         const morph = new Vector42();
         const workInfluences = [];
-        for (let i2 = 0; i2 < 8; i2++) {
-          workInfluences[i2] = [i2, 0];
+        for (let i = 0; i < 8; i++) {
+          workInfluences[i] = [i, 0];
         }
         function update(object, geometry, program) {
           const objectInfluences = object.morphTargetInfluences;
@@ -49118,11 +49118,11 @@ You can use close({ resize: true }) to resize header`);
               texture.type = FloatType2;
               texture.needsUpdate = true;
               const vertexDataStride = vertexDataCount * 4;
-              for (let i2 = 0; i2 < morphTargetsCount; i2++) {
-                const morphTarget = morphTargets[i2];
-                const morphNormal = morphNormals[i2];
-                const morphColor = morphColors[i2];
-                const offset = width * height * 4 * i2;
+              for (let i = 0; i < morphTargetsCount; i++) {
+                const morphTarget = morphTargets[i];
+                const morphNormal = morphNormals[i];
+                const morphColor = morphColors[i];
+                const offset = width * height * 4 * i;
                 for (let j = 0; j < morphTarget.count; j++) {
                   const stride = j * vertexDataStride;
                   if (hasMorphPosition === true) {
@@ -49157,8 +49157,8 @@ You can use close({ resize: true }) to resize header`);
               geometry.addEventListener("dispose", disposeTexture);
             }
             let morphInfluencesSum = 0;
-            for (let i2 = 0; i2 < objectInfluences.length; i2++) {
-              morphInfluencesSum += objectInfluences[i2];
+            for (let i = 0; i < objectInfluences.length; i++) {
+              morphInfluencesSum += objectInfluences[i];
             }
             const morphBaseInfluence = geometry.morphTargetsRelative ? 1 : 1 - morphInfluencesSum;
             program.getUniforms().setValue(gl, "morphTargetBaseInfluence", morphBaseInfluence);
@@ -49170,51 +49170,51 @@ You can use close({ resize: true }) to resize header`);
             let influences = influencesList[geometry.id];
             if (influences === void 0 || influences.length !== length3) {
               influences = [];
-              for (let i2 = 0; i2 < length3; i2++) {
-                influences[i2] = [i2, 0];
+              for (let i = 0; i < length3; i++) {
+                influences[i] = [i, 0];
               }
               influencesList[geometry.id] = influences;
             }
-            for (let i2 = 0; i2 < length3; i2++) {
-              const influence = influences[i2];
-              influence[0] = i2;
-              influence[1] = objectInfluences[i2];
+            for (let i = 0; i < length3; i++) {
+              const influence = influences[i];
+              influence[0] = i;
+              influence[1] = objectInfluences[i];
             }
             influences.sort(absNumericalSort2);
-            for (let i2 = 0; i2 < 8; i2++) {
-              if (i2 < length3 && influences[i2][1]) {
-                workInfluences[i2][0] = influences[i2][0];
-                workInfluences[i2][1] = influences[i2][1];
+            for (let i = 0; i < 8; i++) {
+              if (i < length3 && influences[i][1]) {
+                workInfluences[i][0] = influences[i][0];
+                workInfluences[i][1] = influences[i][1];
               } else {
-                workInfluences[i2][0] = Number.MAX_SAFE_INTEGER;
-                workInfluences[i2][1] = 0;
+                workInfluences[i][0] = Number.MAX_SAFE_INTEGER;
+                workInfluences[i][1] = 0;
               }
             }
             workInfluences.sort(numericalSort2);
             const morphTargets = geometry.morphAttributes.position;
             const morphNormals = geometry.morphAttributes.normal;
             let morphInfluencesSum = 0;
-            for (let i2 = 0; i2 < 8; i2++) {
-              const influence = workInfluences[i2];
+            for (let i = 0; i < 8; i++) {
+              const influence = workInfluences[i];
               const index = influence[0];
               const value = influence[1];
               if (index !== Number.MAX_SAFE_INTEGER && value) {
-                if (morphTargets && geometry.getAttribute("morphTarget" + i2) !== morphTargets[index]) {
-                  geometry.setAttribute("morphTarget" + i2, morphTargets[index]);
+                if (morphTargets && geometry.getAttribute("morphTarget" + i) !== morphTargets[index]) {
+                  geometry.setAttribute("morphTarget" + i, morphTargets[index]);
                 }
-                if (morphNormals && geometry.getAttribute("morphNormal" + i2) !== morphNormals[index]) {
-                  geometry.setAttribute("morphNormal" + i2, morphNormals[index]);
+                if (morphNormals && geometry.getAttribute("morphNormal" + i) !== morphNormals[index]) {
+                  geometry.setAttribute("morphNormal" + i, morphNormals[index]);
                 }
-                morphInfluences[i2] = value;
+                morphInfluences[i] = value;
                 morphInfluencesSum += value;
               } else {
-                if (morphTargets && geometry.hasAttribute("morphTarget" + i2) === true) {
-                  geometry.deleteAttribute("morphTarget" + i2);
+                if (morphTargets && geometry.hasAttribute("morphTarget" + i) === true) {
+                  geometry.deleteAttribute("morphTarget" + i);
                 }
-                if (morphNormals && geometry.hasAttribute("morphNormal" + i2) === true) {
-                  geometry.deleteAttribute("morphNormal" + i2);
+                if (morphNormals && geometry.hasAttribute("morphNormal" + i) === true) {
+                  geometry.deleteAttribute("morphNormal" + i);
                 }
-                morphInfluences[i2] = 0;
+                morphInfluences[i] = 0;
               }
             }
             const morphBaseInfluence = geometry.morphTargetsRelative ? 1 : 1 - morphInfluencesSum;
@@ -49285,45 +49285,45 @@ You can use close({ resize: true }) to resize header`);
         const firstElem = array[0];
         if (firstElem <= 0 || firstElem > 0)
           return array;
-        const n2 = nBlocks * blockSize;
-        let r2 = arrayCacheF322[n2];
-        if (r2 === void 0) {
-          r2 = new Float32Array(n2);
-          arrayCacheF322[n2] = r2;
+        const n = nBlocks * blockSize;
+        let r = arrayCacheF322[n];
+        if (r === void 0) {
+          r = new Float32Array(n);
+          arrayCacheF322[n] = r;
         }
         if (nBlocks !== 0) {
-          firstElem.toArray(r2, 0);
-          for (let i2 = 1, offset = 0; i2 !== nBlocks; ++i2) {
+          firstElem.toArray(r, 0);
+          for (let i = 1, offset = 0; i !== nBlocks; ++i) {
             offset += blockSize;
-            array[i2].toArray(r2, offset);
+            array[i].toArray(r, offset);
           }
         }
-        return r2;
+        return r;
       }
-      function arraysEqual2(a2, b) {
-        if (a2.length !== b.length)
+      function arraysEqual2(a, b) {
+        if (a.length !== b.length)
           return false;
-        for (let i2 = 0, l2 = a2.length; i2 < l2; i2++) {
-          if (a2[i2] !== b[i2])
+        for (let i = 0, l = a.length; i < l; i++) {
+          if (a[i] !== b[i])
             return false;
         }
         return true;
       }
-      function copyArray2(a2, b) {
-        for (let i2 = 0, l2 = b.length; i2 < l2; i2++) {
-          a2[i2] = b[i2];
+      function copyArray2(a, b) {
+        for (let i = 0, l = b.length; i < l; i++) {
+          a[i] = b[i];
         }
       }
-      function allocTexUnits2(textures, n2) {
-        let r2 = arrayCacheI322[n2];
-        if (r2 === void 0) {
-          r2 = new Int32Array(n2);
-          arrayCacheI322[n2] = r2;
+      function allocTexUnits2(textures, n) {
+        let r = arrayCacheI322[n];
+        if (r === void 0) {
+          r = new Int32Array(n);
+          arrayCacheI322[n] = r;
         }
-        for (let i2 = 0; i2 !== n2; ++i2) {
-          r2[i2] = textures.allocateTextureUnit();
+        for (let i = 0; i !== n; ++i) {
+          r[i] = textures.allocateTextureUnit();
         }
-        return r2;
+        return r;
       }
       function setValueV1f2(gl, v) {
         const cache3 = this.cache;
@@ -49692,50 +49692,50 @@ You can use close({ resize: true }) to resize header`);
       }
       function setValueT1Array2(gl, v, textures) {
         const cache3 = this.cache;
-        const n2 = v.length;
-        const units = allocTexUnits2(textures, n2);
+        const n = v.length;
+        const units = allocTexUnits2(textures, n);
         if (!arraysEqual2(cache3, units)) {
           gl.uniform1iv(this.addr, units);
           copyArray2(cache3, units);
         }
-        for (let i2 = 0; i2 !== n2; ++i2) {
-          textures.setTexture2D(v[i2] || emptyTexture2, units[i2]);
+        for (let i = 0; i !== n; ++i) {
+          textures.setTexture2D(v[i] || emptyTexture2, units[i]);
         }
       }
       function setValueT3DArray2(gl, v, textures) {
         const cache3 = this.cache;
-        const n2 = v.length;
-        const units = allocTexUnits2(textures, n2);
+        const n = v.length;
+        const units = allocTexUnits2(textures, n);
         if (!arraysEqual2(cache3, units)) {
           gl.uniform1iv(this.addr, units);
           copyArray2(cache3, units);
         }
-        for (let i2 = 0; i2 !== n2; ++i2) {
-          textures.setTexture3D(v[i2] || empty3dTexture2, units[i2]);
+        for (let i = 0; i !== n; ++i) {
+          textures.setTexture3D(v[i] || empty3dTexture2, units[i]);
         }
       }
       function setValueT6Array2(gl, v, textures) {
         const cache3 = this.cache;
-        const n2 = v.length;
-        const units = allocTexUnits2(textures, n2);
+        const n = v.length;
+        const units = allocTexUnits2(textures, n);
         if (!arraysEqual2(cache3, units)) {
           gl.uniform1iv(this.addr, units);
           copyArray2(cache3, units);
         }
-        for (let i2 = 0; i2 !== n2; ++i2) {
-          textures.setTextureCube(v[i2] || emptyCubeTexture2, units[i2]);
+        for (let i = 0; i !== n; ++i) {
+          textures.setTextureCube(v[i] || emptyCubeTexture2, units[i]);
         }
       }
       function setValueT2DArrayArray2(gl, v, textures) {
         const cache3 = this.cache;
-        const n2 = v.length;
-        const units = allocTexUnits2(textures, n2);
+        const n = v.length;
+        const units = allocTexUnits2(textures, n);
         if (!arraysEqual2(cache3, units)) {
           gl.uniform1iv(this.addr, units);
           copyArray2(cache3, units);
         }
-        for (let i2 = 0; i2 !== n2; ++i2) {
-          textures.setTexture2DArray(v[i2] || emptyArrayTexture2, units[i2]);
+        for (let i = 0; i !== n; ++i) {
+          textures.setTexture2DArray(v[i] || emptyArrayTexture2, units[i]);
         }
       }
       function getPureArraySetter2(type) {
@@ -49821,9 +49821,9 @@ You can use close({ resize: true }) to resize header`);
         }
         setValue(gl, value, textures) {
           const seq = this.seq;
-          for (let i2 = 0, n2 = seq.length; i2 !== n2; ++i2) {
-            const u2 = seq[i2];
-            u2.setValue(gl, value[u2.id], textures);
+          for (let i = 0, n = seq.length; i !== n; ++i) {
+            const u = seq[i];
+            u.setValue(gl, value[u.id], textures);
           }
         }
       };
@@ -49859,16 +49859,16 @@ You can use close({ resize: true }) to resize header`);
         constructor(gl, program) {
           this.seq = [];
           this.map = {};
-          const n2 = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
-          for (let i2 = 0; i2 < n2; ++i2) {
-            const info = gl.getActiveUniform(program, i2), addr = gl.getUniformLocation(program, info.name);
+          const n = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
+          for (let i = 0; i < n; ++i) {
+            const info = gl.getActiveUniform(program, i), addr = gl.getUniformLocation(program, info.name);
             parseUniform2(info, addr, this);
           }
         }
         setValue(gl, name, value, textures) {
-          const u2 = this.map[name];
-          if (u2 !== void 0)
-            u2.setValue(gl, value, textures);
+          const u = this.map[name];
+          if (u !== void 0)
+            u.setValue(gl, value, textures);
         }
         setOptional(gl, object, name) {
           const v = object[name];
@@ -49876,21 +49876,21 @@ You can use close({ resize: true }) to resize header`);
             this.setValue(gl, name, v);
         }
         static upload(gl, seq, values, textures) {
-          for (let i2 = 0, n2 = seq.length; i2 !== n2; ++i2) {
-            const u2 = seq[i2], v = values[u2.id];
+          for (let i = 0, n = seq.length; i !== n; ++i) {
+            const u = seq[i], v = values[u.id];
             if (v.needsUpdate !== false) {
-              u2.setValue(gl, v.value, textures);
+              u.setValue(gl, v.value, textures);
             }
           }
         }
         static seqWithValue(seq, values) {
-          const r2 = [];
-          for (let i2 = 0, n2 = seq.length; i2 !== n2; ++i2) {
-            const u2 = seq[i2];
-            if (u2.id in values)
-              r2.push(u2);
+          const r = [];
+          for (let i = 0, n = seq.length; i !== n; ++i) {
+            const u = seq[i];
+            if (u.id in values)
+              r.push(u);
           }
-          return r2;
+          return r;
         }
       };
       function WebGLShader2(gl, type, string) {
@@ -49905,9 +49905,9 @@ You can use close({ resize: true }) to resize header`);
         const lines2 = [];
         const from3 = Math.max(errorLine - 6, 0);
         const to = Math.min(errorLine + 6, lines.length);
-        for (let i2 = from3; i2 < to; i2++) {
-          const line = i2 + 1;
-          lines2.push(`${line === errorLine ? ">" : " "} ${line}: ${lines[i2]}`);
+        for (let i = from3; i < to; i++) {
+          const line = i + 1;
+          lines2.push(`${line === errorLine ? ">" : " "} ${line}: ${lines[i]}`);
         }
         return lines2.join("\n");
       }
@@ -49984,9 +49984,9 @@ You can use close({ resize: true }) to resize header`);
       }
       function fetchAttributeLocations2(gl, program) {
         const attributes = {};
-        const n2 = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
-        for (let i2 = 0; i2 < n2; i2++) {
-          const info = gl.getActiveAttrib(program, i2);
+        const n = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
+        for (let i = 0; i < n; i++) {
+          const info = gl.getActiveAttrib(program, i);
           const name = info.name;
           let locationSize = 1;
           if (info.type === gl.FLOAT_MAT2)
@@ -50044,8 +50044,8 @@ You can use close({ resize: true }) to resize header`);
       }
       function loopReplacer2(match, start, end, snippet) {
         let string = "";
-        for (let i2 = parseInt(start); i2 < parseInt(end); i2++) {
-          string += snippet.replace(/\[\s*i\s*\]/g, "[ " + i2 + " ]").replace(/UNROLLED_LOOP_INDEX/g, i2);
+        for (let i = parseInt(start); i < parseInt(end); i++) {
+          string += snippet.replace(/\[\s*i\s*\]/g, "[ " + i + " ]").replace(/UNROLLED_LOOP_INDEX/g, i);
         }
         return string;
       }
@@ -50971,8 +50971,8 @@ You can use close({ resize: true }) to resize header`);
         }
         function acquireProgram(parameters, cacheKey) {
           let program;
-          for (let p2 = 0, pl = programs.length; p2 < pl; p2++) {
-            const preexistingProgram = programs[p2];
+          for (let p = 0, pl = programs.length; p < pl; p++) {
+            const preexistingProgram = programs[p];
             if (preexistingProgram.cacheKey === cacheKey) {
               program = preexistingProgram;
               ++program.usedTimes;
@@ -50987,8 +50987,8 @@ You can use close({ resize: true }) to resize header`);
         }
         function releaseProgram(program) {
           if (--program.usedTimes === 0) {
-            const i2 = programs.indexOf(program);
-            programs[i2] = programs[programs.length - 1];
+            const i = programs.indexOf(program);
+            programs[i] = programs[programs.length - 1];
             programs.pop();
             program.destroy();
           }
@@ -51037,28 +51037,28 @@ You can use close({ resize: true }) to resize header`);
           dispose
         };
       }
-      function painterSortStable2(a2, b) {
-        if (a2.groupOrder !== b.groupOrder) {
-          return a2.groupOrder - b.groupOrder;
-        } else if (a2.renderOrder !== b.renderOrder) {
-          return a2.renderOrder - b.renderOrder;
-        } else if (a2.material.id !== b.material.id) {
-          return a2.material.id - b.material.id;
-        } else if (a2.z !== b.z) {
-          return a2.z - b.z;
+      function painterSortStable2(a, b) {
+        if (a.groupOrder !== b.groupOrder) {
+          return a.groupOrder - b.groupOrder;
+        } else if (a.renderOrder !== b.renderOrder) {
+          return a.renderOrder - b.renderOrder;
+        } else if (a.material.id !== b.material.id) {
+          return a.material.id - b.material.id;
+        } else if (a.z !== b.z) {
+          return a.z - b.z;
         } else {
-          return a2.id - b.id;
+          return a.id - b.id;
         }
       }
-      function reversePainterSortStable2(a2, b) {
-        if (a2.groupOrder !== b.groupOrder) {
-          return a2.groupOrder - b.groupOrder;
-        } else if (a2.renderOrder !== b.renderOrder) {
-          return a2.renderOrder - b.renderOrder;
-        } else if (a2.z !== b.z) {
-          return b.z - a2.z;
+      function reversePainterSortStable2(a, b) {
+        if (a.groupOrder !== b.groupOrder) {
+          return a.groupOrder - b.groupOrder;
+        } else if (a.renderOrder !== b.renderOrder) {
+          return a.renderOrder - b.renderOrder;
+        } else if (a.z !== b.z) {
+          return b.z - a.z;
         } else {
-          return a2.id - b.id;
+          return a.id - b.id;
         }
       }
       function WebGLRenderList2() {
@@ -51129,8 +51129,8 @@ You can use close({ resize: true }) to resize header`);
             transparent.sort(customTransparentSort || reversePainterSortStable2);
         }
         function finish() {
-          for (let i2 = renderItemsIndex, il = renderItems.length; i2 < il; i2++) {
-            const renderItem = renderItems[i2];
+          for (let i = renderItemsIndex, il = renderItems.length; i < il; i++) {
+            const renderItem = renderItems[i];
             if (renderItem.id === null)
               break;
             renderItem.id = null;
@@ -51314,15 +51314,15 @@ You can use close({ resize: true }) to resize header`);
           hemi: [],
           numSpotLightShadowsWithMaps: 0
         };
-        for (let i2 = 0; i2 < 9; i2++)
+        for (let i = 0; i < 9; i++)
           state.probe.push(new Vector32());
         const vector3 = new Vector32();
         const matrix4 = new Matrix42();
         const matrix42 = new Matrix42();
         function setup(lights, useLegacyLights) {
-          let r2 = 0, g2 = 0, b = 0;
-          for (let i2 = 0; i2 < 9; i2++)
-            state.probe[i2].set(0, 0, 0);
+          let r = 0, g = 0, b = 0;
+          for (let i = 0; i < 9; i++)
+            state.probe[i].set(0, 0, 0);
           let directionalLength = 0;
           let pointLength = 0;
           let spotLength = 0;
@@ -51335,15 +51335,15 @@ You can use close({ resize: true }) to resize header`);
           let numSpotShadowsWithMaps = 0;
           lights.sort(shadowCastingAndTexturingLightsFirst2);
           const scaleFactor = useLegacyLights === true ? Math.PI : 1;
-          for (let i2 = 0, l2 = lights.length; i2 < l2; i2++) {
-            const light = lights[i2];
+          for (let i = 0, l = lights.length; i < l; i++) {
+            const light = lights[i];
             const color = light.color;
             const intensity = light.intensity;
             const distance = light.distance;
             const shadowMap = light.shadow && light.shadow.map ? light.shadow.map.texture : null;
             if (light.isAmbientLight) {
-              r2 += color.r * intensity * scaleFactor;
-              g2 += color.g * intensity * scaleFactor;
+              r += color.r * intensity * scaleFactor;
+              g += color.g * intensity * scaleFactor;
               b += color.b * intensity * scaleFactor;
             } else if (light.isLightProbe) {
               for (let j = 0; j < 9; j++) {
@@ -51447,8 +51447,8 @@ You can use close({ resize: true }) to resize header`);
               }
             }
           }
-          state.ambient[0] = r2;
-          state.ambient[1] = g2;
+          state.ambient[0] = r;
+          state.ambient[1] = g;
           state.ambient[2] = b;
           const hash = state.hash;
           if (hash.directionalLength !== directionalLength || hash.pointLength !== pointLength || hash.spotLength !== spotLength || hash.rectAreaLength !== rectAreaLength || hash.hemiLength !== hemiLength || hash.numDirectionalShadows !== numDirectionalShadows || hash.numPointShadows !== numPointShadows || hash.numSpotShadows !== numSpotShadows || hash.numSpotMaps !== numSpotMaps) {
@@ -51487,8 +51487,8 @@ You can use close({ resize: true }) to resize header`);
           let rectAreaLength = 0;
           let hemiLength = 0;
           const viewMatrix = camera.matrixWorldInverse;
-          for (let i2 = 0, l2 = lights.length; i2 < l2; i2++) {
-            const light = lights[i2];
+          for (let i = 0, l = lights.length; i < l; i++) {
+            const light = lights[i];
             if (light.isDirectionalLight) {
               const uniforms = state.directional[directionalLength];
               uniforms.direction.setFromMatrixPosition(light.matrixWorld);
@@ -51699,8 +51699,8 @@ You can use close({ resize: true }) to resize header`);
           _state.setScissorTest(false);
           const toVSM = _previousType !== VSMShadowMap2 && this.type === VSMShadowMap2;
           const fromVSM = _previousType === VSMShadowMap2 && this.type !== VSMShadowMap2;
-          for (let i2 = 0, il = lights.length; i2 < il; i2++) {
-            const light = lights[i2];
+          for (let i = 0, il = lights.length; i < il; i++) {
+            const light = lights[i];
             const shadow = light.shadow;
             if (shadow === void 0) {
               console.warn("THREE.WebGLShadowMap:", light, "has no shadow.");
@@ -51854,8 +51854,8 @@ You can use close({ resize: true }) to resize header`);
             }
           }
           const children = object.children;
-          for (let i2 = 0, l2 = children.length; i2 < l2; i2++) {
-            renderObject(children[i2], camera, shadowCamera, light, type);
+          for (let i = 0, l = children.length; i < l; i++) {
+            renderObject(children[i], camera, shadowCamera, light, type);
           }
         }
       }
@@ -51876,15 +51876,15 @@ You can use close({ resize: true }) to resize header`);
             setLocked: function(lock) {
               locked = lock;
             },
-            setClear: function(r2, g2, b, a2, premultipliedAlpha) {
+            setClear: function(r, g, b, a, premultipliedAlpha) {
               if (premultipliedAlpha === true) {
-                r2 *= a2;
-                g2 *= a2;
-                b *= a2;
+                r *= a;
+                g *= a;
+                b *= a;
               }
-              color.set(r2, g2, b, a2);
+              color.set(r, g, b, a);
               if (currentColorClear.equals(color) === false) {
-                gl.clearColor(r2, g2, b, a2);
+                gl.clearColor(r, g, b, a);
                 currentColorClear.copy(color);
               }
             },
@@ -52075,11 +52075,11 @@ You can use close({ resize: true }) to resize header`);
           gl.bindTexture(type, texture);
           gl.texParameteri(type, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
           gl.texParameteri(type, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-          for (let i2 = 0; i2 < count; i2++) {
+          for (let i = 0; i < count; i++) {
             if (isWebGL2 && (type === gl.TEXTURE_3D || type === gl.TEXTURE_2D_ARRAY)) {
               gl.texImage3D(target2, 0, gl.RGBA, 1, 1, dimensions, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
             } else {
-              gl.texImage2D(target2 + i2, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+              gl.texImage2D(target2 + i, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
             }
           }
           return texture;
@@ -52140,8 +52140,8 @@ You can use close({ resize: true }) to resize header`);
             if (renderTarget.isWebGLMultipleRenderTargets) {
               const textures = renderTarget.texture;
               if (drawBuffers2.length !== textures.length || drawBuffers2[0] !== gl.COLOR_ATTACHMENT0) {
-                for (let i2 = 0, il = textures.length; i2 < il; i2++) {
-                  drawBuffers2[i2] = gl.COLOR_ATTACHMENT0 + i2;
+                for (let i = 0, il = textures.length; i < il; i++) {
+                  drawBuffers2[i] = gl.COLOR_ATTACHMENT0 + i;
                 }
                 drawBuffers2.length = textures.length;
                 needsUpdate = true;
@@ -52786,15 +52786,15 @@ You can use close({ resize: true }) to resize header`);
             renderTarget.depthTexture.dispose();
           }
           if (renderTarget.isWebGLCubeRenderTarget) {
-            for (let i2 = 0; i2 < 6; i2++) {
-              if (Array.isArray(renderTargetProperties.__webglFramebuffer[i2])) {
-                for (let level = 0; level < renderTargetProperties.__webglFramebuffer[i2].length; level++)
-                  _gl.deleteFramebuffer(renderTargetProperties.__webglFramebuffer[i2][level]);
+            for (let i = 0; i < 6; i++) {
+              if (Array.isArray(renderTargetProperties.__webglFramebuffer[i])) {
+                for (let level = 0; level < renderTargetProperties.__webglFramebuffer[i].length; level++)
+                  _gl.deleteFramebuffer(renderTargetProperties.__webglFramebuffer[i][level]);
               } else {
-                _gl.deleteFramebuffer(renderTargetProperties.__webglFramebuffer[i2]);
+                _gl.deleteFramebuffer(renderTargetProperties.__webglFramebuffer[i]);
               }
               if (renderTargetProperties.__webglDepthbuffer)
-                _gl.deleteRenderbuffer(renderTargetProperties.__webglDepthbuffer[i2]);
+                _gl.deleteRenderbuffer(renderTargetProperties.__webglDepthbuffer[i]);
             }
           } else {
             if (Array.isArray(renderTargetProperties.__webglFramebuffer)) {
@@ -52808,22 +52808,22 @@ You can use close({ resize: true }) to resize header`);
             if (renderTargetProperties.__webglMultisampledFramebuffer)
               _gl.deleteFramebuffer(renderTargetProperties.__webglMultisampledFramebuffer);
             if (renderTargetProperties.__webglColorRenderbuffer) {
-              for (let i2 = 0; i2 < renderTargetProperties.__webglColorRenderbuffer.length; i2++) {
-                if (renderTargetProperties.__webglColorRenderbuffer[i2])
-                  _gl.deleteRenderbuffer(renderTargetProperties.__webglColorRenderbuffer[i2]);
+              for (let i = 0; i < renderTargetProperties.__webglColorRenderbuffer.length; i++) {
+                if (renderTargetProperties.__webglColorRenderbuffer[i])
+                  _gl.deleteRenderbuffer(renderTargetProperties.__webglColorRenderbuffer[i]);
               }
             }
             if (renderTargetProperties.__webglDepthRenderbuffer)
               _gl.deleteRenderbuffer(renderTargetProperties.__webglDepthRenderbuffer);
           }
           if (renderTarget.isWebGLMultipleRenderTargets) {
-            for (let i2 = 0, il = texture.length; i2 < il; i2++) {
-              const attachmentProperties = properties.get(texture[i2]);
+            for (let i = 0, il = texture.length; i < il; i++) {
+              const attachmentProperties = properties.get(texture[i]);
               if (attachmentProperties.__webglTexture) {
                 _gl.deleteTexture(attachmentProperties.__webglTexture);
                 info.memory.textures--;
               }
-              properties.remove(texture[i2]);
+              properties.remove(texture[i]);
             }
           }
           properties.remove(texture);
@@ -53073,12 +53073,12 @@ You can use close({ resize: true }) to resize header`);
                 if (useTexStorage && allocateMemory) {
                   state.texStorage2D(_gl.TEXTURE_2D, levels, glInternalFormat, mipmaps[0].width, mipmaps[0].height);
                 }
-                for (let i2 = 0, il = mipmaps.length; i2 < il; i2++) {
-                  mipmap = mipmaps[i2];
+                for (let i = 0, il = mipmaps.length; i < il; i++) {
+                  mipmap = mipmaps[i];
                   if (useTexStorage) {
-                    state.texSubImage2D(_gl.TEXTURE_2D, i2, 0, 0, mipmap.width, mipmap.height, glFormat, glType, mipmap.data);
+                    state.texSubImage2D(_gl.TEXTURE_2D, i, 0, 0, mipmap.width, mipmap.height, glFormat, glType, mipmap.data);
                   } else {
-                    state.texImage2D(_gl.TEXTURE_2D, i2, glInternalFormat, mipmap.width, mipmap.height, 0, glFormat, glType, mipmap.data);
+                    state.texImage2D(_gl.TEXTURE_2D, i, glInternalFormat, mipmap.width, mipmap.height, 0, glFormat, glType, mipmap.data);
                   }
                 }
                 texture.generateMipmaps = false;
@@ -53097,23 +53097,23 @@ You can use close({ resize: true }) to resize header`);
                 if (useTexStorage && allocateMemory) {
                   state.texStorage3D(_gl.TEXTURE_2D_ARRAY, levels, glInternalFormat, mipmaps[0].width, mipmaps[0].height, image.depth);
                 }
-                for (let i2 = 0, il = mipmaps.length; i2 < il; i2++) {
-                  mipmap = mipmaps[i2];
+                for (let i = 0, il = mipmaps.length; i < il; i++) {
+                  mipmap = mipmaps[i];
                   if (texture.format !== RGBAFormat2) {
                     if (glFormat !== null) {
                       if (useTexStorage) {
-                        state.compressedTexSubImage3D(_gl.TEXTURE_2D_ARRAY, i2, 0, 0, 0, mipmap.width, mipmap.height, image.depth, glFormat, mipmap.data, 0, 0);
+                        state.compressedTexSubImage3D(_gl.TEXTURE_2D_ARRAY, i, 0, 0, 0, mipmap.width, mipmap.height, image.depth, glFormat, mipmap.data, 0, 0);
                       } else {
-                        state.compressedTexImage3D(_gl.TEXTURE_2D_ARRAY, i2, glInternalFormat, mipmap.width, mipmap.height, image.depth, 0, mipmap.data, 0, 0);
+                        state.compressedTexImage3D(_gl.TEXTURE_2D_ARRAY, i, glInternalFormat, mipmap.width, mipmap.height, image.depth, 0, mipmap.data, 0, 0);
                       }
                     } else {
                       console.warn("THREE.WebGLRenderer: Attempt to load unsupported compressed texture format in .uploadTexture()");
                     }
                   } else {
                     if (useTexStorage) {
-                      state.texSubImage3D(_gl.TEXTURE_2D_ARRAY, i2, 0, 0, 0, mipmap.width, mipmap.height, image.depth, glFormat, glType, mipmap.data);
+                      state.texSubImage3D(_gl.TEXTURE_2D_ARRAY, i, 0, 0, 0, mipmap.width, mipmap.height, image.depth, glFormat, glType, mipmap.data);
                     } else {
-                      state.texImage3D(_gl.TEXTURE_2D_ARRAY, i2, glInternalFormat, mipmap.width, mipmap.height, image.depth, 0, glFormat, glType, mipmap.data);
+                      state.texImage3D(_gl.TEXTURE_2D_ARRAY, i, glInternalFormat, mipmap.width, mipmap.height, image.depth, 0, glFormat, glType, mipmap.data);
                     }
                   }
                 }
@@ -53121,23 +53121,23 @@ You can use close({ resize: true }) to resize header`);
                 if (useTexStorage && allocateMemory) {
                   state.texStorage2D(_gl.TEXTURE_2D, levels, glInternalFormat, mipmaps[0].width, mipmaps[0].height);
                 }
-                for (let i2 = 0, il = mipmaps.length; i2 < il; i2++) {
-                  mipmap = mipmaps[i2];
+                for (let i = 0, il = mipmaps.length; i < il; i++) {
+                  mipmap = mipmaps[i];
                   if (texture.format !== RGBAFormat2) {
                     if (glFormat !== null) {
                       if (useTexStorage) {
-                        state.compressedTexSubImage2D(_gl.TEXTURE_2D, i2, 0, 0, mipmap.width, mipmap.height, glFormat, mipmap.data);
+                        state.compressedTexSubImage2D(_gl.TEXTURE_2D, i, 0, 0, mipmap.width, mipmap.height, glFormat, mipmap.data);
                       } else {
-                        state.compressedTexImage2D(_gl.TEXTURE_2D, i2, glInternalFormat, mipmap.width, mipmap.height, 0, mipmap.data);
+                        state.compressedTexImage2D(_gl.TEXTURE_2D, i, glInternalFormat, mipmap.width, mipmap.height, 0, mipmap.data);
                       }
                     } else {
                       console.warn("THREE.WebGLRenderer: Attempt to load unsupported compressed texture format in .uploadTexture()");
                     }
                   } else {
                     if (useTexStorage) {
-                      state.texSubImage2D(_gl.TEXTURE_2D, i2, 0, 0, mipmap.width, mipmap.height, glFormat, glType, mipmap.data);
+                      state.texSubImage2D(_gl.TEXTURE_2D, i, 0, 0, mipmap.width, mipmap.height, glFormat, glType, mipmap.data);
                     } else {
-                      state.texImage2D(_gl.TEXTURE_2D, i2, glInternalFormat, mipmap.width, mipmap.height, 0, glFormat, glType, mipmap.data);
+                      state.texImage2D(_gl.TEXTURE_2D, i, glInternalFormat, mipmap.width, mipmap.height, 0, glFormat, glType, mipmap.data);
                     }
                   }
                 }
@@ -53166,8 +53166,8 @@ You can use close({ resize: true }) to resize header`);
                   state.texStorage2D(_gl.TEXTURE_2D, levels, glInternalFormat, image.width, image.height);
                 } else {
                   let width = image.width, height = image.height;
-                  for (let i2 = 0; i2 < levels; i2++) {
-                    state.texImage2D(_gl.TEXTURE_2D, i2, glInternalFormat, width, height, 0, glFormat, glType, null);
+                  for (let i = 0; i < levels; i++) {
+                    state.texImage2D(_gl.TEXTURE_2D, i, glInternalFormat, width, height, 0, glFormat, glType, null);
                     width >>= 1;
                     height >>= 1;
                   }
@@ -53178,12 +53178,12 @@ You can use close({ resize: true }) to resize header`);
                 if (useTexStorage && allocateMemory) {
                   state.texStorage2D(_gl.TEXTURE_2D, levels, glInternalFormat, mipmaps[0].width, mipmaps[0].height);
                 }
-                for (let i2 = 0, il = mipmaps.length; i2 < il; i2++) {
-                  mipmap = mipmaps[i2];
+                for (let i = 0, il = mipmaps.length; i < il; i++) {
+                  mipmap = mipmaps[i];
                   if (useTexStorage) {
-                    state.texSubImage2D(_gl.TEXTURE_2D, i2, 0, 0, glFormat, glType, mipmap);
+                    state.texSubImage2D(_gl.TEXTURE_2D, i, 0, 0, glFormat, glType, mipmap);
                   } else {
-                    state.texImage2D(_gl.TEXTURE_2D, i2, glInternalFormat, glFormat, glType, mipmap);
+                    state.texImage2D(_gl.TEXTURE_2D, i, glInternalFormat, glFormat, glType, mipmap);
                   }
                 }
                 texture.generateMipmaps = false;
@@ -53223,13 +53223,13 @@ You can use close({ resize: true }) to resize header`);
             const isCompressed = texture.isCompressedTexture || texture.image[0].isCompressedTexture;
             const isDataTexture = texture.image[0] && texture.image[0].isDataTexture;
             const cubeImage = [];
-            for (let i2 = 0; i2 < 6; i2++) {
+            for (let i = 0; i < 6; i++) {
               if (!isCompressed && !isDataTexture) {
-                cubeImage[i2] = resizeImage(texture.image[i2], false, true, maxCubemapSize);
+                cubeImage[i] = resizeImage(texture.image[i], false, true, maxCubemapSize);
               } else {
-                cubeImage[i2] = isDataTexture ? texture.image[i2].image : texture.image[i2];
+                cubeImage[i] = isDataTexture ? texture.image[i].image : texture.image[i];
               }
-              cubeImage[i2] = verifyColorSpace(texture, cubeImage[i2]);
+              cubeImage[i] = verifyColorSpace(texture, cubeImage[i]);
             }
             const image = cubeImage[0], supportsMips = isPowerOfTwo$1(image) || isWebGL2, glFormat = utils.convert(texture.format, texture.colorSpace), glType = utils.convert(texture.type), glInternalFormat = getInternalFormat(texture.internalFormat, glFormat, glType, texture.colorSpace);
             const useTexStorage = isWebGL2 && texture.isVideoTexture !== true;
@@ -53241,25 +53241,25 @@ You can use close({ resize: true }) to resize header`);
               if (useTexStorage && allocateMemory) {
                 state.texStorage2D(_gl.TEXTURE_CUBE_MAP, levels, glInternalFormat, image.width, image.height);
               }
-              for (let i2 = 0; i2 < 6; i2++) {
-                mipmaps = cubeImage[i2].mipmaps;
+              for (let i = 0; i < 6; i++) {
+                mipmaps = cubeImage[i].mipmaps;
                 for (let j = 0; j < mipmaps.length; j++) {
                   const mipmap = mipmaps[j];
                   if (texture.format !== RGBAFormat2) {
                     if (glFormat !== null) {
                       if (useTexStorage) {
-                        state.compressedTexSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, j, 0, 0, mipmap.width, mipmap.height, glFormat, mipmap.data);
+                        state.compressedTexSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, j, 0, 0, mipmap.width, mipmap.height, glFormat, mipmap.data);
                       } else {
-                        state.compressedTexImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, j, glInternalFormat, mipmap.width, mipmap.height, 0, mipmap.data);
+                        state.compressedTexImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, j, glInternalFormat, mipmap.width, mipmap.height, 0, mipmap.data);
                       }
                     } else {
                       console.warn("THREE.WebGLRenderer: Attempt to load unsupported compressed texture format in .setTextureCube()");
                     }
                   } else {
                     if (useTexStorage) {
-                      state.texSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, j, 0, 0, mipmap.width, mipmap.height, glFormat, glType, mipmap.data);
+                      state.texSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, j, 0, 0, mipmap.width, mipmap.height, glFormat, glType, mipmap.data);
                     } else {
-                      state.texImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, j, glInternalFormat, mipmap.width, mipmap.height, 0, glFormat, glType, mipmap.data);
+                      state.texImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, j, glInternalFormat, mipmap.width, mipmap.height, 0, glFormat, glType, mipmap.data);
                     }
                   }
                 }
@@ -53271,34 +53271,34 @@ You can use close({ resize: true }) to resize header`);
                   levels++;
                 state.texStorage2D(_gl.TEXTURE_CUBE_MAP, levels, glInternalFormat, cubeImage[0].width, cubeImage[0].height);
               }
-              for (let i2 = 0; i2 < 6; i2++) {
+              for (let i = 0; i < 6; i++) {
                 if (isDataTexture) {
                   if (useTexStorage) {
-                    state.texSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, 0, 0, 0, cubeImage[i2].width, cubeImage[i2].height, glFormat, glType, cubeImage[i2].data);
+                    state.texSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, 0, 0, cubeImage[i].width, cubeImage[i].height, glFormat, glType, cubeImage[i].data);
                   } else {
-                    state.texImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, 0, glInternalFormat, cubeImage[i2].width, cubeImage[i2].height, 0, glFormat, glType, cubeImage[i2].data);
+                    state.texImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, glInternalFormat, cubeImage[i].width, cubeImage[i].height, 0, glFormat, glType, cubeImage[i].data);
                   }
                   for (let j = 0; j < mipmaps.length; j++) {
                     const mipmap = mipmaps[j];
-                    const mipmapImage = mipmap.image[i2].image;
+                    const mipmapImage = mipmap.image[i].image;
                     if (useTexStorage) {
-                      state.texSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, j + 1, 0, 0, mipmapImage.width, mipmapImage.height, glFormat, glType, mipmapImage.data);
+                      state.texSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, j + 1, 0, 0, mipmapImage.width, mipmapImage.height, glFormat, glType, mipmapImage.data);
                     } else {
-                      state.texImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, j + 1, glInternalFormat, mipmapImage.width, mipmapImage.height, 0, glFormat, glType, mipmapImage.data);
+                      state.texImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, j + 1, glInternalFormat, mipmapImage.width, mipmapImage.height, 0, glFormat, glType, mipmapImage.data);
                     }
                   }
                 } else {
                   if (useTexStorage) {
-                    state.texSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, 0, 0, 0, glFormat, glType, cubeImage[i2]);
+                    state.texSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, 0, 0, glFormat, glType, cubeImage[i]);
                   } else {
-                    state.texImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, 0, glInternalFormat, glFormat, glType, cubeImage[i2]);
+                    state.texImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, glInternalFormat, glFormat, glType, cubeImage[i]);
                   }
                   for (let j = 0; j < mipmaps.length; j++) {
                     const mipmap = mipmaps[j];
                     if (useTexStorage) {
-                      state.texSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, j + 1, 0, 0, glFormat, glType, mipmap.image[i2]);
+                      state.texSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, j + 1, 0, 0, glFormat, glType, mipmap.image[i]);
                     } else {
-                      state.texImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, j + 1, glInternalFormat, glFormat, glType, mipmap.image[i2]);
+                      state.texImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, j + 1, glInternalFormat, glFormat, glType, mipmap.image[i]);
                     }
                   }
                 }
@@ -53370,8 +53370,8 @@ You can use close({ resize: true }) to resize header`);
             _gl.framebufferRenderbuffer(_gl.FRAMEBUFFER, _gl.DEPTH_STENCIL_ATTACHMENT, _gl.RENDERBUFFER, renderbuffer);
           } else {
             const textures = renderTarget.isWebGLMultipleRenderTargets === true ? renderTarget.texture : [renderTarget.texture];
-            for (let i2 = 0; i2 < textures.length; i2++) {
-              const texture = textures[i2];
+            for (let i = 0; i < textures.length; i++) {
+              const texture = textures[i];
               const glFormat = utils.convert(texture.format, texture.colorSpace);
               const glType = utils.convert(texture.type);
               const glInternalFormat = getInternalFormat(texture.internalFormat, glFormat, glType, texture.colorSpace);
@@ -53429,10 +53429,10 @@ You can use close({ resize: true }) to resize header`);
           } else {
             if (isCube) {
               renderTargetProperties.__webglDepthbuffer = [];
-              for (let i2 = 0; i2 < 6; i2++) {
-                state.bindFramebuffer(_gl.FRAMEBUFFER, renderTargetProperties.__webglFramebuffer[i2]);
-                renderTargetProperties.__webglDepthbuffer[i2] = _gl.createRenderbuffer();
-                setupRenderBufferStorage(renderTargetProperties.__webglDepthbuffer[i2], renderTarget, false);
+              for (let i = 0; i < 6; i++) {
+                state.bindFramebuffer(_gl.FRAMEBUFFER, renderTargetProperties.__webglFramebuffer[i]);
+                renderTargetProperties.__webglDepthbuffer[i] = _gl.createRenderbuffer();
+                setupRenderBufferStorage(renderTargetProperties.__webglDepthbuffer[i], renderTarget, false);
               }
             } else {
               state.bindFramebuffer(_gl.FRAMEBUFFER, renderTargetProperties.__webglFramebuffer);
@@ -53468,14 +53468,14 @@ You can use close({ resize: true }) to resize header`);
           const supportsMips = isPowerOfTwo$1(renderTarget) || isWebGL2;
           if (isCube) {
             renderTargetProperties.__webglFramebuffer = [];
-            for (let i2 = 0; i2 < 6; i2++) {
+            for (let i = 0; i < 6; i++) {
               if (isWebGL2 && texture.mipmaps && texture.mipmaps.length > 0) {
-                renderTargetProperties.__webglFramebuffer[i2] = [];
+                renderTargetProperties.__webglFramebuffer[i] = [];
                 for (let level = 0; level < texture.mipmaps.length; level++) {
-                  renderTargetProperties.__webglFramebuffer[i2][level] = _gl.createFramebuffer();
+                  renderTargetProperties.__webglFramebuffer[i][level] = _gl.createFramebuffer();
                 }
               } else {
-                renderTargetProperties.__webglFramebuffer[i2] = _gl.createFramebuffer();
+                renderTargetProperties.__webglFramebuffer[i] = _gl.createFramebuffer();
               }
             }
           } else {
@@ -53490,8 +53490,8 @@ You can use close({ resize: true }) to resize header`);
             if (isMultipleRenderTargets) {
               if (capabilities.drawBuffers) {
                 const textures = renderTarget.texture;
-                for (let i2 = 0, il = textures.length; i2 < il; i2++) {
-                  const attachmentProperties = properties.get(textures[i2]);
+                for (let i = 0, il = textures.length; i < il; i++) {
+                  const attachmentProperties = properties.get(textures[i]);
                   if (attachmentProperties.__webglTexture === void 0) {
                     attachmentProperties.__webglTexture = _gl.createTexture();
                     info.memory.textures++;
@@ -53506,16 +53506,16 @@ You can use close({ resize: true }) to resize header`);
               renderTargetProperties.__webglMultisampledFramebuffer = _gl.createFramebuffer();
               renderTargetProperties.__webglColorRenderbuffer = [];
               state.bindFramebuffer(_gl.FRAMEBUFFER, renderTargetProperties.__webglMultisampledFramebuffer);
-              for (let i2 = 0; i2 < textures.length; i2++) {
-                const texture2 = textures[i2];
-                renderTargetProperties.__webglColorRenderbuffer[i2] = _gl.createRenderbuffer();
-                _gl.bindRenderbuffer(_gl.RENDERBUFFER, renderTargetProperties.__webglColorRenderbuffer[i2]);
+              for (let i = 0; i < textures.length; i++) {
+                const texture2 = textures[i];
+                renderTargetProperties.__webglColorRenderbuffer[i] = _gl.createRenderbuffer();
+                _gl.bindRenderbuffer(_gl.RENDERBUFFER, renderTargetProperties.__webglColorRenderbuffer[i]);
                 const glFormat = utils.convert(texture2.format, texture2.colorSpace);
                 const glType = utils.convert(texture2.type);
                 const glInternalFormat = getInternalFormat(texture2.internalFormat, glFormat, glType, texture2.colorSpace, renderTarget.isXRRenderTarget === true);
                 const samples = getRenderTargetSamples(renderTarget);
                 _gl.renderbufferStorageMultisample(_gl.RENDERBUFFER, samples, glInternalFormat, renderTarget.width, renderTarget.height);
-                _gl.framebufferRenderbuffer(_gl.FRAMEBUFFER, _gl.COLOR_ATTACHMENT0 + i2, _gl.RENDERBUFFER, renderTargetProperties.__webglColorRenderbuffer[i2]);
+                _gl.framebufferRenderbuffer(_gl.FRAMEBUFFER, _gl.COLOR_ATTACHMENT0 + i, _gl.RENDERBUFFER, renderTargetProperties.__webglColorRenderbuffer[i]);
               }
               _gl.bindRenderbuffer(_gl.RENDERBUFFER, null);
               if (renderTarget.depthBuffer) {
@@ -53528,13 +53528,13 @@ You can use close({ resize: true }) to resize header`);
           if (isCube) {
             state.bindTexture(_gl.TEXTURE_CUBE_MAP, textureProperties.__webglTexture);
             setTextureParameters(_gl.TEXTURE_CUBE_MAP, texture, supportsMips);
-            for (let i2 = 0; i2 < 6; i2++) {
+            for (let i = 0; i < 6; i++) {
               if (isWebGL2 && texture.mipmaps && texture.mipmaps.length > 0) {
                 for (let level = 0; level < texture.mipmaps.length; level++) {
-                  setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer[i2][level], renderTarget, texture, _gl.COLOR_ATTACHMENT0, _gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, level);
+                  setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer[i][level], renderTarget, texture, _gl.COLOR_ATTACHMENT0, _gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, level);
                 }
               } else {
-                setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer[i2], renderTarget, texture, _gl.COLOR_ATTACHMENT0, _gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, 0);
+                setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer[i], renderTarget, texture, _gl.COLOR_ATTACHMENT0, _gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0);
               }
             }
             if (textureNeedsGenerateMipmaps(texture, supportsMips)) {
@@ -53543,12 +53543,12 @@ You can use close({ resize: true }) to resize header`);
             state.unbindTexture();
           } else if (isMultipleRenderTargets) {
             const textures = renderTarget.texture;
-            for (let i2 = 0, il = textures.length; i2 < il; i2++) {
-              const attachment = textures[i2];
+            for (let i = 0, il = textures.length; i < il; i++) {
+              const attachment = textures[i];
               const attachmentProperties = properties.get(attachment);
               state.bindTexture(_gl.TEXTURE_2D, attachmentProperties.__webglTexture);
               setTextureParameters(_gl.TEXTURE_2D, attachment, supportsMips);
-              setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer, renderTarget, attachment, _gl.COLOR_ATTACHMENT0 + i2, _gl.TEXTURE_2D, 0);
+              setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer, renderTarget, attachment, _gl.COLOR_ATTACHMENT0 + i, _gl.TEXTURE_2D, 0);
               if (textureNeedsGenerateMipmaps(attachment, supportsMips)) {
                 generateMipmap(_gl.TEXTURE_2D);
               }
@@ -53584,8 +53584,8 @@ You can use close({ resize: true }) to resize header`);
         function updateRenderTargetMipmap(renderTarget) {
           const supportsMips = isPowerOfTwo$1(renderTarget) || isWebGL2;
           const textures = renderTarget.isWebGLMultipleRenderTargets === true ? renderTarget.texture : [renderTarget.texture];
-          for (let i2 = 0, il = textures.length; i2 < il; i2++) {
-            const texture = textures[i2];
+          for (let i = 0, il = textures.length; i < il; i++) {
+            const texture = textures[i];
             if (textureNeedsGenerateMipmaps(texture, supportsMips)) {
               const target2 = renderTarget.isWebGLCubeRenderTarget ? _gl.TEXTURE_CUBE_MAP : _gl.TEXTURE_2D;
               const webglTexture = properties.get(texture).__webglTexture;
@@ -53606,17 +53606,17 @@ You can use close({ resize: true }) to resize header`);
             const renderTargetProperties = properties.get(renderTarget);
             const isMultipleRenderTargets = renderTarget.isWebGLMultipleRenderTargets === true;
             if (isMultipleRenderTargets) {
-              for (let i2 = 0; i2 < textures.length; i2++) {
+              for (let i = 0; i < textures.length; i++) {
                 state.bindFramebuffer(_gl.FRAMEBUFFER, renderTargetProperties.__webglMultisampledFramebuffer);
-                _gl.framebufferRenderbuffer(_gl.FRAMEBUFFER, _gl.COLOR_ATTACHMENT0 + i2, _gl.RENDERBUFFER, null);
+                _gl.framebufferRenderbuffer(_gl.FRAMEBUFFER, _gl.COLOR_ATTACHMENT0 + i, _gl.RENDERBUFFER, null);
                 state.bindFramebuffer(_gl.FRAMEBUFFER, renderTargetProperties.__webglFramebuffer);
-                _gl.framebufferTexture2D(_gl.DRAW_FRAMEBUFFER, _gl.COLOR_ATTACHMENT0 + i2, _gl.TEXTURE_2D, null, 0);
+                _gl.framebufferTexture2D(_gl.DRAW_FRAMEBUFFER, _gl.COLOR_ATTACHMENT0 + i, _gl.TEXTURE_2D, null, 0);
               }
             }
             state.bindFramebuffer(_gl.READ_FRAMEBUFFER, renderTargetProperties.__webglMultisampledFramebuffer);
             state.bindFramebuffer(_gl.DRAW_FRAMEBUFFER, renderTargetProperties.__webglFramebuffer);
-            for (let i2 = 0; i2 < textures.length; i2++) {
-              invalidationArray.push(_gl.COLOR_ATTACHMENT0 + i2);
+            for (let i = 0; i < textures.length; i++) {
+              invalidationArray.push(_gl.COLOR_ATTACHMENT0 + i);
               if (renderTarget.depthBuffer) {
                 invalidationArray.push(depthStyle);
               }
@@ -53628,14 +53628,14 @@ You can use close({ resize: true }) to resize header`);
                   mask |= _gl.STENCIL_BUFFER_BIT;
               }
               if (isMultipleRenderTargets) {
-                _gl.framebufferRenderbuffer(_gl.READ_FRAMEBUFFER, _gl.COLOR_ATTACHMENT0, _gl.RENDERBUFFER, renderTargetProperties.__webglColorRenderbuffer[i2]);
+                _gl.framebufferRenderbuffer(_gl.READ_FRAMEBUFFER, _gl.COLOR_ATTACHMENT0, _gl.RENDERBUFFER, renderTargetProperties.__webglColorRenderbuffer[i]);
               }
               if (ignoreDepthValues === true) {
                 _gl.invalidateFramebuffer(_gl.READ_FRAMEBUFFER, [depthStyle]);
                 _gl.invalidateFramebuffer(_gl.DRAW_FRAMEBUFFER, [depthStyle]);
               }
               if (isMultipleRenderTargets) {
-                const webglTexture = properties.get(textures[i2]).__webglTexture;
+                const webglTexture = properties.get(textures[i]).__webglTexture;
                 _gl.framebufferTexture2D(_gl.DRAW_FRAMEBUFFER, _gl.COLOR_ATTACHMENT0, _gl.TEXTURE_2D, webglTexture, 0);
               }
               _gl.blitFramebuffer(0, 0, width, height, 0, 0, width, height, mask, _gl.NEAREST);
@@ -53646,12 +53646,12 @@ You can use close({ resize: true }) to resize header`);
             state.bindFramebuffer(_gl.READ_FRAMEBUFFER, null);
             state.bindFramebuffer(_gl.DRAW_FRAMEBUFFER, null);
             if (isMultipleRenderTargets) {
-              for (let i2 = 0; i2 < textures.length; i2++) {
+              for (let i = 0; i < textures.length; i++) {
                 state.bindFramebuffer(_gl.FRAMEBUFFER, renderTargetProperties.__webglMultisampledFramebuffer);
-                _gl.framebufferRenderbuffer(_gl.FRAMEBUFFER, _gl.COLOR_ATTACHMENT0 + i2, _gl.RENDERBUFFER, renderTargetProperties.__webglColorRenderbuffer[i2]);
-                const webglTexture = properties.get(textures[i2]).__webglTexture;
+                _gl.framebufferRenderbuffer(_gl.FRAMEBUFFER, _gl.COLOR_ATTACHMENT0 + i, _gl.RENDERBUFFER, renderTargetProperties.__webglColorRenderbuffer[i]);
+                const webglTexture = properties.get(textures[i]).__webglTexture;
                 state.bindFramebuffer(_gl.FRAMEBUFFER, renderTargetProperties.__webglFramebuffer);
-                _gl.framebufferTexture2D(_gl.DRAW_FRAMEBUFFER, _gl.COLOR_ATTACHMENT0 + i2, _gl.TEXTURE_2D, webglTexture, 0);
+                _gl.framebufferTexture2D(_gl.DRAW_FRAMEBUFFER, _gl.COLOR_ATTACHMENT0 + i, _gl.TEXTURE_2D, webglTexture, 0);
               }
             }
             state.bindFramebuffer(_gl.DRAW_FRAMEBUFFER, renderTargetProperties.__webglMultisampledFramebuffer);
@@ -53716,28 +53716,28 @@ You can use close({ resize: true }) to resize header`);
       var SRGBTransferFunction2 = 1;
       function WebGLUtils2(gl, extensions2, capabilities) {
         const isWebGL2 = capabilities.isWebGL2;
-        function convert(p2, colorSpace = NoColorSpace2) {
+        function convert(p, colorSpace = NoColorSpace2) {
           let extension;
           const transferFunction = colorSpace === SRGBColorSpace2 || colorSpace === DisplayP3ColorSpace2 ? SRGBTransferFunction2 : LinearTransferFunction2;
-          if (p2 === UnsignedByteType2)
+          if (p === UnsignedByteType2)
             return gl.UNSIGNED_BYTE;
-          if (p2 === UnsignedShort4444Type2)
+          if (p === UnsignedShort4444Type2)
             return gl.UNSIGNED_SHORT_4_4_4_4;
-          if (p2 === UnsignedShort5551Type2)
+          if (p === UnsignedShort5551Type2)
             return gl.UNSIGNED_SHORT_5_5_5_1;
-          if (p2 === ByteType2)
+          if (p === ByteType2)
             return gl.BYTE;
-          if (p2 === ShortType2)
+          if (p === ShortType2)
             return gl.SHORT;
-          if (p2 === UnsignedShortType2)
+          if (p === UnsignedShortType2)
             return gl.UNSIGNED_SHORT;
-          if (p2 === IntType2)
+          if (p === IntType2)
             return gl.INT;
-          if (p2 === UnsignedIntType2)
+          if (p === UnsignedIntType2)
             return gl.UNSIGNED_INT;
-          if (p2 === FloatType2)
+          if (p === FloatType2)
             return gl.FLOAT;
-          if (p2 === HalfFloatType2) {
+          if (p === HalfFloatType2) {
             if (isWebGL2)
               return gl.HALF_FLOAT;
             extension = extensions2.get("OES_texture_half_float");
@@ -53747,19 +53747,19 @@ You can use close({ resize: true }) to resize header`);
               return null;
             }
           }
-          if (p2 === AlphaFormat2)
+          if (p === AlphaFormat2)
             return gl.ALPHA;
-          if (p2 === RGBAFormat2)
+          if (p === RGBAFormat2)
             return gl.RGBA;
-          if (p2 === LuminanceFormat2)
+          if (p === LuminanceFormat2)
             return gl.LUMINANCE;
-          if (p2 === LuminanceAlphaFormat2)
+          if (p === LuminanceAlphaFormat2)
             return gl.LUMINANCE_ALPHA;
-          if (p2 === DepthFormat2)
+          if (p === DepthFormat2)
             return gl.DEPTH_COMPONENT;
-          if (p2 === DepthStencilFormat2)
+          if (p === DepthStencilFormat2)
             return gl.DEPTH_STENCIL;
-          if (p2 === _SRGBAFormat2) {
+          if (p === _SRGBAFormat2) {
             extension = extensions2.get("EXT_sRGB");
             if (extension !== null) {
               return extension.SRGB_ALPHA_EXT;
@@ -53767,27 +53767,27 @@ You can use close({ resize: true }) to resize header`);
               return null;
             }
           }
-          if (p2 === RedFormat2)
+          if (p === RedFormat2)
             return gl.RED;
-          if (p2 === RedIntegerFormat2)
+          if (p === RedIntegerFormat2)
             return gl.RED_INTEGER;
-          if (p2 === RGFormat2)
+          if (p === RGFormat2)
             return gl.RG;
-          if (p2 === RGIntegerFormat2)
+          if (p === RGIntegerFormat2)
             return gl.RG_INTEGER;
-          if (p2 === RGBAIntegerFormat2)
+          if (p === RGBAIntegerFormat2)
             return gl.RGBA_INTEGER;
-          if (p2 === RGB_S3TC_DXT1_Format2 || p2 === RGBA_S3TC_DXT1_Format2 || p2 === RGBA_S3TC_DXT3_Format2 || p2 === RGBA_S3TC_DXT5_Format2) {
+          if (p === RGB_S3TC_DXT1_Format2 || p === RGBA_S3TC_DXT1_Format2 || p === RGBA_S3TC_DXT3_Format2 || p === RGBA_S3TC_DXT5_Format2) {
             if (transferFunction === SRGBTransferFunction2) {
               extension = extensions2.get("WEBGL_compressed_texture_s3tc_srgb");
               if (extension !== null) {
-                if (p2 === RGB_S3TC_DXT1_Format2)
+                if (p === RGB_S3TC_DXT1_Format2)
                   return extension.COMPRESSED_SRGB_S3TC_DXT1_EXT;
-                if (p2 === RGBA_S3TC_DXT1_Format2)
+                if (p === RGBA_S3TC_DXT1_Format2)
                   return extension.COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT;
-                if (p2 === RGBA_S3TC_DXT3_Format2)
+                if (p === RGBA_S3TC_DXT3_Format2)
                   return extension.COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT;
-                if (p2 === RGBA_S3TC_DXT5_Format2)
+                if (p === RGBA_S3TC_DXT5_Format2)
                   return extension.COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
               } else {
                 return null;
@@ -53795,35 +53795,35 @@ You can use close({ resize: true }) to resize header`);
             } else {
               extension = extensions2.get("WEBGL_compressed_texture_s3tc");
               if (extension !== null) {
-                if (p2 === RGB_S3TC_DXT1_Format2)
+                if (p === RGB_S3TC_DXT1_Format2)
                   return extension.COMPRESSED_RGB_S3TC_DXT1_EXT;
-                if (p2 === RGBA_S3TC_DXT1_Format2)
+                if (p === RGBA_S3TC_DXT1_Format2)
                   return extension.COMPRESSED_RGBA_S3TC_DXT1_EXT;
-                if (p2 === RGBA_S3TC_DXT3_Format2)
+                if (p === RGBA_S3TC_DXT3_Format2)
                   return extension.COMPRESSED_RGBA_S3TC_DXT3_EXT;
-                if (p2 === RGBA_S3TC_DXT5_Format2)
+                if (p === RGBA_S3TC_DXT5_Format2)
                   return extension.COMPRESSED_RGBA_S3TC_DXT5_EXT;
               } else {
                 return null;
               }
             }
           }
-          if (p2 === RGB_PVRTC_4BPPV1_Format2 || p2 === RGB_PVRTC_2BPPV1_Format2 || p2 === RGBA_PVRTC_4BPPV1_Format2 || p2 === RGBA_PVRTC_2BPPV1_Format2) {
+          if (p === RGB_PVRTC_4BPPV1_Format2 || p === RGB_PVRTC_2BPPV1_Format2 || p === RGBA_PVRTC_4BPPV1_Format2 || p === RGBA_PVRTC_2BPPV1_Format2) {
             extension = extensions2.get("WEBGL_compressed_texture_pvrtc");
             if (extension !== null) {
-              if (p2 === RGB_PVRTC_4BPPV1_Format2)
+              if (p === RGB_PVRTC_4BPPV1_Format2)
                 return extension.COMPRESSED_RGB_PVRTC_4BPPV1_IMG;
-              if (p2 === RGB_PVRTC_2BPPV1_Format2)
+              if (p === RGB_PVRTC_2BPPV1_Format2)
                 return extension.COMPRESSED_RGB_PVRTC_2BPPV1_IMG;
-              if (p2 === RGBA_PVRTC_4BPPV1_Format2)
+              if (p === RGBA_PVRTC_4BPPV1_Format2)
                 return extension.COMPRESSED_RGBA_PVRTC_4BPPV1_IMG;
-              if (p2 === RGBA_PVRTC_2BPPV1_Format2)
+              if (p === RGBA_PVRTC_2BPPV1_Format2)
                 return extension.COMPRESSED_RGBA_PVRTC_2BPPV1_IMG;
             } else {
               return null;
             }
           }
-          if (p2 === RGB_ETC1_Format2) {
+          if (p === RGB_ETC1_Format2) {
             extension = extensions2.get("WEBGL_compressed_texture_etc1");
             if (extension !== null) {
               return extension.COMPRESSED_RGB_ETC1_WEBGL;
@@ -53831,81 +53831,81 @@ You can use close({ resize: true }) to resize header`);
               return null;
             }
           }
-          if (p2 === RGB_ETC2_Format2 || p2 === RGBA_ETC2_EAC_Format2) {
+          if (p === RGB_ETC2_Format2 || p === RGBA_ETC2_EAC_Format2) {
             extension = extensions2.get("WEBGL_compressed_texture_etc");
             if (extension !== null) {
-              if (p2 === RGB_ETC2_Format2)
+              if (p === RGB_ETC2_Format2)
                 return transferFunction === SRGBTransferFunction2 ? extension.COMPRESSED_SRGB8_ETC2 : extension.COMPRESSED_RGB8_ETC2;
-              if (p2 === RGBA_ETC2_EAC_Format2)
+              if (p === RGBA_ETC2_EAC_Format2)
                 return transferFunction === SRGBTransferFunction2 ? extension.COMPRESSED_SRGB8_ALPHA8_ETC2_EAC : extension.COMPRESSED_RGBA8_ETC2_EAC;
             } else {
               return null;
             }
           }
-          if (p2 === RGBA_ASTC_4x4_Format2 || p2 === RGBA_ASTC_5x4_Format2 || p2 === RGBA_ASTC_5x5_Format2 || p2 === RGBA_ASTC_6x5_Format2 || p2 === RGBA_ASTC_6x6_Format2 || p2 === RGBA_ASTC_8x5_Format2 || p2 === RGBA_ASTC_8x6_Format2 || p2 === RGBA_ASTC_8x8_Format2 || p2 === RGBA_ASTC_10x5_Format2 || p2 === RGBA_ASTC_10x6_Format2 || p2 === RGBA_ASTC_10x8_Format2 || p2 === RGBA_ASTC_10x10_Format2 || p2 === RGBA_ASTC_12x10_Format2 || p2 === RGBA_ASTC_12x12_Format2) {
+          if (p === RGBA_ASTC_4x4_Format2 || p === RGBA_ASTC_5x4_Format2 || p === RGBA_ASTC_5x5_Format2 || p === RGBA_ASTC_6x5_Format2 || p === RGBA_ASTC_6x6_Format2 || p === RGBA_ASTC_8x5_Format2 || p === RGBA_ASTC_8x6_Format2 || p === RGBA_ASTC_8x8_Format2 || p === RGBA_ASTC_10x5_Format2 || p === RGBA_ASTC_10x6_Format2 || p === RGBA_ASTC_10x8_Format2 || p === RGBA_ASTC_10x10_Format2 || p === RGBA_ASTC_12x10_Format2 || p === RGBA_ASTC_12x12_Format2) {
             extension = extensions2.get("WEBGL_compressed_texture_astc");
             if (extension !== null) {
-              if (p2 === RGBA_ASTC_4x4_Format2)
+              if (p === RGBA_ASTC_4x4_Format2)
                 return transferFunction === SRGBTransferFunction2 ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR : extension.COMPRESSED_RGBA_ASTC_4x4_KHR;
-              if (p2 === RGBA_ASTC_5x4_Format2)
+              if (p === RGBA_ASTC_5x4_Format2)
                 return transferFunction === SRGBTransferFunction2 ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR : extension.COMPRESSED_RGBA_ASTC_5x4_KHR;
-              if (p2 === RGBA_ASTC_5x5_Format2)
+              if (p === RGBA_ASTC_5x5_Format2)
                 return transferFunction === SRGBTransferFunction2 ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR : extension.COMPRESSED_RGBA_ASTC_5x5_KHR;
-              if (p2 === RGBA_ASTC_6x5_Format2)
+              if (p === RGBA_ASTC_6x5_Format2)
                 return transferFunction === SRGBTransferFunction2 ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR : extension.COMPRESSED_RGBA_ASTC_6x5_KHR;
-              if (p2 === RGBA_ASTC_6x6_Format2)
+              if (p === RGBA_ASTC_6x6_Format2)
                 return transferFunction === SRGBTransferFunction2 ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR : extension.COMPRESSED_RGBA_ASTC_6x6_KHR;
-              if (p2 === RGBA_ASTC_8x5_Format2)
+              if (p === RGBA_ASTC_8x5_Format2)
                 return transferFunction === SRGBTransferFunction2 ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR : extension.COMPRESSED_RGBA_ASTC_8x5_KHR;
-              if (p2 === RGBA_ASTC_8x6_Format2)
+              if (p === RGBA_ASTC_8x6_Format2)
                 return transferFunction === SRGBTransferFunction2 ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR : extension.COMPRESSED_RGBA_ASTC_8x6_KHR;
-              if (p2 === RGBA_ASTC_8x8_Format2)
+              if (p === RGBA_ASTC_8x8_Format2)
                 return transferFunction === SRGBTransferFunction2 ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR : extension.COMPRESSED_RGBA_ASTC_8x8_KHR;
-              if (p2 === RGBA_ASTC_10x5_Format2)
+              if (p === RGBA_ASTC_10x5_Format2)
                 return transferFunction === SRGBTransferFunction2 ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR : extension.COMPRESSED_RGBA_ASTC_10x5_KHR;
-              if (p2 === RGBA_ASTC_10x6_Format2)
+              if (p === RGBA_ASTC_10x6_Format2)
                 return transferFunction === SRGBTransferFunction2 ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR : extension.COMPRESSED_RGBA_ASTC_10x6_KHR;
-              if (p2 === RGBA_ASTC_10x8_Format2)
+              if (p === RGBA_ASTC_10x8_Format2)
                 return transferFunction === SRGBTransferFunction2 ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR : extension.COMPRESSED_RGBA_ASTC_10x8_KHR;
-              if (p2 === RGBA_ASTC_10x10_Format2)
+              if (p === RGBA_ASTC_10x10_Format2)
                 return transferFunction === SRGBTransferFunction2 ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR : extension.COMPRESSED_RGBA_ASTC_10x10_KHR;
-              if (p2 === RGBA_ASTC_12x10_Format2)
+              if (p === RGBA_ASTC_12x10_Format2)
                 return transferFunction === SRGBTransferFunction2 ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR : extension.COMPRESSED_RGBA_ASTC_12x10_KHR;
-              if (p2 === RGBA_ASTC_12x12_Format2)
+              if (p === RGBA_ASTC_12x12_Format2)
                 return transferFunction === SRGBTransferFunction2 ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR : extension.COMPRESSED_RGBA_ASTC_12x12_KHR;
             } else {
               return null;
             }
           }
-          if (p2 === RGBA_BPTC_Format2 || p2 === RGB_BPTC_SIGNED_Format2 || p2 === RGB_BPTC_UNSIGNED_Format2) {
+          if (p === RGBA_BPTC_Format2 || p === RGB_BPTC_SIGNED_Format2 || p === RGB_BPTC_UNSIGNED_Format2) {
             extension = extensions2.get("EXT_texture_compression_bptc");
             if (extension !== null) {
-              if (p2 === RGBA_BPTC_Format2)
+              if (p === RGBA_BPTC_Format2)
                 return transferFunction === SRGBTransferFunction2 ? extension.COMPRESSED_SRGB_ALPHA_BPTC_UNORM_EXT : extension.COMPRESSED_RGBA_BPTC_UNORM_EXT;
-              if (p2 === RGB_BPTC_SIGNED_Format2)
+              if (p === RGB_BPTC_SIGNED_Format2)
                 return extension.COMPRESSED_RGB_BPTC_SIGNED_FLOAT_EXT;
-              if (p2 === RGB_BPTC_UNSIGNED_Format2)
+              if (p === RGB_BPTC_UNSIGNED_Format2)
                 return extension.COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_EXT;
             } else {
               return null;
             }
           }
-          if (p2 === RED_RGTC1_Format2 || p2 === SIGNED_RED_RGTC1_Format2 || p2 === RED_GREEN_RGTC2_Format2 || p2 === SIGNED_RED_GREEN_RGTC2_Format2) {
+          if (p === RED_RGTC1_Format2 || p === SIGNED_RED_RGTC1_Format2 || p === RED_GREEN_RGTC2_Format2 || p === SIGNED_RED_GREEN_RGTC2_Format2) {
             extension = extensions2.get("EXT_texture_compression_rgtc");
             if (extension !== null) {
-              if (p2 === RGBA_BPTC_Format2)
+              if (p === RGBA_BPTC_Format2)
                 return extension.COMPRESSED_RED_RGTC1_EXT;
-              if (p2 === SIGNED_RED_RGTC1_Format2)
+              if (p === SIGNED_RED_RGTC1_Format2)
                 return extension.COMPRESSED_SIGNED_RED_RGTC1_EXT;
-              if (p2 === RED_GREEN_RGTC2_Format2)
+              if (p === RED_GREEN_RGTC2_Format2)
                 return extension.COMPRESSED_RED_GREEN_RGTC2_EXT;
-              if (p2 === SIGNED_RED_GREEN_RGTC2_Format2)
+              if (p === SIGNED_RED_GREEN_RGTC2_Format2)
                 return extension.COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT;
             } else {
               return null;
             }
           }
-          if (p2 === UnsignedInt248Type2) {
+          if (p === UnsignedInt248Type2) {
             if (isWebGL2)
               return gl.UNSIGNED_INT_24_8;
             extension = extensions2.get("WEBGL_depth_texture");
@@ -53915,7 +53915,7 @@ You can use close({ resize: true }) to resize header`);
               return null;
             }
           }
-          return gl[p2] !== void 0 ? gl[p2] : null;
+          return gl[p] !== void 0 ? gl[p] : null;
         }
         return { convert };
       }
@@ -54232,12 +54232,12 @@ You can use close({ resize: true }) to resize header`);
             session.removeEventListener("squeezeend", onSessionEvent);
             session.removeEventListener("end", onSessionEnd);
             session.removeEventListener("inputsourceschange", onInputSourcesChange);
-            for (let i2 = 0; i2 < controllers.length; i2++) {
-              const inputSource = controllerInputSources[i2];
+            for (let i = 0; i < controllers.length; i++) {
+              const inputSource = controllerInputSources[i];
               if (inputSource === null)
                 continue;
-              controllerInputSources[i2] = null;
-              controllers[i2].disconnect(inputSource);
+              controllerInputSources[i] = null;
+              controllers[i].disconnect(inputSource);
             }
             _currentDepthNear = null;
             _currentDepthFar = null;
@@ -54364,26 +54364,26 @@ You can use close({ resize: true }) to resize header`);
             }
           };
           function onInputSourcesChange(event) {
-            for (let i2 = 0; i2 < event.removed.length; i2++) {
-              const inputSource = event.removed[i2];
+            for (let i = 0; i < event.removed.length; i++) {
+              const inputSource = event.removed[i];
               const index = controllerInputSources.indexOf(inputSource);
               if (index >= 0) {
                 controllerInputSources[index] = null;
                 controllers[index].disconnect(inputSource);
               }
             }
-            for (let i2 = 0; i2 < event.added.length; i2++) {
-              const inputSource = event.added[i2];
+            for (let i = 0; i < event.added.length; i++) {
+              const inputSource = event.added[i];
               let controllerIndex = controllerInputSources.indexOf(inputSource);
               if (controllerIndex === -1) {
-                for (let i3 = 0; i3 < controllers.length; i3++) {
-                  if (i3 >= controllerInputSources.length) {
+                for (let i2 = 0; i2 < controllers.length; i2++) {
+                  if (i2 >= controllerInputSources.length) {
                     controllerInputSources.push(inputSource);
-                    controllerIndex = i3;
+                    controllerIndex = i2;
                     break;
-                  } else if (controllerInputSources[i3] === null) {
-                    controllerInputSources[i3] = inputSource;
-                    controllerIndex = i3;
+                  } else if (controllerInputSources[i2] === null) {
+                    controllerInputSources[i2] = inputSource;
+                    controllerIndex = i2;
                     break;
                   }
                 }
@@ -54452,8 +54452,8 @@ You can use close({ resize: true }) to resize header`);
             const parent = camera.parent;
             const cameras2 = cameraXR.cameras;
             updateCamera(cameraXR, parent);
-            for (let i2 = 0; i2 < cameras2.length; i2++) {
-              updateCamera(cameras2[i2], parent);
+            for (let i = 0; i < cameras2.length; i++) {
+              updateCamera(cameras2[i], parent);
             }
             if (cameras2.length === 2) {
               setProjectionFromUnion(cameraXR, cameraL, cameraR);
@@ -54512,15 +54512,15 @@ You can use close({ resize: true }) to resize header`);
                 cameraXR.cameras.length = 0;
                 cameraXRNeedsUpdate = true;
               }
-              for (let i2 = 0; i2 < views.length; i2++) {
-                const view = views[i2];
+              for (let i = 0; i < views.length; i++) {
+                const view = views[i];
                 let viewport = null;
                 if (glBaseLayer !== null) {
                   viewport = glBaseLayer.getViewport(view);
                 } else {
                   const glSubImage = glBinding.getViewSubImage(glProjLayer, view);
                   viewport = glSubImage.viewport;
-                  if (i2 === 0) {
+                  if (i === 0) {
                     renderer.setRenderTargetTextures(
                       newRenderTarget,
                       glSubImage.colorTexture,
@@ -54529,19 +54529,19 @@ You can use close({ resize: true }) to resize header`);
                     renderer.setRenderTarget(newRenderTarget);
                   }
                 }
-                let camera = cameras[i2];
+                let camera = cameras[i];
                 if (camera === void 0) {
                   camera = new PerspectiveCamera2();
-                  camera.layers.enable(i2);
+                  camera.layers.enable(i);
                   camera.viewport = new Vector42();
-                  cameras[i2] = camera;
+                  cameras[i] = camera;
                 }
                 camera.matrix.fromArray(view.transform.matrix);
                 camera.matrix.decompose(camera.position, camera.quaternion, camera.scale);
                 camera.projectionMatrix.fromArray(view.projectionMatrix);
                 camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
                 camera.viewport.set(viewport.x, viewport.y, viewport.width, viewport.height);
-                if (i2 === 0) {
+                if (i === 0) {
                   cameraXR.matrix.copy(camera.matrix);
                   cameraXR.matrix.decompose(cameraXR.position, cameraXR.quaternion, cameraXR.scale);
                 }
@@ -54550,9 +54550,9 @@ You can use close({ resize: true }) to resize header`);
                 }
               }
             }
-            for (let i2 = 0; i2 < controllers.length; i2++) {
-              const inputSource = controllerInputSources[i2];
-              const controller = controllers[i2];
+            for (let i = 0; i < controllers.length; i++) {
+              const inputSource = controllerInputSources[i];
+              const controller = controllers[i];
               if (inputSource !== null && controller !== void 0) {
                 controller.update(inputSource, frame, customReferenceSpace || referenceSpace);
               }
@@ -54908,10 +54908,10 @@ You can use close({ resize: true }) to resize header`);
           return buffer3;
         }
         function allocateBindingPointIndex() {
-          for (let i2 = 0; i2 < maxBindingPoints; i2++) {
-            if (allocatedBindingPoints.indexOf(i2) === -1) {
-              allocatedBindingPoints.push(i2);
-              return i2;
+          for (let i = 0; i < maxBindingPoints; i++) {
+            if (allocatedBindingPoints.indexOf(i) === -1) {
+              allocatedBindingPoints.push(i);
+              return i;
             }
           }
           console.error("THREE.WebGLRenderer: Maximum number of simultaneously usable uniforms groups reached.");
@@ -54922,14 +54922,14 @@ You can use close({ resize: true }) to resize header`);
           const uniforms = uniformsGroup.uniforms;
           const cache3 = uniformsGroup.__cache;
           gl.bindBuffer(gl.UNIFORM_BUFFER, buffer3);
-          for (let i2 = 0, il = uniforms.length; i2 < il; i2++) {
-            const uniform = uniforms[i2];
-            if (hasUniformChanged(uniform, i2, cache3) === true) {
+          for (let i = 0, il = uniforms.length; i < il; i++) {
+            const uniform = uniforms[i];
+            if (hasUniformChanged(uniform, i, cache3) === true) {
               const offset = uniform.__offset;
               const values = Array.isArray(uniform.value) ? uniform.value : [uniform.value];
               let arrayOffset = 0;
-              for (let i3 = 0; i3 < values.length; i3++) {
-                const value = values[i3];
+              for (let i2 = 0; i2 < values.length; i2++) {
+                const value = values[i2];
                 const info2 = getUniformSize(value);
                 if (typeof value === "number") {
                   uniform.__data[0] = value;
@@ -54965,8 +54965,8 @@ You can use close({ resize: true }) to resize header`);
             } else {
               const values = Array.isArray(value) ? value : [value];
               const tempValues = [];
-              for (let i2 = 0; i2 < values.length; i2++) {
-                tempValues.push(values[i2].clone());
+              for (let i = 0; i < values.length; i++) {
+                tempValues.push(values[i].clone());
               }
               cache3[index] = tempValues;
             }
@@ -54980,10 +54980,10 @@ You can use close({ resize: true }) to resize header`);
             } else {
               const cachedObjects = Array.isArray(cache3[index]) ? cache3[index] : [cache3[index]];
               const values = Array.isArray(value) ? value : [value];
-              for (let i2 = 0; i2 < cachedObjects.length; i2++) {
-                const cachedObject = cachedObjects[i2];
-                if (cachedObject.equals(values[i2]) === false) {
-                  cachedObject.copy(values[i2]);
+              for (let i = 0; i < cachedObjects.length; i++) {
+                const cachedObject = cachedObjects[i];
+                if (cachedObject.equals(values[i]) === false) {
+                  cachedObject.copy(values[i]);
                   return true;
                 }
               }
@@ -54996,8 +54996,8 @@ You can use close({ resize: true }) to resize header`);
           let offset = 0;
           const chunkSize = 16;
           let chunkOffset = 0;
-          for (let i2 = 0, l2 = uniforms.length; i2 < l2; i2++) {
-            const uniform = uniforms[i2];
+          for (let i = 0, l = uniforms.length; i < l; i++) {
+            const uniform = uniforms[i];
             const infos = {
               boundary: 0,
               // bytes
@@ -55013,7 +55013,7 @@ You can use close({ resize: true }) to resize header`);
             }
             uniform.__data = new Float32Array(infos.storage / Float32Array.BYTES_PER_ELEMENT);
             uniform.__offset = offset;
-            if (i2 > 0) {
+            if (i > 0) {
               chunkOffset = offset % chunkSize;
               const remainingSizeInChunk = chunkSize - chunkOffset;
               if (chunkOffset !== 0 && remainingSizeInChunk - infos.boundary < 0) {
@@ -55169,8 +55169,8 @@ You can use close({ resize: true }) to resize header`);
           }
           let _gl = context;
           function getContext(contextNames, contextAttributes) {
-            for (let i2 = 0; i2 < contextNames.length; i2++) {
-              const contextName = contextNames[i2];
+            for (let i = 0; i < contextNames.length; i++) {
+              const contextName = contextNames[i];
               const context2 = canvas.getContext(contextName, contextAttributes);
               if (context2 !== null)
                 return context2;
@@ -55377,21 +55377,21 @@ You can use close({ resize: true }) to resize header`);
                 const targetType = _currentRenderTarget.texture.type;
                 const isUnsignedType = targetType === UnsignedByteType2 || targetType === UnsignedIntType2 || targetType === UnsignedShortType2 || targetType === UnsignedInt248Type2 || targetType === UnsignedShort4444Type2 || targetType === UnsignedShort5551Type2;
                 const clearColor = background.getClearColor();
-                const a2 = background.getClearAlpha();
-                const r2 = clearColor.r;
-                const g2 = clearColor.g;
+                const a = background.getClearAlpha();
+                const r = clearColor.r;
+                const g = clearColor.g;
                 const b = clearColor.b;
                 if (isUnsignedType) {
-                  uintClearColor[0] = r2;
-                  uintClearColor[1] = g2;
+                  uintClearColor[0] = r;
+                  uintClearColor[1] = g;
                   uintClearColor[2] = b;
-                  uintClearColor[3] = a2;
+                  uintClearColor[3] = a;
                   _gl.clearBufferuiv(_gl.COLOR, 0, uintClearColor);
                 } else {
-                  intClearColor[0] = r2;
-                  intClearColor[1] = g2;
+                  intClearColor[0] = r;
+                  intClearColor[1] = g;
                   intClearColor[2] = b;
-                  intClearColor[3] = a2;
+                  intClearColor[3] = a;
                   _gl.clearBufferiv(_gl.COLOR, 0, intClearColor);
                 }
               } else {
@@ -55582,8 +55582,8 @@ You can use close({ resize: true }) to resize header`);
               const material = object.material;
               if (material) {
                 if (Array.isArray(material)) {
-                  for (let i2 = 0; i2 < material.length; i2++) {
-                    const material2 = material[i2];
+                  for (let i = 0; i < material.length; i++) {
+                    const material2 = material[i];
                     prepare(material2, scene, object);
                   }
                 } else {
@@ -55662,8 +55662,8 @@ You can use close({ resize: true }) to resize header`);
             currentRenderState.setupLights(_this._useLegacyLights);
             if (camera.isArrayCamera) {
               const cameras = camera.cameras;
-              for (let i2 = 0, l2 = cameras.length; i2 < l2; i2++) {
-                const camera2 = cameras[i2];
+              for (let i = 0, l = cameras.length; i < l; i++) {
+                const camera2 = cameras[i];
                 renderScene(currentRenderList, scene, camera2, camera2.viewport);
               }
             } else {
@@ -55735,8 +55735,8 @@ You can use close({ resize: true }) to resize header`);
                   }
                   if (Array.isArray(material)) {
                     const groups = geometry.groups;
-                    for (let i2 = 0, l2 = groups.length; i2 < l2; i2++) {
-                      const group = groups[i2];
+                    for (let i = 0, l = groups.length; i < l; i++) {
+                      const group = groups[i];
                       const groupMaterial = material[group.materialIndex];
                       if (groupMaterial && groupMaterial.visible) {
                         currentRenderList.push(object, geometry, groupMaterial, groupOrder, _vector32.z, group);
@@ -55749,8 +55749,8 @@ You can use close({ resize: true }) to resize header`);
               }
             }
             const children = object.children;
-            for (let i2 = 0, l2 = children.length; i2 < l2; i2++) {
-              projectObject(children[i2], camera, groupOrder, sortObjects);
+            for (let i = 0, l = children.length; i < l; i++) {
+              projectObject(children[i], camera, groupOrder, sortObjects);
             }
           }
           function renderScene(currentRenderList2, scene, camera, viewport) {
@@ -55804,8 +55804,8 @@ You can use close({ resize: true }) to resize header`);
             textures.updateMultisampleRenderTarget(_transmissionRenderTarget);
             textures.updateRenderTargetMipmap(_transmissionRenderTarget);
             let renderTargetNeedsUpdate = false;
-            for (let i2 = 0, l2 = transmissiveObjects.length; i2 < l2; i2++) {
-              const renderItem = transmissiveObjects[i2];
+            for (let i = 0, l = transmissiveObjects.length; i < l; i++) {
+              const renderItem = transmissiveObjects[i];
               const object = renderItem.object;
               const geometry = renderItem.geometry;
               const material = renderItem.material;
@@ -55830,8 +55830,8 @@ You can use close({ resize: true }) to resize header`);
           }
           function renderObjects(renderList, scene, camera) {
             const overrideMaterial = scene.isScene === true ? scene.overrideMaterial : null;
-            for (let i2 = 0, l2 = renderList.length; i2 < l2; i2++) {
-              const renderItem = renderList[i2];
+            for (let i = 0, l = renderList.length; i < l; i++) {
+              const renderItem = renderList[i];
               const object = renderItem.object;
               const geometry = renderItem.geometry;
               const material = overrideMaterial === null ? renderItem.material : overrideMaterial;
@@ -56103,9 +56103,9 @@ You can use close({ resize: true }) to resize header`);
             p_uniforms.setValue(_gl, "modelMatrix", object.matrixWorld);
             if (material.isShaderMaterial || material.isRawShaderMaterial) {
               const groups = material.uniformsGroups;
-              for (let i2 = 0, l2 = groups.length; i2 < l2; i2++) {
+              for (let i = 0, l = groups.length; i < l; i++) {
                 if (capabilities.isWebGL2) {
-                  const group = groups[i2];
+                  const group = groups[i];
                   uniformsGroups.update(group, program);
                   uniformsGroups.bind(group, program);
                 } else {
@@ -56506,8 +56506,8 @@ You can use close({ resize: true }) to resize header`);
         copyAt(index1, attribute, index2) {
           index1 *= this.stride;
           index2 *= attribute.stride;
-          for (let i2 = 0, l2 = this.stride; i2 < l2; i2++) {
-            this.array[index1 + i2] = attribute.array[index2 + i2];
+          for (let i = 0, l = this.stride; i < l; i++) {
+            this.array[index1 + i] = attribute.array[index2 + i];
           }
           return this;
         }
@@ -56572,26 +56572,26 @@ You can use close({ resize: true }) to resize header`);
           this.data.needsUpdate = value;
         }
         applyMatrix4(m) {
-          for (let i2 = 0, l2 = this.data.count; i2 < l2; i2++) {
-            _vector$5.fromBufferAttribute(this, i2);
+          for (let i = 0, l = this.data.count; i < l; i++) {
+            _vector$5.fromBufferAttribute(this, i);
             _vector$5.applyMatrix4(m);
-            this.setXYZ(i2, _vector$5.x, _vector$5.y, _vector$5.z);
+            this.setXYZ(i, _vector$5.x, _vector$5.y, _vector$5.z);
           }
           return this;
         }
         applyNormalMatrix(m) {
-          for (let i2 = 0, l2 = this.count; i2 < l2; i2++) {
-            _vector$5.fromBufferAttribute(this, i2);
+          for (let i = 0, l = this.count; i < l; i++) {
+            _vector$5.fromBufferAttribute(this, i);
             _vector$5.applyNormalMatrix(m);
-            this.setXYZ(i2, _vector$5.x, _vector$5.y, _vector$5.z);
+            this.setXYZ(i, _vector$5.x, _vector$5.y, _vector$5.z);
           }
           return this;
         }
         transformDirection(m) {
-          for (let i2 = 0, l2 = this.count; i2 < l2; i2++) {
-            _vector$5.fromBufferAttribute(this, i2);
+          for (let i = 0, l = this.count; i < l; i++) {
+            _vector$5.fromBufferAttribute(this, i);
             _vector$5.transformDirection(m);
-            this.setXYZ(i2, _vector$5.x, _vector$5.y, _vector$5.z);
+            this.setXYZ(i, _vector$5.x, _vector$5.y, _vector$5.z);
           }
           return this;
         }
@@ -56683,8 +56683,8 @@ You can use close({ resize: true }) to resize header`);
           if (data === void 0) {
             console.log("THREE.InterleavedBufferAttribute.clone(): Cloning an interleaved buffer attribute will de-interleave buffer data.");
             const array = [];
-            for (let i2 = 0; i2 < this.count; i2++) {
-              const index = i2 * this.data.stride + this.offset;
+            for (let i = 0; i < this.count; i++) {
+              const index = i * this.data.stride + this.offset;
               for (let j = 0; j < this.itemSize; j++) {
                 array.push(this.data.array[index + j]);
               }
@@ -56704,8 +56704,8 @@ You can use close({ resize: true }) to resize header`);
           if (data === void 0) {
             console.log("THREE.InterleavedBufferAttribute.toJSON(): Serializing an interleaved buffer attribute will de-interleave buffer data.");
             const array = [];
-            for (let i2 = 0; i2 < this.count; i2++) {
-              const index = i2 * this.data.stride + this.offset;
+            for (let i = 0; i < this.count; i++) {
+              const index = i * this.data.stride + this.offset;
               for (let j = 0; j < this.itemSize; j++) {
                 array.push(this.data.array[index + j]);
               }
@@ -56895,8 +56895,8 @@ You can use close({ resize: true }) to resize header`);
         copy(source) {
           super.copy(source, false);
           const levels = source.levels;
-          for (let i2 = 0, l2 = levels.length; i2 < l2; i2++) {
-            const level = levels[i2];
+          for (let i = 0, l = levels.length; i < l; i++) {
+            const level = levels[i];
             this.addLevel(level.object.clone(), level.distance, level.hysteresis);
           }
           this.autoUpdate = source.autoUpdate;
@@ -56905,13 +56905,13 @@ You can use close({ resize: true }) to resize header`);
         addLevel(object, distance = 0, hysteresis = 0) {
           distance = Math.abs(distance);
           const levels = this.levels;
-          let l2;
-          for (l2 = 0; l2 < levels.length; l2++) {
-            if (distance < levels[l2].distance) {
+          let l;
+          for (l = 0; l < levels.length; l++) {
+            if (distance < levels[l].distance) {
               break;
             }
           }
-          levels.splice(l2, 0, { distance, hysteresis, object });
+          levels.splice(l, 0, { distance, hysteresis, object });
           this.add(object);
           return this;
         }
@@ -56921,17 +56921,17 @@ You can use close({ resize: true }) to resize header`);
         getObjectForDistance(distance) {
           const levels = this.levels;
           if (levels.length > 0) {
-            let i2, l2;
-            for (i2 = 1, l2 = levels.length; i2 < l2; i2++) {
-              let levelDistance = levels[i2].distance;
-              if (levels[i2].object.visible) {
-                levelDistance -= levelDistance * levels[i2].hysteresis;
+            let i, l;
+            for (i = 1, l = levels.length; i < l; i++) {
+              let levelDistance = levels[i].distance;
+              if (levels[i].object.visible) {
+                levelDistance -= levelDistance * levels[i].hysteresis;
               }
               if (distance < levelDistance) {
                 break;
               }
             }
-            return levels[i2 - 1].object;
+            return levels[i - 1].object;
           }
           return null;
         }
@@ -56950,22 +56950,22 @@ You can use close({ resize: true }) to resize header`);
             _v2$1.setFromMatrixPosition(this.matrixWorld);
             const distance = _v1$2.distanceTo(_v2$1) / camera.zoom;
             levels[0].object.visible = true;
-            let i2, l2;
-            for (i2 = 1, l2 = levels.length; i2 < l2; i2++) {
-              let levelDistance = levels[i2].distance;
-              if (levels[i2].object.visible) {
-                levelDistance -= levelDistance * levels[i2].hysteresis;
+            let i, l;
+            for (i = 1, l = levels.length; i < l; i++) {
+              let levelDistance = levels[i].distance;
+              if (levels[i].object.visible) {
+                levelDistance -= levelDistance * levels[i].hysteresis;
               }
               if (distance >= levelDistance) {
-                levels[i2 - 1].object.visible = false;
-                levels[i2].object.visible = true;
+                levels[i - 1].object.visible = false;
+                levels[i].object.visible = true;
               } else {
                 break;
               }
             }
-            this._currentLevel = i2 - 1;
-            for (; i2 < l2; i2++) {
-              levels[i2].object.visible = false;
+            this._currentLevel = i - 1;
+            for (; i < l; i++) {
+              levels[i].object.visible = false;
             }
           }
         }
@@ -56975,8 +56975,8 @@ You can use close({ resize: true }) to resize header`);
             data.object.autoUpdate = false;
           data.object.levels = [];
           const levels = this.levels;
-          for (let i2 = 0, l2 = levels.length; i2 < l2; i2++) {
-            const level = levels[i2];
+          for (let i = 0, l = levels.length; i < l; i++) {
+            const level = levels[i];
             data.object.levels.push({
               object: level.object.uuid,
               distance: level.distance,
@@ -57013,9 +57013,9 @@ You can use close({ resize: true }) to resize header`);
           }
           this.boundingBox.makeEmpty();
           const positionAttribute = geometry.getAttribute("position");
-          for (let i2 = 0; i2 < positionAttribute.count; i2++) {
-            _vertex.fromBufferAttribute(positionAttribute, i2);
-            this.applyBoneTransform(i2, _vertex);
+          for (let i = 0; i < positionAttribute.count; i++) {
+            _vertex.fromBufferAttribute(positionAttribute, i);
+            this.applyBoneTransform(i, _vertex);
             this.boundingBox.expandByPoint(_vertex);
           }
         }
@@ -57026,9 +57026,9 @@ You can use close({ resize: true }) to resize header`);
           }
           this.boundingSphere.makeEmpty();
           const positionAttribute = geometry.getAttribute("position");
-          for (let i2 = 0; i2 < positionAttribute.count; i2++) {
-            _vertex.fromBufferAttribute(positionAttribute, i2);
-            this.applyBoneTransform(i2, _vertex);
+          for (let i = 0; i < positionAttribute.count; i++) {
+            _vertex.fromBufferAttribute(positionAttribute, i);
+            this.applyBoneTransform(i, _vertex);
             this.boundingSphere.expandByPoint(_vertex);
           }
         }
@@ -57084,15 +57084,15 @@ You can use close({ resize: true }) to resize header`);
         normalizeSkinWeights() {
           const vector = new Vector42();
           const skinWeight = this.geometry.attributes.skinWeight;
-          for (let i2 = 0, l2 = skinWeight.count; i2 < l2; i2++) {
-            vector.fromBufferAttribute(skinWeight, i2);
+          for (let i = 0, l = skinWeight.count; i < l; i++) {
+            vector.fromBufferAttribute(skinWeight, i);
             const scale = 1 / vector.manhattanLength();
             if (scale !== Infinity) {
               vector.multiplyScalar(scale);
             } else {
               vector.set(1, 0, 0, 0);
             }
-            skinWeight.setXYZW(i2, vector.x, vector.y, vector.z, vector.w);
+            skinWeight.setXYZW(i, vector.x, vector.y, vector.z, vector.w);
           }
         }
         updateMatrixWorld(force) {
@@ -57112,10 +57112,10 @@ You can use close({ resize: true }) to resize header`);
           _skinWeight.fromBufferAttribute(geometry.attributes.skinWeight, index);
           _basePosition.copy(vector).applyMatrix4(this.bindMatrix);
           vector.set(0, 0, 0);
-          for (let i2 = 0; i2 < 4; i2++) {
-            const weight = _skinWeight.getComponent(i2);
+          for (let i = 0; i < 4; i++) {
+            const weight = _skinWeight.getComponent(i);
             if (weight !== 0) {
-              const boneIndex = _skinIndex.getComponent(i2);
+              const boneIndex = _skinIndex.getComponent(i);
               _matrix4.multiplyMatrices(skeleton.bones[boneIndex].matrixWorld, skeleton.boneInverses[boneIndex]);
               vector.addScaledVector(_vector3.copy(_basePosition).applyMatrix4(_matrix4), weight);
             }
@@ -57166,7 +57166,7 @@ You can use close({ resize: true }) to resize header`);
             if (bones.length !== boneInverses.length) {
               console.warn("THREE.Skeleton: Number of inverse bone matrices does not match amount of bones.");
               this.boneInverses = [];
-              for (let i2 = 0, il = this.bones.length; i2 < il; i2++) {
+              for (let i = 0, il = this.bones.length; i < il; i++) {
                 this.boneInverses.push(new Matrix42());
               }
             }
@@ -57174,23 +57174,23 @@ You can use close({ resize: true }) to resize header`);
         }
         calculateInverses() {
           this.boneInverses.length = 0;
-          for (let i2 = 0, il = this.bones.length; i2 < il; i2++) {
+          for (let i = 0, il = this.bones.length; i < il; i++) {
             const inverse = new Matrix42();
-            if (this.bones[i2]) {
-              inverse.copy(this.bones[i2].matrixWorld).invert();
+            if (this.bones[i]) {
+              inverse.copy(this.bones[i].matrixWorld).invert();
             }
             this.boneInverses.push(inverse);
           }
         }
         pose() {
-          for (let i2 = 0, il = this.bones.length; i2 < il; i2++) {
-            const bone = this.bones[i2];
+          for (let i = 0, il = this.bones.length; i < il; i++) {
+            const bone = this.bones[i];
             if (bone) {
-              bone.matrixWorld.copy(this.boneInverses[i2]).invert();
+              bone.matrixWorld.copy(this.boneInverses[i]).invert();
             }
           }
-          for (let i2 = 0, il = this.bones.length; i2 < il; i2++) {
-            const bone = this.bones[i2];
+          for (let i = 0, il = this.bones.length; i < il; i++) {
+            const bone = this.bones[i];
             if (bone) {
               if (bone.parent && bone.parent.isBone) {
                 bone.matrix.copy(bone.parent.matrixWorld).invert();
@@ -57207,10 +57207,10 @@ You can use close({ resize: true }) to resize header`);
           const boneInverses = this.boneInverses;
           const boneMatrices = this.boneMatrices;
           const boneTexture = this.boneTexture;
-          for (let i2 = 0, il = bones.length; i2 < il; i2++) {
-            const matrix = bones[i2] ? bones[i2].matrixWorld : _identityMatrix;
-            _offsetMatrix.multiplyMatrices(matrix, boneInverses[i2]);
-            _offsetMatrix.toArray(boneMatrices, i2 * 16);
+          for (let i = 0, il = bones.length; i < il; i++) {
+            const matrix = bones[i] ? bones[i].matrixWorld : _identityMatrix;
+            _offsetMatrix.multiplyMatrices(matrix, boneInverses[i]);
+            _offsetMatrix.toArray(boneMatrices, i * 16);
           }
           if (boneTexture !== null) {
             boneTexture.needsUpdate = true;
@@ -57233,8 +57233,8 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         getBoneByName(name) {
-          for (let i2 = 0, il = this.bones.length; i2 < il; i2++) {
-            const bone = this.bones[i2];
+          for (let i = 0, il = this.bones.length; i < il; i++) {
+            const bone = this.bones[i];
             if (bone.name === name) {
               return bone;
             }
@@ -57249,15 +57249,15 @@ You can use close({ resize: true }) to resize header`);
         }
         fromJSON(json, bones) {
           this.uuid = json.uuid;
-          for (let i2 = 0, l2 = json.bones.length; i2 < l2; i2++) {
-            const uuid = json.bones[i2];
+          for (let i = 0, l = json.bones.length; i < l; i++) {
+            const uuid = json.bones[i];
             let bone = bones[uuid];
             if (bone === void 0) {
               console.warn("THREE.Skeleton: No bone found with UUID:", uuid);
               bone = new Bone();
             }
             this.bones.push(bone);
-            this.boneInverses.push(new Matrix42().fromArray(json.boneInverses[i2]));
+            this.boneInverses.push(new Matrix42().fromArray(json.boneInverses[i]));
           }
           this.init();
           return this;
@@ -57275,10 +57275,10 @@ You can use close({ resize: true }) to resize header`);
           data.uuid = this.uuid;
           const bones = this.bones;
           const boneInverses = this.boneInverses;
-          for (let i2 = 0, l2 = bones.length; i2 < l2; i2++) {
-            const bone = bones[i2];
+          for (let i = 0, l = bones.length; i < l; i++) {
+            const bone = bones[i];
             data.bones.push(bone.uuid);
-            const boneInverse = boneInverses[i2];
+            const boneInverse = boneInverses[i];
             data.boneInverses.push(boneInverse.toArray());
           }
           return data;
@@ -57318,8 +57318,8 @@ You can use close({ resize: true }) to resize header`);
           this.count = count;
           this.boundingBox = null;
           this.boundingSphere = null;
-          for (let i2 = 0; i2 < count; i2++) {
-            this.setMatrixAt(i2, _identity);
+          for (let i = 0; i < count; i++) {
+            this.setMatrixAt(i, _identity);
           }
         }
         computeBoundingBox() {
@@ -57332,8 +57332,8 @@ You can use close({ resize: true }) to resize header`);
             geometry.computeBoundingBox();
           }
           this.boundingBox.makeEmpty();
-          for (let i2 = 0; i2 < count; i2++) {
-            this.getMatrixAt(i2, _instanceLocalMatrix);
+          for (let i = 0; i < count; i++) {
+            this.getMatrixAt(i, _instanceLocalMatrix);
             _box3.copy(geometry.boundingBox).applyMatrix4(_instanceLocalMatrix);
             this.boundingBox.union(_box3);
           }
@@ -57348,8 +57348,8 @@ You can use close({ resize: true }) to resize header`);
             geometry.computeBoundingSphere();
           }
           this.boundingSphere.makeEmpty();
-          for (let i2 = 0; i2 < count; i2++) {
-            this.getMatrixAt(i2, _instanceLocalMatrix);
+          for (let i = 0; i < count; i++) {
+            this.getMatrixAt(i, _instanceLocalMatrix);
             _sphere$2.copy(geometry.boundingSphere).applyMatrix4(_instanceLocalMatrix);
             this.boundingSphere.union(_sphere$2);
           }
@@ -57390,8 +57390,8 @@ You can use close({ resize: true }) to resize header`);
             _instanceWorldMatrix.multiplyMatrices(matrixWorld, _instanceLocalMatrix);
             _mesh.matrixWorld = _instanceWorldMatrix;
             _mesh.raycast(raycaster, _instanceIntersects);
-            for (let i2 = 0, l2 = _instanceIntersects.length; i2 < l2; i2++) {
-              const intersect = _instanceIntersects[i2];
+            for (let i = 0, l = _instanceIntersects.length; i < l; i++) {
+              const intersect = _instanceIntersects[i];
               intersect.instanceId = instanceId;
               intersect.object = this;
               intersects2.push(intersect);
@@ -57463,11 +57463,11 @@ You can use close({ resize: true }) to resize header`);
           if (geometry.index === null) {
             const positionAttribute = geometry.attributes.position;
             const lineDistances = [0];
-            for (let i2 = 1, l2 = positionAttribute.count; i2 < l2; i2++) {
-              _start$1.fromBufferAttribute(positionAttribute, i2 - 1);
-              _end$1.fromBufferAttribute(positionAttribute, i2);
-              lineDistances[i2] = lineDistances[i2 - 1];
-              lineDistances[i2] += _start$1.distanceTo(_end$1);
+            for (let i = 1, l = positionAttribute.count; i < l; i++) {
+              _start$1.fromBufferAttribute(positionAttribute, i - 1);
+              _end$1.fromBufferAttribute(positionAttribute, i);
+              lineDistances[i] = lineDistances[i - 1];
+              lineDistances[i] += _start$1.distanceTo(_end$1);
             }
             geometry.setAttribute("lineDistance", new Float32BufferAttribute2(lineDistances, 1));
           } else {
@@ -57502,10 +57502,10 @@ You can use close({ resize: true }) to resize header`);
           if (index !== null) {
             const start = Math.max(0, drawRange.start);
             const end = Math.min(index.count, drawRange.start + drawRange.count);
-            for (let i2 = start, l2 = end - 1; i2 < l2; i2 += step) {
-              const a2 = index.getX(i2);
-              const b = index.getX(i2 + 1);
-              vStart.fromBufferAttribute(positionAttribute, a2);
+            for (let i = start, l = end - 1; i < l; i += step) {
+              const a = index.getX(i);
+              const b = index.getX(i + 1);
+              vStart.fromBufferAttribute(positionAttribute, a);
               vEnd.fromBufferAttribute(positionAttribute, b);
               const distSq = _ray$1.distanceSqToSegment(vStart, vEnd, interRay, interSegment);
               if (distSq > localThresholdSq)
@@ -57519,7 +57519,7 @@ You can use close({ resize: true }) to resize header`);
                 // What do we want? intersection point on the ray or on the segment??
                 // point: raycaster.ray.at( distance ),
                 point: interSegment.clone().applyMatrix4(this.matrixWorld),
-                index: i2,
+                index: i,
                 face: null,
                 faceIndex: null,
                 object: this
@@ -57528,9 +57528,9 @@ You can use close({ resize: true }) to resize header`);
           } else {
             const start = Math.max(0, drawRange.start);
             const end = Math.min(positionAttribute.count, drawRange.start + drawRange.count);
-            for (let i2 = start, l2 = end - 1; i2 < l2; i2 += step) {
-              vStart.fromBufferAttribute(positionAttribute, i2);
-              vEnd.fromBufferAttribute(positionAttribute, i2 + 1);
+            for (let i = start, l = end - 1; i < l; i += step) {
+              vStart.fromBufferAttribute(positionAttribute, i);
+              vEnd.fromBufferAttribute(positionAttribute, i + 1);
               const distSq = _ray$1.distanceSqToSegment(vStart, vEnd, interRay, interSegment);
               if (distSq > localThresholdSq)
                 continue;
@@ -57543,7 +57543,7 @@ You can use close({ resize: true }) to resize header`);
                 // What do we want? intersection point on the ray or on the segment??
                 // point: raycaster.ray.at( distance ),
                 point: interSegment.clone().applyMatrix4(this.matrixWorld),
-                index: i2,
+                index: i,
                 face: null,
                 faceIndex: null,
                 object: this
@@ -57582,11 +57582,11 @@ You can use close({ resize: true }) to resize header`);
           if (geometry.index === null) {
             const positionAttribute = geometry.attributes.position;
             const lineDistances = [];
-            for (let i2 = 0, l2 = positionAttribute.count; i2 < l2; i2 += 2) {
-              _start.fromBufferAttribute(positionAttribute, i2);
-              _end.fromBufferAttribute(positionAttribute, i2 + 1);
-              lineDistances[i2] = i2 === 0 ? 0 : lineDistances[i2 - 1];
-              lineDistances[i2 + 1] = lineDistances[i2] + _start.distanceTo(_end);
+            for (let i = 0, l = positionAttribute.count; i < l; i += 2) {
+              _start.fromBufferAttribute(positionAttribute, i);
+              _end.fromBufferAttribute(positionAttribute, i + 1);
+              lineDistances[i] = i === 0 ? 0 : lineDistances[i - 1];
+              lineDistances[i + 1] = lineDistances[i] + _start.distanceTo(_end);
             }
             geometry.setAttribute("lineDistance", new Float32BufferAttribute2(lineDistances, 1));
           } else {
@@ -57667,17 +57667,17 @@ You can use close({ resize: true }) to resize header`);
           if (index !== null) {
             const start = Math.max(0, drawRange.start);
             const end = Math.min(index.count, drawRange.start + drawRange.count);
-            for (let i2 = start, il = end; i2 < il; i2++) {
-              const a2 = index.getX(i2);
-              _position$2.fromBufferAttribute(positionAttribute, a2);
-              testPoint(_position$2, a2, localThresholdSq, matrixWorld, raycaster, intersects2, this);
+            for (let i = start, il = end; i < il; i++) {
+              const a = index.getX(i);
+              _position$2.fromBufferAttribute(positionAttribute, a);
+              testPoint(_position$2, a, localThresholdSq, matrixWorld, raycaster, intersects2, this);
             }
           } else {
             const start = Math.max(0, drawRange.start);
             const end = Math.min(positionAttribute.count, drawRange.start + drawRange.count);
-            for (let i2 = start, l2 = end; i2 < l2; i2++) {
-              _position$2.fromBufferAttribute(positionAttribute, i2);
-              testPoint(_position$2, i2, localThresholdSq, matrixWorld, raycaster, intersects2, this);
+            for (let i = start, l = end; i < l; i++) {
+              _position$2.fromBufferAttribute(positionAttribute, i);
+              testPoint(_position$2, i, localThresholdSq, matrixWorld, raycaster, intersects2, this);
             }
           }
         }
@@ -57801,23 +57801,23 @@ You can use close({ resize: true }) to resize header`);
         }
         // Get point at relative position in curve according to arc length
         // - u [0 .. 1]
-        getPointAt(u2, optionalTarget) {
-          const t2 = this.getUtoTmapping(u2);
-          return this.getPoint(t2, optionalTarget);
+        getPointAt(u, optionalTarget) {
+          const t = this.getUtoTmapping(u);
+          return this.getPoint(t, optionalTarget);
         }
         // Get sequence of points using getPoint( t )
         getPoints(divisions = 5) {
           const points = [];
-          for (let d2 = 0; d2 <= divisions; d2++) {
-            points.push(this.getPoint(d2 / divisions));
+          for (let d = 0; d <= divisions; d++) {
+            points.push(this.getPoint(d / divisions));
           }
           return points;
         }
         // Get sequence of points using getPointAt( u )
         getSpacedPoints(divisions = 5) {
           const points = [];
-          for (let d2 = 0; d2 <= divisions; d2++) {
-            points.push(this.getPointAt(d2 / divisions));
+          for (let d = 0; d <= divisions; d++) {
+            points.push(this.getPointAt(d / divisions));
           }
           return points;
         }
@@ -57836,8 +57836,8 @@ You can use close({ resize: true }) to resize header`);
           let current, last = this.getPoint(0);
           let sum = 0;
           cache3.push(0);
-          for (let p2 = 1; p2 <= divisions; p2++) {
-            current = this.getPoint(p2 / divisions);
+          for (let p = 1; p <= divisions; p++) {
+            current = this.getPoint(p / divisions);
             sum += current.distanceTo(last);
             cache3.push(sum);
             last = current;
@@ -57850,61 +57850,61 @@ You can use close({ resize: true }) to resize header`);
           this.getLengths();
         }
         // Given u ( 0 .. 1 ), get a t to find p. This gives you points which are equidistant
-        getUtoTmapping(u2, distance) {
+        getUtoTmapping(u, distance) {
           const arcLengths = this.getLengths();
-          let i2 = 0;
+          let i = 0;
           const il = arcLengths.length;
           let targetArcLength;
           if (distance) {
             targetArcLength = distance;
           } else {
-            targetArcLength = u2 * arcLengths[il - 1];
+            targetArcLength = u * arcLengths[il - 1];
           }
           let low = 0, high = il - 1, comparison;
           while (low <= high) {
-            i2 = Math.floor(low + (high - low) / 2);
-            comparison = arcLengths[i2] - targetArcLength;
+            i = Math.floor(low + (high - low) / 2);
+            comparison = arcLengths[i] - targetArcLength;
             if (comparison < 0) {
-              low = i2 + 1;
+              low = i + 1;
             } else if (comparison > 0) {
-              high = i2 - 1;
+              high = i - 1;
             } else {
-              high = i2;
+              high = i;
               break;
             }
           }
-          i2 = high;
-          if (arcLengths[i2] === targetArcLength) {
-            return i2 / (il - 1);
+          i = high;
+          if (arcLengths[i] === targetArcLength) {
+            return i / (il - 1);
           }
-          const lengthBefore = arcLengths[i2];
-          const lengthAfter = arcLengths[i2 + 1];
+          const lengthBefore = arcLengths[i];
+          const lengthAfter = arcLengths[i + 1];
           const segmentLength = lengthAfter - lengthBefore;
           const segmentFraction = (targetArcLength - lengthBefore) / segmentLength;
-          const t2 = (i2 + segmentFraction) / (il - 1);
-          return t2;
+          const t = (i + segmentFraction) / (il - 1);
+          return t;
         }
         // Returns a unit vector tangent at t
         // In case any sub curve does not implement its tangent derivation,
         // 2 points a small delta apart will be used to find its gradient
         // which seems to give a reasonable approximation
-        getTangent(t2, optionalTarget) {
+        getTangent(t, optionalTarget) {
           const delta = 1e-4;
-          let t1 = t2 - delta;
-          let t22 = t2 + delta;
+          let t1 = t - delta;
+          let t2 = t + delta;
           if (t1 < 0)
             t1 = 0;
-          if (t22 > 1)
-            t22 = 1;
+          if (t2 > 1)
+            t2 = 1;
           const pt1 = this.getPoint(t1);
-          const pt2 = this.getPoint(t22);
+          const pt2 = this.getPoint(t2);
           const tangent = optionalTarget || (pt1.isVector2 ? new Vector22() : new Vector32());
           tangent.copy(pt2).sub(pt1).normalize();
           return tangent;
         }
-        getTangentAt(u2, optionalTarget) {
-          const t2 = this.getUtoTmapping(u2);
-          return this.getTangent(t2, optionalTarget);
+        getTangentAt(u, optionalTarget) {
+          const t = this.getUtoTmapping(u);
+          return this.getTangent(t, optionalTarget);
         }
         computeFrenetFrames(segments, closed) {
           const normal = new Vector32();
@@ -57913,9 +57913,9 @@ You can use close({ resize: true }) to resize header`);
           const binormals = [];
           const vec = new Vector32();
           const mat = new Matrix42();
-          for (let i2 = 0; i2 <= segments; i2++) {
-            const u2 = i2 / segments;
-            tangents[i2] = this.getTangentAt(u2, new Vector32());
+          for (let i = 0; i <= segments; i++) {
+            const u = i / segments;
+            tangents[i] = this.getTangentAt(u, new Vector32());
           }
           normals[0] = new Vector32();
           binormals[0] = new Vector32();
@@ -57937,16 +57937,16 @@ You can use close({ resize: true }) to resize header`);
           vec.crossVectors(tangents[0], normal).normalize();
           normals[0].crossVectors(tangents[0], vec);
           binormals[0].crossVectors(tangents[0], normals[0]);
-          for (let i2 = 1; i2 <= segments; i2++) {
-            normals[i2] = normals[i2 - 1].clone();
-            binormals[i2] = binormals[i2 - 1].clone();
-            vec.crossVectors(tangents[i2 - 1], tangents[i2]);
+          for (let i = 1; i <= segments; i++) {
+            normals[i] = normals[i - 1].clone();
+            binormals[i] = binormals[i - 1].clone();
+            vec.crossVectors(tangents[i - 1], tangents[i]);
             if (vec.length() > Number.EPSILON) {
               vec.normalize();
-              const theta = Math.acos(clamp2(tangents[i2 - 1].dot(tangents[i2]), -1, 1));
-              normals[i2].applyMatrix4(mat.makeRotationAxis(vec, theta));
+              const theta = Math.acos(clamp2(tangents[i - 1].dot(tangents[i]), -1, 1));
+              normals[i].applyMatrix4(mat.makeRotationAxis(vec, theta));
             }
-            binormals[i2].crossVectors(tangents[i2], normals[i2]);
+            binormals[i].crossVectors(tangents[i], normals[i]);
           }
           if (closed === true) {
             let theta = Math.acos(clamp2(normals[0].dot(normals[segments]), -1, 1));
@@ -57954,9 +57954,9 @@ You can use close({ resize: true }) to resize header`);
             if (tangents[0].dot(vec.crossVectors(normals[0], normals[segments])) > 0) {
               theta = -theta;
             }
-            for (let i2 = 1; i2 <= segments; i2++) {
-              normals[i2].applyMatrix4(mat.makeRotationAxis(tangents[i2], theta * i2));
-              binormals[i2].crossVectors(tangents[i2], normals[i2]);
+            for (let i = 1; i <= segments; i++) {
+              normals[i].applyMatrix4(mat.makeRotationAxis(tangents[i], theta * i));
+              binormals[i].crossVectors(tangents[i], normals[i]);
             }
           }
           return {
@@ -58003,7 +58003,7 @@ You can use close({ resize: true }) to resize header`);
           this.aClockwise = aClockwise;
           this.aRotation = aRotation;
         }
-        getPoint(t2, optionalTarget) {
+        getPoint(t, optionalTarget) {
           const point = optionalTarget || new Vector22();
           const twoPi = Math.PI * 2;
           let deltaAngle = this.aEndAngle - this.aStartAngle;
@@ -58026,7 +58026,7 @@ You can use close({ resize: true }) to resize header`);
               deltaAngle = deltaAngle - twoPi;
             }
           }
-          const angle = this.aStartAngle + t2 * deltaAngle;
+          const angle = this.aStartAngle + t * deltaAngle;
           let x = this.aX + this.xRadius * Math.cos(angle);
           let y = this.aY + this.yRadius * Math.sin(angle);
           if (this.aRotation !== 0) {
@@ -58102,10 +58102,10 @@ You can use close({ resize: true }) to resize header`);
             t2 *= dt1;
             init(x1, x2, t1, t2);
           },
-          calc: function(t2) {
-            const t22 = t2 * t2;
-            const t3 = t22 * t2;
-            return c0 + c1 * t2 + c2 * t22 + c3 * t3;
+          calc: function(t) {
+            const t2 = t * t;
+            const t3 = t2 * t;
+            return c0 + c1 * t + c2 * t2 + c3 * t3;
           }
         };
       }
@@ -58123,52 +58123,52 @@ You can use close({ resize: true }) to resize header`);
           this.curveType = curveType;
           this.tension = tension;
         }
-        getPoint(t2, optionalTarget = new Vector32()) {
+        getPoint(t, optionalTarget = new Vector32()) {
           const point = optionalTarget;
           const points = this.points;
-          const l2 = points.length;
-          const p2 = (l2 - (this.closed ? 0 : 1)) * t2;
-          let intPoint = Math.floor(p2);
-          let weight = p2 - intPoint;
+          const l = points.length;
+          const p = (l - (this.closed ? 0 : 1)) * t;
+          let intPoint = Math.floor(p);
+          let weight = p - intPoint;
           if (this.closed) {
-            intPoint += intPoint > 0 ? 0 : (Math.floor(Math.abs(intPoint) / l2) + 1) * l2;
-          } else if (weight === 0 && intPoint === l2 - 1) {
-            intPoint = l2 - 2;
+            intPoint += intPoint > 0 ? 0 : (Math.floor(Math.abs(intPoint) / l) + 1) * l;
+          } else if (weight === 0 && intPoint === l - 1) {
+            intPoint = l - 2;
             weight = 1;
           }
           let p0, p3;
           if (this.closed || intPoint > 0) {
-            p0 = points[(intPoint - 1) % l2];
+            p0 = points[(intPoint - 1) % l];
           } else {
             tmp.subVectors(points[0], points[1]).add(points[0]);
             p0 = tmp;
           }
-          const p1 = points[intPoint % l2];
-          const p22 = points[(intPoint + 1) % l2];
-          if (this.closed || intPoint + 2 < l2) {
-            p3 = points[(intPoint + 2) % l2];
+          const p1 = points[intPoint % l];
+          const p2 = points[(intPoint + 1) % l];
+          if (this.closed || intPoint + 2 < l) {
+            p3 = points[(intPoint + 2) % l];
           } else {
-            tmp.subVectors(points[l2 - 1], points[l2 - 2]).add(points[l2 - 1]);
+            tmp.subVectors(points[l - 1], points[l - 2]).add(points[l - 1]);
             p3 = tmp;
           }
           if (this.curveType === "centripetal" || this.curveType === "chordal") {
             const pow = this.curveType === "chordal" ? 0.5 : 0.25;
             let dt0 = Math.pow(p0.distanceToSquared(p1), pow);
-            let dt1 = Math.pow(p1.distanceToSquared(p22), pow);
-            let dt2 = Math.pow(p22.distanceToSquared(p3), pow);
+            let dt1 = Math.pow(p1.distanceToSquared(p2), pow);
+            let dt2 = Math.pow(p2.distanceToSquared(p3), pow);
             if (dt1 < 1e-4)
               dt1 = 1;
             if (dt0 < 1e-4)
               dt0 = dt1;
             if (dt2 < 1e-4)
               dt2 = dt1;
-            px.initNonuniformCatmullRom(p0.x, p1.x, p22.x, p3.x, dt0, dt1, dt2);
-            py.initNonuniformCatmullRom(p0.y, p1.y, p22.y, p3.y, dt0, dt1, dt2);
-            pz.initNonuniformCatmullRom(p0.z, p1.z, p22.z, p3.z, dt0, dt1, dt2);
+            px.initNonuniformCatmullRom(p0.x, p1.x, p2.x, p3.x, dt0, dt1, dt2);
+            py.initNonuniformCatmullRom(p0.y, p1.y, p2.y, p3.y, dt0, dt1, dt2);
+            pz.initNonuniformCatmullRom(p0.z, p1.z, p2.z, p3.z, dt0, dt1, dt2);
           } else if (this.curveType === "catmullrom") {
-            px.initCatmullRom(p0.x, p1.x, p22.x, p3.x, this.tension);
-            py.initCatmullRom(p0.y, p1.y, p22.y, p3.y, this.tension);
-            pz.initCatmullRom(p0.z, p1.z, p22.z, p3.z, this.tension);
+            px.initCatmullRom(p0.x, p1.x, p2.x, p3.x, this.tension);
+            py.initCatmullRom(p0.y, p1.y, p2.y, p3.y, this.tension);
+            pz.initCatmullRom(p0.z, p1.z, p2.z, p3.z, this.tension);
           }
           point.set(
             px.calc(weight),
@@ -58180,8 +58180,8 @@ You can use close({ resize: true }) to resize header`);
         copy(source) {
           super.copy(source);
           this.points = [];
-          for (let i2 = 0, l2 = source.points.length; i2 < l2; i2++) {
-            const point = source.points[i2];
+          for (let i = 0, l = source.points.length; i < l; i++) {
+            const point = source.points[i];
             this.points.push(point.clone());
           }
           this.closed = source.closed;
@@ -58192,8 +58192,8 @@ You can use close({ resize: true }) to resize header`);
         toJSON() {
           const data = super.toJSON();
           data.points = [];
-          for (let i2 = 0, l2 = this.points.length; i2 < l2; i2++) {
-            const point = this.points[i2];
+          for (let i = 0, l = this.points.length; i < l; i++) {
+            const point = this.points[i];
             data.points.push(point.toArray());
           }
           data.closed = this.closed;
@@ -58204,8 +58204,8 @@ You can use close({ resize: true }) to resize header`);
         fromJSON(json) {
           super.fromJSON(json);
           this.points = [];
-          for (let i2 = 0, l2 = json.points.length; i2 < l2; i2++) {
-            const point = json.points[i2];
+          for (let i = 0, l = json.points.length; i < l; i++) {
+            const point = json.points[i];
             this.points.push(new Vector32().fromArray(point));
           }
           this.closed = json.closed;
@@ -58214,42 +58214,42 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
       };
-      function CatmullRom(t2, p0, p1, p2, p3) {
+      function CatmullRom(t, p0, p1, p2, p3) {
         const v0 = (p2 - p0) * 0.5;
         const v1 = (p3 - p1) * 0.5;
-        const t22 = t2 * t2;
-        const t3 = t2 * t22;
-        return (2 * p1 - 2 * p2 + v0 + v1) * t3 + (-3 * p1 + 3 * p2 - 2 * v0 - v1) * t22 + v0 * t2 + p1;
+        const t2 = t * t;
+        const t3 = t * t2;
+        return (2 * p1 - 2 * p2 + v0 + v1) * t3 + (-3 * p1 + 3 * p2 - 2 * v0 - v1) * t2 + v0 * t + p1;
       }
-      function QuadraticBezierP0(t2, p2) {
-        const k = 1 - t2;
-        return k * k * p2;
+      function QuadraticBezierP0(t, p) {
+        const k = 1 - t;
+        return k * k * p;
       }
-      function QuadraticBezierP1(t2, p2) {
-        return 2 * (1 - t2) * t2 * p2;
+      function QuadraticBezierP1(t, p) {
+        return 2 * (1 - t) * t * p;
       }
-      function QuadraticBezierP2(t2, p2) {
-        return t2 * t2 * p2;
+      function QuadraticBezierP2(t, p) {
+        return t * t * p;
       }
-      function QuadraticBezier(t2, p0, p1, p2) {
-        return QuadraticBezierP0(t2, p0) + QuadraticBezierP1(t2, p1) + QuadraticBezierP2(t2, p2);
+      function QuadraticBezier(t, p0, p1, p2) {
+        return QuadraticBezierP0(t, p0) + QuadraticBezierP1(t, p1) + QuadraticBezierP2(t, p2);
       }
-      function CubicBezierP0(t2, p2) {
-        const k = 1 - t2;
-        return k * k * k * p2;
+      function CubicBezierP0(t, p) {
+        const k = 1 - t;
+        return k * k * k * p;
       }
-      function CubicBezierP1(t2, p2) {
-        const k = 1 - t2;
-        return 3 * k * k * t2 * p2;
+      function CubicBezierP1(t, p) {
+        const k = 1 - t;
+        return 3 * k * k * t * p;
       }
-      function CubicBezierP2(t2, p2) {
-        return 3 * (1 - t2) * t2 * t2 * p2;
+      function CubicBezierP2(t, p) {
+        return 3 * (1 - t) * t * t * p;
       }
-      function CubicBezierP3(t2, p2) {
-        return t2 * t2 * t2 * p2;
+      function CubicBezierP3(t, p) {
+        return t * t * t * p;
       }
-      function CubicBezier(t2, p0, p1, p2, p3) {
-        return CubicBezierP0(t2, p0) + CubicBezierP1(t2, p1) + CubicBezierP2(t2, p2) + CubicBezierP3(t2, p3);
+      function CubicBezier(t, p0, p1, p2, p3) {
+        return CubicBezierP0(t, p0) + CubicBezierP1(t, p1) + CubicBezierP2(t, p2) + CubicBezierP3(t, p3);
       }
       var CubicBezierCurve = class extends Curve {
         constructor(v0 = new Vector22(), v1 = new Vector22(), v2 = new Vector22(), v3 = new Vector22()) {
@@ -58261,12 +58261,12 @@ You can use close({ resize: true }) to resize header`);
           this.v2 = v2;
           this.v3 = v3;
         }
-        getPoint(t2, optionalTarget = new Vector22()) {
+        getPoint(t, optionalTarget = new Vector22()) {
           const point = optionalTarget;
           const v0 = this.v0, v1 = this.v1, v2 = this.v2, v3 = this.v3;
           point.set(
-            CubicBezier(t2, v0.x, v1.x, v2.x, v3.x),
-            CubicBezier(t2, v0.y, v1.y, v2.y, v3.y)
+            CubicBezier(t, v0.x, v1.x, v2.x, v3.x),
+            CubicBezier(t, v0.y, v1.y, v2.y, v3.y)
           );
           return point;
         }
@@ -58305,13 +58305,13 @@ You can use close({ resize: true }) to resize header`);
           this.v2 = v2;
           this.v3 = v3;
         }
-        getPoint(t2, optionalTarget = new Vector32()) {
+        getPoint(t, optionalTarget = new Vector32()) {
           const point = optionalTarget;
           const v0 = this.v0, v1 = this.v1, v2 = this.v2, v3 = this.v3;
           point.set(
-            CubicBezier(t2, v0.x, v1.x, v2.x, v3.x),
-            CubicBezier(t2, v0.y, v1.y, v2.y, v3.y),
-            CubicBezier(t2, v0.z, v1.z, v2.z, v3.z)
+            CubicBezier(t, v0.x, v1.x, v2.x, v3.x),
+            CubicBezier(t, v0.y, v1.y, v2.y, v3.y),
+            CubicBezier(t, v0.z, v1.z, v2.z, v3.z)
           );
           return point;
         }
@@ -58348,25 +58348,25 @@ You can use close({ resize: true }) to resize header`);
           this.v1 = v1;
           this.v2 = v2;
         }
-        getPoint(t2, optionalTarget = new Vector22()) {
+        getPoint(t, optionalTarget = new Vector22()) {
           const point = optionalTarget;
-          if (t2 === 1) {
+          if (t === 1) {
             point.copy(this.v2);
           } else {
             point.copy(this.v2).sub(this.v1);
-            point.multiplyScalar(t2).add(this.v1);
+            point.multiplyScalar(t).add(this.v1);
           }
           return point;
         }
         // Line curve is linear, so we can overwrite default getPointAt
-        getPointAt(u2, optionalTarget) {
-          return this.getPoint(u2, optionalTarget);
+        getPointAt(u, optionalTarget) {
+          return this.getPoint(u, optionalTarget);
         }
-        getTangent(t2, optionalTarget = new Vector22()) {
+        getTangent(t, optionalTarget = new Vector22()) {
           return optionalTarget.subVectors(this.v2, this.v1).normalize();
         }
-        getTangentAt(u2, optionalTarget) {
-          return this.getTangent(u2, optionalTarget);
+        getTangentAt(u, optionalTarget) {
+          return this.getTangent(u, optionalTarget);
         }
         copy(source) {
           super.copy(source);
@@ -58395,25 +58395,25 @@ You can use close({ resize: true }) to resize header`);
           this.v1 = v1;
           this.v2 = v2;
         }
-        getPoint(t2, optionalTarget = new Vector32()) {
+        getPoint(t, optionalTarget = new Vector32()) {
           const point = optionalTarget;
-          if (t2 === 1) {
+          if (t === 1) {
             point.copy(this.v2);
           } else {
             point.copy(this.v2).sub(this.v1);
-            point.multiplyScalar(t2).add(this.v1);
+            point.multiplyScalar(t).add(this.v1);
           }
           return point;
         }
         // Line curve is linear, so we can overwrite default getPointAt
-        getPointAt(u2, optionalTarget) {
-          return this.getPoint(u2, optionalTarget);
+        getPointAt(u, optionalTarget) {
+          return this.getPoint(u, optionalTarget);
         }
-        getTangent(t2, optionalTarget = new Vector32()) {
+        getTangent(t, optionalTarget = new Vector32()) {
           return optionalTarget.subVectors(this.v2, this.v1).normalize();
         }
-        getTangentAt(u2, optionalTarget) {
-          return this.getTangent(u2, optionalTarget);
+        getTangentAt(u, optionalTarget) {
+          return this.getTangent(u, optionalTarget);
         }
         copy(source) {
           super.copy(source);
@@ -58443,12 +58443,12 @@ You can use close({ resize: true }) to resize header`);
           this.v1 = v1;
           this.v2 = v2;
         }
-        getPoint(t2, optionalTarget = new Vector22()) {
+        getPoint(t, optionalTarget = new Vector22()) {
           const point = optionalTarget;
           const v0 = this.v0, v1 = this.v1, v2 = this.v2;
           point.set(
-            QuadraticBezier(t2, v0.x, v1.x, v2.x),
-            QuadraticBezier(t2, v0.y, v1.y, v2.y)
+            QuadraticBezier(t, v0.x, v1.x, v2.x),
+            QuadraticBezier(t, v0.y, v1.y, v2.y)
           );
           return point;
         }
@@ -58483,13 +58483,13 @@ You can use close({ resize: true }) to resize header`);
           this.v1 = v1;
           this.v2 = v2;
         }
-        getPoint(t2, optionalTarget = new Vector32()) {
+        getPoint(t, optionalTarget = new Vector32()) {
           const point = optionalTarget;
           const v0 = this.v0, v1 = this.v1, v2 = this.v2;
           point.set(
-            QuadraticBezier(t2, v0.x, v1.x, v2.x),
-            QuadraticBezier(t2, v0.y, v1.y, v2.y),
-            QuadraticBezier(t2, v0.z, v1.z, v2.z)
+            QuadraticBezier(t, v0.x, v1.x, v2.x),
+            QuadraticBezier(t, v0.y, v1.y, v2.y),
+            QuadraticBezier(t, v0.z, v1.z, v2.z)
           );
           return point;
         }
@@ -58522,27 +58522,27 @@ You can use close({ resize: true }) to resize header`);
           this.type = "SplineCurve";
           this.points = points;
         }
-        getPoint(t2, optionalTarget = new Vector22()) {
+        getPoint(t, optionalTarget = new Vector22()) {
           const point = optionalTarget;
           const points = this.points;
-          const p2 = (points.length - 1) * t2;
-          const intPoint = Math.floor(p2);
-          const weight = p2 - intPoint;
+          const p = (points.length - 1) * t;
+          const intPoint = Math.floor(p);
+          const weight = p - intPoint;
           const p0 = points[intPoint === 0 ? intPoint : intPoint - 1];
           const p1 = points[intPoint];
-          const p22 = points[intPoint > points.length - 2 ? points.length - 1 : intPoint + 1];
+          const p2 = points[intPoint > points.length - 2 ? points.length - 1 : intPoint + 1];
           const p3 = points[intPoint > points.length - 3 ? points.length - 1 : intPoint + 2];
           point.set(
-            CatmullRom(weight, p0.x, p1.x, p22.x, p3.x),
-            CatmullRom(weight, p0.y, p1.y, p22.y, p3.y)
+            CatmullRom(weight, p0.x, p1.x, p2.x, p3.x),
+            CatmullRom(weight, p0.y, p1.y, p2.y, p3.y)
           );
           return point;
         }
         copy(source) {
           super.copy(source);
           this.points = [];
-          for (let i2 = 0, l2 = source.points.length; i2 < l2; i2++) {
-            const point = source.points[i2];
+          for (let i = 0, l = source.points.length; i < l; i++) {
+            const point = source.points[i];
             this.points.push(point.clone());
           }
           return this;
@@ -58550,8 +58550,8 @@ You can use close({ resize: true }) to resize header`);
         toJSON() {
           const data = super.toJSON();
           data.points = [];
-          for (let i2 = 0, l2 = this.points.length; i2 < l2; i2++) {
-            const point = this.points[i2];
+          for (let i = 0, l = this.points.length; i < l; i++) {
+            const point = this.points[i];
             data.points.push(point.toArray());
           }
           return data;
@@ -58559,8 +58559,8 @@ You can use close({ resize: true }) to resize header`);
         fromJSON(json) {
           super.fromJSON(json);
           this.points = [];
-          for (let i2 = 0, l2 = json.points.length; i2 < l2; i2++) {
-            const point = json.points[i2];
+          for (let i = 0, l = json.points.length; i < l; i++) {
+            const point = json.points[i];
             this.points.push(new Vector22().fromArray(point));
           }
           return this;
@@ -58603,19 +58603,19 @@ You can use close({ resize: true }) to resize header`);
         // 2. Locate and identify type of curve
         // 3. Get t for the curve
         // 4. Return curve.getPointAt(t')
-        getPoint(t2, optionalTarget) {
-          const d2 = t2 * this.getLength();
+        getPoint(t, optionalTarget) {
+          const d = t * this.getLength();
           const curveLengths = this.getCurveLengths();
-          let i2 = 0;
-          while (i2 < curveLengths.length) {
-            if (curveLengths[i2] >= d2) {
-              const diff = curveLengths[i2] - d2;
-              const curve = this.curves[i2];
+          let i = 0;
+          while (i < curveLengths.length) {
+            if (curveLengths[i] >= d) {
+              const diff = curveLengths[i] - d;
+              const curve = this.curves[i];
               const segmentLength = curve.getLength();
-              const u2 = segmentLength === 0 ? 0 : 1 - diff / segmentLength;
-              return curve.getPointAt(u2, optionalTarget);
+              const u = segmentLength === 0 ? 0 : 1 - diff / segmentLength;
+              return curve.getPointAt(u, optionalTarget);
             }
-            i2++;
+            i++;
           }
           return null;
         }
@@ -58640,8 +58640,8 @@ You can use close({ resize: true }) to resize header`);
           }
           const lengths = [];
           let sums = 0;
-          for (let i2 = 0, l2 = this.curves.length; i2 < l2; i2++) {
-            sums += this.curves[i2].getLength();
+          for (let i = 0, l = this.curves.length; i < l; i++) {
+            sums += this.curves[i].getLength();
             lengths.push(sums);
           }
           this.cacheLengths = lengths;
@@ -58649,8 +58649,8 @@ You can use close({ resize: true }) to resize header`);
         }
         getSpacedPoints(divisions = 40) {
           const points = [];
-          for (let i2 = 0; i2 <= divisions; i2++) {
-            points.push(this.getPoint(i2 / divisions));
+          for (let i = 0; i <= divisions; i++) {
+            points.push(this.getPoint(i / divisions));
           }
           if (this.autoClose) {
             points.push(points[0]);
@@ -58660,8 +58660,8 @@ You can use close({ resize: true }) to resize header`);
         getPoints(divisions = 12) {
           const points = [];
           let last;
-          for (let i2 = 0, curves = this.curves; i2 < curves.length; i2++) {
-            const curve = curves[i2];
+          for (let i = 0, curves = this.curves; i < curves.length; i++) {
+            const curve = curves[i];
             const resolution = curve.isEllipseCurve ? divisions * 2 : curve.isLineCurve || curve.isLineCurve3 ? 1 : curve.isSplineCurve ? divisions * curve.points.length : divisions;
             const pts = curve.getPoints(resolution);
             for (let j = 0; j < pts.length; j++) {
@@ -58680,8 +58680,8 @@ You can use close({ resize: true }) to resize header`);
         copy(source) {
           super.copy(source);
           this.curves = [];
-          for (let i2 = 0, l2 = source.curves.length; i2 < l2; i2++) {
-            const curve = source.curves[i2];
+          for (let i = 0, l = source.curves.length; i < l; i++) {
+            const curve = source.curves[i];
             this.curves.push(curve.clone());
           }
           this.autoClose = source.autoClose;
@@ -58691,8 +58691,8 @@ You can use close({ resize: true }) to resize header`);
           const data = super.toJSON();
           data.autoClose = this.autoClose;
           data.curves = [];
-          for (let i2 = 0, l2 = this.curves.length; i2 < l2; i2++) {
-            const curve = this.curves[i2];
+          for (let i = 0, l = this.curves.length; i < l; i++) {
+            const curve = this.curves[i];
             data.curves.push(curve.toJSON());
           }
           return data;
@@ -58701,8 +58701,8 @@ You can use close({ resize: true }) to resize header`);
           super.fromJSON(json);
           this.autoClose = json.autoClose;
           this.curves = [];
-          for (let i2 = 0, l2 = json.curves.length; i2 < l2; i2++) {
-            const curve = json.curves[i2];
+          for (let i = 0, l = json.curves.length; i < l; i++) {
+            const curve = json.curves[i];
             this.curves.push(new Curves[curve.type]().fromJSON(curve));
           }
           return this;
@@ -58719,8 +58719,8 @@ You can use close({ resize: true }) to resize header`);
         }
         setFromPoints(points) {
           this.moveTo(points[0].x, points[0].y);
-          for (let i2 = 1, l2 = points.length; i2 < l2; i2++) {
-            this.lineTo(points[i2].x, points[i2].y);
+          for (let i = 1, l = points.length; i < l; i++) {
+            this.lineTo(points[i].x, points[i].y);
           }
           return this;
         }
@@ -58869,8 +58869,8 @@ You can use close({ resize: true }) to resize header`);
                 prevNormal.copy(curNormal);
             }
           }
-          for (let i2 = 0; i2 <= segments; i2++) {
-            const phi = phiStart + i2 * inverseSegments * phiLength;
+          for (let i = 0; i <= segments; i++) {
+            const phi = phiStart + i * inverseSegments * phiLength;
             const sin = Math.sin(phi);
             const cos = Math.cos(phi);
             for (let j = 0; j <= points.length - 1; j++) {
@@ -58878,7 +58878,7 @@ You can use close({ resize: true }) to resize header`);
               vertex3.y = points[j].y;
               vertex3.z = points[j].x * cos;
               vertices.push(vertex3.x, vertex3.y, vertex3.z);
-              uv.x = i2 / segments;
+              uv.x = i / segments;
               uv.y = j / (points.length - 1);
               uvs.push(uv.x, uv.y);
               const x = initNormals[3 * j + 0] * sin;
@@ -58887,15 +58887,15 @@ You can use close({ resize: true }) to resize header`);
               normals.push(x, y, z);
             }
           }
-          for (let i2 = 0; i2 < segments; i2++) {
+          for (let i = 0; i < segments; i++) {
             for (let j = 0; j < points.length - 1; j++) {
-              const base3 = j + i2 * points.length;
-              const a2 = base3;
+              const base3 = j + i * points.length;
+              const a = base3;
               const b = base3 + points.length;
-              const c2 = base3 + points.length + 1;
-              const d2 = base3 + 1;
-              indices.push(a2, b, d2);
-              indices.push(c2, d2, b);
+              const c = base3 + points.length + 1;
+              const d = base3 + 1;
+              indices.push(a, b, d);
+              indices.push(c, d, b);
             }
           }
           this.setIndex(indices);
@@ -58950,18 +58950,18 @@ You can use close({ resize: true }) to resize header`);
           vertices.push(0, 0, 0);
           normals.push(0, 0, 1);
           uvs.push(0.5, 0.5);
-          for (let s2 = 0, i2 = 3; s2 <= segments; s2++, i2 += 3) {
-            const segment = thetaStart + s2 / segments * thetaLength;
+          for (let s = 0, i = 3; s <= segments; s++, i += 3) {
+            const segment = thetaStart + s / segments * thetaLength;
             vertex3.x = radius * Math.cos(segment);
             vertex3.y = radius * Math.sin(segment);
             vertices.push(vertex3.x, vertex3.y, vertex3.z);
             normals.push(0, 0, 1);
-            uv.x = (vertices[i2] / radius + 1) / 2;
-            uv.y = (vertices[i2 + 1] / radius + 1) / 2;
+            uv.x = (vertices[i] / radius + 1) / 2;
+            uv.y = (vertices[i + 1] / radius + 1) / 2;
             uvs.push(uv.x, uv.y);
           }
-          for (let i2 = 1; i2 <= segments; i2++) {
-            indices.push(i2, i2 + 1, 0);
+          for (let i = 1; i <= segments; i++) {
+            indices.push(i, i + 1, 0);
           }
           this.setIndex(indices);
           this.setAttribute("position", new Float32BufferAttribute2(vertices, 3));
@@ -59023,8 +59023,8 @@ You can use close({ resize: true }) to resize header`);
               const v = y / heightSegments;
               const radius = v * (radiusBottom - radiusTop) + radiusTop;
               for (let x = 0; x <= radialSegments; x++) {
-                const u2 = x / radialSegments;
-                const theta = u2 * thetaLength + thetaStart;
+                const u = x / radialSegments;
+                const theta = u * thetaLength + thetaStart;
                 const sinTheta = Math.sin(theta);
                 const cosTheta = Math.cos(theta);
                 vertex3.x = radius * sinTheta;
@@ -59033,19 +59033,19 @@ You can use close({ resize: true }) to resize header`);
                 vertices.push(vertex3.x, vertex3.y, vertex3.z);
                 normal.set(sinTheta, slope, cosTheta).normalize();
                 normals.push(normal.x, normal.y, normal.z);
-                uvs.push(u2, 1 - v);
+                uvs.push(u, 1 - v);
                 indexRow.push(index++);
               }
               indexArray.push(indexRow);
             }
             for (let x = 0; x < radialSegments; x++) {
               for (let y = 0; y < heightSegments; y++) {
-                const a2 = indexArray[y][x];
+                const a = indexArray[y][x];
                 const b = indexArray[y + 1][x];
-                const c2 = indexArray[y + 1][x + 1];
-                const d2 = indexArray[y][x + 1];
-                indices.push(a2, b, d2);
-                indices.push(b, c2, d2);
+                const c = indexArray[y + 1][x + 1];
+                const d = indexArray[y][x + 1];
+                indices.push(a, b, d);
+                indices.push(b, c, d);
                 groupCount += 6;
               }
             }
@@ -59067,8 +59067,8 @@ You can use close({ resize: true }) to resize header`);
             }
             const centerIndexEnd = index;
             for (let x = 0; x <= radialSegments; x++) {
-              const u2 = x / radialSegments;
-              const theta = u2 * thetaLength + thetaStart;
+              const u = x / radialSegments;
+              const theta = u * thetaLength + thetaStart;
               const cosTheta = Math.cos(theta);
               const sinTheta = Math.sin(theta);
               vertex3.x = radius * sinTheta;
@@ -59082,12 +59082,12 @@ You can use close({ resize: true }) to resize header`);
               index++;
             }
             for (let x = 0; x < radialSegments; x++) {
-              const c2 = centerIndexStart + x;
-              const i2 = centerIndexEnd + x;
+              const c = centerIndexStart + x;
+              const i = centerIndexEnd + x;
               if (top === true) {
-                indices.push(i2, i2 + 1, c2);
+                indices.push(i, i + 1, c);
               } else {
-                indices.push(i2 + 1, i2, c2);
+                indices.push(i + 1, i, c);
               }
               groupCount += 3;
             }
@@ -59146,86 +59146,86 @@ You can use close({ resize: true }) to resize header`);
             this.normalizeNormals();
           }
           function subdivide(detail2) {
-            const a2 = new Vector32();
+            const a = new Vector32();
             const b = new Vector32();
-            const c2 = new Vector32();
-            for (let i2 = 0; i2 < indices.length; i2 += 3) {
-              getVertexByIndex(indices[i2 + 0], a2);
-              getVertexByIndex(indices[i2 + 1], b);
-              getVertexByIndex(indices[i2 + 2], c2);
-              subdivideFace(a2, b, c2, detail2);
+            const c = new Vector32();
+            for (let i = 0; i < indices.length; i += 3) {
+              getVertexByIndex(indices[i + 0], a);
+              getVertexByIndex(indices[i + 1], b);
+              getVertexByIndex(indices[i + 2], c);
+              subdivideFace(a, b, c, detail2);
             }
           }
-          function subdivideFace(a2, b, c2, detail2) {
+          function subdivideFace(a, b, c, detail2) {
             const cols = detail2 + 1;
             const v = [];
-            for (let i2 = 0; i2 <= cols; i2++) {
-              v[i2] = [];
-              const aj = a2.clone().lerp(c2, i2 / cols);
-              const bj = b.clone().lerp(c2, i2 / cols);
-              const rows = cols - i2;
+            for (let i = 0; i <= cols; i++) {
+              v[i] = [];
+              const aj = a.clone().lerp(c, i / cols);
+              const bj = b.clone().lerp(c, i / cols);
+              const rows = cols - i;
               for (let j = 0; j <= rows; j++) {
-                if (j === 0 && i2 === cols) {
-                  v[i2][j] = aj;
+                if (j === 0 && i === cols) {
+                  v[i][j] = aj;
                 } else {
-                  v[i2][j] = aj.clone().lerp(bj, j / rows);
+                  v[i][j] = aj.clone().lerp(bj, j / rows);
                 }
               }
             }
-            for (let i2 = 0; i2 < cols; i2++) {
-              for (let j = 0; j < 2 * (cols - i2) - 1; j++) {
+            for (let i = 0; i < cols; i++) {
+              for (let j = 0; j < 2 * (cols - i) - 1; j++) {
                 const k = Math.floor(j / 2);
                 if (j % 2 === 0) {
-                  pushVertex(v[i2][k + 1]);
-                  pushVertex(v[i2 + 1][k]);
-                  pushVertex(v[i2][k]);
+                  pushVertex(v[i][k + 1]);
+                  pushVertex(v[i + 1][k]);
+                  pushVertex(v[i][k]);
                 } else {
-                  pushVertex(v[i2][k + 1]);
-                  pushVertex(v[i2 + 1][k + 1]);
-                  pushVertex(v[i2 + 1][k]);
+                  pushVertex(v[i][k + 1]);
+                  pushVertex(v[i + 1][k + 1]);
+                  pushVertex(v[i + 1][k]);
                 }
               }
             }
           }
           function applyRadius(radius2) {
             const vertex3 = new Vector32();
-            for (let i2 = 0; i2 < vertexBuffer.length; i2 += 3) {
-              vertex3.x = vertexBuffer[i2 + 0];
-              vertex3.y = vertexBuffer[i2 + 1];
-              vertex3.z = vertexBuffer[i2 + 2];
+            for (let i = 0; i < vertexBuffer.length; i += 3) {
+              vertex3.x = vertexBuffer[i + 0];
+              vertex3.y = vertexBuffer[i + 1];
+              vertex3.z = vertexBuffer[i + 2];
               vertex3.normalize().multiplyScalar(radius2);
-              vertexBuffer[i2 + 0] = vertex3.x;
-              vertexBuffer[i2 + 1] = vertex3.y;
-              vertexBuffer[i2 + 2] = vertex3.z;
+              vertexBuffer[i + 0] = vertex3.x;
+              vertexBuffer[i + 1] = vertex3.y;
+              vertexBuffer[i + 2] = vertex3.z;
             }
           }
           function generateUVs() {
             const vertex3 = new Vector32();
-            for (let i2 = 0; i2 < vertexBuffer.length; i2 += 3) {
-              vertex3.x = vertexBuffer[i2 + 0];
-              vertex3.y = vertexBuffer[i2 + 1];
-              vertex3.z = vertexBuffer[i2 + 2];
-              const u2 = azimuth(vertex3) / 2 / Math.PI + 0.5;
+            for (let i = 0; i < vertexBuffer.length; i += 3) {
+              vertex3.x = vertexBuffer[i + 0];
+              vertex3.y = vertexBuffer[i + 1];
+              vertex3.z = vertexBuffer[i + 2];
+              const u = azimuth(vertex3) / 2 / Math.PI + 0.5;
               const v = inclination(vertex3) / Math.PI + 0.5;
-              uvBuffer.push(u2, 1 - v);
+              uvBuffer.push(u, 1 - v);
             }
             correctUVs();
             correctSeam();
           }
           function correctSeam() {
-            for (let i2 = 0; i2 < uvBuffer.length; i2 += 6) {
-              const x0 = uvBuffer[i2 + 0];
-              const x1 = uvBuffer[i2 + 2];
-              const x2 = uvBuffer[i2 + 4];
+            for (let i = 0; i < uvBuffer.length; i += 6) {
+              const x0 = uvBuffer[i + 0];
+              const x1 = uvBuffer[i + 2];
+              const x2 = uvBuffer[i + 4];
               const max = Math.max(x0, x1, x2);
               const min = Math.min(x0, x1, x2);
               if (max > 0.9 && min < 0.1) {
                 if (x0 < 0.2)
-                  uvBuffer[i2 + 0] += 1;
+                  uvBuffer[i + 0] += 1;
                 if (x1 < 0.2)
-                  uvBuffer[i2 + 2] += 1;
+                  uvBuffer[i + 2] += 1;
                 if (x2 < 0.2)
-                  uvBuffer[i2 + 4] += 1;
+                  uvBuffer[i + 4] += 1;
               }
             }
           }
@@ -59239,25 +59239,25 @@ You can use close({ resize: true }) to resize header`);
             vertex3.z = vertices[stride + 2];
           }
           function correctUVs() {
-            const a2 = new Vector32();
+            const a = new Vector32();
             const b = new Vector32();
-            const c2 = new Vector32();
+            const c = new Vector32();
             const centroid = new Vector32();
             const uvA = new Vector22();
             const uvB = new Vector22();
             const uvC = new Vector22();
-            for (let i2 = 0, j = 0; i2 < vertexBuffer.length; i2 += 9, j += 6) {
-              a2.set(vertexBuffer[i2 + 0], vertexBuffer[i2 + 1], vertexBuffer[i2 + 2]);
-              b.set(vertexBuffer[i2 + 3], vertexBuffer[i2 + 4], vertexBuffer[i2 + 5]);
-              c2.set(vertexBuffer[i2 + 6], vertexBuffer[i2 + 7], vertexBuffer[i2 + 8]);
+            for (let i = 0, j = 0; i < vertexBuffer.length; i += 9, j += 6) {
+              a.set(vertexBuffer[i + 0], vertexBuffer[i + 1], vertexBuffer[i + 2]);
+              b.set(vertexBuffer[i + 3], vertexBuffer[i + 4], vertexBuffer[i + 5]);
+              c.set(vertexBuffer[i + 6], vertexBuffer[i + 7], vertexBuffer[i + 8]);
               uvA.set(uvBuffer[j + 0], uvBuffer[j + 1]);
               uvB.set(uvBuffer[j + 2], uvBuffer[j + 3]);
               uvC.set(uvBuffer[j + 4], uvBuffer[j + 5]);
-              centroid.copy(a2).add(b).add(c2).divideScalar(3);
+              centroid.copy(a).add(b).add(c).divideScalar(3);
               const azi = azimuth(centroid);
-              correctUV(uvA, j + 0, a2, azi);
+              correctUV(uvA, j + 0, a, azi);
               correctUV(uvB, j + 2, b, azi);
-              correctUV(uvC, j + 4, c2, azi);
+              correctUV(uvC, j + 4, c, azi);
             }
           }
           function correctUV(uv, stride, vector, azimuth2) {
@@ -59286,8 +59286,8 @@ You can use close({ resize: true }) to resize header`);
       };
       var DodecahedronGeometry = class _DodecahedronGeometry extends PolyhedronGeometry {
         constructor(radius = 1, detail = 0) {
-          const t2 = (1 + Math.sqrt(5)) / 2;
-          const r2 = 1 / t2;
+          const t = (1 + Math.sqrt(5)) / 2;
+          const r = 1 / t;
           const vertices = [
             // (±1, ±1, ±1)
             -1,
@@ -59316,43 +59316,43 @@ You can use close({ resize: true }) to resize header`);
             1,
             // (0, ±1/φ, ±φ)
             0,
-            -r2,
-            -t2,
+            -r,
+            -t,
             0,
-            -r2,
-            t2,
+            -r,
+            t,
             0,
-            r2,
-            -t2,
+            r,
+            -t,
             0,
-            r2,
-            t2,
+            r,
+            t,
             // (±1/φ, ±φ, 0)
-            -r2,
-            -t2,
+            -r,
+            -t,
             0,
-            -r2,
-            t2,
+            -r,
+            t,
             0,
-            r2,
-            -t2,
+            r,
+            -t,
             0,
-            r2,
-            t2,
+            r,
+            t,
             0,
             // (±φ, 0, ±1/φ)
-            -t2,
+            -t,
             0,
-            -r2,
-            t2,
+            -r,
+            t,
             0,
-            -r2,
-            -t2,
+            -r,
+            -t,
             0,
-            r2,
-            t2,
+            r,
+            t,
             0,
-            r2
+            r
           ];
           const indices = [
             3,
@@ -59499,24 +59499,24 @@ You can use close({ resize: true }) to resize header`);
             const hashes = new Array(3);
             const edgeData = {};
             const vertices = [];
-            for (let i2 = 0; i2 < indexCount; i2 += 3) {
+            for (let i = 0; i < indexCount; i += 3) {
               if (indexAttr) {
-                indexArr[0] = indexAttr.getX(i2);
-                indexArr[1] = indexAttr.getX(i2 + 1);
-                indexArr[2] = indexAttr.getX(i2 + 2);
+                indexArr[0] = indexAttr.getX(i);
+                indexArr[1] = indexAttr.getX(i + 1);
+                indexArr[2] = indexAttr.getX(i + 2);
               } else {
-                indexArr[0] = i2;
-                indexArr[1] = i2 + 1;
-                indexArr[2] = i2 + 2;
+                indexArr[0] = i;
+                indexArr[1] = i + 1;
+                indexArr[2] = i + 2;
               }
-              const { a: a2, b, c: c2 } = _triangle;
-              a2.fromBufferAttribute(positionAttr, indexArr[0]);
+              const { a, b, c } = _triangle;
+              a.fromBufferAttribute(positionAttr, indexArr[0]);
               b.fromBufferAttribute(positionAttr, indexArr[1]);
-              c2.fromBufferAttribute(positionAttr, indexArr[2]);
+              c.fromBufferAttribute(positionAttr, indexArr[2]);
               _triangle.getNormal(_normal);
-              hashes[0] = `${Math.round(a2.x * precision)},${Math.round(a2.y * precision)},${Math.round(a2.z * precision)}`;
+              hashes[0] = `${Math.round(a.x * precision)},${Math.round(a.y * precision)},${Math.round(a.z * precision)}`;
               hashes[1] = `${Math.round(b.x * precision)},${Math.round(b.y * precision)},${Math.round(b.z * precision)}`;
-              hashes[2] = `${Math.round(c2.x * precision)},${Math.round(c2.y * precision)},${Math.round(c2.z * precision)}`;
+              hashes[2] = `${Math.round(c.x * precision)},${Math.round(c.y * precision)},${Math.round(c.z * precision)}`;
               if (hashes[0] === hashes[1] || hashes[1] === hashes[2] || hashes[2] === hashes[0]) {
                 continue;
               }
@@ -59570,8 +59570,8 @@ You can use close({ resize: true }) to resize header`);
         }
         getPointsHoles(divisions) {
           const holesPts = [];
-          for (let i2 = 0, l2 = this.holes.length; i2 < l2; i2++) {
-            holesPts[i2] = this.holes[i2].getPoints(divisions);
+          for (let i = 0, l = this.holes.length; i < l; i++) {
+            holesPts[i] = this.holes[i].getPoints(divisions);
           }
           return holesPts;
         }
@@ -59585,8 +59585,8 @@ You can use close({ resize: true }) to resize header`);
         copy(source) {
           super.copy(source);
           this.holes = [];
-          for (let i2 = 0, l2 = source.holes.length; i2 < l2; i2++) {
-            const hole = source.holes[i2];
+          for (let i = 0, l = source.holes.length; i < l; i++) {
+            const hole = source.holes[i];
             this.holes.push(hole.clone());
           }
           return this;
@@ -59595,8 +59595,8 @@ You can use close({ resize: true }) to resize header`);
           const data = super.toJSON();
           data.uuid = this.uuid;
           data.holes = [];
-          for (let i2 = 0, l2 = this.holes.length; i2 < l2; i2++) {
-            const hole = this.holes[i2];
+          for (let i = 0, l = this.holes.length; i < l; i++) {
+            const hole = this.holes[i];
             data.holes.push(hole.toJSON());
           }
           return data;
@@ -59605,8 +59605,8 @@ You can use close({ resize: true }) to resize header`);
           super.fromJSON(json);
           this.uuid = json.uuid;
           this.holes = [];
-          for (let i2 = 0, l2 = json.holes.length; i2 < l2; i2++) {
-            const hole = json.holes[i2];
+          for (let i = 0, l = json.holes.length; i < l; i++) {
+            const hole = json.holes[i];
             this.holes.push(new Path().fromJSON(hole));
           }
           return this;
@@ -59626,9 +59626,9 @@ You can use close({ resize: true }) to resize header`);
           if (data.length > 80 * dim) {
             minX = maxX = data[0];
             minY = maxY = data[1];
-            for (let i2 = dim; i2 < outerLen; i2 += dim) {
-              x = data[i2];
-              y = data[i2 + 1];
+            for (let i = dim; i < outerLen; i += dim) {
+              x = data[i];
+              y = data[i + 1];
               if (x < minX)
                 minX = x;
               if (y < minY)
@@ -59646,13 +59646,13 @@ You can use close({ resize: true }) to resize header`);
         }
       };
       function linkedList(data, start, end, dim, clockwise) {
-        let i2, last;
+        let i, last;
         if (clockwise === signedArea(data, start, end, dim) > 0) {
-          for (i2 = start; i2 < end; i2 += dim)
-            last = insertNode(i2, data[i2], data[i2 + 1], last);
+          for (i = start; i < end; i += dim)
+            last = insertNode(i, data[i], data[i + 1], last);
         } else {
-          for (i2 = end - dim; i2 >= start; i2 -= dim)
-            last = insertNode(i2, data[i2], data[i2 + 1], last);
+          for (i = end - dim; i >= start; i -= dim)
+            last = insertNode(i, data[i], data[i + 1], last);
         }
         if (last && equals5(last, last.next)) {
           removeNode(last);
@@ -59665,19 +59665,19 @@ You can use close({ resize: true }) to resize header`);
           return start;
         if (!end)
           end = start;
-        let p2 = start, again;
+        let p = start, again;
         do {
           again = false;
-          if (!p2.steiner && (equals5(p2, p2.next) || area(p2.prev, p2, p2.next) === 0)) {
-            removeNode(p2);
-            p2 = end = p2.prev;
-            if (p2 === p2.next)
+          if (!p.steiner && (equals5(p, p.next) || area(p.prev, p, p.next) === 0)) {
+            removeNode(p);
+            p = end = p.prev;
+            if (p === p.next)
               break;
             again = true;
           } else {
-            p2 = p2.next;
+            p = p.next;
           }
-        } while (again || p2 !== end);
+        } while (again || p !== end);
         return end;
       }
       function earcutLinked(ear, triangles, dim, minX, minY, invSize, pass) {
@@ -59713,100 +59713,100 @@ You can use close({ resize: true }) to resize header`);
         }
       }
       function isEar(ear) {
-        const a2 = ear.prev, b = ear, c2 = ear.next;
-        if (area(a2, b, c2) >= 0)
+        const a = ear.prev, b = ear, c = ear.next;
+        if (area(a, b, c) >= 0)
           return false;
-        const ax = a2.x, bx = b.x, cx = c2.x, ay = a2.y, by = b.y, cy = c2.y;
+        const ax = a.x, bx = b.x, cx = c.x, ay = a.y, by = b.y, cy = c.y;
         const x0 = ax < bx ? ax < cx ? ax : cx : bx < cx ? bx : cx, y0 = ay < by ? ay < cy ? ay : cy : by < cy ? by : cy, x1 = ax > bx ? ax > cx ? ax : cx : bx > cx ? bx : cx, y1 = ay > by ? ay > cy ? ay : cy : by > cy ? by : cy;
-        let p2 = c2.next;
-        while (p2 !== a2) {
-          if (p2.x >= x0 && p2.x <= x1 && p2.y >= y0 && p2.y <= y1 && pointInTriangle(ax, ay, bx, by, cx, cy, p2.x, p2.y) && area(p2.prev, p2, p2.next) >= 0)
+        let p = c.next;
+        while (p !== a) {
+          if (p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1 && pointInTriangle(ax, ay, bx, by, cx, cy, p.x, p.y) && area(p.prev, p, p.next) >= 0)
             return false;
-          p2 = p2.next;
+          p = p.next;
         }
         return true;
       }
       function isEarHashed(ear, minX, minY, invSize) {
-        const a2 = ear.prev, b = ear, c2 = ear.next;
-        if (area(a2, b, c2) >= 0)
+        const a = ear.prev, b = ear, c = ear.next;
+        if (area(a, b, c) >= 0)
           return false;
-        const ax = a2.x, bx = b.x, cx = c2.x, ay = a2.y, by = b.y, cy = c2.y;
+        const ax = a.x, bx = b.x, cx = c.x, ay = a.y, by = b.y, cy = c.y;
         const x0 = ax < bx ? ax < cx ? ax : cx : bx < cx ? bx : cx, y0 = ay < by ? ay < cy ? ay : cy : by < cy ? by : cy, x1 = ax > bx ? ax > cx ? ax : cx : bx > cx ? bx : cx, y1 = ay > by ? ay > cy ? ay : cy : by > cy ? by : cy;
         const minZ = zOrder(x0, y0, minX, minY, invSize), maxZ = zOrder(x1, y1, minX, minY, invSize);
-        let p2 = ear.prevZ, n2 = ear.nextZ;
-        while (p2 && p2.z >= minZ && n2 && n2.z <= maxZ) {
-          if (p2.x >= x0 && p2.x <= x1 && p2.y >= y0 && p2.y <= y1 && p2 !== a2 && p2 !== c2 && pointInTriangle(ax, ay, bx, by, cx, cy, p2.x, p2.y) && area(p2.prev, p2, p2.next) >= 0)
+        let p = ear.prevZ, n = ear.nextZ;
+        while (p && p.z >= minZ && n && n.z <= maxZ) {
+          if (p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1 && p !== a && p !== c && pointInTriangle(ax, ay, bx, by, cx, cy, p.x, p.y) && area(p.prev, p, p.next) >= 0)
             return false;
-          p2 = p2.prevZ;
-          if (n2.x >= x0 && n2.x <= x1 && n2.y >= y0 && n2.y <= y1 && n2 !== a2 && n2 !== c2 && pointInTriangle(ax, ay, bx, by, cx, cy, n2.x, n2.y) && area(n2.prev, n2, n2.next) >= 0)
+          p = p.prevZ;
+          if (n.x >= x0 && n.x <= x1 && n.y >= y0 && n.y <= y1 && n !== a && n !== c && pointInTriangle(ax, ay, bx, by, cx, cy, n.x, n.y) && area(n.prev, n, n.next) >= 0)
             return false;
-          n2 = n2.nextZ;
+          n = n.nextZ;
         }
-        while (p2 && p2.z >= minZ) {
-          if (p2.x >= x0 && p2.x <= x1 && p2.y >= y0 && p2.y <= y1 && p2 !== a2 && p2 !== c2 && pointInTriangle(ax, ay, bx, by, cx, cy, p2.x, p2.y) && area(p2.prev, p2, p2.next) >= 0)
+        while (p && p.z >= minZ) {
+          if (p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1 && p !== a && p !== c && pointInTriangle(ax, ay, bx, by, cx, cy, p.x, p.y) && area(p.prev, p, p.next) >= 0)
             return false;
-          p2 = p2.prevZ;
+          p = p.prevZ;
         }
-        while (n2 && n2.z <= maxZ) {
-          if (n2.x >= x0 && n2.x <= x1 && n2.y >= y0 && n2.y <= y1 && n2 !== a2 && n2 !== c2 && pointInTriangle(ax, ay, bx, by, cx, cy, n2.x, n2.y) && area(n2.prev, n2, n2.next) >= 0)
+        while (n && n.z <= maxZ) {
+          if (n.x >= x0 && n.x <= x1 && n.y >= y0 && n.y <= y1 && n !== a && n !== c && pointInTriangle(ax, ay, bx, by, cx, cy, n.x, n.y) && area(n.prev, n, n.next) >= 0)
             return false;
-          n2 = n2.nextZ;
+          n = n.nextZ;
         }
         return true;
       }
       function cureLocalIntersections(start, triangles, dim) {
-        let p2 = start;
+        let p = start;
         do {
-          const a2 = p2.prev, b = p2.next.next;
-          if (!equals5(a2, b) && intersects(a2, p2, p2.next, b) && locallyInside(a2, b) && locallyInside(b, a2)) {
-            triangles.push(a2.i / dim | 0);
-            triangles.push(p2.i / dim | 0);
+          const a = p.prev, b = p.next.next;
+          if (!equals5(a, b) && intersects(a, p, p.next, b) && locallyInside(a, b) && locallyInside(b, a)) {
+            triangles.push(a.i / dim | 0);
+            triangles.push(p.i / dim | 0);
             triangles.push(b.i / dim | 0);
-            removeNode(p2);
-            removeNode(p2.next);
-            p2 = start = b;
+            removeNode(p);
+            removeNode(p.next);
+            p = start = b;
           }
-          p2 = p2.next;
-        } while (p2 !== start);
-        return filterPoints(p2);
+          p = p.next;
+        } while (p !== start);
+        return filterPoints(p);
       }
       function splitEarcut(start, triangles, dim, minX, minY, invSize) {
-        let a2 = start;
+        let a = start;
         do {
-          let b = a2.next.next;
-          while (b !== a2.prev) {
-            if (a2.i !== b.i && isValidDiagonal(a2, b)) {
-              let c2 = splitPolygon(a2, b);
-              a2 = filterPoints(a2, a2.next);
-              c2 = filterPoints(c2, c2.next);
-              earcutLinked(a2, triangles, dim, minX, minY, invSize, 0);
-              earcutLinked(c2, triangles, dim, minX, minY, invSize, 0);
+          let b = a.next.next;
+          while (b !== a.prev) {
+            if (a.i !== b.i && isValidDiagonal(a, b)) {
+              let c = splitPolygon(a, b);
+              a = filterPoints(a, a.next);
+              c = filterPoints(c, c.next);
+              earcutLinked(a, triangles, dim, minX, minY, invSize, 0);
+              earcutLinked(c, triangles, dim, minX, minY, invSize, 0);
               return;
             }
             b = b.next;
           }
-          a2 = a2.next;
-        } while (a2 !== start);
+          a = a.next;
+        } while (a !== start);
       }
       function eliminateHoles(data, holeIndices, outerNode, dim) {
         const queue = [];
-        let i2, len, start, end, list;
-        for (i2 = 0, len = holeIndices.length; i2 < len; i2++) {
-          start = holeIndices[i2] * dim;
-          end = i2 < len - 1 ? holeIndices[i2 + 1] * dim : data.length;
+        let i, len, start, end, list;
+        for (i = 0, len = holeIndices.length; i < len; i++) {
+          start = holeIndices[i] * dim;
+          end = i < len - 1 ? holeIndices[i + 1] * dim : data.length;
           list = linkedList(data, start, end, dim, false);
           if (list === list.next)
             list.steiner = true;
           queue.push(getLeftmost(list));
         }
         queue.sort(compareX);
-        for (i2 = 0; i2 < queue.length; i2++) {
-          outerNode = eliminateHole(queue[i2], outerNode);
+        for (i = 0; i < queue.length; i++) {
+          outerNode = eliminateHole(queue[i], outerNode);
         }
         return outerNode;
       }
-      function compareX(a2, b) {
-        return a2.x - b.x;
+      function compareX(a, b) {
+        return a.x - b.x;
       }
       function eliminateHole(hole, outerNode) {
         const bridge = findHoleBridge(hole, outerNode);
@@ -59818,65 +59818,65 @@ You can use close({ resize: true }) to resize header`);
         return filterPoints(bridge, bridge.next);
       }
       function findHoleBridge(hole, outerNode) {
-        let p2 = outerNode, qx = -Infinity, m;
+        let p = outerNode, qx = -Infinity, m;
         const hx = hole.x, hy = hole.y;
         do {
-          if (hy <= p2.y && hy >= p2.next.y && p2.next.y !== p2.y) {
-            const x = p2.x + (hy - p2.y) * (p2.next.x - p2.x) / (p2.next.y - p2.y);
+          if (hy <= p.y && hy >= p.next.y && p.next.y !== p.y) {
+            const x = p.x + (hy - p.y) * (p.next.x - p.x) / (p.next.y - p.y);
             if (x <= hx && x > qx) {
               qx = x;
-              m = p2.x < p2.next.x ? p2 : p2.next;
+              m = p.x < p.next.x ? p : p.next;
               if (x === hx)
                 return m;
             }
           }
-          p2 = p2.next;
-        } while (p2 !== outerNode);
+          p = p.next;
+        } while (p !== outerNode);
         if (!m)
           return null;
         const stop = m, mx = m.x, my = m.y;
         let tanMin = Infinity, tan;
-        p2 = m;
+        p = m;
         do {
-          if (hx >= p2.x && p2.x >= mx && hx !== p2.x && pointInTriangle(hy < my ? hx : qx, hy, mx, my, hy < my ? qx : hx, hy, p2.x, p2.y)) {
-            tan = Math.abs(hy - p2.y) / (hx - p2.x);
-            if (locallyInside(p2, hole) && (tan < tanMin || tan === tanMin && (p2.x > m.x || p2.x === m.x && sectorContainsSector(m, p2)))) {
-              m = p2;
+          if (hx >= p.x && p.x >= mx && hx !== p.x && pointInTriangle(hy < my ? hx : qx, hy, mx, my, hy < my ? qx : hx, hy, p.x, p.y)) {
+            tan = Math.abs(hy - p.y) / (hx - p.x);
+            if (locallyInside(p, hole) && (tan < tanMin || tan === tanMin && (p.x > m.x || p.x === m.x && sectorContainsSector(m, p)))) {
+              m = p;
               tanMin = tan;
             }
           }
-          p2 = p2.next;
-        } while (p2 !== stop);
+          p = p.next;
+        } while (p !== stop);
         return m;
       }
-      function sectorContainsSector(m, p2) {
-        return area(m.prev, m, p2.prev) < 0 && area(p2.next, m, m.next) < 0;
+      function sectorContainsSector(m, p) {
+        return area(m.prev, m, p.prev) < 0 && area(p.next, m, m.next) < 0;
       }
       function indexCurve(start, minX, minY, invSize) {
-        let p2 = start;
+        let p = start;
         do {
-          if (p2.z === 0)
-            p2.z = zOrder(p2.x, p2.y, minX, minY, invSize);
-          p2.prevZ = p2.prev;
-          p2.nextZ = p2.next;
-          p2 = p2.next;
-        } while (p2 !== start);
-        p2.prevZ.nextZ = null;
-        p2.prevZ = null;
-        sortLinked(p2);
+          if (p.z === 0)
+            p.z = zOrder(p.x, p.y, minX, minY, invSize);
+          p.prevZ = p.prev;
+          p.nextZ = p.next;
+          p = p.next;
+        } while (p !== start);
+        p.prevZ.nextZ = null;
+        p.prevZ = null;
+        sortLinked(p);
       }
       function sortLinked(list) {
-        let i2, p2, q, e2, tail, numMerges, pSize, qSize, inSize = 1;
+        let i, p, q, e, tail, numMerges, pSize, qSize, inSize = 1;
         do {
-          p2 = list;
+          p = list;
           list = null;
           tail = null;
           numMerges = 0;
-          while (p2) {
+          while (p) {
             numMerges++;
-            q = p2;
+            q = p;
             pSize = 0;
-            for (i2 = 0; i2 < inSize; i2++) {
+            for (i = 0; i < inSize; i++) {
               pSize++;
               q = q.nextZ;
               if (!q)
@@ -59884,23 +59884,23 @@ You can use close({ resize: true }) to resize header`);
             }
             qSize = inSize;
             while (pSize > 0 || qSize > 0 && q) {
-              if (pSize !== 0 && (qSize === 0 || !q || p2.z <= q.z)) {
-                e2 = p2;
-                p2 = p2.nextZ;
+              if (pSize !== 0 && (qSize === 0 || !q || p.z <= q.z)) {
+                e = p;
+                p = p.nextZ;
                 pSize--;
               } else {
-                e2 = q;
+                e = q;
                 q = q.nextZ;
                 qSize--;
               }
               if (tail)
-                tail.nextZ = e2;
+                tail.nextZ = e;
               else
-                list = e2;
-              e2.prevZ = tail;
-              tail = e2;
+                list = e;
+              e.prevZ = tail;
+              tail = e;
             }
-            p2 = q;
+            p = q;
           }
           tail.nextZ = null;
           inSize *= 2;
@@ -59921,25 +59921,25 @@ You can use close({ resize: true }) to resize header`);
         return x | y << 1;
       }
       function getLeftmost(start) {
-        let p2 = start, leftmost = start;
+        let p = start, leftmost = start;
         do {
-          if (p2.x < leftmost.x || p2.x === leftmost.x && p2.y < leftmost.y)
-            leftmost = p2;
-          p2 = p2.next;
-        } while (p2 !== start);
+          if (p.x < leftmost.x || p.x === leftmost.x && p.y < leftmost.y)
+            leftmost = p;
+          p = p.next;
+        } while (p !== start);
         return leftmost;
       }
       function pointInTriangle(ax, ay, bx, by, cx, cy, px2, py2) {
         return (cx - px2) * (ay - py2) >= (ax - px2) * (cy - py2) && (ax - px2) * (by - py2) >= (bx - px2) * (ay - py2) && (bx - px2) * (cy - py2) >= (cx - px2) * (by - py2);
       }
-      function isValidDiagonal(a2, b) {
-        return a2.next.i !== b.i && a2.prev.i !== b.i && !intersectsPolygon(a2, b) && // dones't intersect other edges
-        (locallyInside(a2, b) && locallyInside(b, a2) && middleInside(a2, b) && // locally visible
-        (area(a2.prev, a2, b.prev) || area(a2, b.prev, b)) || // does not create opposite-facing sectors
-        equals5(a2, b) && area(a2.prev, a2, a2.next) > 0 && area(b.prev, b, b.next) > 0);
+      function isValidDiagonal(a, b) {
+        return a.next.i !== b.i && a.prev.i !== b.i && !intersectsPolygon(a, b) && // dones't intersect other edges
+        (locallyInside(a, b) && locallyInside(b, a) && middleInside(a, b) && // locally visible
+        (area(a.prev, a, b.prev) || area(a, b.prev, b)) || // does not create opposite-facing sectors
+        equals5(a, b) && area(a.prev, a, a.next) > 0 && area(b.prev, b, b.next) > 0);
       }
-      function area(p2, q, r2) {
-        return (q.y - p2.y) * (r2.x - q.x) - (q.x - p2.x) * (r2.y - q.y);
+      function area(p, q, r) {
+        return (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
       }
       function equals5(p1, p2) {
         return p1.x === p2.x && p1.y === p2.y;
@@ -59961,69 +59961,69 @@ You can use close({ resize: true }) to resize header`);
           return true;
         return false;
       }
-      function onSegment(p2, q, r2) {
-        return q.x <= Math.max(p2.x, r2.x) && q.x >= Math.min(p2.x, r2.x) && q.y <= Math.max(p2.y, r2.y) && q.y >= Math.min(p2.y, r2.y);
+      function onSegment(p, q, r) {
+        return q.x <= Math.max(p.x, r.x) && q.x >= Math.min(p.x, r.x) && q.y <= Math.max(p.y, r.y) && q.y >= Math.min(p.y, r.y);
       }
       function sign(num) {
         return num > 0 ? 1 : num < 0 ? -1 : 0;
       }
-      function intersectsPolygon(a2, b) {
-        let p2 = a2;
+      function intersectsPolygon(a, b) {
+        let p = a;
         do {
-          if (p2.i !== a2.i && p2.next.i !== a2.i && p2.i !== b.i && p2.next.i !== b.i && intersects(p2, p2.next, a2, b))
+          if (p.i !== a.i && p.next.i !== a.i && p.i !== b.i && p.next.i !== b.i && intersects(p, p.next, a, b))
             return true;
-          p2 = p2.next;
-        } while (p2 !== a2);
+          p = p.next;
+        } while (p !== a);
         return false;
       }
-      function locallyInside(a2, b) {
-        return area(a2.prev, a2, a2.next) < 0 ? area(a2, b, a2.next) >= 0 && area(a2, a2.prev, b) >= 0 : area(a2, b, a2.prev) < 0 || area(a2, a2.next, b) < 0;
+      function locallyInside(a, b) {
+        return area(a.prev, a, a.next) < 0 ? area(a, b, a.next) >= 0 && area(a, a.prev, b) >= 0 : area(a, b, a.prev) < 0 || area(a, a.next, b) < 0;
       }
-      function middleInside(a2, b) {
-        let p2 = a2, inside = false;
-        const px2 = (a2.x + b.x) / 2, py2 = (a2.y + b.y) / 2;
+      function middleInside(a, b) {
+        let p = a, inside = false;
+        const px2 = (a.x + b.x) / 2, py2 = (a.y + b.y) / 2;
         do {
-          if (p2.y > py2 !== p2.next.y > py2 && p2.next.y !== p2.y && px2 < (p2.next.x - p2.x) * (py2 - p2.y) / (p2.next.y - p2.y) + p2.x)
+          if (p.y > py2 !== p.next.y > py2 && p.next.y !== p.y && px2 < (p.next.x - p.x) * (py2 - p.y) / (p.next.y - p.y) + p.x)
             inside = !inside;
-          p2 = p2.next;
-        } while (p2 !== a2);
+          p = p.next;
+        } while (p !== a);
         return inside;
       }
-      function splitPolygon(a2, b) {
-        const a22 = new Node(a2.i, a2.x, a2.y), b2 = new Node(b.i, b.x, b.y), an = a2.next, bp = b.prev;
-        a2.next = b;
-        b.prev = a2;
-        a22.next = an;
-        an.prev = a22;
-        b2.next = a22;
-        a22.prev = b2;
+      function splitPolygon(a, b) {
+        const a2 = new Node(a.i, a.x, a.y), b2 = new Node(b.i, b.x, b.y), an = a.next, bp = b.prev;
+        a.next = b;
+        b.prev = a;
+        a2.next = an;
+        an.prev = a2;
+        b2.next = a2;
+        a2.prev = b2;
         bp.next = b2;
         b2.prev = bp;
         return b2;
       }
-      function insertNode(i2, x, y, last) {
-        const p2 = new Node(i2, x, y);
+      function insertNode(i, x, y, last) {
+        const p = new Node(i, x, y);
         if (!last) {
-          p2.prev = p2;
-          p2.next = p2;
+          p.prev = p;
+          p.next = p;
         } else {
-          p2.next = last.next;
-          p2.prev = last;
-          last.next.prev = p2;
-          last.next = p2;
+          p.next = last.next;
+          p.prev = last;
+          last.next.prev = p;
+          last.next = p;
         }
-        return p2;
+        return p;
       }
-      function removeNode(p2) {
-        p2.next.prev = p2.prev;
-        p2.prev.next = p2.next;
-        if (p2.prevZ)
-          p2.prevZ.nextZ = p2.nextZ;
-        if (p2.nextZ)
-          p2.nextZ.prevZ = p2.prevZ;
+      function removeNode(p) {
+        p.next.prev = p.prev;
+        p.prev.next = p.next;
+        if (p.prevZ)
+          p.prevZ.nextZ = p.nextZ;
+        if (p.nextZ)
+          p.nextZ.prevZ = p.prevZ;
       }
-      function Node(i2, x, y) {
-        this.i = i2;
+      function Node(i, x, y) {
+        this.i = i;
         this.x = x;
         this.y = y;
         this.prev = null;
@@ -60035,21 +60035,21 @@ You can use close({ resize: true }) to resize header`);
       }
       function signedArea(data, start, end, dim) {
         let sum = 0;
-        for (let i2 = start, j = end - dim; i2 < end; i2 += dim) {
-          sum += (data[j] - data[i2]) * (data[i2 + 1] + data[j + 1]);
-          j = i2;
+        for (let i = start, j = end - dim; i < end; i += dim) {
+          sum += (data[j] - data[i]) * (data[i + 1] + data[j + 1]);
+          j = i;
         }
         return sum;
       }
       var ShapeUtils = class _ShapeUtils {
         // calculate area of the contour polygon
         static area(contour) {
-          const n2 = contour.length;
-          let a2 = 0;
-          for (let p2 = n2 - 1, q = 0; q < n2; p2 = q++) {
-            a2 += contour[p2].x * contour[q].y - contour[q].x * contour[p2].y;
+          const n = contour.length;
+          let a = 0;
+          for (let p = n - 1, q = 0; q < n; p = q++) {
+            a += contour[p].x * contour[q].y - contour[q].x * contour[p].y;
           }
-          return a2 * 0.5;
+          return a * 0.5;
         }
         static isClockWise(pts) {
           return _ShapeUtils.area(pts) < 0;
@@ -60062,28 +60062,28 @@ You can use close({ resize: true }) to resize header`);
           addContour(vertices, contour);
           let holeIndex = contour.length;
           holes.forEach(removeDupEndPts);
-          for (let i2 = 0; i2 < holes.length; i2++) {
+          for (let i = 0; i < holes.length; i++) {
             holeIndices.push(holeIndex);
-            holeIndex += holes[i2].length;
-            addContour(vertices, holes[i2]);
+            holeIndex += holes[i].length;
+            addContour(vertices, holes[i]);
           }
           const triangles = Earcut.triangulate(vertices, holeIndices);
-          for (let i2 = 0; i2 < triangles.length; i2 += 3) {
-            faces.push(triangles.slice(i2, i2 + 3));
+          for (let i = 0; i < triangles.length; i += 3) {
+            faces.push(triangles.slice(i, i + 3));
           }
           return faces;
         }
       };
       function removeDupEndPts(points) {
-        const l2 = points.length;
-        if (l2 > 2 && points[l2 - 1].equals(points[0])) {
+        const l = points.length;
+        if (l > 2 && points[l - 1].equals(points[0])) {
           points.pop();
         }
       }
       function addContour(vertices, contour) {
-        for (let i2 = 0; i2 < contour.length; i2++) {
-          vertices.push(contour[i2].x);
-          vertices.push(contour[i2].y);
+        for (let i = 0; i < contour.length; i++) {
+          vertices.push(contour[i].x);
+          vertices.push(contour[i].y);
         }
       }
       var ExtrudeGeometry = class _ExtrudeGeometry extends BufferGeometry2 {
@@ -60098,8 +60098,8 @@ You can use close({ resize: true }) to resize header`);
           const scope = this;
           const verticesArray = [];
           const uvArray = [];
-          for (let i2 = 0, l2 = shapes.length; i2 < l2; i2++) {
-            const shape = shapes[i2];
+          for (let i = 0, l = shapes.length; i < l; i++) {
+            const shape = shapes[i];
             addShape(shape);
           }
           this.setAttribute("position", new Float32BufferAttribute2(verticesArray, 3));
@@ -60140,17 +60140,17 @@ You can use close({ resize: true }) to resize header`);
             const reverse = !ShapeUtils.isClockWise(vertices);
             if (reverse) {
               vertices = vertices.reverse();
-              for (let h2 = 0, hl = holes.length; h2 < hl; h2++) {
-                const ahole = holes[h2];
+              for (let h = 0, hl = holes.length; h < hl; h++) {
+                const ahole = holes[h];
                 if (ShapeUtils.isClockWise(ahole)) {
-                  holes[h2] = ahole.reverse();
+                  holes[h] = ahole.reverse();
                 }
               }
             }
             const faces = ShapeUtils.triangulateShape(vertices, holes);
             const contour = vertices;
-            for (let h2 = 0, hl = holes.length; h2 < hl; h2++) {
-              const ahole = holes[h2];
+            for (let h = 0, hl = holes.length; h < hl; h++) {
+              const ahole = holes[h];
               vertices = vertices.concat(ahole);
             }
             function scalePt2(pt, vec, size) {
@@ -60211,48 +60211,48 @@ You can use close({ resize: true }) to resize header`);
               return new Vector22(v_trans_x / shrink_by, v_trans_y / shrink_by);
             }
             const contourMovements = [];
-            for (let i2 = 0, il = contour.length, j = il - 1, k = i2 + 1; i2 < il; i2++, j++, k++) {
+            for (let i = 0, il = contour.length, j = il - 1, k = i + 1; i < il; i++, j++, k++) {
               if (j === il)
                 j = 0;
               if (k === il)
                 k = 0;
-              contourMovements[i2] = getBevelVec(contour[i2], contour[j], contour[k]);
+              contourMovements[i] = getBevelVec(contour[i], contour[j], contour[k]);
             }
             const holesMovements = [];
             let oneHoleMovements, verticesMovements = contourMovements.concat();
-            for (let h2 = 0, hl = holes.length; h2 < hl; h2++) {
-              const ahole = holes[h2];
+            for (let h = 0, hl = holes.length; h < hl; h++) {
+              const ahole = holes[h];
               oneHoleMovements = [];
-              for (let i2 = 0, il = ahole.length, j = il - 1, k = i2 + 1; i2 < il; i2++, j++, k++) {
+              for (let i = 0, il = ahole.length, j = il - 1, k = i + 1; i < il; i++, j++, k++) {
                 if (j === il)
                   j = 0;
                 if (k === il)
                   k = 0;
-                oneHoleMovements[i2] = getBevelVec(ahole[i2], ahole[j], ahole[k]);
+                oneHoleMovements[i] = getBevelVec(ahole[i], ahole[j], ahole[k]);
               }
               holesMovements.push(oneHoleMovements);
               verticesMovements = verticesMovements.concat(oneHoleMovements);
             }
             for (let b = 0; b < bevelSegments; b++) {
-              const t2 = b / bevelSegments;
-              const z = bevelThickness * Math.cos(t2 * Math.PI / 2);
-              const bs2 = bevelSize * Math.sin(t2 * Math.PI / 2) + bevelOffset;
-              for (let i2 = 0, il = contour.length; i2 < il; i2++) {
-                const vert = scalePt2(contour[i2], contourMovements[i2], bs2);
+              const t = b / bevelSegments;
+              const z = bevelThickness * Math.cos(t * Math.PI / 2);
+              const bs2 = bevelSize * Math.sin(t * Math.PI / 2) + bevelOffset;
+              for (let i = 0, il = contour.length; i < il; i++) {
+                const vert = scalePt2(contour[i], contourMovements[i], bs2);
                 v(vert.x, vert.y, -z);
               }
-              for (let h2 = 0, hl = holes.length; h2 < hl; h2++) {
-                const ahole = holes[h2];
-                oneHoleMovements = holesMovements[h2];
-                for (let i2 = 0, il = ahole.length; i2 < il; i2++) {
-                  const vert = scalePt2(ahole[i2], oneHoleMovements[i2], bs2);
+              for (let h = 0, hl = holes.length; h < hl; h++) {
+                const ahole = holes[h];
+                oneHoleMovements = holesMovements[h];
+                for (let i = 0, il = ahole.length; i < il; i++) {
+                  const vert = scalePt2(ahole[i], oneHoleMovements[i], bs2);
                   v(vert.x, vert.y, -z);
                 }
               }
             }
             const bs = bevelSize + bevelOffset;
-            for (let i2 = 0; i2 < vlen; i2++) {
-              const vert = bevelEnabled ? scalePt2(vertices[i2], verticesMovements[i2], bs) : vertices[i2];
+            for (let i = 0; i < vlen; i++) {
+              const vert = bevelEnabled ? scalePt2(vertices[i], verticesMovements[i], bs) : vertices[i];
               if (!extrudeByPath) {
                 v(vert.x, vert.y, 0);
               } else {
@@ -60262,32 +60262,32 @@ You can use close({ resize: true }) to resize header`);
                 v(position22.x, position22.y, position22.z);
               }
             }
-            for (let s2 = 1; s2 <= steps; s2++) {
-              for (let i2 = 0; i2 < vlen; i2++) {
-                const vert = bevelEnabled ? scalePt2(vertices[i2], verticesMovements[i2], bs) : vertices[i2];
+            for (let s = 1; s <= steps; s++) {
+              for (let i = 0; i < vlen; i++) {
+                const vert = bevelEnabled ? scalePt2(vertices[i], verticesMovements[i], bs) : vertices[i];
                 if (!extrudeByPath) {
-                  v(vert.x, vert.y, depth / steps * s2);
+                  v(vert.x, vert.y, depth / steps * s);
                 } else {
-                  normal.copy(splineTube.normals[s2]).multiplyScalar(vert.x);
-                  binormal.copy(splineTube.binormals[s2]).multiplyScalar(vert.y);
-                  position22.copy(extrudePts[s2]).add(normal).add(binormal);
+                  normal.copy(splineTube.normals[s]).multiplyScalar(vert.x);
+                  binormal.copy(splineTube.binormals[s]).multiplyScalar(vert.y);
+                  position22.copy(extrudePts[s]).add(normal).add(binormal);
                   v(position22.x, position22.y, position22.z);
                 }
               }
             }
             for (let b = bevelSegments - 1; b >= 0; b--) {
-              const t2 = b / bevelSegments;
-              const z = bevelThickness * Math.cos(t2 * Math.PI / 2);
-              const bs2 = bevelSize * Math.sin(t2 * Math.PI / 2) + bevelOffset;
-              for (let i2 = 0, il = contour.length; i2 < il; i2++) {
-                const vert = scalePt2(contour[i2], contourMovements[i2], bs2);
+              const t = b / bevelSegments;
+              const z = bevelThickness * Math.cos(t * Math.PI / 2);
+              const bs2 = bevelSize * Math.sin(t * Math.PI / 2) + bevelOffset;
+              for (let i = 0, il = contour.length; i < il; i++) {
+                const vert = scalePt2(contour[i], contourMovements[i], bs2);
                 v(vert.x, vert.y, depth + z);
               }
-              for (let h2 = 0, hl = holes.length; h2 < hl; h2++) {
-                const ahole = holes[h2];
-                oneHoleMovements = holesMovements[h2];
-                for (let i2 = 0, il = ahole.length; i2 < il; i2++) {
-                  const vert = scalePt2(ahole[i2], oneHoleMovements[i2], bs2);
+              for (let h = 0, hl = holes.length; h < hl; h++) {
+                const ahole = holes[h];
+                oneHoleMovements = holesMovements[h];
+                for (let i = 0, il = ahole.length; i < il; i++) {
+                  const vert = scalePt2(ahole[i], oneHoleMovements[i], bs2);
                   if (!extrudeByPath) {
                     v(vert.x, vert.y, depth + z);
                   } else {
@@ -60303,23 +60303,23 @@ You can use close({ resize: true }) to resize header`);
               if (bevelEnabled) {
                 let layer = 0;
                 let offset = vlen * layer;
-                for (let i2 = 0; i2 < flen; i2++) {
-                  const face = faces[i2];
+                for (let i = 0; i < flen; i++) {
+                  const face = faces[i];
                   f3(face[2] + offset, face[1] + offset, face[0] + offset);
                 }
                 layer = steps + bevelSegments * 2;
                 offset = vlen * layer;
-                for (let i2 = 0; i2 < flen; i2++) {
-                  const face = faces[i2];
+                for (let i = 0; i < flen; i++) {
+                  const face = faces[i];
                   f3(face[0] + offset, face[1] + offset, face[2] + offset);
                 }
               } else {
-                for (let i2 = 0; i2 < flen; i2++) {
-                  const face = faces[i2];
+                for (let i = 0; i < flen; i++) {
+                  const face = faces[i];
                   f3(face[2], face[1], face[0]);
                 }
-                for (let i2 = 0; i2 < flen; i2++) {
-                  const face = faces[i2];
+                for (let i = 0; i < flen; i++) {
+                  const face = faces[i];
                   f3(face[0] + vlen * steps, face[1] + vlen * steps, face[2] + vlen * steps);
                 }
               }
@@ -60330,25 +60330,25 @@ You can use close({ resize: true }) to resize header`);
               let layeroffset = 0;
               sidewalls(contour, layeroffset);
               layeroffset += contour.length;
-              for (let h2 = 0, hl = holes.length; h2 < hl; h2++) {
-                const ahole = holes[h2];
+              for (let h = 0, hl = holes.length; h < hl; h++) {
+                const ahole = holes[h];
                 sidewalls(ahole, layeroffset);
                 layeroffset += ahole.length;
               }
               scope.addGroup(start, verticesArray.length / 3 - start, 1);
             }
             function sidewalls(contour2, layeroffset) {
-              let i2 = contour2.length;
-              while (--i2 >= 0) {
-                const j = i2;
-                let k = i2 - 1;
+              let i = contour2.length;
+              while (--i >= 0) {
+                const j = i;
+                let k = i - 1;
                 if (k < 0)
                   k = contour2.length - 1;
-                for (let s2 = 0, sl = steps + bevelSegments * 2; s2 < sl; s2++) {
-                  const slen1 = vlen * s2;
-                  const slen2 = vlen * (s2 + 1);
-                  const a2 = layeroffset + j + slen1, b = layeroffset + k + slen1, c2 = layeroffset + k + slen2, d2 = layeroffset + j + slen2;
-                  f4(a2, b, c2, d2);
+                for (let s = 0, sl = steps + bevelSegments * 2; s < sl; s++) {
+                  const slen1 = vlen * s;
+                  const slen2 = vlen * (s + 1);
+                  const a = layeroffset + j + slen1, b = layeroffset + k + slen1, c = layeroffset + k + slen2, d = layeroffset + j + slen2;
+                  f4(a, b, c, d);
                 }
               }
             }
@@ -60357,23 +60357,23 @@ You can use close({ resize: true }) to resize header`);
               placeholder.push(y);
               placeholder.push(z);
             }
-            function f3(a2, b, c2) {
-              addVertex(a2);
+            function f3(a, b, c) {
+              addVertex(a);
               addVertex(b);
-              addVertex(c2);
+              addVertex(c);
               const nextIndex = verticesArray.length / 3;
               const uvs = uvgen.generateTopUV(scope, verticesArray, nextIndex - 3, nextIndex - 2, nextIndex - 1);
               addUV(uvs[0]);
               addUV(uvs[1]);
               addUV(uvs[2]);
             }
-            function f4(a2, b, c2, d2) {
-              addVertex(a2);
+            function f4(a, b, c, d) {
+              addVertex(a);
               addVertex(b);
-              addVertex(d2);
+              addVertex(d);
               addVertex(b);
-              addVertex(c2);
-              addVertex(d2);
+              addVertex(c);
+              addVertex(d);
               const nextIndex = verticesArray.length / 3;
               const uvs = uvgen.generateSideWallUV(scope, verticesArray, nextIndex - 6, nextIndex - 3, nextIndex - 2, nextIndex - 1);
               addUV(uvs[0]);
@@ -60465,8 +60465,8 @@ You can use close({ resize: true }) to resize header`);
       function toJSON$1(shapes, options, data) {
         data.shapes = [];
         if (Array.isArray(shapes)) {
-          for (let i2 = 0, l2 = shapes.length; i2 < l2; i2++) {
-            const shape = shapes[i2];
+          for (let i = 0, l = shapes.length; i < l; i++) {
+            const shape = shapes[i];
             data.shapes.push(shape.uuid);
           }
         } else {
@@ -60479,42 +60479,42 @@ You can use close({ resize: true }) to resize header`);
       }
       var IcosahedronGeometry = class _IcosahedronGeometry extends PolyhedronGeometry {
         constructor(radius = 1, detail = 0) {
-          const t2 = (1 + Math.sqrt(5)) / 2;
+          const t = (1 + Math.sqrt(5)) / 2;
           const vertices = [
             -1,
-            t2,
+            t,
             0,
             1,
-            t2,
+            t,
             0,
             -1,
-            -t2,
+            -t,
             0,
             1,
-            -t2,
+            -t,
             0,
             0,
             -1,
-            t2,
+            t,
             0,
             1,
-            t2,
+            t,
             0,
             -1,
-            -t2,
+            -t,
             0,
             1,
-            -t2,
-            t2,
+            -t,
+            t,
             0,
             -1,
-            t2,
+            t,
             0,
             1,
-            -t2,
+            -t,
             0,
             -1,
-            -t2,
+            -t,
             0,
             1
           ];
@@ -60673,8 +60673,8 @@ You can use close({ resize: true }) to resize header`);
           const vertex3 = new Vector32();
           const uv = new Vector22();
           for (let j = 0; j <= phiSegments; j++) {
-            for (let i2 = 0; i2 <= thetaSegments; i2++) {
-              const segment = thetaStart + i2 / thetaSegments * thetaLength;
+            for (let i = 0; i <= thetaSegments; i++) {
+              const segment = thetaStart + i / thetaSegments * thetaLength;
               vertex3.x = radius * Math.cos(segment);
               vertex3.y = radius * Math.sin(segment);
               vertices.push(vertex3.x, vertex3.y, vertex3.z);
@@ -60687,14 +60687,14 @@ You can use close({ resize: true }) to resize header`);
           }
           for (let j = 0; j < phiSegments; j++) {
             const thetaSegmentLevel = j * (thetaSegments + 1);
-            for (let i2 = 0; i2 < thetaSegments; i2++) {
-              const segment = i2 + thetaSegmentLevel;
-              const a2 = segment;
+            for (let i = 0; i < thetaSegments; i++) {
+              const segment = i + thetaSegmentLevel;
+              const a = segment;
               const b = segment + thetaSegments + 1;
-              const c2 = segment + thetaSegments + 2;
-              const d2 = segment + 1;
-              indices.push(a2, b, d2);
-              indices.push(b, c2, d2);
+              const c = segment + thetaSegments + 2;
+              const d = segment + 1;
+              indices.push(a, b, d);
+              indices.push(b, c, d);
             }
           }
           this.setIndex(indices);
@@ -60728,9 +60728,9 @@ You can use close({ resize: true }) to resize header`);
           if (Array.isArray(shapes) === false) {
             addShape(shapes);
           } else {
-            for (let i2 = 0; i2 < shapes.length; i2++) {
-              addShape(shapes[i2]);
-              this.addGroup(groupStart, groupCount, i2);
+            for (let i = 0; i < shapes.length; i++) {
+              addShape(shapes[i]);
+              this.addGroup(groupStart, groupCount, i);
               groupStart += groupCount;
               groupCount = 0;
             }
@@ -60747,29 +60747,29 @@ You can use close({ resize: true }) to resize header`);
             if (ShapeUtils.isClockWise(shapeVertices) === false) {
               shapeVertices = shapeVertices.reverse();
             }
-            for (let i2 = 0, l2 = shapeHoles.length; i2 < l2; i2++) {
-              const shapeHole = shapeHoles[i2];
+            for (let i = 0, l = shapeHoles.length; i < l; i++) {
+              const shapeHole = shapeHoles[i];
               if (ShapeUtils.isClockWise(shapeHole) === true) {
-                shapeHoles[i2] = shapeHole.reverse();
+                shapeHoles[i] = shapeHole.reverse();
               }
             }
             const faces = ShapeUtils.triangulateShape(shapeVertices, shapeHoles);
-            for (let i2 = 0, l2 = shapeHoles.length; i2 < l2; i2++) {
-              const shapeHole = shapeHoles[i2];
+            for (let i = 0, l = shapeHoles.length; i < l; i++) {
+              const shapeHole = shapeHoles[i];
               shapeVertices = shapeVertices.concat(shapeHole);
             }
-            for (let i2 = 0, l2 = shapeVertices.length; i2 < l2; i2++) {
-              const vertex3 = shapeVertices[i2];
+            for (let i = 0, l = shapeVertices.length; i < l; i++) {
+              const vertex3 = shapeVertices[i];
               vertices.push(vertex3.x, vertex3.y, 0);
               normals.push(0, 0, 1);
               uvs.push(vertex3.x, vertex3.y);
             }
-            for (let i2 = 0, l2 = faces.length; i2 < l2; i2++) {
-              const face = faces[i2];
-              const a2 = face[0] + indexOffset;
+            for (let i = 0, l = faces.length; i < l; i++) {
+              const face = faces[i];
+              const a = face[0] + indexOffset;
               const b = face[1] + indexOffset;
-              const c2 = face[2] + indexOffset;
-              indices.push(a2, b, c2);
+              const c = face[2] + indexOffset;
+              indices.push(a, b, c);
               groupCount += 3;
             }
           }
@@ -60796,8 +60796,8 @@ You can use close({ resize: true }) to resize header`);
       function toJSON(shapes, data) {
         data.shapes = [];
         if (Array.isArray(shapes)) {
-          for (let i2 = 0, l2 = shapes.length; i2 < l2; i2++) {
-            const shape = shapes[i2];
+          for (let i = 0, l = shapes.length; i < l; i++) {
+            const shape = shapes[i];
             data.shapes.push(shape.uuid);
           }
         } else {
@@ -60839,28 +60839,28 @@ You can use close({ resize: true }) to resize header`);
               uOffset = -0.5 / widthSegments;
             }
             for (let ix = 0; ix <= widthSegments; ix++) {
-              const u2 = ix / widthSegments;
-              vertex3.x = -radius * Math.cos(phiStart + u2 * phiLength) * Math.sin(thetaStart + v * thetaLength);
+              const u = ix / widthSegments;
+              vertex3.x = -radius * Math.cos(phiStart + u * phiLength) * Math.sin(thetaStart + v * thetaLength);
               vertex3.y = radius * Math.cos(thetaStart + v * thetaLength);
-              vertex3.z = radius * Math.sin(phiStart + u2 * phiLength) * Math.sin(thetaStart + v * thetaLength);
+              vertex3.z = radius * Math.sin(phiStart + u * phiLength) * Math.sin(thetaStart + v * thetaLength);
               vertices.push(vertex3.x, vertex3.y, vertex3.z);
               normal.copy(vertex3).normalize();
               normals.push(normal.x, normal.y, normal.z);
-              uvs.push(u2 + uOffset, 1 - v);
+              uvs.push(u + uOffset, 1 - v);
               verticesRow.push(index++);
             }
             grid.push(verticesRow);
           }
           for (let iy = 0; iy < heightSegments; iy++) {
             for (let ix = 0; ix < widthSegments; ix++) {
-              const a2 = grid[iy][ix + 1];
+              const a = grid[iy][ix + 1];
               const b = grid[iy][ix];
-              const c2 = grid[iy + 1][ix];
-              const d2 = grid[iy + 1][ix + 1];
+              const c = grid[iy + 1][ix];
+              const d = grid[iy + 1][ix + 1];
               if (iy !== 0 || thetaStart > 0)
-                indices.push(a2, b, d2);
+                indices.push(a, b, d);
               if (iy !== heightSegments - 1 || thetaEnd < Math.PI)
-                indices.push(b, c2, d2);
+                indices.push(b, c, d);
             }
           }
           this.setIndex(indices);
@@ -60939,29 +60939,29 @@ You can use close({ resize: true }) to resize header`);
           const vertex3 = new Vector32();
           const normal = new Vector32();
           for (let j = 0; j <= radialSegments; j++) {
-            for (let i2 = 0; i2 <= tubularSegments; i2++) {
-              const u2 = i2 / tubularSegments * arc;
+            for (let i = 0; i <= tubularSegments; i++) {
+              const u = i / tubularSegments * arc;
               const v = j / radialSegments * Math.PI * 2;
-              vertex3.x = (radius + tube * Math.cos(v)) * Math.cos(u2);
-              vertex3.y = (radius + tube * Math.cos(v)) * Math.sin(u2);
+              vertex3.x = (radius + tube * Math.cos(v)) * Math.cos(u);
+              vertex3.y = (radius + tube * Math.cos(v)) * Math.sin(u);
               vertex3.z = tube * Math.sin(v);
               vertices.push(vertex3.x, vertex3.y, vertex3.z);
-              center.x = radius * Math.cos(u2);
-              center.y = radius * Math.sin(u2);
+              center.x = radius * Math.cos(u);
+              center.y = radius * Math.sin(u);
               normal.subVectors(vertex3, center).normalize();
               normals.push(normal.x, normal.y, normal.z);
-              uvs.push(i2 / tubularSegments);
+              uvs.push(i / tubularSegments);
               uvs.push(j / radialSegments);
             }
           }
           for (let j = 1; j <= radialSegments; j++) {
-            for (let i2 = 1; i2 <= tubularSegments; i2++) {
-              const a2 = (tubularSegments + 1) * j + i2 - 1;
-              const b = (tubularSegments + 1) * (j - 1) + i2 - 1;
-              const c2 = (tubularSegments + 1) * (j - 1) + i2;
-              const d2 = (tubularSegments + 1) * j + i2;
-              indices.push(a2, b, d2);
-              indices.push(b, c2, d2);
+            for (let i = 1; i <= tubularSegments; i++) {
+              const a = (tubularSegments + 1) * j + i - 1;
+              const b = (tubularSegments + 1) * (j - 1) + i - 1;
+              const c = (tubularSegments + 1) * (j - 1) + i;
+              const d = (tubularSegments + 1) * j + i;
+              indices.push(a, b, d);
+              indices.push(b, c, d);
             }
           }
           this.setIndex(indices);
@@ -60979,7 +60979,7 @@ You can use close({ resize: true }) to resize header`);
         }
       };
       var TorusKnotGeometry = class _TorusKnotGeometry extends BufferGeometry2 {
-        constructor(radius = 1, tube = 0.4, tubularSegments = 64, radialSegments = 8, p2 = 2, q = 3) {
+        constructor(radius = 1, tube = 0.4, tubularSegments = 64, radialSegments = 8, p = 2, q = 3) {
           super();
           this.type = "TorusKnotGeometry";
           this.parameters = {
@@ -60987,7 +60987,7 @@ You can use close({ resize: true }) to resize header`);
             tube,
             tubularSegments,
             radialSegments,
-            p: p2,
+            p,
             q
           };
           tubularSegments = Math.floor(tubularSegments);
@@ -61003,10 +61003,10 @@ You can use close({ resize: true }) to resize header`);
           const B = new Vector32();
           const T = new Vector32();
           const N = new Vector32();
-          for (let i2 = 0; i2 <= tubularSegments; ++i2) {
-            const u2 = i2 / tubularSegments * p2 * Math.PI * 2;
-            calculatePositionOnCurve(u2, p2, q, radius, P1);
-            calculatePositionOnCurve(u2 + 0.01, p2, q, radius, P2);
+          for (let i = 0; i <= tubularSegments; ++i) {
+            const u = i / tubularSegments * p * Math.PI * 2;
+            calculatePositionOnCurve(u, p, q, radius, P1);
+            calculatePositionOnCurve(u + 0.01, p, q, radius, P2);
             T.subVectors(P2, P1);
             N.addVectors(P2, P1);
             B.crossVectors(T, N);
@@ -61023,28 +61023,28 @@ You can use close({ resize: true }) to resize header`);
               vertices.push(vertex3.x, vertex3.y, vertex3.z);
               normal.subVectors(vertex3, P1).normalize();
               normals.push(normal.x, normal.y, normal.z);
-              uvs.push(i2 / tubularSegments);
+              uvs.push(i / tubularSegments);
               uvs.push(j / radialSegments);
             }
           }
           for (let j = 1; j <= tubularSegments; j++) {
-            for (let i2 = 1; i2 <= radialSegments; i2++) {
-              const a2 = (radialSegments + 1) * (j - 1) + (i2 - 1);
-              const b = (radialSegments + 1) * j + (i2 - 1);
-              const c2 = (radialSegments + 1) * j + i2;
-              const d2 = (radialSegments + 1) * (j - 1) + i2;
-              indices.push(a2, b, d2);
-              indices.push(b, c2, d2);
+            for (let i = 1; i <= radialSegments; i++) {
+              const a = (radialSegments + 1) * (j - 1) + (i - 1);
+              const b = (radialSegments + 1) * j + (i - 1);
+              const c = (radialSegments + 1) * j + i;
+              const d = (radialSegments + 1) * (j - 1) + i;
+              indices.push(a, b, d);
+              indices.push(b, c, d);
             }
           }
           this.setIndex(indices);
           this.setAttribute("position", new Float32BufferAttribute2(vertices, 3));
           this.setAttribute("normal", new Float32BufferAttribute2(normals, 3));
           this.setAttribute("uv", new Float32BufferAttribute2(uvs, 2));
-          function calculatePositionOnCurve(u2, p3, q2, radius2, position3) {
-            const cu = Math.cos(u2);
-            const su = Math.sin(u2);
-            const quOverP = q2 / p3 * u2;
+          function calculatePositionOnCurve(u, p2, q2, radius2, position3) {
+            const cu = Math.cos(u);
+            const su = Math.sin(u);
+            const quOverP = q2 / p2 * u;
             const cs = Math.cos(quOverP);
             position3.x = radius2 * (2 + cs) * 0.5 * cu;
             position3.y = radius2 * (2 + cs) * su * 0.5;
@@ -61089,17 +61089,17 @@ You can use close({ resize: true }) to resize header`);
           this.setAttribute("normal", new Float32BufferAttribute2(normals, 3));
           this.setAttribute("uv", new Float32BufferAttribute2(uvs, 2));
           function generateBufferData() {
-            for (let i2 = 0; i2 < tubularSegments; i2++) {
-              generateSegment(i2);
+            for (let i = 0; i < tubularSegments; i++) {
+              generateSegment(i);
             }
             generateSegment(closed === false ? tubularSegments : 0);
             generateUVs();
             generateIndices();
           }
-          function generateSegment(i2) {
-            P = path.getPointAt(i2 / tubularSegments, P);
-            const N = frames.normals[i2];
-            const B = frames.binormals[i2];
+          function generateSegment(i) {
+            P = path.getPointAt(i / tubularSegments, P);
+            const N = frames.normals[i];
+            const B = frames.binormals[i];
             for (let j = 0; j <= radialSegments; j++) {
               const v = j / radialSegments * Math.PI * 2;
               const sin = Math.sin(v);
@@ -61117,20 +61117,20 @@ You can use close({ resize: true }) to resize header`);
           }
           function generateIndices() {
             for (let j = 1; j <= tubularSegments; j++) {
-              for (let i2 = 1; i2 <= radialSegments; i2++) {
-                const a2 = (radialSegments + 1) * (j - 1) + (i2 - 1);
-                const b = (radialSegments + 1) * j + (i2 - 1);
-                const c2 = (radialSegments + 1) * j + i2;
-                const d2 = (radialSegments + 1) * (j - 1) + i2;
-                indices.push(a2, b, d2);
-                indices.push(b, c2, d2);
+              for (let i = 1; i <= radialSegments; i++) {
+                const a = (radialSegments + 1) * (j - 1) + (i - 1);
+                const b = (radialSegments + 1) * j + (i - 1);
+                const c = (radialSegments + 1) * j + i;
+                const d = (radialSegments + 1) * (j - 1) + i;
+                indices.push(a, b, d);
+                indices.push(b, c, d);
               }
             }
           }
           function generateUVs() {
-            for (let i2 = 0; i2 <= tubularSegments; i2++) {
+            for (let i = 0; i <= tubularSegments; i++) {
               for (let j = 0; j <= radialSegments; j++) {
-                uv.x = i2 / tubularSegments;
+                uv.x = i / tubularSegments;
                 uv.y = j / radialSegments;
                 uvs.push(uv.x, uv.y);
               }
@@ -61176,14 +61176,14 @@ You can use close({ resize: true }) to resize header`);
               if (groups.length === 0) {
                 groups = [{ start: 0, count: indices.count, materialIndex: 0 }];
               }
-              for (let o2 = 0, ol = groups.length; o2 < ol; ++o2) {
-                const group = groups[o2];
+              for (let o = 0, ol = groups.length; o < ol; ++o) {
+                const group = groups[o];
                 const groupStart = group.start;
                 const groupCount = group.count;
-                for (let i2 = groupStart, l2 = groupStart + groupCount; i2 < l2; i2 += 3) {
+                for (let i = groupStart, l = groupStart + groupCount; i < l; i += 3) {
                   for (let j = 0; j < 3; j++) {
-                    const index1 = indices.getX(i2 + j);
-                    const index2 = indices.getX(i2 + (j + 1) % 3);
+                    const index1 = indices.getX(i + j);
+                    const index2 = indices.getX(i + (j + 1) % 3);
                     start.fromBufferAttribute(position3, index1);
                     end.fromBufferAttribute(position3, index2);
                     if (isUniqueEdge(start, end, edges) === true) {
@@ -61195,10 +61195,10 @@ You can use close({ resize: true }) to resize header`);
               }
             } else {
               const position3 = geometry.attributes.position;
-              for (let i2 = 0, l2 = position3.count / 3; i2 < l2; i2++) {
+              for (let i = 0, l = position3.count / 3; i < l; i++) {
                 for (let j = 0; j < 3; j++) {
-                  const index1 = 3 * i2 + j;
-                  const index2 = 3 * i2 + (j + 1) % 3;
+                  const index1 = 3 * i + j;
+                  const index2 = 3 * i + (j + 1) % 3;
                   start.fromBufferAttribute(position3, index1);
                   end.fromBufferAttribute(position3, index2);
                   if (isUniqueEdge(start, end, edges) === true) {
@@ -61801,21 +61801,21 @@ You can use close({ resize: true }) to resize header`);
         return ArrayBuffer.isView(object) && !(object instanceof DataView);
       }
       function getKeyframeOrder(times) {
-        function compareTime(i2, j) {
-          return times[i2] - times[j];
+        function compareTime(i, j) {
+          return times[i] - times[j];
         }
-        const n2 = times.length;
-        const result = new Array(n2);
-        for (let i2 = 0; i2 !== n2; ++i2)
-          result[i2] = i2;
+        const n = times.length;
+        const result = new Array(n);
+        for (let i = 0; i !== n; ++i)
+          result[i] = i;
         result.sort(compareTime);
         return result;
       }
       function sortedArray(values, stride, order) {
         const nValues = values.length;
         const result = new values.constructor(nValues);
-        for (let i2 = 0, dstOffset = 0; dstOffset !== nValues; ++i2) {
-          const srcOffset = order[i2] * stride;
+        for (let i = 0, dstOffset = 0; dstOffset !== nValues; ++i) {
+          const srcOffset = order[i] * stride;
           for (let j = 0; j !== stride; ++j) {
             result[dstOffset++] = values[srcOffset + j];
           }
@@ -61823,9 +61823,9 @@ You can use close({ resize: true }) to resize header`);
         return result;
       }
       function flattenJSON(jsonKeys, times, values, valuePropertyName) {
-        let i2 = 1, key = jsonKeys[0];
+        let i = 1, key = jsonKeys[0];
         while (key !== void 0 && key[valuePropertyName] === void 0) {
-          key = jsonKeys[i2++];
+          key = jsonKeys[i++];
         }
         if (key === void 0)
           return;
@@ -61839,7 +61839,7 @@ You can use close({ resize: true }) to resize header`);
               times.push(key.time);
               values.push.apply(values, value);
             }
-            key = jsonKeys[i2++];
+            key = jsonKeys[i++];
           } while (key !== void 0);
         } else if (value.toArray !== void 0) {
           do {
@@ -61848,7 +61848,7 @@ You can use close({ resize: true }) to resize header`);
               times.push(key.time);
               value.toArray(values, values.length);
             }
-            key = jsonKeys[i2++];
+            key = jsonKeys[i++];
           } while (key !== void 0);
         } else {
           do {
@@ -61857,7 +61857,7 @@ You can use close({ resize: true }) to resize header`);
               times.push(key.time);
               values.push(value);
             }
-            key = jsonKeys[i2++];
+            key = jsonKeys[i++];
           } while (key !== void 0);
         }
       }
@@ -61865,8 +61865,8 @@ You can use close({ resize: true }) to resize header`);
         const clip = sourceClip.clone();
         clip.name = name;
         const tracks = [];
-        for (let i2 = 0; i2 < clip.tracks.length; ++i2) {
-          const track = clip.tracks[i2];
+        for (let i = 0; i < clip.tracks.length; ++i) {
+          const track = clip.tracks[i];
           const valueSize = track.getValueSize();
           const times = [];
           const values = [];
@@ -61887,13 +61887,13 @@ You can use close({ resize: true }) to resize header`);
         }
         clip.tracks = tracks;
         let minStartTime = Infinity;
-        for (let i2 = 0; i2 < clip.tracks.length; ++i2) {
-          if (minStartTime > clip.tracks[i2].times[0]) {
-            minStartTime = clip.tracks[i2].times[0];
+        for (let i = 0; i < clip.tracks.length; ++i) {
+          if (minStartTime > clip.tracks[i].times[0]) {
+            minStartTime = clip.tracks[i].times[0];
           }
         }
-        for (let i2 = 0; i2 < clip.tracks.length; ++i2) {
-          clip.tracks[i2].shift(-1 * minStartTime);
+        for (let i = 0; i < clip.tracks.length; ++i) {
+          clip.tracks[i].shift(-1 * minStartTime);
         }
         clip.resetDuration();
         return clip;
@@ -61903,8 +61903,8 @@ You can use close({ resize: true }) to resize header`);
           fps = 30;
         const numTracks = referenceClip.tracks.length;
         const referenceTime = referenceFrame / fps;
-        for (let i2 = 0; i2 < numTracks; ++i2) {
-          const referenceTrack = referenceClip.tracks[i2];
+        for (let i = 0; i < numTracks; ++i) {
+          const referenceTrack = referenceClip.tracks[i];
           const referenceTrackType = referenceTrack.ValueTypeName;
           if (referenceTrackType === "bool" || referenceTrackType === "string")
             continue;
@@ -61987,7 +61987,7 @@ You can use close({ resize: true }) to resize header`);
           this.settings = null;
           this.DefaultSettings_ = {};
         }
-        evaluate(t2) {
+        evaluate(t) {
           const pp = this.parameterPositions;
           let i1 = this._cachedIndex, t1 = pp[i1], t0 = pp[i1 - 1];
           validate_interval: {
@@ -61995,10 +61995,10 @@ You can use close({ resize: true }) to resize header`);
               let right;
               linear_scan: {
                 forward_scan:
-                  if (!(t2 < t1)) {
+                  if (!(t < t1)) {
                     for (let giveUpAt = i1 + 2; ; ) {
                       if (t1 === void 0) {
-                        if (t2 < t0)
+                        if (t < t0)
                           break forward_scan;
                         i1 = pp.length;
                         this._cachedIndex = i1;
@@ -62008,16 +62008,16 @@ You can use close({ resize: true }) to resize header`);
                         break;
                       t0 = t1;
                       t1 = pp[++i1];
-                      if (t2 < t1) {
+                      if (t < t1) {
                         break seek;
                       }
                     }
                     right = pp.length;
                     break linear_scan;
                   }
-                if (!(t2 >= t0)) {
+                if (!(t >= t0)) {
                   const t1global = pp[1];
-                  if (t2 < t1global) {
+                  if (t < t1global) {
                     i1 = 2;
                     t0 = t1global;
                   }
@@ -62030,7 +62030,7 @@ You can use close({ resize: true }) to resize header`);
                       break;
                     t1 = t0;
                     t0 = pp[--i1 - 1];
-                    if (t2 >= t0) {
+                    if (t >= t0) {
                       break seek;
                     }
                   }
@@ -62042,7 +62042,7 @@ You can use close({ resize: true }) to resize header`);
               }
               while (i1 < right) {
                 const mid = i1 + right >>> 1;
-                if (t2 < pp[mid]) {
+                if (t < pp[mid]) {
                   right = mid;
                 } else {
                   i1 = mid + 1;
@@ -62063,15 +62063,15 @@ You can use close({ resize: true }) to resize header`);
             this._cachedIndex = i1;
             this.intervalChanged_(i1, t0, t1);
           }
-          return this.interpolate_(i1, t0, t2, t1);
+          return this.interpolate_(i1, t0, t, t1);
         }
         getSettings_() {
           return this.settings || this.DefaultSettings_;
         }
         copySampleValue_(index) {
           const result = this.resultBuffer, values = this.sampleValues, stride = this.valueSize, offset = index * stride;
-          for (let i2 = 0; i2 !== stride; ++i2) {
-            result[i2] = values[offset + i2];
+          for (let i = 0; i !== stride; ++i) {
+            result[i] = values[offset + i];
           }
           return result;
         }
@@ -62133,14 +62133,14 @@ You can use close({ resize: true }) to resize header`);
           this._offsetPrev = iPrev * stride;
           this._offsetNext = iNext * stride;
         }
-        interpolate_(i1, t0, t2, t1) {
-          const result = this.resultBuffer, values = this.sampleValues, stride = this.valueSize, o1 = i1 * stride, o0 = o1 - stride, oP = this._offsetPrev, oN = this._offsetNext, wP = this._weightPrev, wN = this._weightNext, p2 = (t2 - t0) / (t1 - t0), pp = p2 * p2, ppp = pp * p2;
-          const sP = -wP * ppp + 2 * wP * pp - wP * p2;
-          const s0 = (1 + wP) * ppp + (-1.5 - 2 * wP) * pp + (-0.5 + wP) * p2 + 1;
-          const s1 = (-1 - wN) * ppp + (1.5 + wN) * pp + 0.5 * p2;
+        interpolate_(i1, t0, t, t1) {
+          const result = this.resultBuffer, values = this.sampleValues, stride = this.valueSize, o1 = i1 * stride, o0 = o1 - stride, oP = this._offsetPrev, oN = this._offsetNext, wP = this._weightPrev, wN = this._weightNext, p = (t - t0) / (t1 - t0), pp = p * p, ppp = pp * p;
+          const sP = -wP * ppp + 2 * wP * pp - wP * p;
+          const s0 = (1 + wP) * ppp + (-1.5 - 2 * wP) * pp + (-0.5 + wP) * p + 1;
+          const s1 = (-1 - wN) * ppp + (1.5 + wN) * pp + 0.5 * p;
           const sN = wN * ppp - wN * pp;
-          for (let i2 = 0; i2 !== stride; ++i2) {
-            result[i2] = sP * values[oP + i2] + s0 * values[o0 + i2] + s1 * values[o1 + i2] + sN * values[oN + i2];
+          for (let i = 0; i !== stride; ++i) {
+            result[i] = sP * values[oP + i] + s0 * values[o0 + i] + s1 * values[o1 + i] + sN * values[oN + i];
           }
           return result;
         }
@@ -62149,10 +62149,10 @@ You can use close({ resize: true }) to resize header`);
         constructor(parameterPositions, sampleValues, sampleSize, resultBuffer) {
           super(parameterPositions, sampleValues, sampleSize, resultBuffer);
         }
-        interpolate_(i1, t0, t2, t1) {
-          const result = this.resultBuffer, values = this.sampleValues, stride = this.valueSize, offset1 = i1 * stride, offset0 = offset1 - stride, weight1 = (t2 - t0) / (t1 - t0), weight0 = 1 - weight1;
-          for (let i2 = 0; i2 !== stride; ++i2) {
-            result[i2] = values[offset0 + i2] * weight0 + values[offset1 + i2] * weight1;
+        interpolate_(i1, t0, t, t1) {
+          const result = this.resultBuffer, values = this.sampleValues, stride = this.valueSize, offset1 = i1 * stride, offset0 = offset1 - stride, weight1 = (t - t0) / (t1 - t0), weight0 = 1 - weight1;
+          for (let i = 0; i !== stride; ++i) {
+            result[i] = values[offset0 + i] * weight0 + values[offset1 + i] * weight1;
           }
           return result;
         }
@@ -62251,8 +62251,8 @@ You can use close({ resize: true }) to resize header`);
         shift(timeOffset) {
           if (timeOffset !== 0) {
             const times = this.times;
-            for (let i2 = 0, n2 = times.length; i2 !== n2; ++i2) {
-              times[i2] += timeOffset;
+            for (let i = 0, n = times.length; i !== n; ++i) {
+              times[i] += timeOffset;
             }
           }
           return this;
@@ -62261,8 +62261,8 @@ You can use close({ resize: true }) to resize header`);
         scale(timeScale) {
           if (timeScale !== 1) {
             const times = this.times;
-            for (let i2 = 0, n2 = times.length; i2 !== n2; ++i2) {
-              times[i2] *= timeScale;
+            for (let i = 0, n = times.length; i !== n; ++i) {
+              times[i] *= timeScale;
             }
           }
           return this;
@@ -62304,15 +62304,15 @@ You can use close({ resize: true }) to resize header`);
             valid = false;
           }
           let prevTime = null;
-          for (let i2 = 0; i2 !== nKeys; i2++) {
-            const currTime = times[i2];
+          for (let i = 0; i !== nKeys; i++) {
+            const currTime = times[i];
             if (typeof currTime === "number" && isNaN(currTime)) {
-              console.error("THREE.KeyframeTrack: Time is not a valid number.", this, i2, currTime);
+              console.error("THREE.KeyframeTrack: Time is not a valid number.", this, i, currTime);
               valid = false;
               break;
             }
             if (prevTime !== null && prevTime > currTime) {
-              console.error("THREE.KeyframeTrack: Out of order keys.", this, i2, currTime, prevTime);
+              console.error("THREE.KeyframeTrack: Out of order keys.", this, i, currTime, prevTime);
               valid = false;
               break;
             }
@@ -62320,10 +62320,10 @@ You can use close({ resize: true }) to resize header`);
           }
           if (values !== void 0) {
             if (isTypedArray2(values)) {
-              for (let i2 = 0, n2 = values.length; i2 !== n2; ++i2) {
-                const value = values[i2];
+              for (let i = 0, n = values.length; i !== n; ++i) {
+                const value = values[i];
                 if (isNaN(value)) {
-                  console.error("THREE.KeyframeTrack: Value is not a valid number.", this, i2, value);
+                  console.error("THREE.KeyframeTrack: Value is not a valid number.", this, i, value);
                   valid = false;
                   break;
                 }
@@ -62337,13 +62337,13 @@ You can use close({ resize: true }) to resize header`);
         optimize() {
           const times = arraySlice2(this.times), values = arraySlice2(this.values), stride = this.getValueSize(), smoothInterpolation = this.getInterpolation() === InterpolateSmooth2, lastIndex = times.length - 1;
           let writeIndex = 1;
-          for (let i2 = 1; i2 < lastIndex; ++i2) {
+          for (let i = 1; i < lastIndex; ++i) {
             let keep = false;
-            const time = times[i2];
-            const timeNext = times[i2 + 1];
-            if (time !== timeNext && (i2 !== 1 || time !== times[0])) {
+            const time = times[i];
+            const timeNext = times[i + 1];
+            if (time !== timeNext && (i !== 1 || time !== times[0])) {
               if (!smoothInterpolation) {
-                const offset = i2 * stride, offsetP = offset - stride, offsetN = offset + stride;
+                const offset = i * stride, offsetP = offset - stride, offsetN = offset + stride;
                 for (let j = 0; j !== stride; ++j) {
                   const value = values[offset + j];
                   if (value !== values[offsetP + j] || value !== values[offsetN + j]) {
@@ -62356,9 +62356,9 @@ You can use close({ resize: true }) to resize header`);
               }
             }
             if (keep) {
-              if (i2 !== writeIndex) {
-                times[writeIndex] = times[i2];
-                const readOffset = i2 * stride, writeOffset = writeIndex * stride;
+              if (i !== writeIndex) {
+                times[writeIndex] = times[i];
+                const readOffset = i * stride, writeOffset = writeIndex * stride;
                 for (let j = 0; j !== stride; ++j) {
                   values[writeOffset + j] = values[readOffset + j];
                 }
@@ -62411,8 +62411,8 @@ You can use close({ resize: true }) to resize header`);
         constructor(parameterPositions, sampleValues, sampleSize, resultBuffer) {
           super(parameterPositions, sampleValues, sampleSize, resultBuffer);
         }
-        interpolate_(i1, t0, t2, t1) {
-          const result = this.resultBuffer, values = this.sampleValues, stride = this.valueSize, alpha = (t2 - t0) / (t1 - t0);
+        interpolate_(i1, t0, t, t1) {
+          const result = this.resultBuffer, values = this.sampleValues, stride = this.valueSize, alpha = (t - t0) / (t1 - t0);
           let offset = i1 * stride;
           for (let end = offset + stride; offset !== end; offset += 4) {
             Quaternion2.slerpFlat(result, 0, values, offset - stride, values, offset, alpha);
@@ -62451,8 +62451,8 @@ You can use close({ resize: true }) to resize header`);
         }
         static parse(json) {
           const tracks = [], jsonTracks = json.tracks, frameTime = 1 / (json.fps || 1);
-          for (let i2 = 0, n2 = jsonTracks.length; i2 !== n2; ++i2) {
-            tracks.push(parseKeyframeTrack(jsonTracks[i2]).scale(frameTime));
+          for (let i = 0, n = jsonTracks.length; i !== n; ++i) {
+            tracks.push(parseKeyframeTrack(jsonTracks[i]).scale(frameTime));
           }
           const clip = new this(json.name, json.duration, tracks, json.blendMode);
           clip.uuid = json.uuid;
@@ -62467,21 +62467,21 @@ You can use close({ resize: true }) to resize header`);
             "uuid": clip.uuid,
             "blendMode": clip.blendMode
           };
-          for (let i2 = 0, n2 = clipTracks.length; i2 !== n2; ++i2) {
-            tracks.push(KeyframeTrack2.toJSON(clipTracks[i2]));
+          for (let i = 0, n = clipTracks.length; i !== n; ++i) {
+            tracks.push(KeyframeTrack2.toJSON(clipTracks[i]));
           }
           return json;
         }
         static CreateFromMorphTargetSequence(name, morphTargetSequence, fps, noLoop) {
           const numMorphTargets = morphTargetSequence.length;
           const tracks = [];
-          for (let i2 = 0; i2 < numMorphTargets; i2++) {
+          for (let i = 0; i < numMorphTargets; i++) {
             let times = [];
             let values = [];
             times.push(
-              (i2 + numMorphTargets - 1) % numMorphTargets,
-              i2,
-              (i2 + 1) % numMorphTargets
+              (i + numMorphTargets - 1) % numMorphTargets,
+              i,
+              (i + 1) % numMorphTargets
             );
             values.push(0, 1, 0);
             const order = getKeyframeOrder(times);
@@ -62493,7 +62493,7 @@ You can use close({ resize: true }) to resize header`);
             }
             tracks.push(
               new NumberKeyframeTrack2(
-                ".morphTargetInfluences[" + morphTargetSequence[i2].name + "]",
+                ".morphTargetInfluences[" + morphTargetSequence[i].name + "]",
                 times,
                 values
               ).scale(1 / fps)
@@ -62504,12 +62504,12 @@ You can use close({ resize: true }) to resize header`);
         static findByName(objectOrClipArray, name) {
           let clipArray = objectOrClipArray;
           if (!Array.isArray(objectOrClipArray)) {
-            const o2 = objectOrClipArray;
-            clipArray = o2.geometry && o2.geometry.animations || o2.animations;
+            const o = objectOrClipArray;
+            clipArray = o.geometry && o.geometry.animations || o.animations;
           }
-          for (let i2 = 0; i2 < clipArray.length; i2++) {
-            if (clipArray[i2].name === name) {
-              return clipArray[i2];
+          for (let i = 0; i < clipArray.length; i++) {
+            if (clipArray[i].name === name) {
+              return clipArray[i];
             }
           }
           return null;
@@ -62517,8 +62517,8 @@ You can use close({ resize: true }) to resize header`);
         static CreateClipsFromMorphTargetSequences(morphTargets, fps, noLoop) {
           const animationToMorphTargets = {};
           const pattern = /^([\w-]*?)([\d]+)$/;
-          for (let i2 = 0, il = morphTargets.length; i2 < il; i2++) {
-            const morphTarget = morphTargets[i2];
+          for (let i = 0, il = morphTargets.length; i < il; i++) {
+            const morphTarget = morphTargets[i];
             const parts = morphTarget.name.match(pattern);
             if (parts && parts.length > 1) {
               const name = parts[1];
@@ -62557,8 +62557,8 @@ You can use close({ resize: true }) to resize header`);
           const blendMode = animation.blendMode;
           let duration = animation.length || -1;
           const hierarchyTracks = animation.hierarchy || [];
-          for (let h2 = 0; h2 < hierarchyTracks.length; h2++) {
-            const animationKeys = hierarchyTracks[h2].keys;
+          for (let h = 0; h < hierarchyTracks.length; h++) {
+            const animationKeys = hierarchyTracks[h].keys;
             if (!animationKeys || animationKeys.length === 0)
               continue;
             if (animationKeys[0].morphTargets) {
@@ -62583,7 +62583,7 @@ You can use close({ resize: true }) to resize header`);
               }
               duration = morphTargetNames.length * fps;
             } else {
-              const boneName = ".bones[" + bones[h2].name + "]";
+              const boneName = ".bones[" + bones[h].name + "]";
               addNonemptyTrack(
                 VectorKeyframeTrack2,
                 boneName + ".position",
@@ -62616,36 +62616,36 @@ You can use close({ resize: true }) to resize header`);
         resetDuration() {
           const tracks = this.tracks;
           let duration = 0;
-          for (let i2 = 0, n2 = tracks.length; i2 !== n2; ++i2) {
-            const track = this.tracks[i2];
+          for (let i = 0, n = tracks.length; i !== n; ++i) {
+            const track = this.tracks[i];
             duration = Math.max(duration, track.times[track.times.length - 1]);
           }
           this.duration = duration;
           return this;
         }
         trim() {
-          for (let i2 = 0; i2 < this.tracks.length; i2++) {
-            this.tracks[i2].trim(0, this.duration);
+          for (let i = 0; i < this.tracks.length; i++) {
+            this.tracks[i].trim(0, this.duration);
           }
           return this;
         }
         validate() {
           let valid = true;
-          for (let i2 = 0; i2 < this.tracks.length; i2++) {
-            valid = valid && this.tracks[i2].validate();
+          for (let i = 0; i < this.tracks.length; i++) {
+            valid = valid && this.tracks[i].validate();
           }
           return valid;
         }
         optimize() {
-          for (let i2 = 0; i2 < this.tracks.length; i2++) {
-            this.tracks[i2].optimize();
+          for (let i = 0; i < this.tracks.length; i++) {
+            this.tracks[i].optimize();
           }
           return this;
         }
         clone() {
           const tracks = [];
-          for (let i2 = 0; i2 < this.tracks.length; i2++) {
-            tracks.push(this.tracks[i2].clone());
+          for (let i = 0; i < this.tracks.length; i++) {
+            tracks.push(this.tracks[i].clone());
           }
           return new this.constructor(this.name, this.duration, tracks, this.blendMode);
         }
@@ -62775,9 +62775,9 @@ You can use close({ resize: true }) to resize header`);
             return this;
           };
           this.getHandler = function(file) {
-            for (let i2 = 0, l2 = handlers.length; i2 < l2; i2 += 2) {
-              const regex = handlers[i2];
-              const loader = handlers[i2 + 1];
+            for (let i = 0, l = handlers.length; i < l; i += 2) {
+              const regex = handlers[i];
+              const loader = handlers[i + 1];
               if (regex.global)
                 regex.lastIndex = 0;
               if (regex.test(file)) {
@@ -62902,8 +62902,8 @@ You can use close({ resize: true }) to resize header`);
                       } else {
                         loaded += value.byteLength;
                         const event = new ProgressEvent("progress", { lengthComputable, loaded, total });
-                        for (let i2 = 0, il = callbacks.length; i2 < il; i2++) {
-                          const callback = callbacks[i2];
+                        for (let i = 0, il = callbacks.length; i < il; i++) {
+                          const callback = callbacks[i];
                           if (callback.onProgress)
                             callback.onProgress(event);
                         }
@@ -62946,8 +62946,8 @@ You can use close({ resize: true }) to resize header`);
             Cache.add(url, data);
             const callbacks = loading[url];
             delete loading[url];
-            for (let i2 = 0, il = callbacks.length; i2 < il; i2++) {
-              const callback = callbacks[i2];
+            for (let i = 0, il = callbacks.length; i < il; i++) {
+              const callback = callbacks[i];
               if (callback.onLoad)
                 callback.onLoad(data);
             }
@@ -62958,8 +62958,8 @@ You can use close({ resize: true }) to resize header`);
               throw err;
             }
             delete loading[url];
-            for (let i2 = 0, il = callbacks.length; i2 < il; i2++) {
-              const callback = callbacks[i2];
+            for (let i = 0, il = callbacks.length; i < il; i++) {
+              const callback = callbacks[i];
               if (callback.onError)
                 callback.onError(err);
             }
@@ -62991,11 +62991,11 @@ You can use close({ resize: true }) to resize header`);
           loader.load(url, function(text) {
             try {
               onLoad(scope.parse(JSON.parse(text)));
-            } catch (e2) {
+            } catch (e) {
               if (onError) {
-                onError(e2);
+                onError(e);
               } else {
-                console.error(e2);
+                console.error(e);
               }
               scope.manager.itemError(url);
             }
@@ -63003,8 +63003,8 @@ You can use close({ resize: true }) to resize header`);
         }
         parse(json) {
           const animations = [];
-          for (let i2 = 0; i2 < json.length; i2++) {
-            const clip = AnimationClip.parse(json[i2]);
+          for (let i = 0; i < json.length; i++) {
+            const clip = AnimationClip.parse(json[i]);
             animations.push(clip);
           }
           return animations;
@@ -63024,10 +63024,10 @@ You can use close({ resize: true }) to resize header`);
           loader.setRequestHeader(this.requestHeader);
           loader.setWithCredentials(scope.withCredentials);
           let loaded = 0;
-          function loadTexture(i2) {
-            loader.load(url[i2], function(buffer3) {
+          function loadTexture(i) {
+            loader.load(url[i], function(buffer3) {
               const texDatas = scope.parse(buffer3, true);
-              images[i2] = {
+              images[i] = {
                 width: texDatas.width,
                 height: texDatas.height,
                 format: texDatas.format,
@@ -63046,8 +63046,8 @@ You can use close({ resize: true }) to resize header`);
             }, onProgress, onError);
           }
           if (Array.isArray(url)) {
-            for (let i2 = 0, il = url.length; i2 < il; ++i2) {
-              loadTexture(i2);
+            for (let i = 0, il = url.length; i < il; ++i) {
+              loadTexture(i);
             }
           } else {
             loader.load(url, function(buffer3) {
@@ -63056,8 +63056,8 @@ You can use close({ resize: true }) to resize header`);
                 const faces = texDatas.mipmaps.length / texDatas.mipmapCount;
                 for (let f = 0; f < faces; f++) {
                   images[f] = { mipmaps: [] };
-                  for (let i2 = 0; i2 < texDatas.mipmapCount; i2++) {
-                    images[f].mipmaps.push(texDatas.mipmaps[f * texDatas.mipmapCount + i2]);
+                  for (let i = 0; i < texDatas.mipmapCount; i++) {
+                    images[f].mipmaps.push(texDatas.mipmaps[f * texDatas.mipmapCount + i]);
                     images[f].format = texDatas.format;
                     images[f].width = texDatas.width;
                     images[f].height = texDatas.height;
@@ -63141,9 +63141,9 @@ You can use close({ resize: true }) to resize header`);
           loader.setCrossOrigin(this.crossOrigin);
           loader.setPath(this.path);
           let loaded = 0;
-          function loadTexture(i2) {
-            loader.load(urls[i2], function(image) {
-              texture.images[i2] = image;
+          function loadTexture(i) {
+            loader.load(urls[i], function(image) {
+              texture.images[i] = image;
               loaded++;
               if (loaded === 6) {
                 texture.needsUpdate = true;
@@ -63152,8 +63152,8 @@ You can use close({ resize: true }) to resize header`);
               }
             }, void 0, onError);
           }
-          for (let i2 = 0; i2 < urls.length; ++i2) {
-            loadTexture(i2);
+          for (let i = 0; i < urls.length; ++i) {
+            loadTexture(i);
           }
           return texture;
         }
@@ -63614,19 +63614,19 @@ You can use close({ resize: true }) to resize header`);
         constructor() {
           this.isSphericalHarmonics3 = true;
           this.coefficients = [];
-          for (let i2 = 0; i2 < 9; i2++) {
+          for (let i = 0; i < 9; i++) {
             this.coefficients.push(new Vector32());
           }
         }
         set(coefficients) {
-          for (let i2 = 0; i2 < 9; i2++) {
-            this.coefficients[i2].copy(coefficients[i2]);
+          for (let i = 0; i < 9; i++) {
+            this.coefficients[i].copy(coefficients[i]);
           }
           return this;
         }
         zero() {
-          for (let i2 = 0; i2 < 9; i2++) {
-            this.coefficients[i2].set(0, 0, 0);
+          for (let i = 0; i < 9; i++) {
+            this.coefficients[i].set(0, 0, 0);
           }
           return this;
         }
@@ -63664,32 +63664,32 @@ You can use close({ resize: true }) to resize header`);
           return target2;
         }
         add(sh) {
-          for (let i2 = 0; i2 < 9; i2++) {
-            this.coefficients[i2].add(sh.coefficients[i2]);
+          for (let i = 0; i < 9; i++) {
+            this.coefficients[i].add(sh.coefficients[i]);
           }
           return this;
         }
-        addScaledSH(sh, s2) {
-          for (let i2 = 0; i2 < 9; i2++) {
-            this.coefficients[i2].addScaledVector(sh.coefficients[i2], s2);
+        addScaledSH(sh, s) {
+          for (let i = 0; i < 9; i++) {
+            this.coefficients[i].addScaledVector(sh.coefficients[i], s);
           }
           return this;
         }
-        scale(s2) {
-          for (let i2 = 0; i2 < 9; i2++) {
-            this.coefficients[i2].multiplyScalar(s2);
+        scale(s) {
+          for (let i = 0; i < 9; i++) {
+            this.coefficients[i].multiplyScalar(s);
           }
           return this;
         }
         lerp(sh, alpha) {
-          for (let i2 = 0; i2 < 9; i2++) {
-            this.coefficients[i2].lerp(sh.coefficients[i2], alpha);
+          for (let i = 0; i < 9; i++) {
+            this.coefficients[i].lerp(sh.coefficients[i], alpha);
           }
           return this;
         }
         equals(sh) {
-          for (let i2 = 0; i2 < 9; i2++) {
-            if (!this.coefficients[i2].equals(sh.coefficients[i2])) {
+          for (let i = 0; i < 9; i++) {
+            if (!this.coefficients[i].equals(sh.coefficients[i])) {
               return false;
             }
           }
@@ -63703,15 +63703,15 @@ You can use close({ resize: true }) to resize header`);
         }
         fromArray(array, offset = 0) {
           const coefficients = this.coefficients;
-          for (let i2 = 0; i2 < 9; i2++) {
-            coefficients[i2].fromArray(array, offset + i2 * 3);
+          for (let i = 0; i < 9; i++) {
+            coefficients[i].fromArray(array, offset + i * 3);
           }
           return this;
         }
         toArray(array = [], offset = 0) {
           const coefficients = this.coefficients;
-          for (let i2 = 0; i2 < 9; i2++) {
-            coefficients[i2].toArray(array, offset + i2 * 3);
+          for (let i = 0; i < 9; i++) {
+            coefficients[i].toArray(array, offset + i * 3);
           }
           return array;
         }
@@ -63766,11 +63766,11 @@ You can use close({ resize: true }) to resize header`);
           loader.load(url, function(text) {
             try {
               onLoad(scope.parse(JSON.parse(text)));
-            } catch (e2) {
+            } catch (e) {
               if (onError) {
-                onError(e2);
+                onError(e);
               } else {
-                console.error(e2);
+                console.error(e);
               }
               scope.manager.itemError(url);
             }
@@ -64088,14 +64088,14 @@ You can use close({ resize: true }) to resize header`);
           if (typeof TextDecoder !== "undefined") {
             return new TextDecoder().decode(array);
           }
-          let s2 = "";
-          for (let i2 = 0, il = array.length; i2 < il; i2++) {
-            s2 += String.fromCharCode(array[i2]);
+          let s = "";
+          for (let i = 0, il = array.length; i < il; i++) {
+            s += String.fromCharCode(array[i]);
           }
           try {
-            return decodeURIComponent(escape(s2));
-          } catch (e2) {
-            return s2;
+            return decodeURIComponent(escape(s));
+          } catch (e) {
+            return s;
           }
         }
         static extractUrlBase(url) {
@@ -64151,11 +64151,11 @@ You can use close({ resize: true }) to resize header`);
           loader.load(url, function(text) {
             try {
               onLoad(scope.parse(JSON.parse(text)));
-            } catch (e2) {
+            } catch (e) {
               if (onError) {
-                onError(e2);
+                onError(e);
               } else {
-                console.error(e2);
+                console.error(e);
               }
               scope.manager.itemError(url);
             }
@@ -64218,8 +64218,8 @@ You can use close({ resize: true }) to resize header`);
             for (const key in morphAttributes) {
               const attributeArray = morphAttributes[key];
               const array = [];
-              for (let i2 = 0, il = attributeArray.length; i2 < il; i2++) {
-                const attribute = attributeArray[i2];
+              for (let i = 0, il = attributeArray.length; i < il; i++) {
+                const attribute = attributeArray[i];
                 let bufferAttribute;
                 if (attribute.isInterleavedBufferAttribute) {
                   const interleavedBuffer = getInterleavedBuffer(json.data, attribute.data);
@@ -64241,8 +64241,8 @@ You can use close({ resize: true }) to resize header`);
           }
           const groups = json.data.groups || json.data.drawcalls || json.data.offsets;
           if (groups !== void 0) {
-            for (let i2 = 0, n2 = groups.length; i2 !== n2; ++i2) {
-              const group = groups[i2];
+            for (let i = 0, n = groups.length; i !== n; ++i) {
+              const group = groups[i];
               geometry.addGroup(group.start, group.count, group.materialIndex);
             }
           }
@@ -64350,8 +64350,8 @@ You can use close({ resize: true }) to resize header`);
         parseShapes(json) {
           const shapes = {};
           if (json !== void 0) {
-            for (let i2 = 0, l2 = json.length; i2 < l2; i2++) {
-              const shape = new Shape().fromJSON(json[i2]);
+            for (let i = 0, l = json.length; i < l; i++) {
+              const shape = new Shape().fromJSON(json[i]);
               shapes[shape.uuid] = shape;
             }
           }
@@ -64365,8 +64365,8 @@ You can use close({ resize: true }) to resize header`);
               bones[child.uuid] = child;
           });
           if (json !== void 0) {
-            for (let i2 = 0, l2 = json.length; i2 < l2; i2++) {
-              const skeleton = new Skeleton().fromJSON(json[i2], bones);
+            for (let i = 0, l = json.length; i < l; i++) {
+              const skeleton = new Skeleton().fromJSON(json[i], bones);
               skeletons[skeleton.uuid] = skeleton;
             }
           }
@@ -64376,9 +64376,9 @@ You can use close({ resize: true }) to resize header`);
           const geometries = {};
           if (json !== void 0) {
             const bufferGeometryLoader = new BufferGeometryLoader();
-            for (let i2 = 0, l2 = json.length; i2 < l2; i2++) {
+            for (let i = 0, l = json.length; i < l; i++) {
               let geometry;
-              const data = json[i2];
+              const data = json[i];
               switch (data.type) {
                 case "BufferGeometry":
                 case "InstancedBufferGeometry":
@@ -64407,8 +64407,8 @@ You can use close({ resize: true }) to resize header`);
           if (json !== void 0) {
             const loader = new MaterialLoader();
             loader.setTextures(textures);
-            for (let i2 = 0, l2 = json.length; i2 < l2; i2++) {
-              const data = json[i2];
+            for (let i = 0, l = json.length; i < l; i++) {
+              const data = json[i];
               if (cache3[data.uuid] === void 0) {
                 cache3[data.uuid] = loader.parse(data);
               }
@@ -64420,8 +64420,8 @@ You can use close({ resize: true }) to resize header`);
         parseAnimations(json) {
           const animations = {};
           if (json !== void 0) {
-            for (let i2 = 0; i2 < json.length; i2++) {
-              const data = json[i2];
+            for (let i = 0; i < json.length; i++) {
+              const data = json[i];
               const clip = AnimationClip.parse(data);
               animations[clip.uuid] = clip;
             }
@@ -64462,8 +64462,8 @@ You can use close({ resize: true }) to resize header`);
             const manager = new LoadingManager2(onLoad);
             loader = new ImageLoader(manager);
             loader.setCrossOrigin(this.crossOrigin);
-            for (let i2 = 0, il = json.length; i2 < il; i2++) {
-              const image = json[i2];
+            for (let i = 0, il = json.length; i < il; i++) {
+              const image = json[i];
               const url = image.url;
               if (Array.isArray(url)) {
                 const imageArray = [];
@@ -64511,8 +64511,8 @@ You can use close({ resize: true }) to resize header`);
           if (json !== void 0 && json.length > 0) {
             loader = new ImageLoader(this.manager);
             loader.setCrossOrigin(this.crossOrigin);
-            for (let i2 = 0, il = json.length; i2 < il; i2++) {
-              const image = json[i2];
+            for (let i = 0, il = json.length; i < il; i++) {
+              const image = json[i];
               const url = image.url;
               if (Array.isArray(url)) {
                 const imageArray = [];
@@ -64545,8 +64545,8 @@ You can use close({ resize: true }) to resize header`);
           }
           const textures = {};
           if (json !== void 0) {
-            for (let i2 = 0, l2 = json.length; i2 < l2; i2++) {
-              const data = json[i2];
+            for (let i = 0, l = json.length; i < l; i++) {
+              const data = json[i];
               if (data.image === void 0) {
                 console.warn('THREE.ObjectLoader: No "image" specified for', data.uuid);
               }
@@ -64635,8 +64635,8 @@ You can use close({ resize: true }) to resize header`);
               return void 0;
             if (Array.isArray(name)) {
               const array = [];
-              for (let i2 = 0, l2 = name.length; i2 < l2; i2++) {
-                const uuid = name[i2];
+              for (let i = 0, l = name.length; i < l; i++) {
+                const uuid = name[i];
                 if (materials[uuid] === void 0) {
                   console.warn("THREE.ObjectLoader: Undefined material", uuid);
                 }
@@ -64826,14 +64826,14 @@ You can use close({ resize: true }) to resize header`);
             object.layers.mask = data.layers;
           if (data.children !== void 0) {
             const children = data.children;
-            for (let i2 = 0; i2 < children.length; i2++) {
-              object.add(this.parseObject(children[i2], geometries, materials, textures, animations));
+            for (let i = 0; i < children.length; i++) {
+              object.add(this.parseObject(children[i], geometries, materials, textures, animations));
             }
           }
           if (data.animations !== void 0) {
             const objectAnimations = data.animations;
-            for (let i2 = 0; i2 < objectAnimations.length; i2++) {
-              const uuid = objectAnimations[i2];
+            for (let i = 0; i < objectAnimations.length; i++) {
+              const uuid = objectAnimations[i];
               object.animations.push(animations[uuid]);
             }
           }
@@ -64841,8 +64841,8 @@ You can use close({ resize: true }) to resize header`);
             if (data.autoUpdate !== void 0)
               object.autoUpdate = data.autoUpdate;
             const levels = data.levels;
-            for (let l2 = 0; l2 < levels.length; l2++) {
-              const level = levels[l2];
+            for (let l = 0; l < levels.length; l++) {
+              const level = levels[l];
               const child = object.getObjectByProperty("uuid", level.object);
               if (child !== void 0) {
                 object.addLevel(child, level.distance, level.hysteresis);
@@ -64932,9 +64932,9 @@ You can use close({ resize: true }) to resize header`);
             if (onLoad)
               onLoad(imageBitmap);
             scope.manager.itemEnd(url);
-          }).catch(function(e2) {
+          }).catch(function(e) {
             if (onError)
-              onError(e2);
+              onError(e);
             scope.manager.itemError(url);
             scope.manager.itemEnd(url);
           });
@@ -64971,15 +64971,15 @@ You can use close({ resize: true }) to resize header`);
               context.decodeAudioData(bufferCopy, function(audioBuffer) {
                 onLoad(audioBuffer);
               }, handleError);
-            } catch (e2) {
-              handleError(e2);
+            } catch (e) {
+              handleError(e);
             }
           }, onProgress, onError);
-          function handleError(e2) {
+          function handleError(e) {
             if (onError) {
-              onError(e2);
+              onError(e);
             } else {
-              console.error(e2);
+              console.error(e);
             }
             scope.manager.itemError(url);
           }
@@ -65290,8 +65290,8 @@ You can use close({ resize: true }) to resize header`);
         connect() {
           if (this.filters.length > 0) {
             this.source.connect(this.filters[0]);
-            for (let i2 = 1, l2 = this.filters.length; i2 < l2; i2++) {
-              this.filters[i2 - 1].connect(this.filters[i2]);
+            for (let i = 1, l = this.filters.length; i < l; i++) {
+              this.filters[i - 1].connect(this.filters[i]);
             }
             this.filters[this.filters.length - 1].connect(this.getOutput());
           } else {
@@ -65306,8 +65306,8 @@ You can use close({ resize: true }) to resize header`);
           }
           if (this.filters.length > 0) {
             this.source.disconnect(this.filters[0]);
-            for (let i2 = 1, l2 = this.filters.length; i2 < l2; i2++) {
-              this.filters[i2 - 1].disconnect(this.filters[i2]);
+            for (let i = 1, l = this.filters.length; i < l; i++) {
+              this.filters[i - 1].disconnect(this.filters[i]);
             }
             this.filters[this.filters.length - 1].disconnect(this.getOutput());
           } else {
@@ -65491,8 +65491,8 @@ You can use close({ resize: true }) to resize header`);
         getAverageFrequency() {
           let value = 0;
           const data = this.getFrequencyData();
-          for (let i2 = 0; i2 < data.length; i2++) {
-            value += data[i2];
+          for (let i = 0; i < data.length; i++) {
+            value += data[i];
           }
           return value / data.length;
         }
@@ -65538,8 +65538,8 @@ You can use close({ resize: true }) to resize header`);
           const buffer3 = this.buffer, stride = this.valueSize, offset = accuIndex * stride + stride;
           let currentWeight = this.cumulativeWeight;
           if (currentWeight === 0) {
-            for (let i2 = 0; i2 !== stride; ++i2) {
-              buffer3[offset + i2] = buffer3[i2];
+            for (let i = 0; i !== stride; ++i) {
+              buffer3[offset + i] = buffer3[i];
             }
             currentWeight = weight;
           } else {
@@ -65576,8 +65576,8 @@ You can use close({ resize: true }) to resize header`);
           if (weightAdditive > 0) {
             this._mixBufferRegionAdditive(buffer3, offset, this._addIndex * stride, 1, stride);
           }
-          for (let i2 = stride, e2 = stride + stride; i2 !== e2; ++i2) {
-            if (buffer3[i2] !== buffer3[i2 + stride]) {
+          for (let i = stride, e = stride + stride; i !== e; ++i) {
+            if (buffer3[i] !== buffer3[i + stride]) {
               binding.setValue(buffer3, offset);
               break;
             }
@@ -65588,8 +65588,8 @@ You can use close({ resize: true }) to resize header`);
           const binding = this.binding;
           const buffer3 = this.buffer, stride = this.valueSize, originalValueOffset = stride * this._origIndex;
           binding.getValue(buffer3, originalValueOffset);
-          for (let i2 = stride, e2 = originalValueOffset; i2 !== e2; ++i2) {
-            buffer3[i2] = buffer3[originalValueOffset + i2 % stride];
+          for (let i = stride, e = originalValueOffset; i !== e; ++i) {
+            buffer3[i] = buffer3[originalValueOffset + i % stride];
           }
           this._setIdentity();
           this.cumulativeWeight = 0;
@@ -65603,8 +65603,8 @@ You can use close({ resize: true }) to resize header`);
         _setAdditiveIdentityNumeric() {
           const startIndex = this._addIndex * this.valueSize;
           const endIndex = startIndex + this.valueSize;
-          for (let i2 = startIndex; i2 < endIndex; i2++) {
-            this.buffer[i2] = 0;
+          for (let i = startIndex; i < endIndex; i++) {
+            this.buffer[i] = 0;
           }
         }
         _setAdditiveIdentityQuaternion() {
@@ -65614,37 +65614,37 @@ You can use close({ resize: true }) to resize header`);
         _setAdditiveIdentityOther() {
           const startIndex = this._origIndex * this.valueSize;
           const targetIndex = this._addIndex * this.valueSize;
-          for (let i2 = 0; i2 < this.valueSize; i2++) {
-            this.buffer[targetIndex + i2] = this.buffer[startIndex + i2];
+          for (let i = 0; i < this.valueSize; i++) {
+            this.buffer[targetIndex + i] = this.buffer[startIndex + i];
           }
         }
         // mix functions
-        _select(buffer3, dstOffset, srcOffset, t2, stride) {
-          if (t2 >= 0.5) {
-            for (let i2 = 0; i2 !== stride; ++i2) {
-              buffer3[dstOffset + i2] = buffer3[srcOffset + i2];
+        _select(buffer3, dstOffset, srcOffset, t, stride) {
+          if (t >= 0.5) {
+            for (let i = 0; i !== stride; ++i) {
+              buffer3[dstOffset + i] = buffer3[srcOffset + i];
             }
           }
         }
-        _slerp(buffer3, dstOffset, srcOffset, t2) {
-          Quaternion2.slerpFlat(buffer3, dstOffset, buffer3, dstOffset, buffer3, srcOffset, t2);
+        _slerp(buffer3, dstOffset, srcOffset, t) {
+          Quaternion2.slerpFlat(buffer3, dstOffset, buffer3, dstOffset, buffer3, srcOffset, t);
         }
-        _slerpAdditive(buffer3, dstOffset, srcOffset, t2, stride) {
+        _slerpAdditive(buffer3, dstOffset, srcOffset, t, stride) {
           const workOffset = this._workIndex * stride;
           Quaternion2.multiplyQuaternionsFlat(buffer3, workOffset, buffer3, dstOffset, buffer3, srcOffset);
-          Quaternion2.slerpFlat(buffer3, dstOffset, buffer3, dstOffset, buffer3, workOffset, t2);
+          Quaternion2.slerpFlat(buffer3, dstOffset, buffer3, dstOffset, buffer3, workOffset, t);
         }
-        _lerp(buffer3, dstOffset, srcOffset, t2, stride) {
-          const s2 = 1 - t2;
-          for (let i2 = 0; i2 !== stride; ++i2) {
-            const j = dstOffset + i2;
-            buffer3[j] = buffer3[j] * s2 + buffer3[srcOffset + i2] * t2;
+        _lerp(buffer3, dstOffset, srcOffset, t, stride) {
+          const s = 1 - t;
+          for (let i = 0; i !== stride; ++i) {
+            const j = dstOffset + i;
+            buffer3[j] = buffer3[j] * s + buffer3[srcOffset + i] * t;
           }
         }
-        _lerpAdditive(buffer3, dstOffset, srcOffset, t2, stride) {
-          for (let i2 = 0; i2 !== stride; ++i2) {
-            const j = dstOffset + i2;
-            buffer3[j] = buffer3[j] + buffer3[srcOffset + i2] * t2;
+        _lerpAdditive(buffer3, dstOffset, srcOffset, t, stride) {
+          for (let i = 0; i !== stride; ++i) {
+            const j = dstOffset + i;
+            buffer3[j] = buffer3[j] + buffer3[srcOffset + i] * t;
           }
         }
       };
@@ -65674,20 +65674,20 @@ You can use close({ resize: true }) to resize header`);
         }
         setValue(array, offset) {
           const bindings = this._bindings;
-          for (let i2 = this._targetGroup.nCachedObjects_, n2 = bindings.length; i2 !== n2; ++i2) {
-            bindings[i2].setValue(array, offset);
+          for (let i = this._targetGroup.nCachedObjects_, n = bindings.length; i !== n; ++i) {
+            bindings[i].setValue(array, offset);
           }
         }
         bind() {
           const bindings = this._bindings;
-          for (let i2 = this._targetGroup.nCachedObjects_, n2 = bindings.length; i2 !== n2; ++i2) {
-            bindings[i2].bind();
+          for (let i = this._targetGroup.nCachedObjects_, n = bindings.length; i !== n; ++i) {
+            bindings[i].bind();
           }
         }
         unbind() {
           const bindings = this._bindings;
-          for (let i2 = this._targetGroup.nCachedObjects_, n2 = bindings.length; i2 !== n2; ++i2) {
-            bindings[i2].unbind();
+          for (let i = this._targetGroup.nCachedObjects_, n = bindings.length; i !== n; ++i) {
+            bindings[i].unbind();
           }
         }
       };
@@ -65756,8 +65756,8 @@ You can use close({ resize: true }) to resize header`);
           }
           if (root.children) {
             const searchNodeSubtree = function(children) {
-              for (let i2 = 0; i2 < children.length; i2++) {
-                const childNode = children[i2];
+              for (let i = 0; i < children.length; i++) {
+                const childNode = children[i];
                 if (childNode.name === nodeName || childNode.uuid === nodeName) {
                   return childNode;
                 }
@@ -65785,8 +65785,8 @@ You can use close({ resize: true }) to resize header`);
         }
         _getValue_array(buffer3, offset) {
           const source = this.resolvedProperty;
-          for (let i2 = 0, n2 = source.length; i2 !== n2; ++i2) {
-            buffer3[offset++] = source[i2];
+          for (let i = 0, n = source.length; i !== n; ++i) {
+            buffer3[offset++] = source[i];
           }
         }
         _getValue_arrayElement(buffer3, offset) {
@@ -65810,21 +65810,21 @@ You can use close({ resize: true }) to resize header`);
         // EntireArray
         _setValue_array(buffer3, offset) {
           const dest = this.resolvedProperty;
-          for (let i2 = 0, n2 = dest.length; i2 !== n2; ++i2) {
-            dest[i2] = buffer3[offset++];
+          for (let i = 0, n = dest.length; i !== n; ++i) {
+            dest[i] = buffer3[offset++];
           }
         }
         _setValue_array_setNeedsUpdate(buffer3, offset) {
           const dest = this.resolvedProperty;
-          for (let i2 = 0, n2 = dest.length; i2 !== n2; ++i2) {
-            dest[i2] = buffer3[offset++];
+          for (let i = 0, n = dest.length; i !== n; ++i) {
+            dest[i] = buffer3[offset++];
           }
           this.targetObject.needsUpdate = true;
         }
         _setValue_array_setMatrixWorldNeedsUpdate(buffer3, offset) {
           const dest = this.resolvedProperty;
-          for (let i2 = 0, n2 = dest.length; i2 !== n2; ++i2) {
-            dest[i2] = buffer3[offset++];
+          for (let i = 0, n = dest.length; i !== n; ++i) {
+            dest[i] = buffer3[offset++];
           }
           this.targetObject.matrixWorldNeedsUpdate = true;
         }
@@ -65897,9 +65897,9 @@ You can use close({ resize: true }) to resize header`);
                   return;
                 }
                 targetObject = targetObject.skeleton.bones;
-                for (let i2 = 0; i2 < targetObject.length; i2++) {
-                  if (targetObject[i2].name === objectIndex) {
-                    objectIndex = i2;
+                for (let i = 0; i < targetObject.length; i++) {
+                  if (targetObject[i].name === objectIndex) {
+                    objectIndex = i;
                     break;
                   }
                 }
@@ -66035,8 +66035,8 @@ You can use close({ resize: true }) to resize header`);
           this.nCachedObjects_ = 0;
           const indices = {};
           this._indicesByUUID = indices;
-          for (let i2 = 0, n2 = arguments.length; i2 !== n2; ++i2) {
-            indices[arguments[i2].uuid] = i2;
+          for (let i = 0, n = arguments.length; i !== n; ++i) {
+            indices[arguments[i].uuid] = i;
           }
           this._paths = [];
           this._parsedPaths = [];
@@ -66060,8 +66060,8 @@ You can use close({ resize: true }) to resize header`);
         add() {
           const objects = this._objects, indicesByUUID = this._indicesByUUID, paths = this._paths, parsedPaths = this._parsedPaths, bindings = this._bindings, nBindings = bindings.length;
           let knownObject = void 0, nObjects = objects.length, nCachedObjects = this.nCachedObjects_;
-          for (let i2 = 0, n2 = arguments.length; i2 !== n2; ++i2) {
-            const object = arguments[i2], uuid = object.uuid;
+          for (let i = 0, n = arguments.length; i !== n; ++i) {
+            const object = arguments[i], uuid = object.uuid;
             let index = indicesByUUID[uuid];
             if (index === void 0) {
               index = nObjects++;
@@ -66095,8 +66095,8 @@ You can use close({ resize: true }) to resize header`);
         remove() {
           const objects = this._objects, indicesByUUID = this._indicesByUUID, bindings = this._bindings, nBindings = bindings.length;
           let nCachedObjects = this.nCachedObjects_;
-          for (let i2 = 0, n2 = arguments.length; i2 !== n2; ++i2) {
-            const object = arguments[i2], uuid = object.uuid, index = indicesByUUID[uuid];
+          for (let i = 0, n = arguments.length; i !== n; ++i) {
+            const object = arguments[i], uuid = object.uuid, index = indicesByUUID[uuid];
             if (index !== void 0 && index >= nCachedObjects) {
               const lastCachedIndex = nCachedObjects++, firstActiveObject = objects[lastCachedIndex];
               indicesByUUID[firstActiveObject.uuid] = index;
@@ -66116,8 +66116,8 @@ You can use close({ resize: true }) to resize header`);
         uncache() {
           const objects = this._objects, indicesByUUID = this._indicesByUUID, bindings = this._bindings, nBindings = bindings.length;
           let nCachedObjects = this.nCachedObjects_, nObjects = objects.length;
-          for (let i2 = 0, n2 = arguments.length; i2 !== n2; ++i2) {
-            const object = arguments[i2], uuid = object.uuid, index = indicesByUUID[uuid];
+          for (let i = 0, n = arguments.length; i !== n; ++i) {
+            const object = arguments[i], uuid = object.uuid, index = indicesByUUID[uuid];
             if (index !== void 0) {
               delete indicesByUUID[uuid];
               if (index < nCachedObjects) {
@@ -66163,9 +66163,9 @@ You can use close({ resize: true }) to resize header`);
           paths.push(path);
           parsedPaths.push(parsedPath);
           bindings.push(bindingsForPath);
-          for (let i2 = nCachedObjects, n2 = objects.length; i2 !== n2; ++i2) {
-            const object = objects[i2];
-            bindingsForPath[i2] = new PropertyBinding2(object, path, parsedPath);
+          for (let i = nCachedObjects, n = objects.length; i !== n; ++i) {
+            const object = objects[i];
+            bindingsForPath[i] = new PropertyBinding2(object, path, parsedPath);
           }
           return bindingsForPath;
         }
@@ -66194,9 +66194,9 @@ You can use close({ resize: true }) to resize header`);
             endingStart: ZeroCurvatureEnding2,
             endingEnd: ZeroCurvatureEnding2
           };
-          for (let i2 = 0; i2 !== nTracks; ++i2) {
-            const interpolant = tracks[i2].createInterpolant(null);
-            interpolants[i2] = interpolant;
+          for (let i = 0; i !== nTracks; ++i) {
+            const interpolant = tracks[i].createInterpolant(null);
+            interpolants[i] = interpolant;
             interpolant.settings = interpolantSettings;
           }
           this._interpolantSettings = interpolantSettings;
@@ -66565,14 +66565,14 @@ You can use close({ resize: true }) to resize header`);
             bindingsByName = {};
             bindingsByRoot[rootUuid] = bindingsByName;
           }
-          for (let i2 = 0; i2 !== nTracks; ++i2) {
-            const track = tracks[i2], trackName = track.name;
+          for (let i = 0; i !== nTracks; ++i) {
+            const track = tracks[i], trackName = track.name;
             let binding = bindingsByName[trackName];
             if (binding !== void 0) {
               ++binding.referenceCount;
-              bindings[i2] = binding;
+              bindings[i] = binding;
             } else {
-              binding = bindings[i2];
+              binding = bindings[i];
               if (binding !== void 0) {
                 if (binding._cacheIndex === null) {
                   ++binding.referenceCount;
@@ -66580,7 +66580,7 @@ You can use close({ resize: true }) to resize header`);
                 }
                 continue;
               }
-              const path = prototypeAction && prototypeAction._propertyBindings[i2].binding.parsedPath;
+              const path = prototypeAction && prototypeAction._propertyBindings[i].binding.parsedPath;
               binding = new PropertyMixer(
                 PropertyBinding2.create(root, trackName, path),
                 track.ValueTypeName,
@@ -66588,9 +66588,9 @@ You can use close({ resize: true }) to resize header`);
               );
               ++binding.referenceCount;
               this._addInactiveBinding(binding, rootUuid, trackName);
-              bindings[i2] = binding;
+              bindings[i] = binding;
             }
-            interpolants[i2].resultBuffer = binding.buffer;
+            interpolants[i].resultBuffer = binding.buffer;
           }
         }
         _activateAction(action) {
@@ -66604,8 +66604,8 @@ You can use close({ resize: true }) to resize header`);
               this._addInactiveAction(action, clipUuid, rootUuid);
             }
             const bindings = action._propertyBindings;
-            for (let i2 = 0, n2 = bindings.length; i2 !== n2; ++i2) {
-              const binding = bindings[i2];
+            for (let i = 0, n = bindings.length; i !== n; ++i) {
+              const binding = bindings[i];
               if (binding.useCount++ === 0) {
                 this._lendBinding(binding);
                 binding.saveOriginalState();
@@ -66617,8 +66617,8 @@ You can use close({ resize: true }) to resize header`);
         _deactivateAction(action) {
           if (this._isActiveAction(action)) {
             const bindings = action._propertyBindings;
-            for (let i2 = 0, n2 = bindings.length; i2 !== n2; ++i2) {
-              const binding = bindings[i2];
+            for (let i = 0, n = bindings.length; i !== n; ++i) {
+              const binding = bindings[i];
               if (--binding.useCount === 0) {
                 binding.restoreOriginalState();
                 this._takeBackBinding(binding);
@@ -66709,8 +66709,8 @@ You can use close({ resize: true }) to resize header`);
         }
         _removeInactiveBindingsForAction(action) {
           const bindings = action._propertyBindings;
-          for (let i2 = 0, n2 = bindings.length; i2 !== n2; ++i2) {
-            const binding = bindings[i2];
+          for (let i = 0, n = bindings.length; i !== n; ++i) {
+            const binding = bindings[i];
             if (--binding.referenceCount === 0) {
               this._removeInactiveBinding(binding);
             }
@@ -66832,8 +66832,8 @@ You can use close({ resize: true }) to resize header`);
         // deactivates all previously scheduled actions
         stopAllAction() {
           const actions = this._actions, nActions = this._nActiveActions;
-          for (let i2 = nActions - 1; i2 >= 0; --i2) {
-            actions[i2].stop();
+          for (let i = nActions - 1; i >= 0; --i) {
+            actions[i].stop();
           }
           return this;
         }
@@ -66841,21 +66841,21 @@ You can use close({ resize: true }) to resize header`);
         update(deltaTime) {
           deltaTime *= this.timeScale;
           const actions = this._actions, nActions = this._nActiveActions, time = this.time += deltaTime, timeDirection = Math.sign(deltaTime), accuIndex = this._accuIndex ^= 1;
-          for (let i2 = 0; i2 !== nActions; ++i2) {
-            const action = actions[i2];
+          for (let i = 0; i !== nActions; ++i) {
+            const action = actions[i];
             action._update(time, deltaTime, timeDirection, accuIndex);
           }
           const bindings = this._bindings, nBindings = this._nActiveBindings;
-          for (let i2 = 0; i2 !== nBindings; ++i2) {
-            bindings[i2].apply(accuIndex);
+          for (let i = 0; i !== nBindings; ++i) {
+            bindings[i].apply(accuIndex);
           }
           return this;
         }
         // Allows you to seek to a specific time in an animation.
         setTime(timeInSeconds) {
           this.time = 0;
-          for (let i2 = 0; i2 < this._actions.length; i2++) {
-            this._actions[i2].time = 0;
+          for (let i = 0; i < this._actions.length; i++) {
+            this._actions[i].time = 0;
           }
           return this.update(timeInSeconds);
         }
@@ -66868,8 +66868,8 @@ You can use close({ resize: true }) to resize header`);
           const actions = this._actions, clipUuid = clip.uuid, actionsByClip = this._actionsByClip, actionsForClip = actionsByClip[clipUuid];
           if (actionsForClip !== void 0) {
             const actionsToRemove = actionsForClip.knownActions;
-            for (let i2 = 0, n2 = actionsToRemove.length; i2 !== n2; ++i2) {
-              const action = actionsToRemove[i2];
+            for (let i = 0, n = actionsToRemove.length; i !== n; ++i) {
+              const action = actionsToRemove[i];
               this._deactivateAction(action);
               const cacheIndex = action._cacheIndex, lastInactiveAction = actions[actions.length - 1];
               action._cacheIndex = null;
@@ -66955,8 +66955,8 @@ You can use close({ resize: true }) to resize header`);
           this.usage = source.usage;
           const uniformsSource = source.uniforms;
           this.uniforms.length = 0;
-          for (let i2 = 0, l2 = uniformsSource.length; i2 < l2; i2++) {
-            this.uniforms.push(uniformsSource[i2].clone());
+          for (let i = 0, l = uniformsSource.length; i < l; i++) {
+            this.uniforms.push(uniformsSource[i].clone());
           }
           return this;
         }
@@ -67057,15 +67057,15 @@ You can use close({ resize: true }) to resize header`);
           return intersects2;
         }
         intersectObjects(objects, recursive = true, intersects2 = []) {
-          for (let i2 = 0, l2 = objects.length; i2 < l2; i2++) {
-            intersectObject(objects[i2], this, intersects2, recursive);
+          for (let i = 0, l = objects.length; i < l; i++) {
+            intersectObject(objects[i], this, intersects2, recursive);
           }
           intersects2.sort(ascSort);
           return intersects2;
         }
       };
-      function ascSort(a2, b) {
-        return a2.distance - b.distance;
+      function ascSort(a, b) {
+        return a.distance - b.distance;
       }
       function intersectObject(object, raycaster, intersects2, recursive) {
         if (object.layers.test(raycaster.layers)) {
@@ -67073,8 +67073,8 @@ You can use close({ resize: true }) to resize header`);
         }
         if (recursive === true) {
           const children = object.children;
-          for (let i2 = 0, l2 = children.length; i2 < l2; i2++) {
-            intersectObject(children[i2], raycaster, intersects2, true);
+          for (let i = 0, l = children.length; i < l; i++) {
+            intersectObject(children[i], raycaster, intersects2, true);
           }
         }
       }
@@ -67167,8 +67167,8 @@ You can use close({ resize: true }) to resize header`);
         }
         setFromPoints(points) {
           this.makeEmpty();
-          for (let i2 = 0, il = points.length; i2 < il; i2++) {
-            this.expandByPoint(points[i2]);
+          for (let i = 0, il = points.length; i < il; i++) {
+            this.expandByPoint(points[i]);
           }
           return this;
         }
@@ -67286,23 +67286,23 @@ You can use close({ resize: true }) to resize header`);
         distance() {
           return this.start.distanceTo(this.end);
         }
-        at(t2, target2) {
-          return this.delta(target2).multiplyScalar(t2).add(this.start);
+        at(t, target2) {
+          return this.delta(target2).multiplyScalar(t).add(this.start);
         }
         closestPointToPointParameter(point, clampToLine) {
           _startP.subVectors(point, this.start);
           _startEnd.subVectors(this.end, this.start);
           const startEnd2 = _startEnd.dot(_startEnd);
           const startEnd_startP = _startEnd.dot(_startP);
-          let t2 = startEnd_startP / startEnd2;
+          let t = startEnd_startP / startEnd2;
           if (clampToLine) {
-            t2 = clamp2(t2, 0, 1);
+            t = clamp2(t, 0, 1);
           }
-          return t2;
+          return t;
         }
         closestPointToPoint(point, clampToLine, target2) {
-          const t2 = this.closestPointToPointParameter(point, clampToLine);
-          return this.delta(target2).multiplyScalar(t2).add(this.start);
+          const t = this.closestPointToPointParameter(point, clampToLine);
+          return this.delta(target2).multiplyScalar(t).add(this.start);
         }
         applyMatrix4(matrix) {
           this.start.applyMatrix4(matrix);
@@ -67358,9 +67358,9 @@ You can use close({ resize: true }) to resize header`);
             -1,
             1
           ];
-          for (let i2 = 0, j = 1, l2 = 32; i2 < l2; i2++, j++) {
-            const p1 = i2 / l2 * Math.PI * 2;
-            const p2 = j / l2 * Math.PI * 2;
+          for (let i = 0, j = 1, l = 32; i < l; i++, j++) {
+            const p1 = i / l * Math.PI * 2;
+            const p2 = j / l * Math.PI * 2;
             positions.push(
               Math.cos(p1),
               Math.sin(p1),
@@ -67406,8 +67406,8 @@ You can use close({ resize: true }) to resize header`);
           const colors = [];
           const color1 = new Color2(0, 0, 1);
           const color2 = new Color2(0, 1, 0);
-          for (let i2 = 0; i2 < bones.length; i2++) {
-            const bone = bones[i2];
+          for (let i = 0; i < bones.length; i++) {
+            const bone = bones[i];
             if (bone.parent && bone.parent.isBone) {
               vertices.push(0, 0, 0);
               vertices.push(0, 0, 0);
@@ -67431,8 +67431,8 @@ You can use close({ resize: true }) to resize header`);
           const geometry = this.geometry;
           const position3 = geometry.getAttribute("position");
           _matrixWorldInv.copy(this.root.matrixWorld).invert();
-          for (let i2 = 0, j = 0; i2 < bones.length; i2++) {
-            const bone = bones[i2];
+          for (let i = 0, j = 0; i < bones.length; i++) {
+            const bone = bones[i];
             if (bone.parent && bone.parent.isBone) {
               _boneMatrix.multiplyMatrices(_matrixWorldInv, bone.matrixWorld);
               _vector$2.setFromMatrixPosition(_boneMatrix);
@@ -67456,8 +67456,8 @@ You can use close({ resize: true }) to resize header`);
         if (object.isBone === true) {
           boneList.push(object);
         }
-        for (let i2 = 0; i2 < object.children.length; i2++) {
-          boneList.push.apply(boneList, getBoneList(object.children[i2]));
+        for (let i = 0; i < object.children.length; i++) {
+          boneList.push.apply(boneList, getBoneList(object.children[i]));
         }
         return boneList;
       }
@@ -67520,9 +67520,9 @@ You can use close({ resize: true }) to resize header`);
             const colors = mesh.geometry.getAttribute("color");
             _color1.copy(this.light.color);
             _color22.copy(this.light.groundColor);
-            for (let i2 = 0, l2 = colors.count; i2 < l2; i2++) {
-              const color = i2 < l2 / 2 ? _color1 : _color22;
-              colors.setXYZ(i2, color.r, color.g, color.b);
+            for (let i = 0, l = colors.count; i < l; i++) {
+              const color = i < l / 2 ? _color1 : _color22;
+              colors.setXYZ(i, color.r, color.g, color.b);
             }
             colors.needsUpdate = true;
           }
@@ -67538,10 +67538,10 @@ You can use close({ resize: true }) to resize header`);
           const step = size / divisions;
           const halfSize = size / 2;
           const vertices = [], colors = [];
-          for (let i2 = 0, j = 0, k = -halfSize; i2 <= divisions; i2++, k += step) {
+          for (let i = 0, j = 0, k = -halfSize; i <= divisions; i++, k += step) {
             vertices.push(-halfSize, 0, k, halfSize, 0, k);
             vertices.push(k, 0, -halfSize, k, 0, halfSize);
-            const color = i2 === center ? color1 : color2;
+            const color = i === center ? color1 : color2;
             color.toArray(colors, j);
             j += 3;
             color.toArray(colors, j);
@@ -67570,29 +67570,29 @@ You can use close({ resize: true }) to resize header`);
           const vertices = [];
           const colors = [];
           if (sectors > 1) {
-            for (let i2 = 0; i2 < sectors; i2++) {
-              const v = i2 / sectors * (Math.PI * 2);
+            for (let i = 0; i < sectors; i++) {
+              const v = i / sectors * (Math.PI * 2);
               const x = Math.sin(v) * radius;
               const z = Math.cos(v) * radius;
               vertices.push(0, 0, 0);
               vertices.push(x, 0, z);
-              const color = i2 & 1 ? color1 : color2;
+              const color = i & 1 ? color1 : color2;
               colors.push(color.r, color.g, color.b);
               colors.push(color.r, color.g, color.b);
             }
           }
-          for (let i2 = 0; i2 < rings; i2++) {
-            const color = i2 & 1 ? color1 : color2;
-            const r2 = radius - radius / rings * i2;
+          for (let i = 0; i < rings; i++) {
+            const color = i & 1 ? color1 : color2;
+            const r = radius - radius / rings * i;
             for (let j = 0; j < divisions; j++) {
               let v = j / divisions * (Math.PI * 2);
-              let x = Math.sin(v) * r2;
-              let z = Math.cos(v) * r2;
+              let x = Math.sin(v) * r;
+              let z = Math.cos(v) * r;
               vertices.push(x, 0, z);
               colors.push(color.r, color.g, color.b);
               v = (j + 1) / divisions * (Math.PI * 2);
-              x = Math.sin(v) * r2;
-              z = Math.cos(v) * r2;
+              x = Math.sin(v) * r;
+              z = Math.cos(v) * r;
               vertices.push(x, 0, z);
               colors.push(color.r, color.g, color.b);
             }
@@ -67707,8 +67707,8 @@ You can use close({ resize: true }) to resize header`);
           addLine("cn3", "cn4");
           addLine("cf1", "cf2");
           addLine("cf3", "cf4");
-          function addLine(a2, b) {
-            addPoint(a2);
+          function addLine(a, b) {
+            addPoint(a);
             addPoint(b);
           }
           function addPoint(id) {
@@ -67795,29 +67795,29 @@ You can use close({ resize: true }) to resize header`);
         update() {
           const geometry = this.geometry;
           const pointMap = this.pointMap;
-          const w = 1, h2 = 1;
+          const w = 1, h = 1;
           _camera.projectionMatrixInverse.copy(this.camera.projectionMatrixInverse);
           setPoint("c", pointMap, geometry, _camera, 0, 0, -1);
           setPoint("t", pointMap, geometry, _camera, 0, 0, 1);
-          setPoint("n1", pointMap, geometry, _camera, -w, -h2, -1);
-          setPoint("n2", pointMap, geometry, _camera, w, -h2, -1);
-          setPoint("n3", pointMap, geometry, _camera, -w, h2, -1);
-          setPoint("n4", pointMap, geometry, _camera, w, h2, -1);
-          setPoint("f1", pointMap, geometry, _camera, -w, -h2, 1);
-          setPoint("f2", pointMap, geometry, _camera, w, -h2, 1);
-          setPoint("f3", pointMap, geometry, _camera, -w, h2, 1);
-          setPoint("f4", pointMap, geometry, _camera, w, h2, 1);
-          setPoint("u1", pointMap, geometry, _camera, w * 0.7, h2 * 1.1, -1);
-          setPoint("u2", pointMap, geometry, _camera, -w * 0.7, h2 * 1.1, -1);
-          setPoint("u3", pointMap, geometry, _camera, 0, h2 * 2, -1);
+          setPoint("n1", pointMap, geometry, _camera, -w, -h, -1);
+          setPoint("n2", pointMap, geometry, _camera, w, -h, -1);
+          setPoint("n3", pointMap, geometry, _camera, -w, h, -1);
+          setPoint("n4", pointMap, geometry, _camera, w, h, -1);
+          setPoint("f1", pointMap, geometry, _camera, -w, -h, 1);
+          setPoint("f2", pointMap, geometry, _camera, w, -h, 1);
+          setPoint("f3", pointMap, geometry, _camera, -w, h, 1);
+          setPoint("f4", pointMap, geometry, _camera, w, h, 1);
+          setPoint("u1", pointMap, geometry, _camera, w * 0.7, h * 1.1, -1);
+          setPoint("u2", pointMap, geometry, _camera, -w * 0.7, h * 1.1, -1);
+          setPoint("u3", pointMap, geometry, _camera, 0, h * 2, -1);
           setPoint("cf1", pointMap, geometry, _camera, -w, 0, 1);
           setPoint("cf2", pointMap, geometry, _camera, w, 0, 1);
-          setPoint("cf3", pointMap, geometry, _camera, 0, -h2, 1);
-          setPoint("cf4", pointMap, geometry, _camera, 0, h2, 1);
+          setPoint("cf3", pointMap, geometry, _camera, 0, -h, 1);
+          setPoint("cf4", pointMap, geometry, _camera, 0, h, 1);
           setPoint("cn1", pointMap, geometry, _camera, -w, 0, -1);
           setPoint("cn2", pointMap, geometry, _camera, w, 0, -1);
-          setPoint("cn3", pointMap, geometry, _camera, 0, -h2, -1);
-          setPoint("cn4", pointMap, geometry, _camera, 0, h2, -1);
+          setPoint("cn3", pointMap, geometry, _camera, 0, -h, -1);
+          setPoint("cn4", pointMap, geometry, _camera, 0, h, -1);
           geometry.getAttribute("position").needsUpdate = true;
         }
         dispose() {
@@ -67830,8 +67830,8 @@ You can use close({ resize: true }) to resize header`);
         const points = pointMap[point];
         if (points !== void 0) {
           const position3 = geometry.getAttribute("position");
-          for (let i2 = 0, l2 = points.length; i2 < l2; i2++) {
-            position3.setXYZ(points[i2], _vector.x, _vector.y, _vector.z);
+          for (let i = 0, l = points.length; i < l; i++) {
+            position3.setXYZ(points[i], _vector.x, _vector.y, _vector.z);
           }
         }
       }
@@ -68121,8 +68121,8 @@ You can use close({ resize: true }) to resize header`);
         toShapes(isCCW) {
           function toShapesNoHoles(inSubpaths) {
             const shapes2 = [];
-            for (let i2 = 0, l2 = inSubpaths.length; i2 < l2; i2++) {
-              const tmpPath2 = inSubpaths[i2];
+            for (let i = 0, l = inSubpaths.length; i < l; i++) {
+              const tmpPath2 = inSubpaths[i];
               const tmpShape2 = new Shape();
               tmpShape2.curves = tmpPath2.curves;
               shapes2.push(tmpShape2);
@@ -68132,8 +68132,8 @@ You can use close({ resize: true }) to resize header`);
           function isPointInsidePolygon(inPt, inPolygon) {
             const polyLen = inPolygon.length;
             let inside = false;
-            for (let p2 = polyLen - 1, q = 0; q < polyLen; p2 = q++) {
-              let edgeLowPt = inPolygon[p2];
+            for (let p = polyLen - 1, q = 0; q < polyLen; p = q++) {
+              let edgeLowPt = inPolygon[p];
               let edgeHighPt = inPolygon[q];
               let edgeDx = edgeHighPt.x - edgeLowPt.x;
               let edgeDy = edgeHighPt.y - edgeLowPt.y;
@@ -68141,7 +68141,7 @@ You can use close({ resize: true }) to resize header`);
                 if (edgeDy < 0) {
                   edgeLowPt = inPolygon[q];
                   edgeDx = -edgeDx;
-                  edgeHighPt = inPolygon[p2];
+                  edgeHighPt = inPolygon[p];
                   edgeDy = -edgeDy;
                 }
                 if (inPt.y < edgeLowPt.y || inPt.y > edgeHighPt.y)
@@ -68188,8 +68188,8 @@ You can use close({ resize: true }) to resize header`);
           let tmpPoints;
           newShapes[mainIdx] = void 0;
           newShapeHoles[mainIdx] = [];
-          for (let i2 = 0, l2 = subPaths.length; i2 < l2; i2++) {
-            tmpPath = subPaths[i2];
+          for (let i = 0, l = subPaths.length; i < l; i++) {
+            tmpPath = subPaths[i];
             tmpPoints = tmpPath.getPoints();
             solid = isClockWise(tmpPoints);
             solid = isCCW ? !solid : solid;
@@ -68240,10 +68240,10 @@ You can use close({ resize: true }) to resize header`);
             }
           }
           let tmpHoles;
-          for (let i2 = 0, il = newShapes.length; i2 < il; i2++) {
-            tmpShape = newShapes[i2].s;
+          for (let i = 0, il = newShapes.length; i < il; i++) {
+            tmpShape = newShapes[i].s;
             shapes.push(tmpShape);
-            tmpHoles = newShapeHoles[i2];
+            tmpHoles = newShapeHoles[i];
             for (let j = 0, jl = tmpHoles.length; j < jl; j++) {
               tmpShape.holes.push(tmpHoles[j].h);
             }
@@ -68693,8 +68693,8 @@ You can use close({ resize: true }) to resize header`);
           return panel;
         }
         function showPanel(id) {
-          for (var i2 = 0; i2 < container.children.length; i2++) {
-            container.children[i2].style.display = i2 === id ? "block" : "none";
+          for (var i = 0; i < container.children.length; i++) {
+            container.children[i].style.display = i === id ? "block" : "none";
           }
           mode = id;
         }
@@ -68777,459 +68777,6 @@ You can use close({ resize: true }) to resize header`);
     }
   });
 
-  // node_modules/three/examples/jsm/libs/lil-gui.module.min.js
-  var lil_gui_module_min_exports = {};
-  __export(lil_gui_module_min_exports, {
-    BooleanController: () => i,
-    ColorController: () => a,
-    Controller: () => t,
-    FunctionController: () => h,
-    GUI: () => g,
-    NumberController: () => d,
-    OptionController: () => c,
-    StringController: () => u,
-    default: () => lil_gui_module_min_default
-  });
-  function e(t2) {
-    let i2, e2;
-    return (i2 = t2.match(/(#|0x)?([a-f0-9]{6})/i)) ? e2 = i2[2] : (i2 = t2.match(/rgb\(\s*(\d*)\s*,\s*(\d*)\s*,\s*(\d*)\s*\)/)) ? e2 = parseInt(i2[1]).toString(16).padStart(2, 0) + parseInt(i2[2]).toString(16).padStart(2, 0) + parseInt(i2[3]).toString(16).padStart(2, 0) : (i2 = t2.match(/^#?([a-f0-9])([a-f0-9])([a-f0-9])$/i)) && (e2 = i2[1] + i2[1] + i2[2] + i2[2] + i2[3] + i2[3]), !!e2 && "#" + e2;
-  }
-  var t, i, s, n, l, r, o, a, h, d, c, u, p, g, lil_gui_module_min_default;
-  var init_lil_gui_module_min = __esm({
-    "node_modules/three/examples/jsm/libs/lil-gui.module.min.js"() {
-      t = class _t {
-        constructor(i2, e2, s2, n2, l2 = "div") {
-          this.parent = i2, this.object = e2, this.property = s2, this._disabled = false, this._hidden = false, this.initialValue = this.getValue(), this.domElement = document.createElement("div"), this.domElement.classList.add("controller"), this.domElement.classList.add(n2), this.$name = document.createElement("div"), this.$name.classList.add("name"), _t.nextNameID = _t.nextNameID || 0, this.$name.id = "lil-gui-name-" + ++_t.nextNameID, this.$widget = document.createElement(l2), this.$widget.classList.add("widget"), this.$disable = this.$widget, this.domElement.appendChild(this.$name), this.domElement.appendChild(this.$widget), this.parent.children.push(this), this.parent.controllers.push(this), this.parent.$children.appendChild(this.domElement), this._listenCallback = this._listenCallback.bind(this), this.name(s2);
-        }
-        name(t2) {
-          return this._name = t2, this.$name.innerHTML = t2, this;
-        }
-        onChange(t2) {
-          return this._onChange = t2, this;
-        }
-        _callOnChange() {
-          this.parent._callOnChange(this), void 0 !== this._onChange && this._onChange.call(this, this.getValue()), this._changed = true;
-        }
-        onFinishChange(t2) {
-          return this._onFinishChange = t2, this;
-        }
-        _callOnFinishChange() {
-          this._changed && (this.parent._callOnFinishChange(this), void 0 !== this._onFinishChange && this._onFinishChange.call(this, this.getValue())), this._changed = false;
-        }
-        reset() {
-          return this.setValue(this.initialValue), this._callOnFinishChange(), this;
-        }
-        enable(t2 = true) {
-          return this.disable(!t2);
-        }
-        disable(t2 = true) {
-          return t2 === this._disabled || (this._disabled = t2, this.domElement.classList.toggle("disabled", t2), this.$disable.toggleAttribute("disabled", t2)), this;
-        }
-        show(t2 = true) {
-          return this._hidden = !t2, this.domElement.style.display = this._hidden ? "none" : "", this;
-        }
-        hide() {
-          return this.show(false);
-        }
-        options(t2) {
-          const i2 = this.parent.add(this.object, this.property, t2);
-          return i2.name(this._name), this.destroy(), i2;
-        }
-        min(t2) {
-          return this;
-        }
-        max(t2) {
-          return this;
-        }
-        step(t2) {
-          return this;
-        }
-        decimals(t2) {
-          return this;
-        }
-        listen(t2 = true) {
-          return this._listening = t2, void 0 !== this._listenCallbackID && (cancelAnimationFrame(this._listenCallbackID), this._listenCallbackID = void 0), this._listening && this._listenCallback(), this;
-        }
-        _listenCallback() {
-          this._listenCallbackID = requestAnimationFrame(this._listenCallback);
-          const t2 = this.save();
-          t2 !== this._listenPrevValue && this.updateDisplay(), this._listenPrevValue = t2;
-        }
-        getValue() {
-          return this.object[this.property];
-        }
-        setValue(t2) {
-          return this.object[this.property] = t2, this._callOnChange(), this.updateDisplay(), this;
-        }
-        updateDisplay() {
-          return this;
-        }
-        load(t2) {
-          return this.setValue(t2), this._callOnFinishChange(), this;
-        }
-        save() {
-          return this.getValue();
-        }
-        destroy() {
-          this.listen(false), this.parent.children.splice(this.parent.children.indexOf(this), 1), this.parent.controllers.splice(this.parent.controllers.indexOf(this), 1), this.parent.$children.removeChild(this.domElement);
-        }
-      };
-      i = class extends t {
-        constructor(t2, i2, e2) {
-          super(t2, i2, e2, "boolean", "label"), this.$input = document.createElement("input"), this.$input.setAttribute("type", "checkbox"), this.$input.setAttribute("aria-labelledby", this.$name.id), this.$widget.appendChild(this.$input), this.$input.addEventListener("change", () => {
-            this.setValue(this.$input.checked), this._callOnFinishChange();
-          }), this.$disable = this.$input, this.updateDisplay();
-        }
-        updateDisplay() {
-          return this.$input.checked = this.getValue(), this;
-        }
-      };
-      s = { isPrimitive: true, match: (t2) => "string" == typeof t2, fromHexString: e, toHexString: e };
-      n = { isPrimitive: true, match: (t2) => "number" == typeof t2, fromHexString: (t2) => parseInt(t2.substring(1), 16), toHexString: (t2) => "#" + t2.toString(16).padStart(6, 0) };
-      l = { isPrimitive: false, match: Array.isArray, fromHexString(t2, i2, e2 = 1) {
-        const s2 = n.fromHexString(t2);
-        i2[0] = (s2 >> 16 & 255) / 255 * e2, i2[1] = (s2 >> 8 & 255) / 255 * e2, i2[2] = (255 & s2) / 255 * e2;
-      }, toHexString: ([t2, i2, e2], s2 = 1) => n.toHexString(t2 * (s2 = 255 / s2) << 16 ^ i2 * s2 << 8 ^ e2 * s2 << 0) };
-      r = { isPrimitive: false, match: (t2) => Object(t2) === t2, fromHexString(t2, i2, e2 = 1) {
-        const s2 = n.fromHexString(t2);
-        i2.r = (s2 >> 16 & 255) / 255 * e2, i2.g = (s2 >> 8 & 255) / 255 * e2, i2.b = (255 & s2) / 255 * e2;
-      }, toHexString: ({ r: t2, g: i2, b: e2 }, s2 = 1) => n.toHexString(t2 * (s2 = 255 / s2) << 16 ^ i2 * s2 << 8 ^ e2 * s2 << 0) };
-      o = [s, n, l, r];
-      a = class extends t {
-        constructor(t2, i2, s2, n2) {
-          var l2;
-          super(t2, i2, s2, "color"), this.$input = document.createElement("input"), this.$input.setAttribute("type", "color"), this.$input.setAttribute("tabindex", -1), this.$input.setAttribute("aria-labelledby", this.$name.id), this.$text = document.createElement("input"), this.$text.setAttribute("type", "text"), this.$text.setAttribute("spellcheck", "false"), this.$text.setAttribute("aria-labelledby", this.$name.id), this.$display = document.createElement("div"), this.$display.classList.add("display"), this.$display.appendChild(this.$input), this.$widget.appendChild(this.$display), this.$widget.appendChild(this.$text), this._format = (l2 = this.initialValue, o.find((t3) => t3.match(l2))), this._rgbScale = n2, this._initialValueHexString = this.save(), this._textFocused = false, this.$input.addEventListener("input", () => {
-            this._setValueFromHexString(this.$input.value);
-          }), this.$input.addEventListener("blur", () => {
-            this._callOnFinishChange();
-          }), this.$text.addEventListener("input", () => {
-            const t3 = e(this.$text.value);
-            t3 && this._setValueFromHexString(t3);
-          }), this.$text.addEventListener("focus", () => {
-            this._textFocused = true, this.$text.select();
-          }), this.$text.addEventListener("blur", () => {
-            this._textFocused = false, this.updateDisplay(), this._callOnFinishChange();
-          }), this.$disable = this.$text, this.updateDisplay();
-        }
-        reset() {
-          return this._setValueFromHexString(this._initialValueHexString), this;
-        }
-        _setValueFromHexString(t2) {
-          if (this._format.isPrimitive) {
-            const i2 = this._format.fromHexString(t2);
-            this.setValue(i2);
-          } else
-            this._format.fromHexString(t2, this.getValue(), this._rgbScale), this._callOnChange(), this.updateDisplay();
-        }
-        save() {
-          return this._format.toHexString(this.getValue(), this._rgbScale);
-        }
-        load(t2) {
-          return this._setValueFromHexString(t2), this._callOnFinishChange(), this;
-        }
-        updateDisplay() {
-          return this.$input.value = this._format.toHexString(this.getValue(), this._rgbScale), this._textFocused || (this.$text.value = this.$input.value.substring(1)), this.$display.style.backgroundColor = this.$input.value, this;
-        }
-      };
-      h = class extends t {
-        constructor(t2, i2, e2) {
-          super(t2, i2, e2, "function"), this.$button = document.createElement("button"), this.$button.appendChild(this.$name), this.$widget.appendChild(this.$button), this.$button.addEventListener("click", (t3) => {
-            t3.preventDefault(), this.getValue().call(this.object);
-          }), this.$button.addEventListener("touchstart", () => {
-          }, { passive: true }), this.$disable = this.$button;
-        }
-      };
-      d = class extends t {
-        constructor(t2, i2, e2, s2, n2, l2) {
-          super(t2, i2, e2, "number"), this._initInput(), this.min(s2), this.max(n2);
-          const r2 = void 0 !== l2;
-          this.step(r2 ? l2 : this._getImplicitStep(), r2), this.updateDisplay();
-        }
-        decimals(t2) {
-          return this._decimals = t2, this.updateDisplay(), this;
-        }
-        min(t2) {
-          return this._min = t2, this._onUpdateMinMax(), this;
-        }
-        max(t2) {
-          return this._max = t2, this._onUpdateMinMax(), this;
-        }
-        step(t2, i2 = true) {
-          return this._step = t2, this._stepExplicit = i2, this;
-        }
-        updateDisplay() {
-          const t2 = this.getValue();
-          if (this._hasSlider) {
-            let i2 = (t2 - this._min) / (this._max - this._min);
-            i2 = Math.max(0, Math.min(i2, 1)), this.$fill.style.width = 100 * i2 + "%";
-          }
-          return this._inputFocused || (this.$input.value = void 0 === this._decimals ? t2 : t2.toFixed(this._decimals)), this;
-        }
-        _initInput() {
-          this.$input = document.createElement("input"), this.$input.setAttribute("type", "number"), this.$input.setAttribute("step", "any"), this.$input.setAttribute("aria-labelledby", this.$name.id), this.$widget.appendChild(this.$input), this.$disable = this.$input;
-          const t2 = (t3) => {
-            const i3 = parseFloat(this.$input.value);
-            isNaN(i3) || (this._snapClampSetValue(i3 + t3), this.$input.value = this.getValue());
-          };
-          let i2, e2, s2, n2, l2, r2 = false;
-          const o2 = (t3) => {
-            if (r2) {
-              const s3 = t3.clientX - i2, n3 = t3.clientY - e2;
-              Math.abs(n3) > 5 ? (t3.preventDefault(), this.$input.blur(), r2 = false, this._setDraggingStyle(true, "vertical")) : Math.abs(s3) > 5 && a2();
-            }
-            if (!r2) {
-              const i3 = t3.clientY - s2;
-              l2 -= i3 * this._step * this._arrowKeyMultiplier(t3), n2 + l2 > this._max ? l2 = this._max - n2 : n2 + l2 < this._min && (l2 = this._min - n2), this._snapClampSetValue(n2 + l2);
-            }
-            s2 = t3.clientY;
-          }, a2 = () => {
-            this._setDraggingStyle(false, "vertical"), this._callOnFinishChange(), window.removeEventListener("mousemove", o2), window.removeEventListener("mouseup", a2);
-          };
-          this.$input.addEventListener("input", () => {
-            let t3 = parseFloat(this.$input.value);
-            isNaN(t3) || (this._stepExplicit && (t3 = this._snap(t3)), this.setValue(this._clamp(t3)));
-          }), this.$input.addEventListener("keydown", (i3) => {
-            "Enter" === i3.code && this.$input.blur(), "ArrowUp" === i3.code && (i3.preventDefault(), t2(this._step * this._arrowKeyMultiplier(i3))), "ArrowDown" === i3.code && (i3.preventDefault(), t2(this._step * this._arrowKeyMultiplier(i3) * -1));
-          }), this.$input.addEventListener("wheel", (i3) => {
-            this._inputFocused && (i3.preventDefault(), t2(this._step * this._normalizeMouseWheel(i3)));
-          }, { passive: false }), this.$input.addEventListener("mousedown", (t3) => {
-            i2 = t3.clientX, e2 = s2 = t3.clientY, r2 = true, n2 = this.getValue(), l2 = 0, window.addEventListener("mousemove", o2), window.addEventListener("mouseup", a2);
-          }), this.$input.addEventListener("focus", () => {
-            this._inputFocused = true;
-          }), this.$input.addEventListener("blur", () => {
-            this._inputFocused = false, this.updateDisplay(), this._callOnFinishChange();
-          });
-        }
-        _initSlider() {
-          this._hasSlider = true, this.$slider = document.createElement("div"), this.$slider.classList.add("slider"), this.$fill = document.createElement("div"), this.$fill.classList.add("fill"), this.$slider.appendChild(this.$fill), this.$widget.insertBefore(this.$slider, this.$input), this.domElement.classList.add("hasSlider");
-          const t2 = (t3) => {
-            const i3 = this.$slider.getBoundingClientRect();
-            let e3 = (s3 = t3, n3 = i3.left, l3 = i3.right, r3 = this._min, o3 = this._max, (s3 - n3) / (l3 - n3) * (o3 - r3) + r3);
-            var s3, n3, l3, r3, o3;
-            this._snapClampSetValue(e3);
-          }, i2 = (i3) => {
-            t2(i3.clientX);
-          }, e2 = () => {
-            this._callOnFinishChange(), this._setDraggingStyle(false), window.removeEventListener("mousemove", i2), window.removeEventListener("mouseup", e2);
-          };
-          let s2, n2, l2 = false;
-          const r2 = (i3) => {
-            i3.preventDefault(), this._setDraggingStyle(true), t2(i3.touches[0].clientX), l2 = false;
-          }, o2 = (i3) => {
-            if (l2) {
-              const t3 = i3.touches[0].clientX - s2, e3 = i3.touches[0].clientY - n2;
-              Math.abs(t3) > Math.abs(e3) ? r2(i3) : (window.removeEventListener("touchmove", o2), window.removeEventListener("touchend", a2));
-            } else
-              i3.preventDefault(), t2(i3.touches[0].clientX);
-          }, a2 = () => {
-            this._callOnFinishChange(), this._setDraggingStyle(false), window.removeEventListener("touchmove", o2), window.removeEventListener("touchend", a2);
-          }, h2 = this._callOnFinishChange.bind(this);
-          let d2;
-          this.$slider.addEventListener("mousedown", (s3) => {
-            this._setDraggingStyle(true), t2(s3.clientX), window.addEventListener("mousemove", i2), window.addEventListener("mouseup", e2);
-          }), this.$slider.addEventListener("touchstart", (t3) => {
-            t3.touches.length > 1 || (this._hasScrollBar ? (s2 = t3.touches[0].clientX, n2 = t3.touches[0].clientY, l2 = true) : r2(t3), window.addEventListener("touchmove", o2, { passive: false }), window.addEventListener("touchend", a2));
-          }, { passive: false }), this.$slider.addEventListener("wheel", (t3) => {
-            if (Math.abs(t3.deltaX) < Math.abs(t3.deltaY) && this._hasScrollBar)
-              return;
-            t3.preventDefault();
-            const i3 = this._normalizeMouseWheel(t3) * this._step;
-            this._snapClampSetValue(this.getValue() + i3), this.$input.value = this.getValue(), clearTimeout(d2), d2 = setTimeout(h2, 400);
-          }, { passive: false });
-        }
-        _setDraggingStyle(t2, i2 = "horizontal") {
-          this.$slider && this.$slider.classList.toggle("active", t2), document.body.classList.toggle("lil-gui-dragging", t2), document.body.classList.toggle("lil-gui-" + i2, t2);
-        }
-        _getImplicitStep() {
-          return this._hasMin && this._hasMax ? (this._max - this._min) / 1e3 : 0.1;
-        }
-        _onUpdateMinMax() {
-          !this._hasSlider && this._hasMin && this._hasMax && (this._stepExplicit || this.step(this._getImplicitStep(), false), this._initSlider(), this.updateDisplay());
-        }
-        _normalizeMouseWheel(t2) {
-          let { deltaX: i2, deltaY: e2 } = t2;
-          Math.floor(t2.deltaY) !== t2.deltaY && t2.wheelDelta && (i2 = 0, e2 = -t2.wheelDelta / 120, e2 *= this._stepExplicit ? 1 : 10);
-          return i2 + -e2;
-        }
-        _arrowKeyMultiplier(t2) {
-          let i2 = this._stepExplicit ? 1 : 10;
-          return t2.shiftKey ? i2 *= 10 : t2.altKey && (i2 /= 10), i2;
-        }
-        _snap(t2) {
-          const i2 = Math.round(t2 / this._step) * this._step;
-          return parseFloat(i2.toPrecision(15));
-        }
-        _clamp(t2) {
-          return t2 < this._min && (t2 = this._min), t2 > this._max && (t2 = this._max), t2;
-        }
-        _snapClampSetValue(t2) {
-          this.setValue(this._clamp(this._snap(t2)));
-        }
-        get _hasScrollBar() {
-          const t2 = this.parent.root.$children;
-          return t2.scrollHeight > t2.clientHeight;
-        }
-        get _hasMin() {
-          return void 0 !== this._min;
-        }
-        get _hasMax() {
-          return void 0 !== this._max;
-        }
-      };
-      c = class extends t {
-        constructor(t2, i2, e2, s2) {
-          super(t2, i2, e2, "option"), this.$select = document.createElement("select"), this.$select.setAttribute("aria-labelledby", this.$name.id), this.$display = document.createElement("div"), this.$display.classList.add("display"), this._values = Array.isArray(s2) ? s2 : Object.values(s2), this._names = Array.isArray(s2) ? s2 : Object.keys(s2), this._names.forEach((t3) => {
-            const i3 = document.createElement("option");
-            i3.innerHTML = t3, this.$select.appendChild(i3);
-          }), this.$select.addEventListener("change", () => {
-            this.setValue(this._values[this.$select.selectedIndex]), this._callOnFinishChange();
-          }), this.$select.addEventListener("focus", () => {
-            this.$display.classList.add("focus");
-          }), this.$select.addEventListener("blur", () => {
-            this.$display.classList.remove("focus");
-          }), this.$widget.appendChild(this.$select), this.$widget.appendChild(this.$display), this.$disable = this.$select, this.updateDisplay();
-        }
-        updateDisplay() {
-          const t2 = this.getValue(), i2 = this._values.indexOf(t2);
-          return this.$select.selectedIndex = i2, this.$display.innerHTML = -1 === i2 ? t2 : this._names[i2], this;
-        }
-      };
-      u = class extends t {
-        constructor(t2, i2, e2) {
-          super(t2, i2, e2, "string"), this.$input = document.createElement("input"), this.$input.setAttribute("type", "text"), this.$input.setAttribute("aria-labelledby", this.$name.id), this.$input.addEventListener("input", () => {
-            this.setValue(this.$input.value);
-          }), this.$input.addEventListener("keydown", (t3) => {
-            "Enter" === t3.code && this.$input.blur();
-          }), this.$input.addEventListener("blur", () => {
-            this._callOnFinishChange();
-          }), this.$widget.appendChild(this.$input), this.$disable = this.$input, this.updateDisplay();
-        }
-        updateDisplay() {
-          return this.$input.value = this.getValue(), this;
-        }
-      };
-      p = false;
-      g = class _g {
-        constructor({ parent: t2, autoPlace: i2 = void 0 === t2, container: e2, width: s2, title: n2 = "Controls", injectStyles: l2 = true, touchStyles: r2 = true } = {}) {
-          if (this.parent = t2, this.root = t2 ? t2.root : this, this.children = [], this.controllers = [], this.folders = [], this._closed = false, this._hidden = false, this.domElement = document.createElement("div"), this.domElement.classList.add("lil-gui"), this.$title = document.createElement("div"), this.$title.classList.add("title"), this.$title.setAttribute("role", "button"), this.$title.setAttribute("aria-expanded", true), this.$title.setAttribute("tabindex", 0), this.$title.addEventListener("click", () => this.openAnimated(this._closed)), this.$title.addEventListener("keydown", (t3) => {
-            "Enter" !== t3.code && "Space" !== t3.code || (t3.preventDefault(), this.$title.click());
-          }), this.$title.addEventListener("touchstart", () => {
-          }, { passive: true }), this.$children = document.createElement("div"), this.$children.classList.add("children"), this.domElement.appendChild(this.$title), this.domElement.appendChild(this.$children), this.title(n2), r2 && this.domElement.classList.add("allow-touch-styles"), this.parent)
-            return this.parent.children.push(this), this.parent.folders.push(this), void this.parent.$children.appendChild(this.domElement);
-          this.domElement.classList.add("root"), !p && l2 && (!function(t3) {
-            const i3 = document.createElement("style");
-            i3.innerHTML = t3;
-            const e3 = document.querySelector("head link[rel=stylesheet], head style");
-            e3 ? document.head.insertBefore(i3, e3) : document.head.appendChild(i3);
-          }('.lil-gui{--background-color:#1f1f1f;--text-color:#ebebeb;--title-background-color:#111;--title-text-color:#ebebeb;--widget-color:#424242;--hover-color:#4f4f4f;--focus-color:#595959;--number-color:#2cc9ff;--string-color:#a2db3c;--font-size:11px;--input-font-size:11px;--font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;--font-family-mono:Menlo,Monaco,Consolas,"Droid Sans Mono",monospace;--padding:4px;--spacing:4px;--widget-height:20px;--name-width:45%;--slider-knob-width:2px;--slider-input-width:27%;--color-input-width:27%;--slider-input-min-width:45px;--color-input-min-width:45px;--folder-indent:7px;--widget-padding:0 0 0 3px;--widget-border-radius:2px;--checkbox-size:calc(var(--widget-height)*0.75);--scrollbar-width:5px;background-color:var(--background-color);color:var(--text-color);font-family:var(--font-family);font-size:var(--font-size);font-style:normal;font-weight:400;line-height:1;text-align:left;touch-action:manipulation;user-select:none;-webkit-user-select:none}.lil-gui,.lil-gui *{box-sizing:border-box;margin:0;padding:0}.lil-gui.root{display:flex;flex-direction:column;width:var(--width,245px)}.lil-gui.root>.title{background:var(--title-background-color);color:var(--title-text-color)}.lil-gui.root>.children{overflow-x:hidden;overflow-y:auto}.lil-gui.root>.children::-webkit-scrollbar{background:var(--background-color);height:var(--scrollbar-width);width:var(--scrollbar-width)}.lil-gui.root>.children::-webkit-scrollbar-thumb{background:var(--focus-color);border-radius:var(--scrollbar-width)}.lil-gui.force-touch-styles{--widget-height:28px;--padding:6px;--spacing:6px;--font-size:13px;--input-font-size:16px;--folder-indent:10px;--scrollbar-width:7px;--slider-input-min-width:50px;--color-input-min-width:65px}.lil-gui.autoPlace{max-height:100%;position:fixed;right:15px;top:0;z-index:1001}.lil-gui .controller{align-items:center;display:flex;margin:var(--spacing) 0;padding:0 var(--padding)}.lil-gui .controller.disabled{opacity:.5}.lil-gui .controller.disabled,.lil-gui .controller.disabled *{pointer-events:none!important}.lil-gui .controller>.name{flex-shrink:0;line-height:var(--widget-height);min-width:var(--name-width);padding-right:var(--spacing);white-space:pre}.lil-gui .controller .widget{align-items:center;display:flex;min-height:var(--widget-height);position:relative;width:100%}.lil-gui .controller.string input{color:var(--string-color)}.lil-gui .controller.boolean .widget{cursor:pointer}.lil-gui .controller.color .display{border-radius:var(--widget-border-radius);height:var(--widget-height);position:relative;width:100%}.lil-gui .controller.color input[type=color]{cursor:pointer;height:100%;opacity:0;width:100%}.lil-gui .controller.color input[type=text]{flex-shrink:0;font-family:var(--font-family-mono);margin-left:var(--spacing);min-width:var(--color-input-min-width);width:var(--color-input-width)}.lil-gui .controller.option select{max-width:100%;opacity:0;position:absolute;width:100%}.lil-gui .controller.option .display{background:var(--widget-color);border-radius:var(--widget-border-radius);height:var(--widget-height);line-height:var(--widget-height);max-width:100%;overflow:hidden;padding-left:.55em;padding-right:1.75em;pointer-events:none;position:relative;word-break:break-all}.lil-gui .controller.option .display.active{background:var(--focus-color)}.lil-gui .controller.option .display:after{bottom:0;content:"\u2195";font-family:lil-gui;padding-right:.375em;position:absolute;right:0;top:0}.lil-gui .controller.option .widget,.lil-gui .controller.option select{cursor:pointer}.lil-gui .controller.number input{color:var(--number-color)}.lil-gui .controller.number.hasSlider input{flex-shrink:0;margin-left:var(--spacing);min-width:var(--slider-input-min-width);width:var(--slider-input-width)}.lil-gui .controller.number .slider{background-color:var(--widget-color);border-radius:var(--widget-border-radius);cursor:ew-resize;height:var(--widget-height);overflow:hidden;padding-right:var(--slider-knob-width);touch-action:pan-y;width:100%}.lil-gui .controller.number .slider.active{background-color:var(--focus-color)}.lil-gui .controller.number .slider.active .fill{opacity:.95}.lil-gui .controller.number .fill{border-right:var(--slider-knob-width) solid var(--number-color);box-sizing:content-box;height:100%}.lil-gui-dragging .lil-gui{--hover-color:var(--widget-color)}.lil-gui-dragging *{cursor:ew-resize!important}.lil-gui-dragging.lil-gui-vertical *{cursor:ns-resize!important}.lil-gui .title{--title-height:calc(var(--widget-height) + var(--spacing)*1.25);-webkit-tap-highlight-color:transparent;text-decoration-skip:objects;cursor:pointer;font-weight:600;height:var(--title-height);line-height:calc(var(--title-height) - 4px);outline:none;padding:0 var(--padding)}.lil-gui .title:before{content:"\u25BE";display:inline-block;font-family:lil-gui;padding-right:2px}.lil-gui .title:active{background:var(--title-background-color);opacity:.75}.lil-gui.root>.title:focus{text-decoration:none!important}.lil-gui.closed>.title:before{content:"\u25B8"}.lil-gui.closed>.children{opacity:0;transform:translateY(-7px)}.lil-gui.closed:not(.transition)>.children{display:none}.lil-gui.transition>.children{overflow:hidden;pointer-events:none;transition-duration:.3s;transition-property:height,opacity,transform;transition-timing-function:cubic-bezier(.2,.6,.35,1)}.lil-gui .children:empty:before{content:"Empty";display:block;font-style:italic;height:var(--widget-height);line-height:var(--widget-height);margin:var(--spacing) 0;opacity:.5;padding:0 var(--padding)}.lil-gui.root>.children>.lil-gui>.title{border-width:0;border-bottom:1px solid var(--widget-color);border-left:0 solid var(--widget-color);border-right:0 solid var(--widget-color);border-top:1px solid var(--widget-color);transition:border-color .3s}.lil-gui.root>.children>.lil-gui.closed>.title{border-bottom-color:transparent}.lil-gui+.controller{border-top:1px solid var(--widget-color);margin-top:0;padding-top:var(--spacing)}.lil-gui .lil-gui .lil-gui>.title{border:none}.lil-gui .lil-gui .lil-gui>.children{border:none;border-left:2px solid var(--widget-color);margin-left:var(--folder-indent)}.lil-gui .lil-gui .controller{border:none}.lil-gui input{-webkit-tap-highlight-color:transparent;background:var(--widget-color);border:0;border-radius:var(--widget-border-radius);color:var(--text-color);font-family:var(--font-family);font-size:var(--input-font-size);height:var(--widget-height);outline:none;width:100%}.lil-gui input:disabled{opacity:1}.lil-gui input[type=number],.lil-gui input[type=text]{padding:var(--widget-padding)}.lil-gui input[type=number]:focus,.lil-gui input[type=text]:focus{background:var(--focus-color)}.lil-gui input::-webkit-inner-spin-button,.lil-gui input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}.lil-gui input[type=number]{-moz-appearance:textfield}.lil-gui input[type=checkbox]{appearance:none;-webkit-appearance:none;border-radius:var(--widget-border-radius);cursor:pointer;height:var(--checkbox-size);text-align:center;width:var(--checkbox-size)}.lil-gui input[type=checkbox]:checked:before{content:"\u2713";font-family:lil-gui;font-size:var(--checkbox-size);line-height:var(--checkbox-size)}.lil-gui button{-webkit-tap-highlight-color:transparent;background:var(--widget-color);border:1px solid var(--widget-color);border-radius:var(--widget-border-radius);color:var(--text-color);cursor:pointer;font-family:var(--font-family);font-size:var(--font-size);height:var(--widget-height);line-height:calc(var(--widget-height) - 4px);outline:none;text-align:center;text-transform:none;width:100%}.lil-gui button:active{background:var(--focus-color)}@font-face{font-family:lil-gui;src:url("data:application/font-woff;charset=utf-8;base64,d09GRgABAAAAAAUsAAsAAAAACJwAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAABHU1VCAAABCAAAAH4AAADAImwmYE9TLzIAAAGIAAAAPwAAAGBKqH5SY21hcAAAAcgAAAD0AAACrukyyJBnbHlmAAACvAAAAF8AAACEIZpWH2hlYWQAAAMcAAAAJwAAADZfcj2zaGhlYQAAA0QAAAAYAAAAJAC5AHhobXR4AAADXAAAABAAAABMAZAAAGxvY2EAAANsAAAAFAAAACgCEgIybWF4cAAAA4AAAAAeAAAAIAEfABJuYW1lAAADoAAAASIAAAIK9SUU/XBvc3QAAATEAAAAZgAAAJCTcMc2eJxVjbEOgjAURU+hFRBK1dGRL+ALnAiToyMLEzFpnPz/eAshwSa97517c/MwwJmeB9kwPl+0cf5+uGPZXsqPu4nvZabcSZldZ6kfyWnomFY/eScKqZNWupKJO6kXN3K9uCVoL7iInPr1X5baXs3tjuMqCtzEuagm/AAlzQgPAAB4nGNgYRBlnMDAysDAYM/gBiT5oLQBAwuDJAMDEwMrMwNWEJDmmsJwgCFeXZghBcjlZMgFCzOiKOIFAB71Bb8AeJy1kjFuwkAQRZ+DwRAwBtNQRUGKQ8OdKCAWUhAgKLhIuAsVSpWz5Bbkj3dEgYiUIszqWdpZe+Z7/wB1oCYmIoboiwiLT2WjKl/jscrHfGg/pKdMkyklC5Zs2LEfHYpjcRoPzme9MWWmk3dWbK9ObkWkikOetJ554fWyoEsmdSlt+uR0pCJR34b6t/TVg1SY3sYvdf8vuiKrpyaDXDISiegp17p7579Gp3p++y7HPAiY9pmTibljrr85qSidtlg4+l25GLCaS8e6rRxNBmsnERunKbaOObRz7N72ju5vdAjYpBXHgJylOAVsMseDAPEP8LYoUHicY2BiAAEfhiAGJgZWBgZ7RnFRdnVJELCQlBSRlATJMoLV2DK4glSYs6ubq5vbKrJLSbGrgEmovDuDJVhe3VzcXFwNLCOILB/C4IuQ1xTn5FPilBTj5FPmBAB4WwoqAHicY2BkYGAA4sk1sR/j+W2+MnAzpDBgAyEMQUCSg4EJxAEAwUgFHgB4nGNgZGBgSGFggJMhDIwMqEAYAByHATJ4nGNgAIIUNEwmAABl3AGReJxjYAACIQYlBiMGJ3wQAEcQBEV4nGNgZGBgEGZgY2BiAAEQyQWEDAz/wXwGAAsPATIAAHicXdBNSsNAHAXwl35iA0UQXYnMShfS9GPZA7T7LgIu03SSpkwzYTIt1BN4Ak/gKTyAeCxfw39jZkjymzcvAwmAW/wgwHUEGDb36+jQQ3GXGot79L24jxCP4gHzF/EIr4jEIe7wxhOC3g2TMYy4Q7+Lu/SHuEd/ivt4wJd4wPxbPEKMX3GI5+DJFGaSn4qNzk8mcbKSR6xdXdhSzaOZJGtdapd4vVPbi6rP+cL7TGXOHtXKll4bY1Xl7EGnPtp7Xy2n00zyKLVHfkHBa4IcJ2oD3cgggWvt/V/FbDrUlEUJhTn/0azVWbNTNr0Ens8de1tceK9xZmfB1CPjOmPH4kitmvOubcNpmVTN3oFJyjzCvnmrwhJTzqzVj9jiSX911FjeAAB4nG3HMRKCMBBA0f0giiKi4DU8k0V2GWbIZDOh4PoWWvq6J5V8If9NVNQcaDhyouXMhY4rPTcG7jwYmXhKq8Wz+p762aNaeYXom2n3m2dLTVgsrCgFJ7OTmIkYbwIbC6vIB7WmFfAAAA==") format("woff")}@media (pointer:coarse){.lil-gui.allow-touch-styles{--widget-height:28px;--padding:6px;--spacing:6px;--font-size:13px;--input-font-size:16px;--folder-indent:10px;--scrollbar-width:7px;--slider-input-min-width:50px;--color-input-min-width:65px}}@media (hover:hover){.lil-gui .controller.color .display:hover:before{border:1px solid #fff9;border-radius:var(--widget-border-radius);bottom:0;content:" ";display:block;left:0;position:absolute;right:0;top:0}.lil-gui .controller.option .display.focus{background:var(--focus-color)}.lil-gui .controller.option .widget:hover .display{background:var(--hover-color)}.lil-gui .controller.number .slider:hover{background-color:var(--hover-color)}body:not(.lil-gui-dragging) .lil-gui .title:hover{background:var(--title-background-color);opacity:.85}.lil-gui .title:focus{text-decoration:underline var(--focus-color)}.lil-gui input:hover{background:var(--hover-color)}.lil-gui input:active{background:var(--focus-color)}.lil-gui input[type=checkbox]:focus{box-shadow:inset 0 0 0 1px var(--focus-color)}.lil-gui button:hover{background:var(--hover-color);border-color:var(--hover-color)}.lil-gui button:focus{border-color:var(--focus-color)}}'), p = true), e2 ? e2.appendChild(this.domElement) : i2 && (this.domElement.classList.add("autoPlace"), document.body.appendChild(this.domElement)), s2 && this.domElement.style.setProperty("--width", s2 + "px"), this.domElement.addEventListener("keydown", (t3) => t3.stopPropagation()), this.domElement.addEventListener("keyup", (t3) => t3.stopPropagation());
-        }
-        add(t2, e2, s2, n2, l2) {
-          if (Object(s2) === s2)
-            return new c(this, t2, e2, s2);
-          const r2 = t2[e2];
-          switch (typeof r2) {
-            case "number":
-              return new d(this, t2, e2, s2, n2, l2);
-            case "boolean":
-              return new i(this, t2, e2);
-            case "string":
-              return new u(this, t2, e2);
-            case "function":
-              return new h(this, t2, e2);
-          }
-          console.error("gui.add failed\n	property:", e2, "\n	object:", t2, "\n	value:", r2);
-        }
-        addColor(t2, i2, e2 = 1) {
-          return new a(this, t2, i2, e2);
-        }
-        addFolder(t2) {
-          return new _g({ parent: this, title: t2 });
-        }
-        load(t2, i2 = true) {
-          return t2.controllers && this.controllers.forEach((i3) => {
-            i3 instanceof h || i3._name in t2.controllers && i3.load(t2.controllers[i3._name]);
-          }), i2 && t2.folders && this.folders.forEach((i3) => {
-            i3._title in t2.folders && i3.load(t2.folders[i3._title]);
-          }), this;
-        }
-        save(t2 = true) {
-          const i2 = { controllers: {}, folders: {} };
-          return this.controllers.forEach((t3) => {
-            if (!(t3 instanceof h)) {
-              if (t3._name in i2.controllers)
-                throw new Error(`Cannot save GUI with duplicate property "${t3._name}"`);
-              i2.controllers[t3._name] = t3.save();
-            }
-          }), t2 && this.folders.forEach((t3) => {
-            if (t3._title in i2.folders)
-              throw new Error(`Cannot save GUI with duplicate folder "${t3._title}"`);
-            i2.folders[t3._title] = t3.save();
-          }), i2;
-        }
-        open(t2 = true) {
-          return this._closed = !t2, this.$title.setAttribute("aria-expanded", !this._closed), this.domElement.classList.toggle("closed", this._closed), this;
-        }
-        close() {
-          return this.open(false);
-        }
-        show(t2 = true) {
-          return this._hidden = !t2, this.domElement.style.display = this._hidden ? "none" : "", this;
-        }
-        hide() {
-          return this.show(false);
-        }
-        openAnimated(t2 = true) {
-          return this._closed = !t2, this.$title.setAttribute("aria-expanded", !this._closed), requestAnimationFrame(() => {
-            const i2 = this.$children.clientHeight;
-            this.$children.style.height = i2 + "px", this.domElement.classList.add("transition");
-            const e2 = (t3) => {
-              t3.target === this.$children && (this.$children.style.height = "", this.domElement.classList.remove("transition"), this.$children.removeEventListener("transitionend", e2));
-            };
-            this.$children.addEventListener("transitionend", e2);
-            const s2 = t2 ? this.$children.scrollHeight : 0;
-            this.domElement.classList.toggle("closed", !t2), requestAnimationFrame(() => {
-              this.$children.style.height = s2 + "px";
-            });
-          }), this;
-        }
-        title(t2) {
-          return this._title = t2, this.$title.innerHTML = t2, this;
-        }
-        reset(t2 = true) {
-          return (t2 ? this.controllersRecursive() : this.controllers).forEach((t3) => t3.reset()), this;
-        }
-        onChange(t2) {
-          return this._onChange = t2, this;
-        }
-        _callOnChange(t2) {
-          this.parent && this.parent._callOnChange(t2), void 0 !== this._onChange && this._onChange.call(this, { object: t2.object, property: t2.property, value: t2.getValue(), controller: t2 });
-        }
-        onFinishChange(t2) {
-          return this._onFinishChange = t2, this;
-        }
-        _callOnFinishChange(t2) {
-          this.parent && this.parent._callOnFinishChange(t2), void 0 !== this._onFinishChange && this._onFinishChange.call(this, { object: t2.object, property: t2.property, value: t2.getValue(), controller: t2 });
-        }
-        destroy() {
-          this.parent && (this.parent.children.splice(this.parent.children.indexOf(this), 1), this.parent.folders.splice(this.parent.folders.indexOf(this), 1)), this.domElement.parentElement && this.domElement.parentElement.removeChild(this.domElement), Array.from(this.children).forEach((t2) => t2.destroy());
-        }
-        controllersRecursive() {
-          let t2 = Array.from(this.controllers);
-          return this.folders.forEach((i2) => {
-            t2 = t2.concat(i2.controllersRecursive());
-          }), t2;
-        }
-        foldersRecursive() {
-          let t2 = Array.from(this.folders);
-          return this.folders.forEach((i2) => {
-            t2 = t2.concat(i2.foldersRecursive());
-          }), t2;
-        }
-      };
-      lil_gui_module_min_default = g;
-    }
-  });
-
   // node_modules/three/build/three.module.js
   function generateUUID() {
     const d0 = Math.random() * 4294967295 | 0;
@@ -69242,8 +68789,8 @@ You can use close({ resize: true }) to resize header`);
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
   }
-  function euclideanModulo(n2, m) {
-    return (n2 % m + m) % m;
+  function euclideanModulo(n, m) {
+    return (n % m + m) % m;
   }
   function mapLinear(x, a1, a2, b1, b2) {
     return b1 + (x - a1) * (b2 - b1) / (a2 - a1);
@@ -69255,8 +68802,8 @@ You can use close({ resize: true }) to resize header`);
       return 0;
     }
   }
-  function lerp(x, y, t2) {
-    return (1 - t2) * x + t2 * y;
+  function lerp(x, y, t) {
+    return (1 - t) * x + t * y;
   }
   function damp(x, y, lambda, dt) {
     return lerp(x, y, 1 - Math.exp(-lambda * dt));
@@ -69289,13 +68836,13 @@ You can use close({ resize: true }) to resize header`);
   function randFloatSpread(range) {
     return range * (0.5 - Math.random());
   }
-  function seededRandom(s2) {
-    if (s2 !== void 0)
-      _seed = s2;
-    let t2 = _seed += 1831565813;
-    t2 = Math.imul(t2 ^ t2 >>> 15, t2 | 1);
-    t2 ^= t2 + Math.imul(t2 ^ t2 >>> 7, t2 | 61);
-    return ((t2 ^ t2 >>> 14) >>> 0) / 4294967296;
+  function seededRandom(s) {
+    if (s !== void 0)
+      _seed = s;
+    let t = _seed += 1831565813;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
   }
   function degToRad(degrees) {
     return degrees * DEG2RAD;
@@ -69312,35 +68859,35 @@ You can use close({ resize: true }) to resize header`);
   function floorPowerOfTwo(value) {
     return Math.pow(2, Math.floor(Math.log(value) / Math.LN2));
   }
-  function setQuaternionFromProperEuler(q, a2, b, c2, order) {
+  function setQuaternionFromProperEuler(q, a, b, c, order) {
     const cos = Math.cos;
     const sin = Math.sin;
-    const c22 = cos(b / 2);
+    const c2 = cos(b / 2);
     const s2 = sin(b / 2);
-    const c13 = cos((a2 + c2) / 2);
-    const s13 = sin((a2 + c2) / 2);
-    const c1_3 = cos((a2 - c2) / 2);
-    const s1_3 = sin((a2 - c2) / 2);
-    const c3_1 = cos((c2 - a2) / 2);
-    const s3_1 = sin((c2 - a2) / 2);
+    const c13 = cos((a + c) / 2);
+    const s13 = sin((a + c) / 2);
+    const c1_3 = cos((a - c) / 2);
+    const s1_3 = sin((a - c) / 2);
+    const c3_1 = cos((c - a) / 2);
+    const s3_1 = sin((c - a) / 2);
     switch (order) {
       case "XYX":
-        q.set(c22 * s13, s2 * c1_3, s2 * s1_3, c22 * c13);
+        q.set(c2 * s13, s2 * c1_3, s2 * s1_3, c2 * c13);
         break;
       case "YZY":
-        q.set(s2 * s1_3, c22 * s13, s2 * c1_3, c22 * c13);
+        q.set(s2 * s1_3, c2 * s13, s2 * c1_3, c2 * c13);
         break;
       case "ZXZ":
-        q.set(s2 * c1_3, s2 * s1_3, c22 * s13, c22 * c13);
+        q.set(s2 * c1_3, s2 * s1_3, c2 * s13, c2 * c13);
         break;
       case "XZX":
-        q.set(c22 * s13, s2 * s3_1, s2 * c3_1, c22 * c13);
+        q.set(c2 * s13, s2 * s3_1, s2 * c3_1, c2 * c13);
         break;
       case "YXY":
-        q.set(s2 * c3_1, c22 * s13, s2 * s3_1, c22 * c13);
+        q.set(s2 * c3_1, c2 * s13, s2 * s3_1, c2 * c13);
         break;
       case "ZYZ":
-        q.set(s2 * s3_1, s2 * c3_1, c22 * s13, c22 * c13);
+        q.set(s2 * s3_1, s2 * c3_1, c2 * s13, c2 * c13);
         break;
       default:
         console.warn("THREE.MathUtils: .setQuaternionFromProperEuler() encountered an unknown order: " + order);
@@ -69387,8 +68934,8 @@ You can use close({ resize: true }) to resize header`);
     }
   }
   function arrayNeedsUint32(array) {
-    for (let i2 = array.length - 1; i2 >= 0; --i2) {
-      if (array[i2] >= 65535)
+    for (let i = array.length - 1; i >= 0; --i) {
+      if (array[i] >= 65535)
         return true;
     }
     return false;
@@ -69407,11 +68954,11 @@ You can use close({ resize: true }) to resize header`);
     _cache[message] = true;
     console.warn(message);
   }
-  function SRGBToLinear(c2) {
-    return c2 < 0.04045 ? c2 * 0.0773993808 : Math.pow(c2 * 0.9478672986 + 0.0521327014, 2.4);
+  function SRGBToLinear(c) {
+    return c < 0.04045 ? c * 0.0773993808 : Math.pow(c * 0.9478672986 + 0.0521327014, 2.4);
   }
-  function LinearToSRGB(c2) {
-    return c2 < 31308e-7 ? c2 * 12.92 : 1.055 * Math.pow(c2, 0.41666) - 0.055;
+  function LinearToSRGB(c) {
+    return c < 31308e-7 ? c * 12.92 : 1.055 * Math.pow(c, 0.41666) - 0.055;
   }
   function DisplayP3ToLinearSRGB(color) {
     return color.convertSRGBToLinear().applyMatrix3(LINEAR_DISPLAY_P3_TO_LINEAR_SRGB);
@@ -69437,30 +68984,30 @@ You can use close({ resize: true }) to resize header`);
     }
   }
   function satForAxes(axes, v0, v1, v2, extents) {
-    for (let i2 = 0, j = axes.length - 3; i2 <= j; i2 += 3) {
-      _testAxis.fromArray(axes, i2);
-      const r2 = extents.x * Math.abs(_testAxis.x) + extents.y * Math.abs(_testAxis.y) + extents.z * Math.abs(_testAxis.z);
+    for (let i = 0, j = axes.length - 3; i <= j; i += 3) {
+      _testAxis.fromArray(axes, i);
+      const r = extents.x * Math.abs(_testAxis.x) + extents.y * Math.abs(_testAxis.y) + extents.z * Math.abs(_testAxis.z);
       const p0 = v0.dot(_testAxis);
       const p1 = v1.dot(_testAxis);
       const p2 = v2.dot(_testAxis);
-      if (Math.max(-Math.max(p0, p1, p2), Math.min(p0, p1, p2)) > r2) {
+      if (Math.max(-Math.max(p0, p1, p2), Math.min(p0, p1, p2)) > r) {
         return false;
       }
     }
     return true;
   }
-  function hue2rgb(p2, q, t2) {
-    if (t2 < 0)
-      t2 += 1;
-    if (t2 > 1)
-      t2 -= 1;
-    if (t2 < 1 / 6)
-      return p2 + (q - p2) * 6 * t2;
-    if (t2 < 1 / 2)
+  function hue2rgb(p, q, t) {
+    if (t < 0)
+      t += 1;
+    if (t > 1)
+      t -= 1;
+    if (t < 1 / 6)
+      return p + (q - p) * 6 * t;
+    if (t < 1 / 2)
       return q;
-    if (t2 < 2 / 3)
-      return p2 + (q - p2) * 6 * (2 / 3 - t2);
-    return p2;
+    if (t < 2 / 3)
+      return p + (q - p) * 6 * (2 / 3 - t);
+    return p;
   }
   function checkIntersection(object, material, raycaster, ray, pA, pB, pC, point) {
     let intersect;
@@ -69482,38 +69029,38 @@ You can use close({ resize: true }) to resize header`);
       object
     };
   }
-  function checkGeometryIntersection(object, material, raycaster, ray, uv, uv1, normal, a2, b, c2) {
-    object.getVertexPosition(a2, _vA$1);
+  function checkGeometryIntersection(object, material, raycaster, ray, uv, uv1, normal, a, b, c) {
+    object.getVertexPosition(a, _vA$1);
     object.getVertexPosition(b, _vB$1);
-    object.getVertexPosition(c2, _vC$1);
+    object.getVertexPosition(c, _vC$1);
     const intersection = checkIntersection(object, material, raycaster, ray, _vA$1, _vB$1, _vC$1, _intersectionPoint);
     if (intersection) {
       if (uv) {
-        _uvA$1.fromBufferAttribute(uv, a2);
+        _uvA$1.fromBufferAttribute(uv, a);
         _uvB$1.fromBufferAttribute(uv, b);
-        _uvC$1.fromBufferAttribute(uv, c2);
+        _uvC$1.fromBufferAttribute(uv, c);
         intersection.uv = Triangle.getInterpolation(_intersectionPoint, _vA$1, _vB$1, _vC$1, _uvA$1, _uvB$1, _uvC$1, new Vector2());
       }
       if (uv1) {
-        _uvA$1.fromBufferAttribute(uv1, a2);
+        _uvA$1.fromBufferAttribute(uv1, a);
         _uvB$1.fromBufferAttribute(uv1, b);
-        _uvC$1.fromBufferAttribute(uv1, c2);
+        _uvC$1.fromBufferAttribute(uv1, c);
         intersection.uv1 = Triangle.getInterpolation(_intersectionPoint, _vA$1, _vB$1, _vC$1, _uvA$1, _uvB$1, _uvC$1, new Vector2());
         intersection.uv2 = intersection.uv1;
       }
       if (normal) {
-        _normalA.fromBufferAttribute(normal, a2);
+        _normalA.fromBufferAttribute(normal, a);
         _normalB.fromBufferAttribute(normal, b);
-        _normalC.fromBufferAttribute(normal, c2);
+        _normalC.fromBufferAttribute(normal, c);
         intersection.normal = Triangle.getInterpolation(_intersectionPoint, _vA$1, _vB$1, _vC$1, _normalA, _normalB, _normalC, new Vector3());
         if (intersection.normal.dot(ray.direction) > 0) {
           intersection.normal.multiplyScalar(-1);
         }
       }
       const face = {
-        a: a2,
+        a,
         b,
-        c: c2,
+        c,
         normal: new Vector3(),
         materialIndex: 0
       };
@@ -69524,21 +69071,21 @@ You can use close({ resize: true }) to resize header`);
   }
   function cloneUniforms(src4) {
     const dst = {};
-    for (const u2 in src4) {
-      dst[u2] = {};
-      for (const p2 in src4[u2]) {
-        const property = src4[u2][p2];
+    for (const u in src4) {
+      dst[u] = {};
+      for (const p in src4[u]) {
+        const property = src4[u][p];
         if (property && (property.isColor || property.isMatrix3 || property.isMatrix4 || property.isVector2 || property.isVector3 || property.isVector4 || property.isTexture || property.isQuaternion)) {
           if (property.isRenderTargetTexture) {
             console.warn("UniformsUtils: Textures of render targets cannot be cloned via cloneUniforms() or mergeUniforms().");
-            dst[u2][p2] = null;
+            dst[u][p] = null;
           } else {
-            dst[u2][p2] = property.clone();
+            dst[u][p] = property.clone();
           }
         } else if (Array.isArray(property)) {
-          dst[u2][p2] = property.slice();
+          dst[u][p] = property.slice();
         } else {
-          dst[u2][p2] = property;
+          dst[u][p] = property;
         }
       }
     }
@@ -69546,18 +69093,18 @@ You can use close({ resize: true }) to resize header`);
   }
   function mergeUniforms(uniforms) {
     const merged = {};
-    for (let u2 = 0; u2 < uniforms.length; u2++) {
-      const tmp = cloneUniforms(uniforms[u2]);
-      for (const p2 in tmp) {
-        merged[p2] = tmp[p2];
+    for (let u = 0; u < uniforms.length; u++) {
+      const tmp = cloneUniforms(uniforms[u]);
+      for (const p in tmp) {
+        merged[p] = tmp[p];
       }
     }
     return merged;
   }
   function cloneUniformsGroups(src4) {
     const dst = [];
-    for (let u2 = 0; u2 < src4.length; u2++) {
-      dst.push(src4[u2].clone());
+    for (let u = 0; u < src4.length; u++) {
+      dst.push(src4[u].clone());
     }
     return dst;
   }
@@ -69921,10 +69468,10 @@ You can use close({ resize: true }) to resize header`);
       const newAttributes = [];
       const enabledAttributes = [];
       const attributeDivisors = [];
-      for (let i2 = 0; i2 < maxVertexAttributes; i2++) {
-        newAttributes[i2] = 0;
-        enabledAttributes[i2] = 0;
-        attributeDivisors[i2] = 0;
+      for (let i = 0; i < maxVertexAttributes; i++) {
+        newAttributes[i] = 0;
+        enabledAttributes[i] = 0;
+        attributeDivisors[i] = 0;
       }
       return {
         // for backward compatibility on non-VAO support browser
@@ -70000,8 +69547,8 @@ You can use close({ resize: true }) to resize header`);
     }
     function initAttributes() {
       const newAttributes = currentState.newAttributes;
-      for (let i2 = 0, il = newAttributes.length; i2 < il; i2++) {
-        newAttributes[i2] = 0;
+      for (let i = 0, il = newAttributes.length; i < il; i++) {
+        newAttributes[i] = 0;
       }
     }
     function enableAttribute(attribute) {
@@ -70025,10 +69572,10 @@ You can use close({ resize: true }) to resize header`);
     function disableUnusedAttributes() {
       const newAttributes = currentState.newAttributes;
       const enabledAttributes = currentState.enabledAttributes;
-      for (let i2 = 0, il = enabledAttributes.length; i2 < il; i2++) {
-        if (enabledAttributes[i2] !== newAttributes[i2]) {
-          gl.disableVertexAttribArray(i2);
-          enabledAttributes[i2] = 0;
+      for (let i = 0, il = enabledAttributes.length; i < il; i++) {
+        if (enabledAttributes[i] !== newAttributes[i]) {
+          gl.disableVertexAttribArray(i);
+          enabledAttributes[i] = 0;
         }
       }
     }
@@ -70073,51 +69620,51 @@ You can use close({ resize: true }) to resize header`);
               const stride = data.stride;
               const offset = geometryAttribute.offset;
               if (data.isInstancedInterleavedBuffer) {
-                for (let i2 = 0; i2 < programAttribute.locationSize; i2++) {
-                  enableAttributeAndDivisor(programAttribute.location + i2, data.meshPerAttribute);
+                for (let i = 0; i < programAttribute.locationSize; i++) {
+                  enableAttributeAndDivisor(programAttribute.location + i, data.meshPerAttribute);
                 }
                 if (object.isInstancedMesh !== true && geometry._maxInstanceCount === void 0) {
                   geometry._maxInstanceCount = data.meshPerAttribute * data.count;
                 }
               } else {
-                for (let i2 = 0; i2 < programAttribute.locationSize; i2++) {
-                  enableAttribute(programAttribute.location + i2);
+                for (let i = 0; i < programAttribute.locationSize; i++) {
+                  enableAttribute(programAttribute.location + i);
                 }
               }
               gl.bindBuffer(gl.ARRAY_BUFFER, buffer3);
-              for (let i2 = 0; i2 < programAttribute.locationSize; i2++) {
+              for (let i = 0; i < programAttribute.locationSize; i++) {
                 vertexAttribPointer(
-                  programAttribute.location + i2,
+                  programAttribute.location + i,
                   size / programAttribute.locationSize,
                   type,
                   normalized,
                   stride * bytesPerElement,
-                  (offset + size / programAttribute.locationSize * i2) * bytesPerElement,
+                  (offset + size / programAttribute.locationSize * i) * bytesPerElement,
                   integer
                 );
               }
             } else {
               if (geometryAttribute.isInstancedBufferAttribute) {
-                for (let i2 = 0; i2 < programAttribute.locationSize; i2++) {
-                  enableAttributeAndDivisor(programAttribute.location + i2, geometryAttribute.meshPerAttribute);
+                for (let i = 0; i < programAttribute.locationSize; i++) {
+                  enableAttributeAndDivisor(programAttribute.location + i, geometryAttribute.meshPerAttribute);
                 }
                 if (object.isInstancedMesh !== true && geometry._maxInstanceCount === void 0) {
                   geometry._maxInstanceCount = geometryAttribute.meshPerAttribute * geometryAttribute.count;
                 }
               } else {
-                for (let i2 = 0; i2 < programAttribute.locationSize; i2++) {
-                  enableAttribute(programAttribute.location + i2);
+                for (let i = 0; i < programAttribute.locationSize; i++) {
+                  enableAttribute(programAttribute.location + i);
                 }
               }
               gl.bindBuffer(gl.ARRAY_BUFFER, buffer3);
-              for (let i2 = 0; i2 < programAttribute.locationSize; i2++) {
+              for (let i = 0; i < programAttribute.locationSize; i++) {
                 vertexAttribPointer(
-                  programAttribute.location + i2,
+                  programAttribute.location + i,
                   size / programAttribute.locationSize,
                   type,
                   normalized,
                   size * bytesPerElement,
-                  size / programAttribute.locationSize * i2 * bytesPerElement,
+                  size / programAttribute.locationSize * i * bytesPerElement,
                   integer
                 );
               }
@@ -70351,8 +69898,8 @@ You can use close({ resize: true }) to resize header`);
         let dstArray = materialProperties.clippingState || null;
         uniform.value = dstArray;
         dstArray = projectPlanes(planes, camera, lGlobal, useCache);
-        for (let i2 = 0; i2 !== lGlobal; ++i2) {
-          dstArray[i2] = globalState[i2];
+        for (let i = 0; i !== lGlobal; ++i) {
+          dstArray[i] = globalState[i];
         }
         materialProperties.clippingState = dstArray;
         this.numIntersection = clipIntersection ? this.numPlanes : 0;
@@ -70378,8 +69925,8 @@ You can use close({ resize: true }) to resize header`);
           if (dstArray === null || dstArray.length < flatSize) {
             dstArray = new Float32Array(flatSize);
           }
-          for (let i2 = 0, i4 = dstOffset; i2 !== nPlanes; ++i2, i4 += 4) {
-            plane.copy(planes[i2]).applyMatrix4(viewMatrix, viewNormalMatrix);
+          for (let i = 0, i4 = dstOffset; i !== nPlanes; ++i, i4 += 4) {
+            plane.copy(planes[i]).applyMatrix4(viewMatrix, viewNormalMatrix);
             plane.normal.toArray(dstArray, i4);
             dstArray[i4 + 3] = plane.constant;
           }
@@ -70448,13 +69995,13 @@ You can use close({ resize: true }) to resize header`);
     const sigmas = [];
     let lod = lodMax;
     const totalLods = lodMax - LOD_MIN + 1 + EXTRA_LOD_SIGMA.length;
-    for (let i2 = 0; i2 < totalLods; i2++) {
+    for (let i = 0; i < totalLods; i++) {
       const sizeLod = Math.pow(2, lod);
       sizeLods.push(sizeLod);
       let sigma = 1 / sizeLod;
-      if (i2 > lodMax - LOD_MIN) {
-        sigma = EXTRA_LOD_SIGMA[i2 - lodMax + LOD_MIN - 1];
-      } else if (i2 === 0) {
+      if (i > lodMax - LOD_MIN) {
+        sigma = EXTRA_LOD_SIGMA[i - lodMax + LOD_MIN - 1];
+      } else if (i === 0) {
         sigma = 0;
       }
       sigmas.push(sigma);
@@ -70781,8 +70328,8 @@ You can use close({ resize: true }) to resize header`);
     function isCubeTextureComplete(image) {
       let count = 0;
       const length3 = 6;
-      for (let i2 = 0; i2 < length3; i2++) {
-        if (image[i2] !== void 0)
+      for (let i = 0; i < length3; i++) {
+        if (image[i] !== void 0)
           count++;
       }
       return count === length3;
@@ -70877,8 +70424,8 @@ You can use close({ resize: true }) to resize header`);
       }
       for (const name in geometry.morphAttributes) {
         const array = geometry.morphAttributes[name];
-        for (let i2 = 0, l2 = array.length; i2 < l2; i2++) {
-          attributes.remove(array[i2]);
+        for (let i = 0, l = array.length; i < l; i++) {
+          attributes.remove(array[i]);
         }
       }
       geometry.removeEventListener("dispose", onGeometryDispose);
@@ -70910,8 +70457,8 @@ You can use close({ resize: true }) to resize header`);
       const morphAttributes = geometry.morphAttributes;
       for (const name in morphAttributes) {
         const array = morphAttributes[name];
-        for (let i2 = 0, l2 = array.length; i2 < l2; i2++) {
-          attributes.update(array[i2], gl.ARRAY_BUFFER);
+        for (let i = 0, l = array.length; i < l; i++) {
+          attributes.update(array[i], gl.ARRAY_BUFFER);
         }
       }
     }
@@ -70923,20 +70470,20 @@ You can use close({ resize: true }) to resize header`);
       if (geometryIndex !== null) {
         const array = geometryIndex.array;
         version = geometryIndex.version;
-        for (let i2 = 0, l2 = array.length; i2 < l2; i2 += 3) {
-          const a2 = array[i2 + 0];
-          const b = array[i2 + 1];
-          const c2 = array[i2 + 2];
-          indices.push(a2, b, b, c2, c2, a2);
+        for (let i = 0, l = array.length; i < l; i += 3) {
+          const a = array[i + 0];
+          const b = array[i + 1];
+          const c = array[i + 2];
+          indices.push(a, b, b, c, c, a);
         }
       } else if (geometryPosition !== void 0) {
         const array = geometryPosition.array;
         version = geometryPosition.version;
-        for (let i2 = 0, l2 = array.length / 3 - 1; i2 < l2; i2 += 3) {
-          const a2 = i2 + 0;
-          const b = i2 + 1;
-          const c2 = i2 + 2;
-          indices.push(a2, b, b, c2, c2, a2);
+        for (let i = 0, l = array.length / 3 - 1; i < l; i += 3) {
+          const a = i + 0;
+          const b = i + 1;
+          const c = i + 2;
+          indices.push(a, b, b, c, c, a);
         }
       } else {
         return;
@@ -71056,11 +70603,11 @@ You can use close({ resize: true }) to resize header`);
       update
     };
   }
-  function numericalSort(a2, b) {
-    return a2[0] - b[0];
+  function numericalSort(a, b) {
+    return a[0] - b[0];
   }
-  function absNumericalSort(a2, b) {
-    return Math.abs(b[1]) - Math.abs(a2[1]);
+  function absNumericalSort(a, b) {
+    return Math.abs(b[1]) - Math.abs(a[1]);
   }
   function WebGLMorphtargets(gl, capabilities, textures) {
     const influencesList = {};
@@ -71068,8 +70615,8 @@ You can use close({ resize: true }) to resize header`);
     const morphTextures = /* @__PURE__ */ new WeakMap();
     const morph = new Vector4();
     const workInfluences = [];
-    for (let i2 = 0; i2 < 8; i2++) {
-      workInfluences[i2] = [i2, 0];
+    for (let i = 0; i < 8; i++) {
+      workInfluences[i] = [i, 0];
     }
     function update(object, geometry, program) {
       const objectInfluences = object.morphTargetInfluences;
@@ -71109,11 +70656,11 @@ You can use close({ resize: true }) to resize header`);
           texture.type = FloatType;
           texture.needsUpdate = true;
           const vertexDataStride = vertexDataCount * 4;
-          for (let i2 = 0; i2 < morphTargetsCount; i2++) {
-            const morphTarget = morphTargets[i2];
-            const morphNormal = morphNormals[i2];
-            const morphColor = morphColors[i2];
-            const offset = width * height * 4 * i2;
+          for (let i = 0; i < morphTargetsCount; i++) {
+            const morphTarget = morphTargets[i];
+            const morphNormal = morphNormals[i];
+            const morphColor = morphColors[i];
+            const offset = width * height * 4 * i;
             for (let j = 0; j < morphTarget.count; j++) {
               const stride = j * vertexDataStride;
               if (hasMorphPosition === true) {
@@ -71148,8 +70695,8 @@ You can use close({ resize: true }) to resize header`);
           geometry.addEventListener("dispose", disposeTexture);
         }
         let morphInfluencesSum = 0;
-        for (let i2 = 0; i2 < objectInfluences.length; i2++) {
-          morphInfluencesSum += objectInfluences[i2];
+        for (let i = 0; i < objectInfluences.length; i++) {
+          morphInfluencesSum += objectInfluences[i];
         }
         const morphBaseInfluence = geometry.morphTargetsRelative ? 1 : 1 - morphInfluencesSum;
         program.getUniforms().setValue(gl, "morphTargetBaseInfluence", morphBaseInfluence);
@@ -71161,51 +70708,51 @@ You can use close({ resize: true }) to resize header`);
         let influences = influencesList[geometry.id];
         if (influences === void 0 || influences.length !== length3) {
           influences = [];
-          for (let i2 = 0; i2 < length3; i2++) {
-            influences[i2] = [i2, 0];
+          for (let i = 0; i < length3; i++) {
+            influences[i] = [i, 0];
           }
           influencesList[geometry.id] = influences;
         }
-        for (let i2 = 0; i2 < length3; i2++) {
-          const influence = influences[i2];
-          influence[0] = i2;
-          influence[1] = objectInfluences[i2];
+        for (let i = 0; i < length3; i++) {
+          const influence = influences[i];
+          influence[0] = i;
+          influence[1] = objectInfluences[i];
         }
         influences.sort(absNumericalSort);
-        for (let i2 = 0; i2 < 8; i2++) {
-          if (i2 < length3 && influences[i2][1]) {
-            workInfluences[i2][0] = influences[i2][0];
-            workInfluences[i2][1] = influences[i2][1];
+        for (let i = 0; i < 8; i++) {
+          if (i < length3 && influences[i][1]) {
+            workInfluences[i][0] = influences[i][0];
+            workInfluences[i][1] = influences[i][1];
           } else {
-            workInfluences[i2][0] = Number.MAX_SAFE_INTEGER;
-            workInfluences[i2][1] = 0;
+            workInfluences[i][0] = Number.MAX_SAFE_INTEGER;
+            workInfluences[i][1] = 0;
           }
         }
         workInfluences.sort(numericalSort);
         const morphTargets = geometry.morphAttributes.position;
         const morphNormals = geometry.morphAttributes.normal;
         let morphInfluencesSum = 0;
-        for (let i2 = 0; i2 < 8; i2++) {
-          const influence = workInfluences[i2];
+        for (let i = 0; i < 8; i++) {
+          const influence = workInfluences[i];
           const index = influence[0];
           const value = influence[1];
           if (index !== Number.MAX_SAFE_INTEGER && value) {
-            if (morphTargets && geometry.getAttribute("morphTarget" + i2) !== morphTargets[index]) {
-              geometry.setAttribute("morphTarget" + i2, morphTargets[index]);
+            if (morphTargets && geometry.getAttribute("morphTarget" + i) !== morphTargets[index]) {
+              geometry.setAttribute("morphTarget" + i, morphTargets[index]);
             }
-            if (morphNormals && geometry.getAttribute("morphNormal" + i2) !== morphNormals[index]) {
-              geometry.setAttribute("morphNormal" + i2, morphNormals[index]);
+            if (morphNormals && geometry.getAttribute("morphNormal" + i) !== morphNormals[index]) {
+              geometry.setAttribute("morphNormal" + i, morphNormals[index]);
             }
-            morphInfluences[i2] = value;
+            morphInfluences[i] = value;
             morphInfluencesSum += value;
           } else {
-            if (morphTargets && geometry.hasAttribute("morphTarget" + i2) === true) {
-              geometry.deleteAttribute("morphTarget" + i2);
+            if (morphTargets && geometry.hasAttribute("morphTarget" + i) === true) {
+              geometry.deleteAttribute("morphTarget" + i);
             }
-            if (morphNormals && geometry.hasAttribute("morphNormal" + i2) === true) {
-              geometry.deleteAttribute("morphNormal" + i2);
+            if (morphNormals && geometry.hasAttribute("morphNormal" + i) === true) {
+              geometry.deleteAttribute("morphNormal" + i);
             }
-            morphInfluences[i2] = 0;
+            morphInfluences[i] = 0;
           }
         }
         const morphBaseInfluence = geometry.morphTargetsRelative ? 1 : 1 - morphInfluencesSum;
@@ -71267,45 +70814,45 @@ You can use close({ resize: true }) to resize header`);
     const firstElem = array[0];
     if (firstElem <= 0 || firstElem > 0)
       return array;
-    const n2 = nBlocks * blockSize;
-    let r2 = arrayCacheF32[n2];
-    if (r2 === void 0) {
-      r2 = new Float32Array(n2);
-      arrayCacheF32[n2] = r2;
+    const n = nBlocks * blockSize;
+    let r = arrayCacheF32[n];
+    if (r === void 0) {
+      r = new Float32Array(n);
+      arrayCacheF32[n] = r;
     }
     if (nBlocks !== 0) {
-      firstElem.toArray(r2, 0);
-      for (let i2 = 1, offset = 0; i2 !== nBlocks; ++i2) {
+      firstElem.toArray(r, 0);
+      for (let i = 1, offset = 0; i !== nBlocks; ++i) {
         offset += blockSize;
-        array[i2].toArray(r2, offset);
+        array[i].toArray(r, offset);
       }
     }
-    return r2;
+    return r;
   }
-  function arraysEqual(a2, b) {
-    if (a2.length !== b.length)
+  function arraysEqual(a, b) {
+    if (a.length !== b.length)
       return false;
-    for (let i2 = 0, l2 = a2.length; i2 < l2; i2++) {
-      if (a2[i2] !== b[i2])
+    for (let i = 0, l = a.length; i < l; i++) {
+      if (a[i] !== b[i])
         return false;
     }
     return true;
   }
-  function copyArray(a2, b) {
-    for (let i2 = 0, l2 = b.length; i2 < l2; i2++) {
-      a2[i2] = b[i2];
+  function copyArray(a, b) {
+    for (let i = 0, l = b.length; i < l; i++) {
+      a[i] = b[i];
     }
   }
-  function allocTexUnits(textures, n2) {
-    let r2 = arrayCacheI32[n2];
-    if (r2 === void 0) {
-      r2 = new Int32Array(n2);
-      arrayCacheI32[n2] = r2;
+  function allocTexUnits(textures, n) {
+    let r = arrayCacheI32[n];
+    if (r === void 0) {
+      r = new Int32Array(n);
+      arrayCacheI32[n] = r;
     }
-    for (let i2 = 0; i2 !== n2; ++i2) {
-      r2[i2] = textures.allocateTextureUnit();
+    for (let i = 0; i !== n; ++i) {
+      r[i] = textures.allocateTextureUnit();
     }
-    return r2;
+    return r;
   }
   function setValueV1f(gl, v) {
     const cache3 = this.cache;
@@ -71674,50 +71221,50 @@ You can use close({ resize: true }) to resize header`);
   }
   function setValueT1Array(gl, v, textures) {
     const cache3 = this.cache;
-    const n2 = v.length;
-    const units = allocTexUnits(textures, n2);
+    const n = v.length;
+    const units = allocTexUnits(textures, n);
     if (!arraysEqual(cache3, units)) {
       gl.uniform1iv(this.addr, units);
       copyArray(cache3, units);
     }
-    for (let i2 = 0; i2 !== n2; ++i2) {
-      textures.setTexture2D(v[i2] || emptyTexture, units[i2]);
+    for (let i = 0; i !== n; ++i) {
+      textures.setTexture2D(v[i] || emptyTexture, units[i]);
     }
   }
   function setValueT3DArray(gl, v, textures) {
     const cache3 = this.cache;
-    const n2 = v.length;
-    const units = allocTexUnits(textures, n2);
+    const n = v.length;
+    const units = allocTexUnits(textures, n);
     if (!arraysEqual(cache3, units)) {
       gl.uniform1iv(this.addr, units);
       copyArray(cache3, units);
     }
-    for (let i2 = 0; i2 !== n2; ++i2) {
-      textures.setTexture3D(v[i2] || empty3dTexture, units[i2]);
+    for (let i = 0; i !== n; ++i) {
+      textures.setTexture3D(v[i] || empty3dTexture, units[i]);
     }
   }
   function setValueT6Array(gl, v, textures) {
     const cache3 = this.cache;
-    const n2 = v.length;
-    const units = allocTexUnits(textures, n2);
+    const n = v.length;
+    const units = allocTexUnits(textures, n);
     if (!arraysEqual(cache3, units)) {
       gl.uniform1iv(this.addr, units);
       copyArray(cache3, units);
     }
-    for (let i2 = 0; i2 !== n2; ++i2) {
-      textures.setTextureCube(v[i2] || emptyCubeTexture, units[i2]);
+    for (let i = 0; i !== n; ++i) {
+      textures.setTextureCube(v[i] || emptyCubeTexture, units[i]);
     }
   }
   function setValueT2DArrayArray(gl, v, textures) {
     const cache3 = this.cache;
-    const n2 = v.length;
-    const units = allocTexUnits(textures, n2);
+    const n = v.length;
+    const units = allocTexUnits(textures, n);
     if (!arraysEqual(cache3, units)) {
       gl.uniform1iv(this.addr, units);
       copyArray(cache3, units);
     }
-    for (let i2 = 0; i2 !== n2; ++i2) {
-      textures.setTexture2DArray(v[i2] || emptyArrayTexture, units[i2]);
+    for (let i = 0; i !== n; ++i) {
+      textures.setTexture2DArray(v[i] || emptyArrayTexture, units[i]);
     }
   }
   function getPureArraySetter(type) {
@@ -71816,9 +71363,9 @@ You can use close({ resize: true }) to resize header`);
     const lines2 = [];
     const from3 = Math.max(errorLine - 6, 0);
     const to = Math.min(errorLine + 6, lines.length);
-    for (let i2 = from3; i2 < to; i2++) {
-      const line = i2 + 1;
-      lines2.push(`${line === errorLine ? ">" : " "} ${line}: ${lines[i2]}`);
+    for (let i = from3; i < to; i++) {
+      const line = i + 1;
+      lines2.push(`${line === errorLine ? ">" : " "} ${line}: ${lines[i]}`);
     }
     return lines2.join("\n");
   }
@@ -71895,9 +71442,9 @@ You can use close({ resize: true }) to resize header`);
   }
   function fetchAttributeLocations(gl, program) {
     const attributes = {};
-    const n2 = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
-    for (let i2 = 0; i2 < n2; i2++) {
-      const info = gl.getActiveAttrib(program, i2);
+    const n = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
+    for (let i = 0; i < n; i++) {
+      const info = gl.getActiveAttrib(program, i);
       const name = info.name;
       let locationSize = 1;
       if (info.type === gl.FLOAT_MAT2)
@@ -71945,8 +71492,8 @@ You can use close({ resize: true }) to resize header`);
   }
   function loopReplacer(match, start, end, snippet) {
     let string = "";
-    for (let i2 = parseInt(start); i2 < parseInt(end); i2++) {
-      string += snippet.replace(/\[\s*i\s*\]/g, "[ " + i2 + " ]").replace(/UNROLLED_LOOP_INDEX/g, i2);
+    for (let i = parseInt(start); i < parseInt(end); i++) {
+      string += snippet.replace(/\[\s*i\s*\]/g, "[ " + i + " ]").replace(/UNROLLED_LOOP_INDEX/g, i);
     }
     return string;
   }
@@ -72804,8 +72351,8 @@ You can use close({ resize: true }) to resize header`);
     }
     function acquireProgram(parameters, cacheKey) {
       let program;
-      for (let p2 = 0, pl = programs.length; p2 < pl; p2++) {
-        const preexistingProgram = programs[p2];
+      for (let p = 0, pl = programs.length; p < pl; p++) {
+        const preexistingProgram = programs[p];
         if (preexistingProgram.cacheKey === cacheKey) {
           program = preexistingProgram;
           ++program.usedTimes;
@@ -72820,8 +72367,8 @@ You can use close({ resize: true }) to resize header`);
     }
     function releaseProgram(program) {
       if (--program.usedTimes === 0) {
-        const i2 = programs.indexOf(program);
-        programs[i2] = programs[programs.length - 1];
+        const i = programs.indexOf(program);
+        programs[i] = programs[programs.length - 1];
         programs.pop();
         program.destroy();
       }
@@ -72870,28 +72417,28 @@ You can use close({ resize: true }) to resize header`);
       dispose
     };
   }
-  function painterSortStable(a2, b) {
-    if (a2.groupOrder !== b.groupOrder) {
-      return a2.groupOrder - b.groupOrder;
-    } else if (a2.renderOrder !== b.renderOrder) {
-      return a2.renderOrder - b.renderOrder;
-    } else if (a2.material.id !== b.material.id) {
-      return a2.material.id - b.material.id;
-    } else if (a2.z !== b.z) {
-      return a2.z - b.z;
+  function painterSortStable(a, b) {
+    if (a.groupOrder !== b.groupOrder) {
+      return a.groupOrder - b.groupOrder;
+    } else if (a.renderOrder !== b.renderOrder) {
+      return a.renderOrder - b.renderOrder;
+    } else if (a.material.id !== b.material.id) {
+      return a.material.id - b.material.id;
+    } else if (a.z !== b.z) {
+      return a.z - b.z;
     } else {
-      return a2.id - b.id;
+      return a.id - b.id;
     }
   }
-  function reversePainterSortStable(a2, b) {
-    if (a2.groupOrder !== b.groupOrder) {
-      return a2.groupOrder - b.groupOrder;
-    } else if (a2.renderOrder !== b.renderOrder) {
-      return a2.renderOrder - b.renderOrder;
-    } else if (a2.z !== b.z) {
-      return b.z - a2.z;
+  function reversePainterSortStable(a, b) {
+    if (a.groupOrder !== b.groupOrder) {
+      return a.groupOrder - b.groupOrder;
+    } else if (a.renderOrder !== b.renderOrder) {
+      return a.renderOrder - b.renderOrder;
+    } else if (a.z !== b.z) {
+      return b.z - a.z;
     } else {
-      return a2.id - b.id;
+      return a.id - b.id;
     }
   }
   function WebGLRenderList() {
@@ -72962,8 +72509,8 @@ You can use close({ resize: true }) to resize header`);
         transparent.sort(customTransparentSort || reversePainterSortStable);
     }
     function finish() {
-      for (let i2 = renderItemsIndex, il = renderItems.length; i2 < il; i2++) {
-        const renderItem = renderItems[i2];
+      for (let i = renderItemsIndex, il = renderItems.length; i < il; i++) {
+        const renderItem = renderItems[i];
         if (renderItem.id === null)
           break;
         renderItem.id = null;
@@ -73146,15 +72693,15 @@ You can use close({ resize: true }) to resize header`);
       hemi: [],
       numSpotLightShadowsWithMaps: 0
     };
-    for (let i2 = 0; i2 < 9; i2++)
+    for (let i = 0; i < 9; i++)
       state.probe.push(new Vector3());
     const vector3 = new Vector3();
     const matrix4 = new Matrix4();
     const matrix42 = new Matrix4();
     function setup(lights, useLegacyLights) {
-      let r2 = 0, g2 = 0, b = 0;
-      for (let i2 = 0; i2 < 9; i2++)
-        state.probe[i2].set(0, 0, 0);
+      let r = 0, g = 0, b = 0;
+      for (let i = 0; i < 9; i++)
+        state.probe[i].set(0, 0, 0);
       let directionalLength = 0;
       let pointLength = 0;
       let spotLength = 0;
@@ -73167,15 +72714,15 @@ You can use close({ resize: true }) to resize header`);
       let numSpotShadowsWithMaps = 0;
       lights.sort(shadowCastingAndTexturingLightsFirst);
       const scaleFactor = useLegacyLights === true ? Math.PI : 1;
-      for (let i2 = 0, l2 = lights.length; i2 < l2; i2++) {
-        const light = lights[i2];
+      for (let i = 0, l = lights.length; i < l; i++) {
+        const light = lights[i];
         const color = light.color;
         const intensity = light.intensity;
         const distance = light.distance;
         const shadowMap = light.shadow && light.shadow.map ? light.shadow.map.texture : null;
         if (light.isAmbientLight) {
-          r2 += color.r * intensity * scaleFactor;
-          g2 += color.g * intensity * scaleFactor;
+          r += color.r * intensity * scaleFactor;
+          g += color.g * intensity * scaleFactor;
           b += color.b * intensity * scaleFactor;
         } else if (light.isLightProbe) {
           for (let j = 0; j < 9; j++) {
@@ -73279,8 +72826,8 @@ You can use close({ resize: true }) to resize header`);
           }
         }
       }
-      state.ambient[0] = r2;
-      state.ambient[1] = g2;
+      state.ambient[0] = r;
+      state.ambient[1] = g;
       state.ambient[2] = b;
       const hash = state.hash;
       if (hash.directionalLength !== directionalLength || hash.pointLength !== pointLength || hash.spotLength !== spotLength || hash.rectAreaLength !== rectAreaLength || hash.hemiLength !== hemiLength || hash.numDirectionalShadows !== numDirectionalShadows || hash.numPointShadows !== numPointShadows || hash.numSpotShadows !== numSpotShadows || hash.numSpotMaps !== numSpotMaps) {
@@ -73319,8 +72866,8 @@ You can use close({ resize: true }) to resize header`);
       let rectAreaLength = 0;
       let hemiLength = 0;
       const viewMatrix = camera.matrixWorldInverse;
-      for (let i2 = 0, l2 = lights.length; i2 < l2; i2++) {
-        const light = lights[i2];
+      for (let i = 0, l = lights.length; i < l; i++) {
+        const light = lights[i];
         if (light.isDirectionalLight) {
           const uniforms = state.directional[directionalLength];
           uniforms.direction.setFromMatrixPosition(light.matrixWorld);
@@ -73479,8 +73026,8 @@ You can use close({ resize: true }) to resize header`);
       _state.setScissorTest(false);
       const toVSM = _previousType !== VSMShadowMap && this.type === VSMShadowMap;
       const fromVSM = _previousType === VSMShadowMap && this.type !== VSMShadowMap;
-      for (let i2 = 0, il = lights.length; i2 < il; i2++) {
-        const light = lights[i2];
+      for (let i = 0, il = lights.length; i < il; i++) {
+        const light = lights[i];
         const shadow = light.shadow;
         if (shadow === void 0) {
           console.warn("THREE.WebGLShadowMap:", light, "has no shadow.");
@@ -73634,8 +73181,8 @@ You can use close({ resize: true }) to resize header`);
         }
       }
       const children = object.children;
-      for (let i2 = 0, l2 = children.length; i2 < l2; i2++) {
-        renderObject(children[i2], camera, shadowCamera, light, type);
+      for (let i = 0, l = children.length; i < l; i++) {
+        renderObject(children[i], camera, shadowCamera, light, type);
       }
     }
   }
@@ -73656,15 +73203,15 @@ You can use close({ resize: true }) to resize header`);
         setLocked: function(lock) {
           locked = lock;
         },
-        setClear: function(r2, g2, b, a2, premultipliedAlpha) {
+        setClear: function(r, g, b, a, premultipliedAlpha) {
           if (premultipliedAlpha === true) {
-            r2 *= a2;
-            g2 *= a2;
-            b *= a2;
+            r *= a;
+            g *= a;
+            b *= a;
           }
-          color.set(r2, g2, b, a2);
+          color.set(r, g, b, a);
           if (currentColorClear.equals(color) === false) {
-            gl.clearColor(r2, g2, b, a2);
+            gl.clearColor(r, g, b, a);
             currentColorClear.copy(color);
           }
         },
@@ -73855,11 +73402,11 @@ You can use close({ resize: true }) to resize header`);
       gl.bindTexture(type, texture);
       gl.texParameteri(type, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
       gl.texParameteri(type, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      for (let i2 = 0; i2 < count; i2++) {
+      for (let i = 0; i < count; i++) {
         if (isWebGL2 && (type === gl.TEXTURE_3D || type === gl.TEXTURE_2D_ARRAY)) {
           gl.texImage3D(target2, 0, gl.RGBA, 1, 1, dimensions, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
         } else {
-          gl.texImage2D(target2 + i2, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+          gl.texImage2D(target2 + i, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
         }
       }
       return texture;
@@ -73920,8 +73467,8 @@ You can use close({ resize: true }) to resize header`);
         if (renderTarget.isWebGLMultipleRenderTargets) {
           const textures = renderTarget.texture;
           if (drawBuffers2.length !== textures.length || drawBuffers2[0] !== gl.COLOR_ATTACHMENT0) {
-            for (let i2 = 0, il = textures.length; i2 < il; i2++) {
-              drawBuffers2[i2] = gl.COLOR_ATTACHMENT0 + i2;
+            for (let i = 0, il = textures.length; i < il; i++) {
+              drawBuffers2[i] = gl.COLOR_ATTACHMENT0 + i;
             }
             drawBuffers2.length = textures.length;
             needsUpdate = true;
@@ -74566,15 +74113,15 @@ You can use close({ resize: true }) to resize header`);
         renderTarget.depthTexture.dispose();
       }
       if (renderTarget.isWebGLCubeRenderTarget) {
-        for (let i2 = 0; i2 < 6; i2++) {
-          if (Array.isArray(renderTargetProperties.__webglFramebuffer[i2])) {
-            for (let level = 0; level < renderTargetProperties.__webglFramebuffer[i2].length; level++)
-              _gl.deleteFramebuffer(renderTargetProperties.__webglFramebuffer[i2][level]);
+        for (let i = 0; i < 6; i++) {
+          if (Array.isArray(renderTargetProperties.__webglFramebuffer[i])) {
+            for (let level = 0; level < renderTargetProperties.__webglFramebuffer[i].length; level++)
+              _gl.deleteFramebuffer(renderTargetProperties.__webglFramebuffer[i][level]);
           } else {
-            _gl.deleteFramebuffer(renderTargetProperties.__webglFramebuffer[i2]);
+            _gl.deleteFramebuffer(renderTargetProperties.__webglFramebuffer[i]);
           }
           if (renderTargetProperties.__webglDepthbuffer)
-            _gl.deleteRenderbuffer(renderTargetProperties.__webglDepthbuffer[i2]);
+            _gl.deleteRenderbuffer(renderTargetProperties.__webglDepthbuffer[i]);
         }
       } else {
         if (Array.isArray(renderTargetProperties.__webglFramebuffer)) {
@@ -74588,22 +74135,22 @@ You can use close({ resize: true }) to resize header`);
         if (renderTargetProperties.__webglMultisampledFramebuffer)
           _gl.deleteFramebuffer(renderTargetProperties.__webglMultisampledFramebuffer);
         if (renderTargetProperties.__webglColorRenderbuffer) {
-          for (let i2 = 0; i2 < renderTargetProperties.__webglColorRenderbuffer.length; i2++) {
-            if (renderTargetProperties.__webglColorRenderbuffer[i2])
-              _gl.deleteRenderbuffer(renderTargetProperties.__webglColorRenderbuffer[i2]);
+          for (let i = 0; i < renderTargetProperties.__webglColorRenderbuffer.length; i++) {
+            if (renderTargetProperties.__webglColorRenderbuffer[i])
+              _gl.deleteRenderbuffer(renderTargetProperties.__webglColorRenderbuffer[i]);
           }
         }
         if (renderTargetProperties.__webglDepthRenderbuffer)
           _gl.deleteRenderbuffer(renderTargetProperties.__webglDepthRenderbuffer);
       }
       if (renderTarget.isWebGLMultipleRenderTargets) {
-        for (let i2 = 0, il = texture.length; i2 < il; i2++) {
-          const attachmentProperties = properties.get(texture[i2]);
+        for (let i = 0, il = texture.length; i < il; i++) {
+          const attachmentProperties = properties.get(texture[i]);
           if (attachmentProperties.__webglTexture) {
             _gl.deleteTexture(attachmentProperties.__webglTexture);
             info.memory.textures--;
           }
-          properties.remove(texture[i2]);
+          properties.remove(texture[i]);
         }
       }
       properties.remove(texture);
@@ -74853,12 +74400,12 @@ You can use close({ resize: true }) to resize header`);
             if (useTexStorage && allocateMemory) {
               state.texStorage2D(_gl.TEXTURE_2D, levels, glInternalFormat, mipmaps[0].width, mipmaps[0].height);
             }
-            for (let i2 = 0, il = mipmaps.length; i2 < il; i2++) {
-              mipmap = mipmaps[i2];
+            for (let i = 0, il = mipmaps.length; i < il; i++) {
+              mipmap = mipmaps[i];
               if (useTexStorage) {
-                state.texSubImage2D(_gl.TEXTURE_2D, i2, 0, 0, mipmap.width, mipmap.height, glFormat, glType, mipmap.data);
+                state.texSubImage2D(_gl.TEXTURE_2D, i, 0, 0, mipmap.width, mipmap.height, glFormat, glType, mipmap.data);
               } else {
-                state.texImage2D(_gl.TEXTURE_2D, i2, glInternalFormat, mipmap.width, mipmap.height, 0, glFormat, glType, mipmap.data);
+                state.texImage2D(_gl.TEXTURE_2D, i, glInternalFormat, mipmap.width, mipmap.height, 0, glFormat, glType, mipmap.data);
               }
             }
             texture.generateMipmaps = false;
@@ -74877,23 +74424,23 @@ You can use close({ resize: true }) to resize header`);
             if (useTexStorage && allocateMemory) {
               state.texStorage3D(_gl.TEXTURE_2D_ARRAY, levels, glInternalFormat, mipmaps[0].width, mipmaps[0].height, image.depth);
             }
-            for (let i2 = 0, il = mipmaps.length; i2 < il; i2++) {
-              mipmap = mipmaps[i2];
+            for (let i = 0, il = mipmaps.length; i < il; i++) {
+              mipmap = mipmaps[i];
               if (texture.format !== RGBAFormat) {
                 if (glFormat !== null) {
                   if (useTexStorage) {
-                    state.compressedTexSubImage3D(_gl.TEXTURE_2D_ARRAY, i2, 0, 0, 0, mipmap.width, mipmap.height, image.depth, glFormat, mipmap.data, 0, 0);
+                    state.compressedTexSubImage3D(_gl.TEXTURE_2D_ARRAY, i, 0, 0, 0, mipmap.width, mipmap.height, image.depth, glFormat, mipmap.data, 0, 0);
                   } else {
-                    state.compressedTexImage3D(_gl.TEXTURE_2D_ARRAY, i2, glInternalFormat, mipmap.width, mipmap.height, image.depth, 0, mipmap.data, 0, 0);
+                    state.compressedTexImage3D(_gl.TEXTURE_2D_ARRAY, i, glInternalFormat, mipmap.width, mipmap.height, image.depth, 0, mipmap.data, 0, 0);
                   }
                 } else {
                   console.warn("THREE.WebGLRenderer: Attempt to load unsupported compressed texture format in .uploadTexture()");
                 }
               } else {
                 if (useTexStorage) {
-                  state.texSubImage3D(_gl.TEXTURE_2D_ARRAY, i2, 0, 0, 0, mipmap.width, mipmap.height, image.depth, glFormat, glType, mipmap.data);
+                  state.texSubImage3D(_gl.TEXTURE_2D_ARRAY, i, 0, 0, 0, mipmap.width, mipmap.height, image.depth, glFormat, glType, mipmap.data);
                 } else {
-                  state.texImage3D(_gl.TEXTURE_2D_ARRAY, i2, glInternalFormat, mipmap.width, mipmap.height, image.depth, 0, glFormat, glType, mipmap.data);
+                  state.texImage3D(_gl.TEXTURE_2D_ARRAY, i, glInternalFormat, mipmap.width, mipmap.height, image.depth, 0, glFormat, glType, mipmap.data);
                 }
               }
             }
@@ -74901,23 +74448,23 @@ You can use close({ resize: true }) to resize header`);
             if (useTexStorage && allocateMemory) {
               state.texStorage2D(_gl.TEXTURE_2D, levels, glInternalFormat, mipmaps[0].width, mipmaps[0].height);
             }
-            for (let i2 = 0, il = mipmaps.length; i2 < il; i2++) {
-              mipmap = mipmaps[i2];
+            for (let i = 0, il = mipmaps.length; i < il; i++) {
+              mipmap = mipmaps[i];
               if (texture.format !== RGBAFormat) {
                 if (glFormat !== null) {
                   if (useTexStorage) {
-                    state.compressedTexSubImage2D(_gl.TEXTURE_2D, i2, 0, 0, mipmap.width, mipmap.height, glFormat, mipmap.data);
+                    state.compressedTexSubImage2D(_gl.TEXTURE_2D, i, 0, 0, mipmap.width, mipmap.height, glFormat, mipmap.data);
                   } else {
-                    state.compressedTexImage2D(_gl.TEXTURE_2D, i2, glInternalFormat, mipmap.width, mipmap.height, 0, mipmap.data);
+                    state.compressedTexImage2D(_gl.TEXTURE_2D, i, glInternalFormat, mipmap.width, mipmap.height, 0, mipmap.data);
                   }
                 } else {
                   console.warn("THREE.WebGLRenderer: Attempt to load unsupported compressed texture format in .uploadTexture()");
                 }
               } else {
                 if (useTexStorage) {
-                  state.texSubImage2D(_gl.TEXTURE_2D, i2, 0, 0, mipmap.width, mipmap.height, glFormat, glType, mipmap.data);
+                  state.texSubImage2D(_gl.TEXTURE_2D, i, 0, 0, mipmap.width, mipmap.height, glFormat, glType, mipmap.data);
                 } else {
-                  state.texImage2D(_gl.TEXTURE_2D, i2, glInternalFormat, mipmap.width, mipmap.height, 0, glFormat, glType, mipmap.data);
+                  state.texImage2D(_gl.TEXTURE_2D, i, glInternalFormat, mipmap.width, mipmap.height, 0, glFormat, glType, mipmap.data);
                 }
               }
             }
@@ -74946,8 +74493,8 @@ You can use close({ resize: true }) to resize header`);
               state.texStorage2D(_gl.TEXTURE_2D, levels, glInternalFormat, image.width, image.height);
             } else {
               let width = image.width, height = image.height;
-              for (let i2 = 0; i2 < levels; i2++) {
-                state.texImage2D(_gl.TEXTURE_2D, i2, glInternalFormat, width, height, 0, glFormat, glType, null);
+              for (let i = 0; i < levels; i++) {
+                state.texImage2D(_gl.TEXTURE_2D, i, glInternalFormat, width, height, 0, glFormat, glType, null);
                 width >>= 1;
                 height >>= 1;
               }
@@ -74958,12 +74505,12 @@ You can use close({ resize: true }) to resize header`);
             if (useTexStorage && allocateMemory) {
               state.texStorage2D(_gl.TEXTURE_2D, levels, glInternalFormat, mipmaps[0].width, mipmaps[0].height);
             }
-            for (let i2 = 0, il = mipmaps.length; i2 < il; i2++) {
-              mipmap = mipmaps[i2];
+            for (let i = 0, il = mipmaps.length; i < il; i++) {
+              mipmap = mipmaps[i];
               if (useTexStorage) {
-                state.texSubImage2D(_gl.TEXTURE_2D, i2, 0, 0, glFormat, glType, mipmap);
+                state.texSubImage2D(_gl.TEXTURE_2D, i, 0, 0, glFormat, glType, mipmap);
               } else {
-                state.texImage2D(_gl.TEXTURE_2D, i2, glInternalFormat, glFormat, glType, mipmap);
+                state.texImage2D(_gl.TEXTURE_2D, i, glInternalFormat, glFormat, glType, mipmap);
               }
             }
             texture.generateMipmaps = false;
@@ -75003,13 +74550,13 @@ You can use close({ resize: true }) to resize header`);
         const isCompressed = texture.isCompressedTexture || texture.image[0].isCompressedTexture;
         const isDataTexture = texture.image[0] && texture.image[0].isDataTexture;
         const cubeImage = [];
-        for (let i2 = 0; i2 < 6; i2++) {
+        for (let i = 0; i < 6; i++) {
           if (!isCompressed && !isDataTexture) {
-            cubeImage[i2] = resizeImage(texture.image[i2], false, true, maxCubemapSize);
+            cubeImage[i] = resizeImage(texture.image[i], false, true, maxCubemapSize);
           } else {
-            cubeImage[i2] = isDataTexture ? texture.image[i2].image : texture.image[i2];
+            cubeImage[i] = isDataTexture ? texture.image[i].image : texture.image[i];
           }
-          cubeImage[i2] = verifyColorSpace(texture, cubeImage[i2]);
+          cubeImage[i] = verifyColorSpace(texture, cubeImage[i]);
         }
         const image = cubeImage[0], supportsMips = isPowerOfTwo$1(image) || isWebGL2, glFormat = utils.convert(texture.format, texture.colorSpace), glType = utils.convert(texture.type), glInternalFormat = getInternalFormat(texture.internalFormat, glFormat, glType, texture.colorSpace);
         const useTexStorage = isWebGL2 && texture.isVideoTexture !== true;
@@ -75021,25 +74568,25 @@ You can use close({ resize: true }) to resize header`);
           if (useTexStorage && allocateMemory) {
             state.texStorage2D(_gl.TEXTURE_CUBE_MAP, levels, glInternalFormat, image.width, image.height);
           }
-          for (let i2 = 0; i2 < 6; i2++) {
-            mipmaps = cubeImage[i2].mipmaps;
+          for (let i = 0; i < 6; i++) {
+            mipmaps = cubeImage[i].mipmaps;
             for (let j = 0; j < mipmaps.length; j++) {
               const mipmap = mipmaps[j];
               if (texture.format !== RGBAFormat) {
                 if (glFormat !== null) {
                   if (useTexStorage) {
-                    state.compressedTexSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, j, 0, 0, mipmap.width, mipmap.height, glFormat, mipmap.data);
+                    state.compressedTexSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, j, 0, 0, mipmap.width, mipmap.height, glFormat, mipmap.data);
                   } else {
-                    state.compressedTexImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, j, glInternalFormat, mipmap.width, mipmap.height, 0, mipmap.data);
+                    state.compressedTexImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, j, glInternalFormat, mipmap.width, mipmap.height, 0, mipmap.data);
                   }
                 } else {
                   console.warn("THREE.WebGLRenderer: Attempt to load unsupported compressed texture format in .setTextureCube()");
                 }
               } else {
                 if (useTexStorage) {
-                  state.texSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, j, 0, 0, mipmap.width, mipmap.height, glFormat, glType, mipmap.data);
+                  state.texSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, j, 0, 0, mipmap.width, mipmap.height, glFormat, glType, mipmap.data);
                 } else {
-                  state.texImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, j, glInternalFormat, mipmap.width, mipmap.height, 0, glFormat, glType, mipmap.data);
+                  state.texImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, j, glInternalFormat, mipmap.width, mipmap.height, 0, glFormat, glType, mipmap.data);
                 }
               }
             }
@@ -75051,34 +74598,34 @@ You can use close({ resize: true }) to resize header`);
               levels++;
             state.texStorage2D(_gl.TEXTURE_CUBE_MAP, levels, glInternalFormat, cubeImage[0].width, cubeImage[0].height);
           }
-          for (let i2 = 0; i2 < 6; i2++) {
+          for (let i = 0; i < 6; i++) {
             if (isDataTexture) {
               if (useTexStorage) {
-                state.texSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, 0, 0, 0, cubeImage[i2].width, cubeImage[i2].height, glFormat, glType, cubeImage[i2].data);
+                state.texSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, 0, 0, cubeImage[i].width, cubeImage[i].height, glFormat, glType, cubeImage[i].data);
               } else {
-                state.texImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, 0, glInternalFormat, cubeImage[i2].width, cubeImage[i2].height, 0, glFormat, glType, cubeImage[i2].data);
+                state.texImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, glInternalFormat, cubeImage[i].width, cubeImage[i].height, 0, glFormat, glType, cubeImage[i].data);
               }
               for (let j = 0; j < mipmaps.length; j++) {
                 const mipmap = mipmaps[j];
-                const mipmapImage = mipmap.image[i2].image;
+                const mipmapImage = mipmap.image[i].image;
                 if (useTexStorage) {
-                  state.texSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, j + 1, 0, 0, mipmapImage.width, mipmapImage.height, glFormat, glType, mipmapImage.data);
+                  state.texSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, j + 1, 0, 0, mipmapImage.width, mipmapImage.height, glFormat, glType, mipmapImage.data);
                 } else {
-                  state.texImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, j + 1, glInternalFormat, mipmapImage.width, mipmapImage.height, 0, glFormat, glType, mipmapImage.data);
+                  state.texImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, j + 1, glInternalFormat, mipmapImage.width, mipmapImage.height, 0, glFormat, glType, mipmapImage.data);
                 }
               }
             } else {
               if (useTexStorage) {
-                state.texSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, 0, 0, 0, glFormat, glType, cubeImage[i2]);
+                state.texSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, 0, 0, glFormat, glType, cubeImage[i]);
               } else {
-                state.texImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, 0, glInternalFormat, glFormat, glType, cubeImage[i2]);
+                state.texImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, glInternalFormat, glFormat, glType, cubeImage[i]);
               }
               for (let j = 0; j < mipmaps.length; j++) {
                 const mipmap = mipmaps[j];
                 if (useTexStorage) {
-                  state.texSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, j + 1, 0, 0, glFormat, glType, mipmap.image[i2]);
+                  state.texSubImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, j + 1, 0, 0, glFormat, glType, mipmap.image[i]);
                 } else {
-                  state.texImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, j + 1, glInternalFormat, glFormat, glType, mipmap.image[i2]);
+                  state.texImage2D(_gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, j + 1, glInternalFormat, glFormat, glType, mipmap.image[i]);
                 }
               }
             }
@@ -75150,8 +74697,8 @@ You can use close({ resize: true }) to resize header`);
         _gl.framebufferRenderbuffer(_gl.FRAMEBUFFER, _gl.DEPTH_STENCIL_ATTACHMENT, _gl.RENDERBUFFER, renderbuffer);
       } else {
         const textures = renderTarget.isWebGLMultipleRenderTargets === true ? renderTarget.texture : [renderTarget.texture];
-        for (let i2 = 0; i2 < textures.length; i2++) {
-          const texture = textures[i2];
+        for (let i = 0; i < textures.length; i++) {
+          const texture = textures[i];
           const glFormat = utils.convert(texture.format, texture.colorSpace);
           const glType = utils.convert(texture.type);
           const glInternalFormat = getInternalFormat(texture.internalFormat, glFormat, glType, texture.colorSpace);
@@ -75209,10 +74756,10 @@ You can use close({ resize: true }) to resize header`);
       } else {
         if (isCube) {
           renderTargetProperties.__webglDepthbuffer = [];
-          for (let i2 = 0; i2 < 6; i2++) {
-            state.bindFramebuffer(_gl.FRAMEBUFFER, renderTargetProperties.__webglFramebuffer[i2]);
-            renderTargetProperties.__webglDepthbuffer[i2] = _gl.createRenderbuffer();
-            setupRenderBufferStorage(renderTargetProperties.__webglDepthbuffer[i2], renderTarget, false);
+          for (let i = 0; i < 6; i++) {
+            state.bindFramebuffer(_gl.FRAMEBUFFER, renderTargetProperties.__webglFramebuffer[i]);
+            renderTargetProperties.__webglDepthbuffer[i] = _gl.createRenderbuffer();
+            setupRenderBufferStorage(renderTargetProperties.__webglDepthbuffer[i], renderTarget, false);
           }
         } else {
           state.bindFramebuffer(_gl.FRAMEBUFFER, renderTargetProperties.__webglFramebuffer);
@@ -75248,14 +74795,14 @@ You can use close({ resize: true }) to resize header`);
       const supportsMips = isPowerOfTwo$1(renderTarget) || isWebGL2;
       if (isCube) {
         renderTargetProperties.__webglFramebuffer = [];
-        for (let i2 = 0; i2 < 6; i2++) {
+        for (let i = 0; i < 6; i++) {
           if (isWebGL2 && texture.mipmaps && texture.mipmaps.length > 0) {
-            renderTargetProperties.__webglFramebuffer[i2] = [];
+            renderTargetProperties.__webglFramebuffer[i] = [];
             for (let level = 0; level < texture.mipmaps.length; level++) {
-              renderTargetProperties.__webglFramebuffer[i2][level] = _gl.createFramebuffer();
+              renderTargetProperties.__webglFramebuffer[i][level] = _gl.createFramebuffer();
             }
           } else {
-            renderTargetProperties.__webglFramebuffer[i2] = _gl.createFramebuffer();
+            renderTargetProperties.__webglFramebuffer[i] = _gl.createFramebuffer();
           }
         }
       } else {
@@ -75270,8 +74817,8 @@ You can use close({ resize: true }) to resize header`);
         if (isMultipleRenderTargets) {
           if (capabilities.drawBuffers) {
             const textures = renderTarget.texture;
-            for (let i2 = 0, il = textures.length; i2 < il; i2++) {
-              const attachmentProperties = properties.get(textures[i2]);
+            for (let i = 0, il = textures.length; i < il; i++) {
+              const attachmentProperties = properties.get(textures[i]);
               if (attachmentProperties.__webglTexture === void 0) {
                 attachmentProperties.__webglTexture = _gl.createTexture();
                 info.memory.textures++;
@@ -75286,16 +74833,16 @@ You can use close({ resize: true }) to resize header`);
           renderTargetProperties.__webglMultisampledFramebuffer = _gl.createFramebuffer();
           renderTargetProperties.__webglColorRenderbuffer = [];
           state.bindFramebuffer(_gl.FRAMEBUFFER, renderTargetProperties.__webglMultisampledFramebuffer);
-          for (let i2 = 0; i2 < textures.length; i2++) {
-            const texture2 = textures[i2];
-            renderTargetProperties.__webglColorRenderbuffer[i2] = _gl.createRenderbuffer();
-            _gl.bindRenderbuffer(_gl.RENDERBUFFER, renderTargetProperties.__webglColorRenderbuffer[i2]);
+          for (let i = 0; i < textures.length; i++) {
+            const texture2 = textures[i];
+            renderTargetProperties.__webglColorRenderbuffer[i] = _gl.createRenderbuffer();
+            _gl.bindRenderbuffer(_gl.RENDERBUFFER, renderTargetProperties.__webglColorRenderbuffer[i]);
             const glFormat = utils.convert(texture2.format, texture2.colorSpace);
             const glType = utils.convert(texture2.type);
             const glInternalFormat = getInternalFormat(texture2.internalFormat, glFormat, glType, texture2.colorSpace, renderTarget.isXRRenderTarget === true);
             const samples = getRenderTargetSamples(renderTarget);
             _gl.renderbufferStorageMultisample(_gl.RENDERBUFFER, samples, glInternalFormat, renderTarget.width, renderTarget.height);
-            _gl.framebufferRenderbuffer(_gl.FRAMEBUFFER, _gl.COLOR_ATTACHMENT0 + i2, _gl.RENDERBUFFER, renderTargetProperties.__webglColorRenderbuffer[i2]);
+            _gl.framebufferRenderbuffer(_gl.FRAMEBUFFER, _gl.COLOR_ATTACHMENT0 + i, _gl.RENDERBUFFER, renderTargetProperties.__webglColorRenderbuffer[i]);
           }
           _gl.bindRenderbuffer(_gl.RENDERBUFFER, null);
           if (renderTarget.depthBuffer) {
@@ -75308,13 +74855,13 @@ You can use close({ resize: true }) to resize header`);
       if (isCube) {
         state.bindTexture(_gl.TEXTURE_CUBE_MAP, textureProperties.__webglTexture);
         setTextureParameters(_gl.TEXTURE_CUBE_MAP, texture, supportsMips);
-        for (let i2 = 0; i2 < 6; i2++) {
+        for (let i = 0; i < 6; i++) {
           if (isWebGL2 && texture.mipmaps && texture.mipmaps.length > 0) {
             for (let level = 0; level < texture.mipmaps.length; level++) {
-              setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer[i2][level], renderTarget, texture, _gl.COLOR_ATTACHMENT0, _gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, level);
+              setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer[i][level], renderTarget, texture, _gl.COLOR_ATTACHMENT0, _gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, level);
             }
           } else {
-            setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer[i2], renderTarget, texture, _gl.COLOR_ATTACHMENT0, _gl.TEXTURE_CUBE_MAP_POSITIVE_X + i2, 0);
+            setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer[i], renderTarget, texture, _gl.COLOR_ATTACHMENT0, _gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0);
           }
         }
         if (textureNeedsGenerateMipmaps(texture, supportsMips)) {
@@ -75323,12 +74870,12 @@ You can use close({ resize: true }) to resize header`);
         state.unbindTexture();
       } else if (isMultipleRenderTargets) {
         const textures = renderTarget.texture;
-        for (let i2 = 0, il = textures.length; i2 < il; i2++) {
-          const attachment = textures[i2];
+        for (let i = 0, il = textures.length; i < il; i++) {
+          const attachment = textures[i];
           const attachmentProperties = properties.get(attachment);
           state.bindTexture(_gl.TEXTURE_2D, attachmentProperties.__webglTexture);
           setTextureParameters(_gl.TEXTURE_2D, attachment, supportsMips);
-          setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer, renderTarget, attachment, _gl.COLOR_ATTACHMENT0 + i2, _gl.TEXTURE_2D, 0);
+          setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer, renderTarget, attachment, _gl.COLOR_ATTACHMENT0 + i, _gl.TEXTURE_2D, 0);
           if (textureNeedsGenerateMipmaps(attachment, supportsMips)) {
             generateMipmap(_gl.TEXTURE_2D);
           }
@@ -75364,8 +74911,8 @@ You can use close({ resize: true }) to resize header`);
     function updateRenderTargetMipmap(renderTarget) {
       const supportsMips = isPowerOfTwo$1(renderTarget) || isWebGL2;
       const textures = renderTarget.isWebGLMultipleRenderTargets === true ? renderTarget.texture : [renderTarget.texture];
-      for (let i2 = 0, il = textures.length; i2 < il; i2++) {
-        const texture = textures[i2];
+      for (let i = 0, il = textures.length; i < il; i++) {
+        const texture = textures[i];
         if (textureNeedsGenerateMipmaps(texture, supportsMips)) {
           const target2 = renderTarget.isWebGLCubeRenderTarget ? _gl.TEXTURE_CUBE_MAP : _gl.TEXTURE_2D;
           const webglTexture = properties.get(texture).__webglTexture;
@@ -75386,17 +74933,17 @@ You can use close({ resize: true }) to resize header`);
         const renderTargetProperties = properties.get(renderTarget);
         const isMultipleRenderTargets = renderTarget.isWebGLMultipleRenderTargets === true;
         if (isMultipleRenderTargets) {
-          for (let i2 = 0; i2 < textures.length; i2++) {
+          for (let i = 0; i < textures.length; i++) {
             state.bindFramebuffer(_gl.FRAMEBUFFER, renderTargetProperties.__webglMultisampledFramebuffer);
-            _gl.framebufferRenderbuffer(_gl.FRAMEBUFFER, _gl.COLOR_ATTACHMENT0 + i2, _gl.RENDERBUFFER, null);
+            _gl.framebufferRenderbuffer(_gl.FRAMEBUFFER, _gl.COLOR_ATTACHMENT0 + i, _gl.RENDERBUFFER, null);
             state.bindFramebuffer(_gl.FRAMEBUFFER, renderTargetProperties.__webglFramebuffer);
-            _gl.framebufferTexture2D(_gl.DRAW_FRAMEBUFFER, _gl.COLOR_ATTACHMENT0 + i2, _gl.TEXTURE_2D, null, 0);
+            _gl.framebufferTexture2D(_gl.DRAW_FRAMEBUFFER, _gl.COLOR_ATTACHMENT0 + i, _gl.TEXTURE_2D, null, 0);
           }
         }
         state.bindFramebuffer(_gl.READ_FRAMEBUFFER, renderTargetProperties.__webglMultisampledFramebuffer);
         state.bindFramebuffer(_gl.DRAW_FRAMEBUFFER, renderTargetProperties.__webglFramebuffer);
-        for (let i2 = 0; i2 < textures.length; i2++) {
-          invalidationArray.push(_gl.COLOR_ATTACHMENT0 + i2);
+        for (let i = 0; i < textures.length; i++) {
+          invalidationArray.push(_gl.COLOR_ATTACHMENT0 + i);
           if (renderTarget.depthBuffer) {
             invalidationArray.push(depthStyle);
           }
@@ -75408,14 +74955,14 @@ You can use close({ resize: true }) to resize header`);
               mask |= _gl.STENCIL_BUFFER_BIT;
           }
           if (isMultipleRenderTargets) {
-            _gl.framebufferRenderbuffer(_gl.READ_FRAMEBUFFER, _gl.COLOR_ATTACHMENT0, _gl.RENDERBUFFER, renderTargetProperties.__webglColorRenderbuffer[i2]);
+            _gl.framebufferRenderbuffer(_gl.READ_FRAMEBUFFER, _gl.COLOR_ATTACHMENT0, _gl.RENDERBUFFER, renderTargetProperties.__webglColorRenderbuffer[i]);
           }
           if (ignoreDepthValues === true) {
             _gl.invalidateFramebuffer(_gl.READ_FRAMEBUFFER, [depthStyle]);
             _gl.invalidateFramebuffer(_gl.DRAW_FRAMEBUFFER, [depthStyle]);
           }
           if (isMultipleRenderTargets) {
-            const webglTexture = properties.get(textures[i2]).__webglTexture;
+            const webglTexture = properties.get(textures[i]).__webglTexture;
             _gl.framebufferTexture2D(_gl.DRAW_FRAMEBUFFER, _gl.COLOR_ATTACHMENT0, _gl.TEXTURE_2D, webglTexture, 0);
           }
           _gl.blitFramebuffer(0, 0, width, height, 0, 0, width, height, mask, _gl.NEAREST);
@@ -75426,12 +74973,12 @@ You can use close({ resize: true }) to resize header`);
         state.bindFramebuffer(_gl.READ_FRAMEBUFFER, null);
         state.bindFramebuffer(_gl.DRAW_FRAMEBUFFER, null);
         if (isMultipleRenderTargets) {
-          for (let i2 = 0; i2 < textures.length; i2++) {
+          for (let i = 0; i < textures.length; i++) {
             state.bindFramebuffer(_gl.FRAMEBUFFER, renderTargetProperties.__webglMultisampledFramebuffer);
-            _gl.framebufferRenderbuffer(_gl.FRAMEBUFFER, _gl.COLOR_ATTACHMENT0 + i2, _gl.RENDERBUFFER, renderTargetProperties.__webglColorRenderbuffer[i2]);
-            const webglTexture = properties.get(textures[i2]).__webglTexture;
+            _gl.framebufferRenderbuffer(_gl.FRAMEBUFFER, _gl.COLOR_ATTACHMENT0 + i, _gl.RENDERBUFFER, renderTargetProperties.__webglColorRenderbuffer[i]);
+            const webglTexture = properties.get(textures[i]).__webglTexture;
             state.bindFramebuffer(_gl.FRAMEBUFFER, renderTargetProperties.__webglFramebuffer);
-            _gl.framebufferTexture2D(_gl.DRAW_FRAMEBUFFER, _gl.COLOR_ATTACHMENT0 + i2, _gl.TEXTURE_2D, webglTexture, 0);
+            _gl.framebufferTexture2D(_gl.DRAW_FRAMEBUFFER, _gl.COLOR_ATTACHMENT0 + i, _gl.TEXTURE_2D, webglTexture, 0);
           }
         }
         state.bindFramebuffer(_gl.DRAW_FRAMEBUFFER, renderTargetProperties.__webglMultisampledFramebuffer);
@@ -75494,28 +75041,28 @@ You can use close({ resize: true }) to resize header`);
   }
   function WebGLUtils(gl, extensions2, capabilities) {
     const isWebGL2 = capabilities.isWebGL2;
-    function convert(p2, colorSpace = NoColorSpace) {
+    function convert(p, colorSpace = NoColorSpace) {
       let extension;
       const transferFunction = colorSpace === SRGBColorSpace || colorSpace === DisplayP3ColorSpace ? SRGBTransferFunction : LinearTransferFunction;
-      if (p2 === UnsignedByteType)
+      if (p === UnsignedByteType)
         return gl.UNSIGNED_BYTE;
-      if (p2 === UnsignedShort4444Type)
+      if (p === UnsignedShort4444Type)
         return gl.UNSIGNED_SHORT_4_4_4_4;
-      if (p2 === UnsignedShort5551Type)
+      if (p === UnsignedShort5551Type)
         return gl.UNSIGNED_SHORT_5_5_5_1;
-      if (p2 === ByteType)
+      if (p === ByteType)
         return gl.BYTE;
-      if (p2 === ShortType)
+      if (p === ShortType)
         return gl.SHORT;
-      if (p2 === UnsignedShortType)
+      if (p === UnsignedShortType)
         return gl.UNSIGNED_SHORT;
-      if (p2 === IntType)
+      if (p === IntType)
         return gl.INT;
-      if (p2 === UnsignedIntType)
+      if (p === UnsignedIntType)
         return gl.UNSIGNED_INT;
-      if (p2 === FloatType)
+      if (p === FloatType)
         return gl.FLOAT;
-      if (p2 === HalfFloatType) {
+      if (p === HalfFloatType) {
         if (isWebGL2)
           return gl.HALF_FLOAT;
         extension = extensions2.get("OES_texture_half_float");
@@ -75525,19 +75072,19 @@ You can use close({ resize: true }) to resize header`);
           return null;
         }
       }
-      if (p2 === AlphaFormat)
+      if (p === AlphaFormat)
         return gl.ALPHA;
-      if (p2 === RGBAFormat)
+      if (p === RGBAFormat)
         return gl.RGBA;
-      if (p2 === LuminanceFormat)
+      if (p === LuminanceFormat)
         return gl.LUMINANCE;
-      if (p2 === LuminanceAlphaFormat)
+      if (p === LuminanceAlphaFormat)
         return gl.LUMINANCE_ALPHA;
-      if (p2 === DepthFormat)
+      if (p === DepthFormat)
         return gl.DEPTH_COMPONENT;
-      if (p2 === DepthStencilFormat)
+      if (p === DepthStencilFormat)
         return gl.DEPTH_STENCIL;
-      if (p2 === _SRGBAFormat) {
+      if (p === _SRGBAFormat) {
         extension = extensions2.get("EXT_sRGB");
         if (extension !== null) {
           return extension.SRGB_ALPHA_EXT;
@@ -75545,27 +75092,27 @@ You can use close({ resize: true }) to resize header`);
           return null;
         }
       }
-      if (p2 === RedFormat)
+      if (p === RedFormat)
         return gl.RED;
-      if (p2 === RedIntegerFormat)
+      if (p === RedIntegerFormat)
         return gl.RED_INTEGER;
-      if (p2 === RGFormat)
+      if (p === RGFormat)
         return gl.RG;
-      if (p2 === RGIntegerFormat)
+      if (p === RGIntegerFormat)
         return gl.RG_INTEGER;
-      if (p2 === RGBAIntegerFormat)
+      if (p === RGBAIntegerFormat)
         return gl.RGBA_INTEGER;
-      if (p2 === RGB_S3TC_DXT1_Format || p2 === RGBA_S3TC_DXT1_Format || p2 === RGBA_S3TC_DXT3_Format || p2 === RGBA_S3TC_DXT5_Format) {
+      if (p === RGB_S3TC_DXT1_Format || p === RGBA_S3TC_DXT1_Format || p === RGBA_S3TC_DXT3_Format || p === RGBA_S3TC_DXT5_Format) {
         if (transferFunction === SRGBTransferFunction) {
           extension = extensions2.get("WEBGL_compressed_texture_s3tc_srgb");
           if (extension !== null) {
-            if (p2 === RGB_S3TC_DXT1_Format)
+            if (p === RGB_S3TC_DXT1_Format)
               return extension.COMPRESSED_SRGB_S3TC_DXT1_EXT;
-            if (p2 === RGBA_S3TC_DXT1_Format)
+            if (p === RGBA_S3TC_DXT1_Format)
               return extension.COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT;
-            if (p2 === RGBA_S3TC_DXT3_Format)
+            if (p === RGBA_S3TC_DXT3_Format)
               return extension.COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT;
-            if (p2 === RGBA_S3TC_DXT5_Format)
+            if (p === RGBA_S3TC_DXT5_Format)
               return extension.COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
           } else {
             return null;
@@ -75573,35 +75120,35 @@ You can use close({ resize: true }) to resize header`);
         } else {
           extension = extensions2.get("WEBGL_compressed_texture_s3tc");
           if (extension !== null) {
-            if (p2 === RGB_S3TC_DXT1_Format)
+            if (p === RGB_S3TC_DXT1_Format)
               return extension.COMPRESSED_RGB_S3TC_DXT1_EXT;
-            if (p2 === RGBA_S3TC_DXT1_Format)
+            if (p === RGBA_S3TC_DXT1_Format)
               return extension.COMPRESSED_RGBA_S3TC_DXT1_EXT;
-            if (p2 === RGBA_S3TC_DXT3_Format)
+            if (p === RGBA_S3TC_DXT3_Format)
               return extension.COMPRESSED_RGBA_S3TC_DXT3_EXT;
-            if (p2 === RGBA_S3TC_DXT5_Format)
+            if (p === RGBA_S3TC_DXT5_Format)
               return extension.COMPRESSED_RGBA_S3TC_DXT5_EXT;
           } else {
             return null;
           }
         }
       }
-      if (p2 === RGB_PVRTC_4BPPV1_Format || p2 === RGB_PVRTC_2BPPV1_Format || p2 === RGBA_PVRTC_4BPPV1_Format || p2 === RGBA_PVRTC_2BPPV1_Format) {
+      if (p === RGB_PVRTC_4BPPV1_Format || p === RGB_PVRTC_2BPPV1_Format || p === RGBA_PVRTC_4BPPV1_Format || p === RGBA_PVRTC_2BPPV1_Format) {
         extension = extensions2.get("WEBGL_compressed_texture_pvrtc");
         if (extension !== null) {
-          if (p2 === RGB_PVRTC_4BPPV1_Format)
+          if (p === RGB_PVRTC_4BPPV1_Format)
             return extension.COMPRESSED_RGB_PVRTC_4BPPV1_IMG;
-          if (p2 === RGB_PVRTC_2BPPV1_Format)
+          if (p === RGB_PVRTC_2BPPV1_Format)
             return extension.COMPRESSED_RGB_PVRTC_2BPPV1_IMG;
-          if (p2 === RGBA_PVRTC_4BPPV1_Format)
+          if (p === RGBA_PVRTC_4BPPV1_Format)
             return extension.COMPRESSED_RGBA_PVRTC_4BPPV1_IMG;
-          if (p2 === RGBA_PVRTC_2BPPV1_Format)
+          if (p === RGBA_PVRTC_2BPPV1_Format)
             return extension.COMPRESSED_RGBA_PVRTC_2BPPV1_IMG;
         } else {
           return null;
         }
       }
-      if (p2 === RGB_ETC1_Format) {
+      if (p === RGB_ETC1_Format) {
         extension = extensions2.get("WEBGL_compressed_texture_etc1");
         if (extension !== null) {
           return extension.COMPRESSED_RGB_ETC1_WEBGL;
@@ -75609,81 +75156,81 @@ You can use close({ resize: true }) to resize header`);
           return null;
         }
       }
-      if (p2 === RGB_ETC2_Format || p2 === RGBA_ETC2_EAC_Format) {
+      if (p === RGB_ETC2_Format || p === RGBA_ETC2_EAC_Format) {
         extension = extensions2.get("WEBGL_compressed_texture_etc");
         if (extension !== null) {
-          if (p2 === RGB_ETC2_Format)
+          if (p === RGB_ETC2_Format)
             return transferFunction === SRGBTransferFunction ? extension.COMPRESSED_SRGB8_ETC2 : extension.COMPRESSED_RGB8_ETC2;
-          if (p2 === RGBA_ETC2_EAC_Format)
+          if (p === RGBA_ETC2_EAC_Format)
             return transferFunction === SRGBTransferFunction ? extension.COMPRESSED_SRGB8_ALPHA8_ETC2_EAC : extension.COMPRESSED_RGBA8_ETC2_EAC;
         } else {
           return null;
         }
       }
-      if (p2 === RGBA_ASTC_4x4_Format || p2 === RGBA_ASTC_5x4_Format || p2 === RGBA_ASTC_5x5_Format || p2 === RGBA_ASTC_6x5_Format || p2 === RGBA_ASTC_6x6_Format || p2 === RGBA_ASTC_8x5_Format || p2 === RGBA_ASTC_8x6_Format || p2 === RGBA_ASTC_8x8_Format || p2 === RGBA_ASTC_10x5_Format || p2 === RGBA_ASTC_10x6_Format || p2 === RGBA_ASTC_10x8_Format || p2 === RGBA_ASTC_10x10_Format || p2 === RGBA_ASTC_12x10_Format || p2 === RGBA_ASTC_12x12_Format) {
+      if (p === RGBA_ASTC_4x4_Format || p === RGBA_ASTC_5x4_Format || p === RGBA_ASTC_5x5_Format || p === RGBA_ASTC_6x5_Format || p === RGBA_ASTC_6x6_Format || p === RGBA_ASTC_8x5_Format || p === RGBA_ASTC_8x6_Format || p === RGBA_ASTC_8x8_Format || p === RGBA_ASTC_10x5_Format || p === RGBA_ASTC_10x6_Format || p === RGBA_ASTC_10x8_Format || p === RGBA_ASTC_10x10_Format || p === RGBA_ASTC_12x10_Format || p === RGBA_ASTC_12x12_Format) {
         extension = extensions2.get("WEBGL_compressed_texture_astc");
         if (extension !== null) {
-          if (p2 === RGBA_ASTC_4x4_Format)
+          if (p === RGBA_ASTC_4x4_Format)
             return transferFunction === SRGBTransferFunction ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR : extension.COMPRESSED_RGBA_ASTC_4x4_KHR;
-          if (p2 === RGBA_ASTC_5x4_Format)
+          if (p === RGBA_ASTC_5x4_Format)
             return transferFunction === SRGBTransferFunction ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR : extension.COMPRESSED_RGBA_ASTC_5x4_KHR;
-          if (p2 === RGBA_ASTC_5x5_Format)
+          if (p === RGBA_ASTC_5x5_Format)
             return transferFunction === SRGBTransferFunction ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR : extension.COMPRESSED_RGBA_ASTC_5x5_KHR;
-          if (p2 === RGBA_ASTC_6x5_Format)
+          if (p === RGBA_ASTC_6x5_Format)
             return transferFunction === SRGBTransferFunction ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR : extension.COMPRESSED_RGBA_ASTC_6x5_KHR;
-          if (p2 === RGBA_ASTC_6x6_Format)
+          if (p === RGBA_ASTC_6x6_Format)
             return transferFunction === SRGBTransferFunction ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR : extension.COMPRESSED_RGBA_ASTC_6x6_KHR;
-          if (p2 === RGBA_ASTC_8x5_Format)
+          if (p === RGBA_ASTC_8x5_Format)
             return transferFunction === SRGBTransferFunction ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR : extension.COMPRESSED_RGBA_ASTC_8x5_KHR;
-          if (p2 === RGBA_ASTC_8x6_Format)
+          if (p === RGBA_ASTC_8x6_Format)
             return transferFunction === SRGBTransferFunction ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR : extension.COMPRESSED_RGBA_ASTC_8x6_KHR;
-          if (p2 === RGBA_ASTC_8x8_Format)
+          if (p === RGBA_ASTC_8x8_Format)
             return transferFunction === SRGBTransferFunction ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR : extension.COMPRESSED_RGBA_ASTC_8x8_KHR;
-          if (p2 === RGBA_ASTC_10x5_Format)
+          if (p === RGBA_ASTC_10x5_Format)
             return transferFunction === SRGBTransferFunction ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR : extension.COMPRESSED_RGBA_ASTC_10x5_KHR;
-          if (p2 === RGBA_ASTC_10x6_Format)
+          if (p === RGBA_ASTC_10x6_Format)
             return transferFunction === SRGBTransferFunction ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR : extension.COMPRESSED_RGBA_ASTC_10x6_KHR;
-          if (p2 === RGBA_ASTC_10x8_Format)
+          if (p === RGBA_ASTC_10x8_Format)
             return transferFunction === SRGBTransferFunction ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR : extension.COMPRESSED_RGBA_ASTC_10x8_KHR;
-          if (p2 === RGBA_ASTC_10x10_Format)
+          if (p === RGBA_ASTC_10x10_Format)
             return transferFunction === SRGBTransferFunction ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR : extension.COMPRESSED_RGBA_ASTC_10x10_KHR;
-          if (p2 === RGBA_ASTC_12x10_Format)
+          if (p === RGBA_ASTC_12x10_Format)
             return transferFunction === SRGBTransferFunction ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR : extension.COMPRESSED_RGBA_ASTC_12x10_KHR;
-          if (p2 === RGBA_ASTC_12x12_Format)
+          if (p === RGBA_ASTC_12x12_Format)
             return transferFunction === SRGBTransferFunction ? extension.COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR : extension.COMPRESSED_RGBA_ASTC_12x12_KHR;
         } else {
           return null;
         }
       }
-      if (p2 === RGBA_BPTC_Format || p2 === RGB_BPTC_SIGNED_Format || p2 === RGB_BPTC_UNSIGNED_Format) {
+      if (p === RGBA_BPTC_Format || p === RGB_BPTC_SIGNED_Format || p === RGB_BPTC_UNSIGNED_Format) {
         extension = extensions2.get("EXT_texture_compression_bptc");
         if (extension !== null) {
-          if (p2 === RGBA_BPTC_Format)
+          if (p === RGBA_BPTC_Format)
             return transferFunction === SRGBTransferFunction ? extension.COMPRESSED_SRGB_ALPHA_BPTC_UNORM_EXT : extension.COMPRESSED_RGBA_BPTC_UNORM_EXT;
-          if (p2 === RGB_BPTC_SIGNED_Format)
+          if (p === RGB_BPTC_SIGNED_Format)
             return extension.COMPRESSED_RGB_BPTC_SIGNED_FLOAT_EXT;
-          if (p2 === RGB_BPTC_UNSIGNED_Format)
+          if (p === RGB_BPTC_UNSIGNED_Format)
             return extension.COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_EXT;
         } else {
           return null;
         }
       }
-      if (p2 === RED_RGTC1_Format || p2 === SIGNED_RED_RGTC1_Format || p2 === RED_GREEN_RGTC2_Format || p2 === SIGNED_RED_GREEN_RGTC2_Format) {
+      if (p === RED_RGTC1_Format || p === SIGNED_RED_RGTC1_Format || p === RED_GREEN_RGTC2_Format || p === SIGNED_RED_GREEN_RGTC2_Format) {
         extension = extensions2.get("EXT_texture_compression_rgtc");
         if (extension !== null) {
-          if (p2 === RGBA_BPTC_Format)
+          if (p === RGBA_BPTC_Format)
             return extension.COMPRESSED_RED_RGTC1_EXT;
-          if (p2 === SIGNED_RED_RGTC1_Format)
+          if (p === SIGNED_RED_RGTC1_Format)
             return extension.COMPRESSED_SIGNED_RED_RGTC1_EXT;
-          if (p2 === RED_GREEN_RGTC2_Format)
+          if (p === RED_GREEN_RGTC2_Format)
             return extension.COMPRESSED_RED_GREEN_RGTC2_EXT;
-          if (p2 === SIGNED_RED_GREEN_RGTC2_Format)
+          if (p === SIGNED_RED_GREEN_RGTC2_Format)
             return extension.COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT;
         } else {
           return null;
         }
       }
-      if (p2 === UnsignedInt248Type) {
+      if (p === UnsignedInt248Type) {
         if (isWebGL2)
           return gl.UNSIGNED_INT_24_8;
         extension = extensions2.get("WEBGL_depth_texture");
@@ -75693,7 +75240,7 @@ You can use close({ resize: true }) to resize header`);
           return null;
         }
       }
-      return gl[p2] !== void 0 ? gl[p2] : null;
+      return gl[p] !== void 0 ? gl[p] : null;
     }
     return { convert };
   }
@@ -76032,10 +75579,10 @@ You can use close({ resize: true }) to resize header`);
       return buffer3;
     }
     function allocateBindingPointIndex() {
-      for (let i2 = 0; i2 < maxBindingPoints; i2++) {
-        if (allocatedBindingPoints.indexOf(i2) === -1) {
-          allocatedBindingPoints.push(i2);
-          return i2;
+      for (let i = 0; i < maxBindingPoints; i++) {
+        if (allocatedBindingPoints.indexOf(i) === -1) {
+          allocatedBindingPoints.push(i);
+          return i;
         }
       }
       console.error("THREE.WebGLRenderer: Maximum number of simultaneously usable uniforms groups reached.");
@@ -76046,14 +75593,14 @@ You can use close({ resize: true }) to resize header`);
       const uniforms = uniformsGroup.uniforms;
       const cache3 = uniformsGroup.__cache;
       gl.bindBuffer(gl.UNIFORM_BUFFER, buffer3);
-      for (let i2 = 0, il = uniforms.length; i2 < il; i2++) {
-        const uniform = uniforms[i2];
-        if (hasUniformChanged(uniform, i2, cache3) === true) {
+      for (let i = 0, il = uniforms.length; i < il; i++) {
+        const uniform = uniforms[i];
+        if (hasUniformChanged(uniform, i, cache3) === true) {
           const offset = uniform.__offset;
           const values = Array.isArray(uniform.value) ? uniform.value : [uniform.value];
           let arrayOffset = 0;
-          for (let i3 = 0; i3 < values.length; i3++) {
-            const value = values[i3];
+          for (let i2 = 0; i2 < values.length; i2++) {
+            const value = values[i2];
             const info2 = getUniformSize(value);
             if (typeof value === "number") {
               uniform.__data[0] = value;
@@ -76089,8 +75636,8 @@ You can use close({ resize: true }) to resize header`);
         } else {
           const values = Array.isArray(value) ? value : [value];
           const tempValues = [];
-          for (let i2 = 0; i2 < values.length; i2++) {
-            tempValues.push(values[i2].clone());
+          for (let i = 0; i < values.length; i++) {
+            tempValues.push(values[i].clone());
           }
           cache3[index] = tempValues;
         }
@@ -76104,10 +75651,10 @@ You can use close({ resize: true }) to resize header`);
         } else {
           const cachedObjects = Array.isArray(cache3[index]) ? cache3[index] : [cache3[index]];
           const values = Array.isArray(value) ? value : [value];
-          for (let i2 = 0; i2 < cachedObjects.length; i2++) {
-            const cachedObject = cachedObjects[i2];
-            if (cachedObject.equals(values[i2]) === false) {
-              cachedObject.copy(values[i2]);
+          for (let i = 0; i < cachedObjects.length; i++) {
+            const cachedObject = cachedObjects[i];
+            if (cachedObject.equals(values[i]) === false) {
+              cachedObject.copy(values[i]);
               return true;
             }
           }
@@ -76120,8 +75667,8 @@ You can use close({ resize: true }) to resize header`);
       let offset = 0;
       const chunkSize = 16;
       let chunkOffset = 0;
-      for (let i2 = 0, l2 = uniforms.length; i2 < l2; i2++) {
-        const uniform = uniforms[i2];
+      for (let i = 0, l = uniforms.length; i < l; i++) {
+        const uniform = uniforms[i];
         const infos = {
           boundary: 0,
           // bytes
@@ -76137,7 +75684,7 @@ You can use close({ resize: true }) to resize header`);
         }
         uniform.__data = new Float32Array(infos.storage / Float32Array.BYTES_PER_ELEMENT);
         uniform.__offset = offset;
-        if (i2 > 0) {
+        if (i > 0) {
           chunkOffset = offset % chunkSize;
           const remainingSizeInChunk = chunkSize - chunkOffset;
           if (chunkOffset !== 0 && remainingSizeInChunk - infos.boundary < 0) {
@@ -76419,8 +75966,8 @@ You can use close({ resize: true }) to resize header`);
           if (listenerArray !== void 0) {
             event.target = this;
             const array = listenerArray.slice(0);
-            for (let i2 = 0, l2 = array.length; i2 < l2; i2++) {
-              array[i2].call(this, event);
+            for (let i = 0, l = array.length; i < l; i++) {
+              array[i].call(this, event);
             }
             event.target = null;
           }
@@ -76528,19 +76075,19 @@ You can use close({ resize: true }) to resize header`);
           this.y += v.y;
           return this;
         }
-        addScalar(s2) {
-          this.x += s2;
-          this.y += s2;
+        addScalar(s) {
+          this.x += s;
+          this.y += s;
           return this;
         }
-        addVectors(a2, b) {
-          this.x = a2.x + b.x;
-          this.y = a2.y + b.y;
+        addVectors(a, b) {
+          this.x = a.x + b.x;
+          this.y = a.y + b.y;
           return this;
         }
-        addScaledVector(v, s2) {
-          this.x += v.x * s2;
-          this.y += v.y * s2;
+        addScaledVector(v, s) {
+          this.x += v.x * s;
+          this.y += v.y * s;
           return this;
         }
         sub(v) {
@@ -76548,14 +76095,14 @@ You can use close({ resize: true }) to resize header`);
           this.y -= v.y;
           return this;
         }
-        subScalar(s2) {
-          this.x -= s2;
-          this.y -= s2;
+        subScalar(s) {
+          this.x -= s;
+          this.y -= s;
           return this;
         }
-        subVectors(a2, b) {
-          this.x = a2.x - b.x;
-          this.y = a2.y - b.y;
+        subVectors(a, b) {
+          this.x = a.x - b.x;
+          this.y = a.y - b.y;
           return this;
         }
         multiply(v) {
@@ -76578,9 +76125,9 @@ You can use close({ resize: true }) to resize header`);
         }
         applyMatrix3(m) {
           const x = this.x, y = this.y;
-          const e2 = m.elements;
-          this.x = e2[0] * x + e2[3] * y + e2[6];
-          this.y = e2[1] * x + e2[4] * y + e2[7];
+          const e = m.elements;
+          this.x = e[0] * x + e[3] * y + e[6];
+          this.y = e[1] * x + e[4] * y + e[7];
           return this;
         }
         min(v) {
@@ -76703,11 +76250,11 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         rotateAround(center, angle) {
-          const c2 = Math.cos(angle), s2 = Math.sin(angle);
+          const c = Math.cos(angle), s = Math.sin(angle);
           const x = this.x - center.x;
           const y = this.y - center.y;
-          this.x = x * c2 - y * s2 + center.x;
-          this.y = x * s2 + y * c2 + center.y;
+          this.x = x * c - y * s + center.x;
+          this.y = x * s + y * c + center.y;
           return this;
         }
         random() {
@@ -76806,8 +76353,8 @@ You can use close({ resize: true }) to resize header`);
         premultiply(m) {
           return this.multiplyMatrices(m, this);
         }
-        multiplyMatrices(a2, b) {
-          const ae = a2.elements;
+        multiplyMatrices(a, b) {
+          const ae = a.elements;
           const be = b.elements;
           const te = this.elements;
           const a11 = ae[0], a12 = ae[3], a13 = ae[6];
@@ -76827,23 +76374,23 @@ You can use close({ resize: true }) to resize header`);
           te[8] = a31 * b13 + a32 * b23 + a33 * b33;
           return this;
         }
-        multiplyScalar(s2) {
+        multiplyScalar(s) {
           const te = this.elements;
-          te[0] *= s2;
-          te[3] *= s2;
-          te[6] *= s2;
-          te[1] *= s2;
-          te[4] *= s2;
-          te[7] *= s2;
-          te[2] *= s2;
-          te[5] *= s2;
-          te[8] *= s2;
+          te[0] *= s;
+          te[3] *= s;
+          te[6] *= s;
+          te[1] *= s;
+          te[4] *= s;
+          te[7] *= s;
+          te[2] *= s;
+          te[5] *= s;
+          te[8] *= s;
           return this;
         }
         determinant() {
           const te = this.elements;
-          const a2 = te[0], b = te[1], c2 = te[2], d2 = te[3], e2 = te[4], f = te[5], g2 = te[6], h2 = te[7], i2 = te[8];
-          return a2 * e2 * i2 - a2 * f * h2 - b * d2 * i2 + b * f * g2 + c2 * d2 * h2 - c2 * e2 * g2;
+          const a = te[0], b = te[1], c = te[2], d = te[3], e = te[4], f = te[5], g = te[6], h = te[7], i = te[8];
+          return a * e * i - a * f * h - b * d * i + b * f * g + c * d * h - c * e * g;
         }
         invert() {
           const te = this.elements, n11 = te[0], n21 = te[1], n31 = te[2], n12 = te[3], n22 = te[4], n32 = te[5], n13 = te[6], n23 = te[7], n33 = te[8], t11 = n33 * n22 - n32 * n23, t12 = n32 * n13 - n33 * n12, t13 = n23 * n12 - n22 * n13, det = n11 * t11 + n21 * t12 + n31 * t13;
@@ -76878,29 +76425,29 @@ You can use close({ resize: true }) to resize header`);
         getNormalMatrix(matrix4) {
           return this.setFromMatrix4(matrix4).invert().transpose();
         }
-        transposeIntoArray(r2) {
+        transposeIntoArray(r) {
           const m = this.elements;
-          r2[0] = m[0];
-          r2[1] = m[3];
-          r2[2] = m[6];
-          r2[3] = m[1];
-          r2[4] = m[4];
-          r2[5] = m[7];
-          r2[6] = m[2];
-          r2[7] = m[5];
-          r2[8] = m[8];
+          r[0] = m[0];
+          r[1] = m[3];
+          r[2] = m[6];
+          r[3] = m[1];
+          r[4] = m[4];
+          r[5] = m[7];
+          r[6] = m[2];
+          r[7] = m[5];
+          r[8] = m[8];
           return this;
         }
         setUvTransform(tx, ty, sx, sy, rotation, cx, cy) {
-          const c2 = Math.cos(rotation);
-          const s2 = Math.sin(rotation);
+          const c = Math.cos(rotation);
+          const s = Math.sin(rotation);
           this.set(
-            sx * c2,
-            sx * s2,
-            -sx * (c2 * cx + s2 * cy) + cx + tx,
-            -sy * s2,
-            sy * c2,
-            -sy * (-s2 * cx + c2 * cy) + cy + ty,
+            sx * c,
+            sx * s,
+            -sx * (c * cx + s * cy) + cx + tx,
+            -sy * s,
+            sy * c,
+            -sy * (-s * cx + c * cy) + cy + ty,
             0,
             0,
             1
@@ -76950,14 +76497,14 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         makeRotation(theta) {
-          const c2 = Math.cos(theta);
-          const s2 = Math.sin(theta);
+          const c = Math.cos(theta);
+          const s = Math.sin(theta);
           this.set(
-            c2,
-            -s2,
+            c,
+            -s,
             0,
-            s2,
-            c2,
+            s,
+            c,
             0,
             0,
             0,
@@ -76983,15 +76530,15 @@ You can use close({ resize: true }) to resize header`);
         equals(matrix) {
           const te = this.elements;
           const me = matrix.elements;
-          for (let i2 = 0; i2 < 9; i2++) {
-            if (te[i2] !== me[i2])
+          for (let i = 0; i < 9; i++) {
+            if (te[i] !== me[i])
               return false;
           }
           return true;
         }
         fromArray(array, offset = 0) {
-          for (let i2 = 0; i2 < 9; i2++) {
-            this.elements[i2] = array[i2 + offset];
+          for (let i = 0; i < 9; i++) {
+            this.elements[i] = array[i + offset];
           }
           return this;
         }
@@ -77120,18 +76667,18 @@ You can use close({ resize: true }) to resize header`);
             context.drawImage(image, 0, 0, image.width, image.height);
             const imageData = context.getImageData(0, 0, image.width, image.height);
             const data = imageData.data;
-            for (let i2 = 0; i2 < data.length; i2++) {
-              data[i2] = SRGBToLinear(data[i2] / 255) * 255;
+            for (let i = 0; i < data.length; i++) {
+              data[i] = SRGBToLinear(data[i] / 255) * 255;
             }
             context.putImageData(imageData, 0, 0);
             return canvas;
           } else if (image.data) {
             const data = image.data.slice(0);
-            for (let i2 = 0; i2 < data.length; i2++) {
+            for (let i = 0; i < data.length; i++) {
               if (data instanceof Uint8Array || data instanceof Uint8ClampedArray) {
-                data[i2] = Math.floor(SRGBToLinear(data[i2] / 255) * 255);
+                data[i] = Math.floor(SRGBToLinear(data[i] / 255) * 255);
               } else {
-                data[i2] = SRGBToLinear(data[i2]);
+                data[i] = SRGBToLinear(data[i]);
               }
             }
             return {
@@ -77172,11 +76719,11 @@ You can use close({ resize: true }) to resize header`);
             let url;
             if (Array.isArray(data)) {
               url = [];
-              for (let i2 = 0, l2 = data.length; i2 < l2; i2++) {
-                if (data[i2].isDataTexture) {
-                  url.push(serializeImage(data[i2].image));
+              for (let i = 0, l = data.length; i < l; i++) {
+                if (data[i].isDataTexture) {
+                  url.push(serializeImage(data[i].image));
                 } else {
-                  url.push(serializeImage(data[i2]));
+                  url.push(serializeImage(data[i]));
                 }
               }
             } else {
@@ -77477,25 +77024,25 @@ You can use close({ resize: true }) to resize header`);
           this.w += v.w;
           return this;
         }
-        addScalar(s2) {
-          this.x += s2;
-          this.y += s2;
-          this.z += s2;
-          this.w += s2;
+        addScalar(s) {
+          this.x += s;
+          this.y += s;
+          this.z += s;
+          this.w += s;
           return this;
         }
-        addVectors(a2, b) {
-          this.x = a2.x + b.x;
-          this.y = a2.y + b.y;
-          this.z = a2.z + b.z;
-          this.w = a2.w + b.w;
+        addVectors(a, b) {
+          this.x = a.x + b.x;
+          this.y = a.y + b.y;
+          this.z = a.z + b.z;
+          this.w = a.w + b.w;
           return this;
         }
-        addScaledVector(v, s2) {
-          this.x += v.x * s2;
-          this.y += v.y * s2;
-          this.z += v.z * s2;
-          this.w += v.w * s2;
+        addScaledVector(v, s) {
+          this.x += v.x * s;
+          this.y += v.y * s;
+          this.z += v.z * s;
+          this.w += v.w * s;
           return this;
         }
         sub(v) {
@@ -77505,18 +77052,18 @@ You can use close({ resize: true }) to resize header`);
           this.w -= v.w;
           return this;
         }
-        subScalar(s2) {
-          this.x -= s2;
-          this.y -= s2;
-          this.z -= s2;
-          this.w -= s2;
+        subScalar(s) {
+          this.x -= s;
+          this.y -= s;
+          this.z -= s;
+          this.w -= s;
           return this;
         }
-        subVectors(a2, b) {
-          this.x = a2.x - b.x;
-          this.y = a2.y - b.y;
-          this.z = a2.z - b.z;
-          this.w = a2.w - b.w;
+        subVectors(a, b) {
+          this.x = a.x - b.x;
+          this.y = a.y - b.y;
+          this.z = a.z - b.z;
+          this.w = a.w - b.w;
           return this;
         }
         multiply(v) {
@@ -77535,11 +77082,11 @@ You can use close({ resize: true }) to resize header`);
         }
         applyMatrix4(m) {
           const x = this.x, y = this.y, z = this.z, w = this.w;
-          const e2 = m.elements;
-          this.x = e2[0] * x + e2[4] * y + e2[8] * z + e2[12] * w;
-          this.y = e2[1] * x + e2[5] * y + e2[9] * z + e2[13] * w;
-          this.z = e2[2] * x + e2[6] * y + e2[10] * z + e2[14] * w;
-          this.w = e2[3] * x + e2[7] * y + e2[11] * z + e2[15] * w;
+          const e = m.elements;
+          this.x = e[0] * x + e[4] * y + e[8] * z + e[12] * w;
+          this.y = e[1] * x + e[5] * y + e[9] * z + e[13] * w;
+          this.z = e[2] * x + e[6] * y + e[10] * z + e[14] * w;
+          this.w = e[3] * x + e[7] * y + e[11] * z + e[15] * w;
           return this;
         }
         divideScalar(scalar) {
@@ -77547,15 +77094,15 @@ You can use close({ resize: true }) to resize header`);
         }
         setAxisAngleFromQuaternion(q) {
           this.w = 2 * Math.acos(q.w);
-          const s2 = Math.sqrt(1 - q.w * q.w);
-          if (s2 < 1e-4) {
+          const s = Math.sqrt(1 - q.w * q.w);
+          if (s < 1e-4) {
             this.x = 1;
             this.y = 0;
             this.z = 0;
           } else {
-            this.x = q.x / s2;
-            this.y = q.y / s2;
-            this.z = q.z / s2;
+            this.x = q.x / s;
+            this.y = q.y / s;
+            this.z = q.z / s;
           }
           return this;
         }
@@ -77608,12 +77155,12 @@ You can use close({ resize: true }) to resize header`);
             this.set(x, y, z, angle);
             return this;
           }
-          let s2 = Math.sqrt((m32 - m23) * (m32 - m23) + (m13 - m31) * (m13 - m31) + (m21 - m12) * (m21 - m12));
-          if (Math.abs(s2) < 1e-3)
-            s2 = 1;
-          this.x = (m32 - m23) / s2;
-          this.y = (m13 - m31) / s2;
-          this.z = (m21 - m12) / s2;
+          let s = Math.sqrt((m32 - m23) * (m32 - m23) + (m13 - m31) * (m13 - m31) + (m21 - m12) * (m21 - m12));
+          if (Math.abs(s) < 1e-3)
+            s = 1;
+          this.x = (m32 - m23) / s;
+          this.y = (m13 - m31) / s;
+          this.z = (m21 - m12) / s;
           this.w = Math.acos((m11 + m22 + m33 - 1) / 2);
           return this;
         }
@@ -77858,17 +77405,17 @@ You can use close({ resize: true }) to resize header`);
           this._z = z;
           this._w = w;
         }
-        static slerpFlat(dst, dstOffset, src0, srcOffset0, src1, srcOffset1, t2) {
+        static slerpFlat(dst, dstOffset, src0, srcOffset0, src1, srcOffset1, t) {
           let x0 = src0[srcOffset0 + 0], y0 = src0[srcOffset0 + 1], z0 = src0[srcOffset0 + 2], w0 = src0[srcOffset0 + 3];
           const x1 = src1[srcOffset1 + 0], y1 = src1[srcOffset1 + 1], z1 = src1[srcOffset1 + 2], w1 = src1[srcOffset1 + 3];
-          if (t2 === 0) {
+          if (t === 0) {
             dst[dstOffset + 0] = x0;
             dst[dstOffset + 1] = y0;
             dst[dstOffset + 2] = z0;
             dst[dstOffset + 3] = w0;
             return;
           }
-          if (t2 === 1) {
+          if (t === 1) {
             dst[dstOffset + 0] = x1;
             dst[dstOffset + 1] = y1;
             dst[dstOffset + 2] = z1;
@@ -77876,19 +77423,19 @@ You can use close({ resize: true }) to resize header`);
             return;
           }
           if (w0 !== w1 || x0 !== x1 || y0 !== y1 || z0 !== z1) {
-            let s2 = 1 - t2;
+            let s = 1 - t;
             const cos = x0 * x1 + y0 * y1 + z0 * z1 + w0 * w1, dir = cos >= 0 ? 1 : -1, sqrSin = 1 - cos * cos;
             if (sqrSin > Number.EPSILON) {
               const sin = Math.sqrt(sqrSin), len = Math.atan2(sin, cos * dir);
-              s2 = Math.sin(s2 * len) / sin;
-              t2 = Math.sin(t2 * len) / sin;
+              s = Math.sin(s * len) / sin;
+              t = Math.sin(t * len) / sin;
             }
-            const tDir = t2 * dir;
-            x0 = x0 * s2 + x1 * tDir;
-            y0 = y0 * s2 + y1 * tDir;
-            z0 = z0 * s2 + z1 * tDir;
-            w0 = w0 * s2 + w1 * tDir;
-            if (s2 === 1 - t2) {
+            const tDir = t * dir;
+            x0 = x0 * s + x1 * tDir;
+            y0 = y0 * s + y1 * tDir;
+            z0 = z0 * s + z1 * tDir;
+            w0 = w0 * s + w1 * tDir;
+            if (s === 1 - t) {
               const f = 1 / Math.sqrt(x0 * x0 + y0 * y0 + z0 * z0 + w0 * w0);
               x0 *= f;
               y0 *= f;
@@ -78018,10 +77565,10 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         setFromAxisAngle(axis, angle) {
-          const halfAngle = angle / 2, s2 = Math.sin(halfAngle);
-          this._x = axis.x * s2;
-          this._y = axis.y * s2;
-          this._z = axis.z * s2;
+          const halfAngle = angle / 2, s = Math.sin(halfAngle);
+          this._x = axis.x * s;
+          this._y = axis.y * s;
+          this._z = axis.z * s;
           this._w = Math.cos(halfAngle);
           this._onChangeCallback();
           return this;
@@ -78029,53 +77576,53 @@ You can use close({ resize: true }) to resize header`);
         setFromRotationMatrix(m) {
           const te = m.elements, m11 = te[0], m12 = te[4], m13 = te[8], m21 = te[1], m22 = te[5], m23 = te[9], m31 = te[2], m32 = te[6], m33 = te[10], trace = m11 + m22 + m33;
           if (trace > 0) {
-            const s2 = 0.5 / Math.sqrt(trace + 1);
-            this._w = 0.25 / s2;
-            this._x = (m32 - m23) * s2;
-            this._y = (m13 - m31) * s2;
-            this._z = (m21 - m12) * s2;
+            const s = 0.5 / Math.sqrt(trace + 1);
+            this._w = 0.25 / s;
+            this._x = (m32 - m23) * s;
+            this._y = (m13 - m31) * s;
+            this._z = (m21 - m12) * s;
           } else if (m11 > m22 && m11 > m33) {
-            const s2 = 2 * Math.sqrt(1 + m11 - m22 - m33);
-            this._w = (m32 - m23) / s2;
-            this._x = 0.25 * s2;
-            this._y = (m12 + m21) / s2;
-            this._z = (m13 + m31) / s2;
+            const s = 2 * Math.sqrt(1 + m11 - m22 - m33);
+            this._w = (m32 - m23) / s;
+            this._x = 0.25 * s;
+            this._y = (m12 + m21) / s;
+            this._z = (m13 + m31) / s;
           } else if (m22 > m33) {
-            const s2 = 2 * Math.sqrt(1 + m22 - m11 - m33);
-            this._w = (m13 - m31) / s2;
-            this._x = (m12 + m21) / s2;
-            this._y = 0.25 * s2;
-            this._z = (m23 + m32) / s2;
+            const s = 2 * Math.sqrt(1 + m22 - m11 - m33);
+            this._w = (m13 - m31) / s;
+            this._x = (m12 + m21) / s;
+            this._y = 0.25 * s;
+            this._z = (m23 + m32) / s;
           } else {
-            const s2 = 2 * Math.sqrt(1 + m33 - m11 - m22);
-            this._w = (m21 - m12) / s2;
-            this._x = (m13 + m31) / s2;
-            this._y = (m23 + m32) / s2;
-            this._z = 0.25 * s2;
+            const s = 2 * Math.sqrt(1 + m33 - m11 - m22);
+            this._w = (m21 - m12) / s;
+            this._x = (m13 + m31) / s;
+            this._y = (m23 + m32) / s;
+            this._z = 0.25 * s;
           }
           this._onChangeCallback();
           return this;
         }
         setFromUnitVectors(vFrom, vTo) {
-          let r2 = vFrom.dot(vTo) + 1;
-          if (r2 < Number.EPSILON) {
-            r2 = 0;
+          let r = vFrom.dot(vTo) + 1;
+          if (r < Number.EPSILON) {
+            r = 0;
             if (Math.abs(vFrom.x) > Math.abs(vFrom.z)) {
               this._x = -vFrom.y;
               this._y = vFrom.x;
               this._z = 0;
-              this._w = r2;
+              this._w = r;
             } else {
               this._x = 0;
               this._y = -vFrom.z;
               this._z = vFrom.y;
-              this._w = r2;
+              this._w = r;
             }
           } else {
             this._x = vFrom.y * vTo.z - vFrom.z * vTo.y;
             this._y = vFrom.z * vTo.x - vFrom.x * vTo.z;
             this._z = vFrom.x * vTo.y - vFrom.y * vTo.x;
-            this._w = r2;
+            this._w = r;
           }
           return this.normalize();
         }
@@ -78086,8 +77633,8 @@ You can use close({ resize: true }) to resize header`);
           const angle = this.angleTo(q);
           if (angle === 0)
             return this;
-          const t2 = Math.min(1, step / angle);
-          this.slerp(q, t2);
+          const t = Math.min(1, step / angle);
+          this.slerp(q, t);
           return this;
         }
         identity() {
@@ -78113,18 +77660,18 @@ You can use close({ resize: true }) to resize header`);
           return Math.sqrt(this._x * this._x + this._y * this._y + this._z * this._z + this._w * this._w);
         }
         normalize() {
-          let l2 = this.length();
-          if (l2 === 0) {
+          let l = this.length();
+          if (l === 0) {
             this._x = 0;
             this._y = 0;
             this._z = 0;
             this._w = 1;
           } else {
-            l2 = 1 / l2;
-            this._x = this._x * l2;
-            this._y = this._y * l2;
-            this._z = this._z * l2;
-            this._w = this._w * l2;
+            l = 1 / l;
+            this._x = this._x * l;
+            this._y = this._y * l;
+            this._z = this._z * l;
+            this._w = this._w * l;
           }
           this._onChangeCallback();
           return this;
@@ -78135,8 +77682,8 @@ You can use close({ resize: true }) to resize header`);
         premultiply(q) {
           return this.multiplyQuaternions(q, this);
         }
-        multiplyQuaternions(a2, b) {
-          const qax = a2._x, qay = a2._y, qaz = a2._z, qaw = a2._w;
+        multiplyQuaternions(a, b) {
+          const qax = a._x, qay = a._y, qaz = a._z, qaw = a._w;
           const qbx = b._x, qby = b._y, qbz = b._z, qbw = b._w;
           this._x = qax * qbw + qaw * qbx + qay * qbz - qaz * qby;
           this._y = qay * qbw + qaw * qby + qaz * qbx - qax * qbz;
@@ -78145,10 +77692,10 @@ You can use close({ resize: true }) to resize header`);
           this._onChangeCallback();
           return this;
         }
-        slerp(qb, t2) {
-          if (t2 === 0)
+        slerp(qb, t) {
+          if (t === 0)
             return this;
-          if (t2 === 1)
+          if (t === 1)
             return this.copy(qb);
           const x = this._x, y = this._y, z = this._z, w = this._w;
           let cosHalfTheta = w * qb._w + x * qb._x + y * qb._y + z * qb._z;
@@ -78170,18 +77717,18 @@ You can use close({ resize: true }) to resize header`);
           }
           const sqrSinHalfTheta = 1 - cosHalfTheta * cosHalfTheta;
           if (sqrSinHalfTheta <= Number.EPSILON) {
-            const s2 = 1 - t2;
-            this._w = s2 * w + t2 * this._w;
-            this._x = s2 * x + t2 * this._x;
-            this._y = s2 * y + t2 * this._y;
-            this._z = s2 * z + t2 * this._z;
+            const s = 1 - t;
+            this._w = s * w + t * this._w;
+            this._x = s * x + t * this._x;
+            this._y = s * y + t * this._y;
+            this._z = s * z + t * this._z;
             this.normalize();
             this._onChangeCallback();
             return this;
           }
           const sinHalfTheta = Math.sqrt(sqrSinHalfTheta);
           const halfTheta = Math.atan2(sinHalfTheta, cosHalfTheta);
-          const ratioA = Math.sin((1 - t2) * halfTheta) / sinHalfTheta, ratioB = Math.sin(t2 * halfTheta) / sinHalfTheta;
+          const ratioA = Math.sin((1 - t) * halfTheta) / sinHalfTheta, ratioB = Math.sin(t * halfTheta) / sinHalfTheta;
           this._w = w * ratioA + this._w * ratioB;
           this._x = x * ratioA + this._x * ratioB;
           this._y = y * ratioA + this._y * ratioB;
@@ -78189,8 +77736,8 @@ You can use close({ resize: true }) to resize header`);
           this._onChangeCallback();
           return this;
         }
-        slerpQuaternions(qa, qb, t2) {
-          return this.copy(qa).slerp(qb, t2);
+        slerpQuaternions(qa, qb, t) {
+          return this.copy(qa).slerp(qb, t);
         }
         random() {
           const u1 = Math.random();
@@ -78322,22 +77869,22 @@ You can use close({ resize: true }) to resize header`);
           this.z += v.z;
           return this;
         }
-        addScalar(s2) {
-          this.x += s2;
-          this.y += s2;
-          this.z += s2;
+        addScalar(s) {
+          this.x += s;
+          this.y += s;
+          this.z += s;
           return this;
         }
-        addVectors(a2, b) {
-          this.x = a2.x + b.x;
-          this.y = a2.y + b.y;
-          this.z = a2.z + b.z;
+        addVectors(a, b) {
+          this.x = a.x + b.x;
+          this.y = a.y + b.y;
+          this.z = a.z + b.z;
           return this;
         }
-        addScaledVector(v, s2) {
-          this.x += v.x * s2;
-          this.y += v.y * s2;
-          this.z += v.z * s2;
+        addScaledVector(v, s) {
+          this.x += v.x * s;
+          this.y += v.y * s;
+          this.z += v.z * s;
           return this;
         }
         sub(v) {
@@ -78346,16 +77893,16 @@ You can use close({ resize: true }) to resize header`);
           this.z -= v.z;
           return this;
         }
-        subScalar(s2) {
-          this.x -= s2;
-          this.y -= s2;
-          this.z -= s2;
+        subScalar(s) {
+          this.x -= s;
+          this.y -= s;
+          this.z -= s;
           return this;
         }
-        subVectors(a2, b) {
-          this.x = a2.x - b.x;
-          this.y = a2.y - b.y;
-          this.z = a2.z - b.z;
+        subVectors(a, b) {
+          this.x = a.x - b.x;
+          this.y = a.y - b.y;
+          this.z = a.z - b.z;
           return this;
         }
         multiply(v) {
@@ -78370,10 +77917,10 @@ You can use close({ resize: true }) to resize header`);
           this.z *= scalar;
           return this;
         }
-        multiplyVectors(a2, b) {
-          this.x = a2.x * b.x;
-          this.y = a2.y * b.y;
-          this.z = a2.z * b.z;
+        multiplyVectors(a, b) {
+          this.x = a.x * b.x;
+          this.y = a.y * b.y;
+          this.z = a.z * b.z;
           return this;
         }
         applyEuler(euler) {
@@ -78384,10 +77931,10 @@ You can use close({ resize: true }) to resize header`);
         }
         applyMatrix3(m) {
           const x = this.x, y = this.y, z = this.z;
-          const e2 = m.elements;
-          this.x = e2[0] * x + e2[3] * y + e2[6] * z;
-          this.y = e2[1] * x + e2[4] * y + e2[7] * z;
-          this.z = e2[2] * x + e2[5] * y + e2[8] * z;
+          const e = m.elements;
+          this.x = e[0] * x + e[3] * y + e[6] * z;
+          this.y = e[1] * x + e[4] * y + e[7] * z;
+          this.z = e[2] * x + e[5] * y + e[8] * z;
           return this;
         }
         applyNormalMatrix(m) {
@@ -78395,11 +77942,11 @@ You can use close({ resize: true }) to resize header`);
         }
         applyMatrix4(m) {
           const x = this.x, y = this.y, z = this.z;
-          const e2 = m.elements;
-          const w = 1 / (e2[3] * x + e2[7] * y + e2[11] * z + e2[15]);
-          this.x = (e2[0] * x + e2[4] * y + e2[8] * z + e2[12]) * w;
-          this.y = (e2[1] * x + e2[5] * y + e2[9] * z + e2[13]) * w;
-          this.z = (e2[2] * x + e2[6] * y + e2[10] * z + e2[14]) * w;
+          const e = m.elements;
+          const w = 1 / (e[3] * x + e[7] * y + e[11] * z + e[15]);
+          this.x = (e[0] * x + e[4] * y + e[8] * z + e[12]) * w;
+          this.y = (e[1] * x + e[5] * y + e[9] * z + e[13]) * w;
+          this.z = (e[2] * x + e[6] * y + e[10] * z + e[14]) * w;
           return this;
         }
         applyQuaternion(q) {
@@ -78422,10 +77969,10 @@ You can use close({ resize: true }) to resize header`);
         }
         transformDirection(m) {
           const x = this.x, y = this.y, z = this.z;
-          const e2 = m.elements;
-          this.x = e2[0] * x + e2[4] * y + e2[8] * z;
-          this.y = e2[1] * x + e2[5] * y + e2[9] * z;
-          this.z = e2[2] * x + e2[6] * y + e2[10] * z;
+          const e = m.elements;
+          this.x = e[0] * x + e[4] * y + e[8] * z;
+          this.y = e[1] * x + e[5] * y + e[9] * z;
+          this.z = e[2] * x + e[6] * y + e[10] * z;
           return this.normalize();
         }
         divide(v) {
@@ -78529,8 +78076,8 @@ You can use close({ resize: true }) to resize header`);
         cross(v) {
           return this.crossVectors(this, v);
         }
-        crossVectors(a2, b) {
-          const ax = a2.x, ay = a2.y, az = a2.z;
+        crossVectors(a, b) {
+          const ax = a.x, ay = a.y, az = a.z;
           const bx = b.x, by = b.y, bz = b.z;
           this.x = ay * bz - az * by;
           this.y = az * bx - ax * bz;
@@ -78568,8 +78115,8 @@ You can use close({ resize: true }) to resize header`);
         manhattanDistanceTo(v) {
           return Math.abs(this.x - v.x) + Math.abs(this.y - v.y) + Math.abs(this.z - v.z);
         }
-        setFromSpherical(s2) {
-          return this.setFromSphericalCoords(s2.radius, s2.phi, s2.theta);
+        setFromSpherical(s) {
+          return this.setFromSphericalCoords(s.radius, s.phi, s.theta);
         }
         setFromSphericalCoords(radius, phi, theta) {
           const sinPhiRadius = Math.sin(phi) * radius;
@@ -78578,8 +78125,8 @@ You can use close({ resize: true }) to resize header`);
           this.z = sinPhiRadius * Math.cos(theta);
           return this;
         }
-        setFromCylindrical(c2) {
-          return this.setFromCylindricalCoords(c2.radius, c2.theta, c2.y);
+        setFromCylindrical(c) {
+          return this.setFromCylindricalCoords(c.radius, c.theta, c.y);
         }
         setFromCylindricalCoords(radius, theta, y) {
           this.x = radius * Math.sin(theta);
@@ -78588,10 +78135,10 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         setFromMatrixPosition(m) {
-          const e2 = m.elements;
-          this.x = e2[12];
-          this.y = e2[13];
-          this.z = e2[14];
+          const e = m.elements;
+          this.x = e[12];
+          this.y = e[13];
+          this.z = e[14];
           return this;
         }
         setFromMatrixScale(m) {
@@ -78609,16 +78156,16 @@ You can use close({ resize: true }) to resize header`);
         setFromMatrix3Column(m, index) {
           return this.fromArray(m.elements, index * 3);
         }
-        setFromEuler(e2) {
-          this.x = e2._x;
-          this.y = e2._y;
-          this.z = e2._z;
+        setFromEuler(e) {
+          this.x = e._x;
+          this.y = e._y;
+          this.z = e._z;
           return this;
         }
-        setFromColor(c2) {
-          this.x = c2.r;
-          this.y = c2.g;
-          this.z = c2.b;
+        setFromColor(c) {
+          this.x = c.r;
+          this.y = c.g;
+          this.z = c.b;
           return this;
         }
         equals(v) {
@@ -78649,12 +78196,12 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         randomDirection() {
-          const u2 = (Math.random() - 0.5) * 2;
-          const t2 = Math.random() * Math.PI * 2;
-          const f = Math.sqrt(1 - u2 ** 2);
-          this.x = f * Math.cos(t2);
-          this.y = f * Math.sin(t2);
-          this.z = u2;
+          const u = (Math.random() - 0.5) * 2;
+          const t = Math.random() * Math.PI * 2;
+          const f = Math.sqrt(1 - u ** 2);
+          this.x = f * Math.cos(t);
+          this.y = f * Math.sin(t);
+          this.z = u;
           return this;
         }
         *[Symbol.iterator]() {
@@ -78678,22 +78225,22 @@ You can use close({ resize: true }) to resize header`);
         }
         setFromArray(array) {
           this.makeEmpty();
-          for (let i2 = 0, il = array.length; i2 < il; i2 += 3) {
-            this.expandByPoint(_vector$a.fromArray(array, i2));
+          for (let i = 0, il = array.length; i < il; i += 3) {
+            this.expandByPoint(_vector$a.fromArray(array, i));
           }
           return this;
         }
         setFromBufferAttribute(attribute) {
           this.makeEmpty();
-          for (let i2 = 0, il = attribute.count; i2 < il; i2++) {
-            this.expandByPoint(_vector$a.fromBufferAttribute(attribute, i2));
+          for (let i = 0, il = attribute.count; i < il; i++) {
+            this.expandByPoint(_vector$a.fromBufferAttribute(attribute, i));
           }
           return this;
         }
         setFromPoints(points) {
           this.makeEmpty();
-          for (let i2 = 0, il = points.length; i2 < il; i2++) {
-            this.expandByPoint(points[i2]);
+          for (let i = 0, il = points.length; i < il; i++) {
+            this.expandByPoint(points[i]);
           }
           return this;
         }
@@ -78758,8 +78305,8 @@ You can use close({ resize: true }) to resize header`);
             if (geometry !== void 0) {
               if (precise && geometry.attributes !== void 0 && geometry.attributes.position !== void 0) {
                 const position3 = geometry.attributes.position;
-                for (let i2 = 0, l2 = position3.count; i2 < l2; i2++) {
-                  _vector$a.fromBufferAttribute(position3, i2).applyMatrix4(object.matrixWorld);
+                for (let i = 0, l = position3.count; i < l; i++) {
+                  _vector$a.fromBufferAttribute(position3, i).applyMatrix4(object.matrixWorld);
                   this.expandByPoint(_vector$a);
                 }
               } else {
@@ -78773,8 +78320,8 @@ You can use close({ resize: true }) to resize header`);
             }
           }
           const children = object.children;
-          for (let i2 = 0, l2 = children.length; i2 < l2; i2++) {
-            this.expandByObject(children[i2], precise);
+          for (let i = 0, l = children.length; i < l; i++) {
+            this.expandByObject(children[i], precise);
           }
           return this;
         }
@@ -78968,8 +78515,8 @@ You can use close({ resize: true }) to resize header`);
             _box$2.setFromPoints(points).getCenter(center);
           }
           let maxRadiusSq = 0;
-          for (let i2 = 0, il = points.length; i2 < il; i2++) {
-            maxRadiusSq = Math.max(maxRadiusSq, center.distanceToSquared(points[i2]));
+          for (let i = 0, il = points.length; i < il; i++) {
+            maxRadiusSq = Math.max(maxRadiusSq, center.distanceToSquared(points[i]));
           }
           this.radius = Math.sqrt(maxRadiusSq);
           return this;
@@ -79092,15 +78639,15 @@ You can use close({ resize: true }) to resize header`);
           this.direction.copy(ray.direction);
           return this;
         }
-        at(t2, target2) {
-          return target2.copy(this.origin).addScaledVector(this.direction, t2);
+        at(t, target2) {
+          return target2.copy(this.origin).addScaledVector(this.direction, t);
         }
         lookAt(v) {
           this.direction.copy(v).sub(this.origin).normalize();
           return this;
         }
-        recast(t2) {
-          this.origin.copy(this.at(t2, _vector$9));
+        recast(t) {
+          this.origin.copy(this.at(t, _vector$9));
           return this;
         }
         closestPointToPoint(point, target2) {
@@ -79130,7 +78677,7 @@ You can use close({ resize: true }) to resize header`);
           const a01 = -this.direction.dot(_segDir);
           const b0 = _diff.dot(this.direction);
           const b1 = -_diff.dot(_segDir);
-          const c2 = _diff.lengthSq();
+          const c = _diff.lengthSq();
           const det = Math.abs(1 - a01 * a01);
           let s0, s1, sqrDist, extDet;
           if (det > 0) {
@@ -79143,36 +78690,36 @@ You can use close({ resize: true }) to resize header`);
                   const invDet = 1 / det;
                   s0 *= invDet;
                   s1 *= invDet;
-                  sqrDist = s0 * (s0 + a01 * s1 + 2 * b0) + s1 * (a01 * s0 + s1 + 2 * b1) + c2;
+                  sqrDist = s0 * (s0 + a01 * s1 + 2 * b0) + s1 * (a01 * s0 + s1 + 2 * b1) + c;
                 } else {
                   s1 = segExtent;
                   s0 = Math.max(0, -(a01 * s1 + b0));
-                  sqrDist = -s0 * s0 + s1 * (s1 + 2 * b1) + c2;
+                  sqrDist = -s0 * s0 + s1 * (s1 + 2 * b1) + c;
                 }
               } else {
                 s1 = -segExtent;
                 s0 = Math.max(0, -(a01 * s1 + b0));
-                sqrDist = -s0 * s0 + s1 * (s1 + 2 * b1) + c2;
+                sqrDist = -s0 * s0 + s1 * (s1 + 2 * b1) + c;
               }
             } else {
               if (s1 <= -extDet) {
                 s0 = Math.max(0, -(-a01 * segExtent + b0));
                 s1 = s0 > 0 ? -segExtent : Math.min(Math.max(-segExtent, -b1), segExtent);
-                sqrDist = -s0 * s0 + s1 * (s1 + 2 * b1) + c2;
+                sqrDist = -s0 * s0 + s1 * (s1 + 2 * b1) + c;
               } else if (s1 <= extDet) {
                 s0 = 0;
                 s1 = Math.min(Math.max(-segExtent, -b1), segExtent);
-                sqrDist = s1 * (s1 + 2 * b1) + c2;
+                sqrDist = s1 * (s1 + 2 * b1) + c;
               } else {
                 s0 = Math.max(0, -(a01 * segExtent + b0));
                 s1 = s0 > 0 ? segExtent : Math.min(Math.max(-segExtent, -b1), segExtent);
-                sqrDist = -s0 * s0 + s1 * (s1 + 2 * b1) + c2;
+                sqrDist = -s0 * s0 + s1 * (s1 + 2 * b1) + c;
               }
             }
           } else {
             s1 = a01 > 0 ? -segExtent : segExtent;
             s0 = Math.max(0, -(a01 * s1 + b0));
-            sqrDist = -s0 * s0 + s1 * (s1 + 2 * b1) + c2;
+            sqrDist = -s0 * s0 + s1 * (s1 + 2 * b1) + c;
           }
           if (optionalPointOnRay) {
             optionalPointOnRay.copy(this.origin).addScaledVector(this.direction, s0);
@@ -79209,15 +78756,15 @@ You can use close({ resize: true }) to resize header`);
             }
             return null;
           }
-          const t2 = -(this.origin.dot(plane.normal) + plane.constant) / denominator;
-          return t2 >= 0 ? t2 : null;
+          const t = -(this.origin.dot(plane.normal) + plane.constant) / denominator;
+          return t >= 0 ? t : null;
         }
         intersectPlane(plane, target2) {
-          const t2 = this.distanceToPlane(plane);
-          if (t2 === null) {
+          const t = this.distanceToPlane(plane);
+          if (t === null) {
             return null;
           }
-          return this.at(t2, target2);
+          return this.at(t, target2);
         }
         intersectsPlane(plane) {
           const distToPoint = plane.distanceToPoint(this.origin);
@@ -79274,9 +78821,9 @@ You can use close({ resize: true }) to resize header`);
         intersectsBox(box) {
           return this.intersectBox(box, _vector$9) !== null;
         }
-        intersectTriangle(a2, b, c2, backfaceCulling, target2) {
-          _edge1.subVectors(b, a2);
-          _edge2.subVectors(c2, a2);
+        intersectTriangle(a, b, c, backfaceCulling, target2) {
+          _edge1.subVectors(b, a);
+          _edge2.subVectors(c, a);
           _normal$1.crossVectors(_edge1, _edge2);
           let DdN = this.direction.dot(_normal$1);
           let sign;
@@ -79290,7 +78837,7 @@ You can use close({ resize: true }) to resize header`);
           } else {
             return null;
           }
-          _diff.subVectors(this.origin, a2);
+          _diff.subVectors(this.origin, a);
           const DdQxE2 = sign * this.direction.dot(_edge2.crossVectors(_diff, _edge2));
           if (DdQxE2 < 0) {
             return null;
@@ -79493,74 +79040,74 @@ You can use close({ resize: true }) to resize header`);
         makeRotationFromEuler(euler) {
           const te = this.elements;
           const x = euler.x, y = euler.y, z = euler.z;
-          const a2 = Math.cos(x), b = Math.sin(x);
-          const c2 = Math.cos(y), d2 = Math.sin(y);
-          const e2 = Math.cos(z), f = Math.sin(z);
+          const a = Math.cos(x), b = Math.sin(x);
+          const c = Math.cos(y), d = Math.sin(y);
+          const e = Math.cos(z), f = Math.sin(z);
           if (euler.order === "XYZ") {
-            const ae = a2 * e2, af = a2 * f, be = b * e2, bf = b * f;
-            te[0] = c2 * e2;
-            te[4] = -c2 * f;
-            te[8] = d2;
-            te[1] = af + be * d2;
-            te[5] = ae - bf * d2;
-            te[9] = -b * c2;
-            te[2] = bf - ae * d2;
-            te[6] = be + af * d2;
-            te[10] = a2 * c2;
+            const ae = a * e, af = a * f, be = b * e, bf = b * f;
+            te[0] = c * e;
+            te[4] = -c * f;
+            te[8] = d;
+            te[1] = af + be * d;
+            te[5] = ae - bf * d;
+            te[9] = -b * c;
+            te[2] = bf - ae * d;
+            te[6] = be + af * d;
+            te[10] = a * c;
           } else if (euler.order === "YXZ") {
-            const ce = c2 * e2, cf = c2 * f, de = d2 * e2, df = d2 * f;
+            const ce = c * e, cf = c * f, de = d * e, df = d * f;
             te[0] = ce + df * b;
             te[4] = de * b - cf;
-            te[8] = a2 * d2;
-            te[1] = a2 * f;
-            te[5] = a2 * e2;
+            te[8] = a * d;
+            te[1] = a * f;
+            te[5] = a * e;
             te[9] = -b;
             te[2] = cf * b - de;
             te[6] = df + ce * b;
-            te[10] = a2 * c2;
+            te[10] = a * c;
           } else if (euler.order === "ZXY") {
-            const ce = c2 * e2, cf = c2 * f, de = d2 * e2, df = d2 * f;
+            const ce = c * e, cf = c * f, de = d * e, df = d * f;
             te[0] = ce - df * b;
-            te[4] = -a2 * f;
+            te[4] = -a * f;
             te[8] = de + cf * b;
             te[1] = cf + de * b;
-            te[5] = a2 * e2;
+            te[5] = a * e;
             te[9] = df - ce * b;
-            te[2] = -a2 * d2;
+            te[2] = -a * d;
             te[6] = b;
-            te[10] = a2 * c2;
+            te[10] = a * c;
           } else if (euler.order === "ZYX") {
-            const ae = a2 * e2, af = a2 * f, be = b * e2, bf = b * f;
-            te[0] = c2 * e2;
-            te[4] = be * d2 - af;
-            te[8] = ae * d2 + bf;
-            te[1] = c2 * f;
-            te[5] = bf * d2 + ae;
-            te[9] = af * d2 - be;
-            te[2] = -d2;
-            te[6] = b * c2;
-            te[10] = a2 * c2;
+            const ae = a * e, af = a * f, be = b * e, bf = b * f;
+            te[0] = c * e;
+            te[4] = be * d - af;
+            te[8] = ae * d + bf;
+            te[1] = c * f;
+            te[5] = bf * d + ae;
+            te[9] = af * d - be;
+            te[2] = -d;
+            te[6] = b * c;
+            te[10] = a * c;
           } else if (euler.order === "YZX") {
-            const ac = a2 * c2, ad = a2 * d2, bc = b * c2, bd = b * d2;
-            te[0] = c2 * e2;
+            const ac = a * c, ad = a * d, bc = b * c, bd = b * d;
+            te[0] = c * e;
             te[4] = bd - ac * f;
             te[8] = bc * f + ad;
             te[1] = f;
-            te[5] = a2 * e2;
-            te[9] = -b * e2;
-            te[2] = -d2 * e2;
+            te[5] = a * e;
+            te[9] = -b * e;
+            te[2] = -d * e;
             te[6] = ad * f + bc;
             te[10] = ac - bd * f;
           } else if (euler.order === "XZY") {
-            const ac = a2 * c2, ad = a2 * d2, bc = b * c2, bd = b * d2;
-            te[0] = c2 * e2;
+            const ac = a * c, ad = a * d, bc = b * c, bd = b * d;
+            te[0] = c * e;
             te[4] = -f;
-            te[8] = d2 * e2;
+            te[8] = d * e;
             te[1] = ac * f + bd;
-            te[5] = a2 * e2;
+            te[5] = a * e;
             te[9] = ad * f - bc;
             te[2] = bc * f - ad;
-            te[6] = b * e2;
+            te[6] = b * e;
             te[10] = bd * f + ac;
           }
           te[3] = 0;
@@ -79611,8 +79158,8 @@ You can use close({ resize: true }) to resize header`);
         premultiply(m) {
           return this.multiplyMatrices(m, this);
         }
-        multiplyMatrices(a2, b) {
-          const ae = a2.elements;
+        multiplyMatrices(a, b) {
+          const ae = a.elements;
           const be = b.elements;
           const te = this.elements;
           const a11 = ae[0], a12 = ae[4], a13 = ae[8], a14 = ae[12];
@@ -79641,24 +79188,24 @@ You can use close({ resize: true }) to resize header`);
           te[15] = a41 * b14 + a42 * b24 + a43 * b34 + a44 * b44;
           return this;
         }
-        multiplyScalar(s2) {
+        multiplyScalar(s) {
           const te = this.elements;
-          te[0] *= s2;
-          te[4] *= s2;
-          te[8] *= s2;
-          te[12] *= s2;
-          te[1] *= s2;
-          te[5] *= s2;
-          te[9] *= s2;
-          te[13] *= s2;
-          te[2] *= s2;
-          te[6] *= s2;
-          te[10] *= s2;
-          te[14] *= s2;
-          te[3] *= s2;
-          te[7] *= s2;
-          te[11] *= s2;
-          te[15] *= s2;
+          te[0] *= s;
+          te[4] *= s;
+          te[8] *= s;
+          te[12] *= s;
+          te[1] *= s;
+          te[5] *= s;
+          te[9] *= s;
+          te[13] *= s;
+          te[2] *= s;
+          te[6] *= s;
+          te[10] *= s;
+          te[14] *= s;
+          te[3] *= s;
+          te[7] *= s;
+          te[11] *= s;
+          te[15] *= s;
           return this;
         }
         determinant() {
@@ -79796,19 +79343,19 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         makeRotationX(theta) {
-          const c2 = Math.cos(theta), s2 = Math.sin(theta);
+          const c = Math.cos(theta), s = Math.sin(theta);
           this.set(
             1,
             0,
             0,
             0,
             0,
-            c2,
-            -s2,
+            c,
+            -s,
             0,
             0,
-            s2,
-            c2,
+            s,
+            c,
             0,
             0,
             0,
@@ -79818,19 +79365,19 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         makeRotationY(theta) {
-          const c2 = Math.cos(theta), s2 = Math.sin(theta);
+          const c = Math.cos(theta), s = Math.sin(theta);
           this.set(
-            c2,
+            c,
             0,
-            s2,
+            s,
             0,
             0,
             1,
             0,
             0,
-            -s2,
+            -s,
             0,
-            c2,
+            c,
             0,
             0,
             0,
@@ -79840,14 +79387,14 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         makeRotationZ(theta) {
-          const c2 = Math.cos(theta), s2 = Math.sin(theta);
+          const c = Math.cos(theta), s = Math.sin(theta);
           this.set(
-            c2,
-            -s2,
+            c,
+            -s,
             0,
             0,
-            s2,
-            c2,
+            s,
+            c,
             0,
             0,
             0,
@@ -79862,23 +79409,23 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         makeRotationAxis(axis, angle) {
-          const c2 = Math.cos(angle);
-          const s2 = Math.sin(angle);
-          const t2 = 1 - c2;
+          const c = Math.cos(angle);
+          const s = Math.sin(angle);
+          const t = 1 - c;
           const x = axis.x, y = axis.y, z = axis.z;
-          const tx = t2 * x, ty = t2 * y;
+          const tx = t * x, ty = t * y;
           this.set(
-            tx * x + c2,
-            tx * y - s2 * z,
-            tx * z + s2 * y,
+            tx * x + c,
+            tx * y - s * z,
+            tx * z + s * y,
             0,
-            tx * y + s2 * z,
-            ty * y + c2,
-            ty * z - s2 * x,
+            tx * y + s * z,
+            ty * y + c,
+            ty * z - s * x,
             0,
-            tx * z - s2 * y,
-            ty * z + s2 * x,
-            t2 * z * z + c2,
+            tx * z - s * y,
+            ty * z + s * x,
+            t * z * z + c,
             0,
             0,
             0,
@@ -79989,21 +79536,21 @@ You can use close({ resize: true }) to resize header`);
           const te = this.elements;
           const x = 2 * near / (right - left);
           const y = 2 * near / (top - bottom);
-          const a2 = (right + left) / (right - left);
+          const a = (right + left) / (right - left);
           const b = (top + bottom) / (top - bottom);
-          let c2, d2;
+          let c, d;
           if (coordinateSystem === WebGLCoordinateSystem) {
-            c2 = -(far + near) / (far - near);
-            d2 = -2 * far * near / (far - near);
+            c = -(far + near) / (far - near);
+            d = -2 * far * near / (far - near);
           } else if (coordinateSystem === WebGPUCoordinateSystem) {
-            c2 = -far / (far - near);
-            d2 = -far * near / (far - near);
+            c = -far / (far - near);
+            d = -far * near / (far - near);
           } else {
             throw new Error("THREE.Matrix4.makePerspective(): Invalid coordinate system: " + coordinateSystem);
           }
           te[0] = x;
           te[4] = 0;
-          te[8] = a2;
+          te[8] = a;
           te[12] = 0;
           te[1] = 0;
           te[5] = y;
@@ -80011,8 +79558,8 @@ You can use close({ resize: true }) to resize header`);
           te[13] = 0;
           te[2] = 0;
           te[6] = 0;
-          te[10] = c2;
-          te[14] = d2;
+          te[10] = c;
+          te[14] = d;
           te[3] = 0;
           te[7] = 0;
           te[11] = -1;
@@ -80022,17 +79569,17 @@ You can use close({ resize: true }) to resize header`);
         makeOrthographic(left, right, top, bottom, near, far, coordinateSystem = WebGLCoordinateSystem) {
           const te = this.elements;
           const w = 1 / (right - left);
-          const h2 = 1 / (top - bottom);
-          const p2 = 1 / (far - near);
+          const h = 1 / (top - bottom);
+          const p = 1 / (far - near);
           const x = (right + left) * w;
-          const y = (top + bottom) * h2;
+          const y = (top + bottom) * h;
           let z, zInv;
           if (coordinateSystem === WebGLCoordinateSystem) {
-            z = (far + near) * p2;
-            zInv = -2 * p2;
+            z = (far + near) * p;
+            zInv = -2 * p;
           } else if (coordinateSystem === WebGPUCoordinateSystem) {
-            z = near * p2;
-            zInv = -1 * p2;
+            z = near * p;
+            zInv = -1 * p;
           } else {
             throw new Error("THREE.Matrix4.makeOrthographic(): Invalid coordinate system: " + coordinateSystem);
           }
@@ -80041,7 +79588,7 @@ You can use close({ resize: true }) to resize header`);
           te[8] = 0;
           te[12] = -x;
           te[1] = 0;
-          te[5] = 2 * h2;
+          te[5] = 2 * h;
           te[9] = 0;
           te[13] = -y;
           te[2] = 0;
@@ -80057,15 +79604,15 @@ You can use close({ resize: true }) to resize header`);
         equals(matrix) {
           const te = this.elements;
           const me = matrix.elements;
-          for (let i2 = 0; i2 < 16; i2++) {
-            if (te[i2] !== me[i2])
+          for (let i = 0; i < 16; i++) {
+            if (te[i] !== me[i])
               return false;
           }
           return true;
         }
         fromArray(array, offset = 0) {
-          for (let i2 = 0; i2 < 16; i2++) {
-            this.elements[i2] = array[i2 + offset];
+          for (let i = 0; i < 16; i++) {
+            this.elements[i] = array[i + offset];
           }
           return this;
         }
@@ -80469,8 +80016,8 @@ You can use close({ resize: true }) to resize header`);
         }
         add(object) {
           if (arguments.length > 1) {
-            for (let i2 = 0; i2 < arguments.length; i2++) {
-              this.add(arguments[i2]);
+            for (let i = 0; i < arguments.length; i++) {
+              this.add(arguments[i]);
             }
             return this;
           }
@@ -80492,8 +80039,8 @@ You can use close({ resize: true }) to resize header`);
         }
         remove(object) {
           if (arguments.length > 1) {
-            for (let i2 = 0; i2 < arguments.length; i2++) {
-              this.remove(arguments[i2]);
+            for (let i = 0; i < arguments.length; i++) {
+              this.remove(arguments[i]);
             }
             return this;
           }
@@ -80536,8 +80083,8 @@ You can use close({ resize: true }) to resize header`);
         getObjectByProperty(name, value) {
           if (this[name] === value)
             return this;
-          for (let i2 = 0, l2 = this.children.length; i2 < l2; i2++) {
-            const child = this.children[i2];
+          for (let i = 0, l = this.children.length; i < l; i++) {
+            const child = this.children[i];
             const object = child.getObjectByProperty(name, value);
             if (object !== void 0) {
               return object;
@@ -80549,8 +80096,8 @@ You can use close({ resize: true }) to resize header`);
           let result = [];
           if (this[name] === value)
             result.push(this);
-          for (let i2 = 0, l2 = this.children.length; i2 < l2; i2++) {
-            const childResult = this.children[i2].getObjectsByProperty(name, value);
+          for (let i = 0, l = this.children.length; i < l; i++) {
+            const childResult = this.children[i].getObjectsByProperty(name, value);
             if (childResult.length > 0) {
               result = result.concat(childResult);
             }
@@ -80573,16 +80120,16 @@ You can use close({ resize: true }) to resize header`);
         }
         getWorldDirection(target2) {
           this.updateWorldMatrix(true, false);
-          const e2 = this.matrixWorld.elements;
-          return target2.set(e2[8], e2[9], e2[10]).normalize();
+          const e = this.matrixWorld.elements;
+          return target2.set(e[8], e[9], e[10]).normalize();
         }
         raycast() {
         }
         traverse(callback) {
           callback(this);
           const children = this.children;
-          for (let i2 = 0, l2 = children.length; i2 < l2; i2++) {
-            children[i2].traverse(callback);
+          for (let i = 0, l = children.length; i < l; i++) {
+            children[i].traverse(callback);
           }
         }
         traverseVisible(callback) {
@@ -80590,8 +80137,8 @@ You can use close({ resize: true }) to resize header`);
             return;
           callback(this);
           const children = this.children;
-          for (let i2 = 0, l2 = children.length; i2 < l2; i2++) {
-            children[i2].traverseVisible(callback);
+          for (let i = 0, l = children.length; i < l; i++) {
+            children[i].traverseVisible(callback);
           }
         }
         traverseAncestors(callback) {
@@ -80618,8 +80165,8 @@ You can use close({ resize: true }) to resize header`);
             force = true;
           }
           const children = this.children;
-          for (let i2 = 0, l2 = children.length; i2 < l2; i2++) {
-            const child = children[i2];
+          for (let i = 0, l = children.length; i < l; i++) {
+            const child = children[i];
             if (child.matrixWorldAutoUpdate === true || force === true) {
               child.updateMatrixWorld(force);
             }
@@ -80639,8 +80186,8 @@ You can use close({ resize: true }) to resize header`);
           }
           if (updateChildren === true) {
             const children = this.children;
-            for (let i2 = 0, l2 = children.length; i2 < l2; i2++) {
-              const child = children[i2];
+            for (let i = 0, l = children.length; i < l; i++) {
+              const child = children[i];
               if (child.matrixWorldAutoUpdate === true) {
                 child.updateWorldMatrix(false, true);
               }
@@ -80719,8 +80266,8 @@ You can use close({ resize: true }) to resize header`);
             if (parameters !== void 0 && parameters.shapes !== void 0) {
               const shapes = parameters.shapes;
               if (Array.isArray(shapes)) {
-                for (let i2 = 0, l2 = shapes.length; i2 < l2; i2++) {
-                  const shape = shapes[i2];
+                for (let i = 0, l = shapes.length; i < l; i++) {
+                  const shape = shapes[i];
                   serialize(meta.shapes, shape);
                 }
               } else {
@@ -80739,8 +80286,8 @@ You can use close({ resize: true }) to resize header`);
           if (this.material !== void 0) {
             if (Array.isArray(this.material)) {
               const uuids = [];
-              for (let i2 = 0, l2 = this.material.length; i2 < l2; i2++) {
-                uuids.push(serialize(meta.materials, this.material[i2]));
+              for (let i = 0, l = this.material.length; i < l; i++) {
+                uuids.push(serialize(meta.materials, this.material[i]));
               }
               object.material = uuids;
             } else {
@@ -80749,14 +80296,14 @@ You can use close({ resize: true }) to resize header`);
           }
           if (this.children.length > 0) {
             object.children = [];
-            for (let i2 = 0; i2 < this.children.length; i2++) {
-              object.children.push(this.children[i2].toJSON(meta).object);
+            for (let i = 0; i < this.children.length; i++) {
+              object.children.push(this.children[i].toJSON(meta).object);
             }
           }
           if (this.animations.length > 0) {
             object.animations = [];
-            for (let i2 = 0; i2 < this.animations.length; i2++) {
-              const animation = this.animations[i2];
+            for (let i = 0; i < this.animations.length; i++) {
+              const animation = this.animations[i];
               object.animations.push(serialize(meta.animations, animation));
             }
           }
@@ -80822,8 +80369,8 @@ You can use close({ resize: true }) to resize header`);
           this.animations = source.animations.slice();
           this.userData = JSON.parse(JSON.stringify(source.userData));
           if (recursive === true) {
-            for (let i2 = 0; i2 < source.children.length; i2++) {
-              const child = source.children[i2];
+            for (let i = 0; i < source.children.length; i++) {
+              const child = source.children[i];
               this.add(child.clone());
             }
           }
@@ -80845,14 +80392,14 @@ You can use close({ resize: true }) to resize header`);
       _vcp = /* @__PURE__ */ new Vector3();
       warnedGetUV = false;
       Triangle = class _Triangle {
-        constructor(a2 = new Vector3(), b = new Vector3(), c2 = new Vector3()) {
-          this.a = a2;
+        constructor(a = new Vector3(), b = new Vector3(), c = new Vector3()) {
+          this.a = a;
           this.b = b;
-          this.c = c2;
+          this.c = c;
         }
-        static getNormal(a2, b, c2, target2) {
-          target2.subVectors(c2, b);
-          _v0$1.subVectors(a2, b);
+        static getNormal(a, b, c, target2) {
+          target2.subVectors(c, b);
+          _v0$1.subVectors(a, b);
           target2.cross(_v0$1);
           const targetLengthSq = target2.lengthSq();
           if (targetLengthSq > 0) {
@@ -80862,10 +80409,10 @@ You can use close({ resize: true }) to resize header`);
         }
         // static/instance method to calculate barycentric coordinates
         // based on: http://www.blackpawn.com/texts/pointinpoly/default.html
-        static getBarycoord(point, a2, b, c2, target2) {
-          _v0$1.subVectors(c2, a2);
-          _v1$3.subVectors(b, a2);
-          _v2$2.subVectors(point, a2);
+        static getBarycoord(point, a, b, c, target2) {
+          _v0$1.subVectors(c, a);
+          _v1$3.subVectors(b, a);
+          _v2$2.subVectors(point, a);
           const dot00 = _v0$1.dot(_v0$1);
           const dot01 = _v0$1.dot(_v1$3);
           const dot02 = _v0$1.dot(_v2$2);
@@ -80876,12 +80423,12 @@ You can use close({ resize: true }) to resize header`);
             return target2.set(-2, -1, -1);
           }
           const invDenom = 1 / denom;
-          const u2 = (dot11 * dot02 - dot01 * dot12) * invDenom;
+          const u = (dot11 * dot02 - dot01 * dot12) * invDenom;
           const v = (dot00 * dot12 - dot01 * dot02) * invDenom;
-          return target2.set(1 - u2 - v, v, u2);
+          return target2.set(1 - u - v, v, u);
         }
-        static containsPoint(point, a2, b, c2) {
-          this.getBarycoord(point, a2, b, c2, _v3$1);
+        static containsPoint(point, a, b, c) {
+          this.getBarycoord(point, a, b, c, _v3$1);
           return _v3$1.x >= 0 && _v3$1.y >= 0 && _v3$1.x + _v3$1.y <= 1;
         }
         static getUV(point, p1, p2, p3, uv1, uv2, uv3, target2) {
@@ -80899,15 +80446,15 @@ You can use close({ resize: true }) to resize header`);
           target2.addScaledVector(v3, _v3$1.z);
           return target2;
         }
-        static isFrontFacing(a2, b, c2, direction) {
-          _v0$1.subVectors(c2, b);
-          _v1$3.subVectors(a2, b);
+        static isFrontFacing(a, b, c, direction) {
+          _v0$1.subVectors(c, b);
+          _v1$3.subVectors(a, b);
           return _v0$1.cross(_v1$3).dot(direction) < 0 ? true : false;
         }
-        set(a2, b, c2) {
-          this.a.copy(a2);
+        set(a, b, c) {
+          this.a.copy(a);
           this.b.copy(b);
-          this.c.copy(c2);
+          this.c.copy(c);
           return this;
         }
         setFromPointsAndIndices(points, i0, i1, i2) {
@@ -80967,18 +80514,18 @@ You can use close({ resize: true }) to resize header`);
         intersectsBox(box) {
           return box.intersectsTriangle(this);
         }
-        closestPointToPoint(p2, target2) {
-          const a2 = this.a, b = this.b, c2 = this.c;
+        closestPointToPoint(p, target2) {
+          const a = this.a, b = this.b, c = this.c;
           let v, w;
-          _vab.subVectors(b, a2);
-          _vac.subVectors(c2, a2);
-          _vap.subVectors(p2, a2);
+          _vab.subVectors(b, a);
+          _vac.subVectors(c, a);
+          _vap.subVectors(p, a);
           const d1 = _vab.dot(_vap);
           const d2 = _vac.dot(_vap);
           if (d1 <= 0 && d2 <= 0) {
-            return target2.copy(a2);
+            return target2.copy(a);
           }
-          _vbp.subVectors(p2, b);
+          _vbp.subVectors(p, b);
           const d3 = _vab.dot(_vbp);
           const d4 = _vac.dot(_vbp);
           if (d3 >= 0 && d4 <= d3) {
@@ -80987,29 +80534,29 @@ You can use close({ resize: true }) to resize header`);
           const vc = d1 * d4 - d3 * d2;
           if (vc <= 0 && d1 >= 0 && d3 <= 0) {
             v = d1 / (d1 - d3);
-            return target2.copy(a2).addScaledVector(_vab, v);
+            return target2.copy(a).addScaledVector(_vab, v);
           }
-          _vcp.subVectors(p2, c2);
+          _vcp.subVectors(p, c);
           const d5 = _vab.dot(_vcp);
           const d6 = _vac.dot(_vcp);
           if (d6 >= 0 && d5 <= d6) {
-            return target2.copy(c2);
+            return target2.copy(c);
           }
           const vb = d5 * d2 - d1 * d6;
           if (vb <= 0 && d2 >= 0 && d6 <= 0) {
             w = d2 / (d2 - d6);
-            return target2.copy(a2).addScaledVector(_vac, w);
+            return target2.copy(a).addScaledVector(_vac, w);
           }
           const va = d3 * d6 - d5 * d4;
           if (va <= 0 && d4 - d3 >= 0 && d5 - d6 >= 0) {
-            _vbc.subVectors(c2, b);
+            _vbc.subVectors(c, b);
             w = (d4 - d3) / (d4 - d3 + (d5 - d6));
             return target2.copy(b).addScaledVector(_vbc, w);
           }
           const denom = 1 / (va + vb + vc);
           v = vb * denom;
           w = vc * denom;
-          return target2.copy(a2).addScaledVector(_vab, v).addScaledVector(_vac, w);
+          return target2.copy(a).addScaledVector(_vab, v).addScaledVector(_vac, w);
         }
         equals(triangle) {
           return triangle.a.equals(this.a) && triangle.b.equals(this.b) && triangle.c.equals(this.c);
@@ -81372,10 +80919,10 @@ You can use close({ resize: true }) to resize header`);
           const srcPlanes = source.clippingPlanes;
           let dstPlanes = null;
           if (srcPlanes !== null) {
-            const n2 = srcPlanes.length;
-            dstPlanes = new Array(n2);
-            for (let i2 = 0; i2 !== n2; ++i2) {
-              dstPlanes[i2] = srcPlanes[i2].clone();
+            const n = srcPlanes.length;
+            dstPlanes = new Array(n);
+            for (let i = 0; i !== n; ++i) {
+              dstPlanes[i] = srcPlanes[i].clone();
             }
           }
           this.clippingPlanes = dstPlanes;
@@ -81559,16 +81106,16 @@ You can use close({ resize: true }) to resize header`);
       _hslA = { h: 0, s: 0, l: 0 };
       _hslB = { h: 0, s: 0, l: 0 };
       Color = class {
-        constructor(r2, g2, b) {
+        constructor(r, g, b) {
           this.isColor = true;
           this.r = 1;
           this.g = 1;
           this.b = 1;
-          return this.set(r2, g2, b);
+          return this.set(r, g, b);
         }
-        set(r2, g2, b) {
-          if (g2 === void 0 && b === void 0) {
-            const value = r2;
+        set(r, g, b) {
+          if (g === void 0 && b === void 0) {
+            const value = r;
             if (value && value.isColor) {
               this.copy(value);
             } else if (typeof value === "number") {
@@ -81577,7 +81124,7 @@ You can use close({ resize: true }) to resize header`);
               this.setStyle(value);
             }
           } else {
-            this.setRGB(r2, g2, b);
+            this.setRGB(r, g, b);
           }
           return this;
         }
@@ -81595,25 +81142,25 @@ You can use close({ resize: true }) to resize header`);
           ColorManagement.toWorkingColorSpace(this, colorSpace);
           return this;
         }
-        setRGB(r2, g2, b, colorSpace = ColorManagement.workingColorSpace) {
-          this.r = r2;
-          this.g = g2;
+        setRGB(r, g, b, colorSpace = ColorManagement.workingColorSpace) {
+          this.r = r;
+          this.g = g;
           this.b = b;
           ColorManagement.toWorkingColorSpace(this, colorSpace);
           return this;
         }
-        setHSL(h2, s2, l2, colorSpace = ColorManagement.workingColorSpace) {
-          h2 = euclideanModulo(h2, 1);
-          s2 = clamp(s2, 0, 1);
-          l2 = clamp(l2, 0, 1);
-          if (s2 === 0) {
-            this.r = this.g = this.b = l2;
+        setHSL(h, s, l, colorSpace = ColorManagement.workingColorSpace) {
+          h = euclideanModulo(h, 1);
+          s = clamp(s, 0, 1);
+          l = clamp(l, 0, 1);
+          if (s === 0) {
+            this.r = this.g = this.b = l;
           } else {
-            const p2 = l2 <= 0.5 ? l2 * (1 + s2) : l2 + s2 - l2 * s2;
-            const q = 2 * l2 - p2;
-            this.r = hue2rgb(q, p2, h2 + 1 / 3);
-            this.g = hue2rgb(q, p2, h2);
-            this.b = hue2rgb(q, p2, h2 - 1 / 3);
+            const p = l <= 0.5 ? l * (1 + s) : l + s - l * s;
+            const q = 2 * l - p;
+            this.r = hue2rgb(q, p, h + 1 / 3);
+            this.g = hue2rgb(q, p, h);
+            this.b = hue2rgb(q, p, h - 1 / 3);
           }
           ColorManagement.toWorkingColorSpace(this, colorSpace);
           return this;
@@ -81735,9 +81282,9 @@ You can use close({ resize: true }) to resize header`);
         }
         getHSL(target2, colorSpace = ColorManagement.workingColorSpace) {
           ColorManagement.fromWorkingColorSpace(_color.copy(this), colorSpace);
-          const r2 = _color.r, g2 = _color.g, b = _color.b;
-          const max = Math.max(r2, g2, b);
-          const min = Math.min(r2, g2, b);
+          const r = _color.r, g = _color.g, b = _color.b;
+          const max = Math.max(r, g, b);
+          const min = Math.min(r, g, b);
           let hue, saturation;
           const lightness = (min + max) / 2;
           if (min === max) {
@@ -81747,14 +81294,14 @@ You can use close({ resize: true }) to resize header`);
             const delta = max - min;
             saturation = lightness <= 0.5 ? delta / (max + min) : delta / (2 - max - min);
             switch (max) {
-              case r2:
-                hue = (g2 - b) / delta + (g2 < b ? 6 : 0);
+              case r:
+                hue = (g - b) / delta + (g < b ? 6 : 0);
                 break;
-              case g2:
-                hue = (b - r2) / delta + 2;
+              case g:
+                hue = (b - r) / delta + 2;
                 break;
               case b:
-                hue = (r2 - g2) / delta + 4;
+                hue = (r - g) / delta + 4;
                 break;
             }
             hue /= 6;
@@ -81773,17 +81320,17 @@ You can use close({ resize: true }) to resize header`);
         }
         getStyle(colorSpace = SRGBColorSpace) {
           ColorManagement.fromWorkingColorSpace(_color.copy(this), colorSpace);
-          const r2 = _color.r, g2 = _color.g, b = _color.b;
+          const r = _color.r, g = _color.g, b = _color.b;
           if (colorSpace !== SRGBColorSpace) {
-            return `color(${colorSpace} ${r2.toFixed(3)} ${g2.toFixed(3)} ${b.toFixed(3)})`;
+            return `color(${colorSpace} ${r.toFixed(3)} ${g.toFixed(3)} ${b.toFixed(3)})`;
           }
-          return `rgb(${Math.round(r2 * 255)},${Math.round(g2 * 255)},${Math.round(b * 255)})`;
+          return `rgb(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)})`;
         }
-        offsetHSL(h2, s2, l2) {
+        offsetHSL(h, s, l) {
           this.getHSL(_hslA);
-          _hslA.h += h2;
-          _hslA.s += s2;
-          _hslA.l += l2;
+          _hslA.h += h;
+          _hslA.s += s;
+          _hslA.l += l;
           this.setHSL(_hslA.h, _hslA.s, _hslA.l);
           return this;
         }
@@ -81799,10 +81346,10 @@ You can use close({ resize: true }) to resize header`);
           this.b = color1.b + color2.b;
           return this;
         }
-        addScalar(s2) {
-          this.r += s2;
-          this.g += s2;
-          this.b += s2;
+        addScalar(s) {
+          this.r += s;
+          this.g += s;
+          this.b += s;
           return this;
         }
         sub(color) {
@@ -81817,10 +81364,10 @@ You can use close({ resize: true }) to resize header`);
           this.b *= color.b;
           return this;
         }
-        multiplyScalar(s2) {
-          this.r *= s2;
-          this.g *= s2;
-          this.b *= s2;
+        multiplyScalar(s) {
+          this.r *= s;
+          this.g *= s;
+          this.b *= s;
           return this;
         }
         lerp(color, alpha) {
@@ -81838,10 +81385,10 @@ You can use close({ resize: true }) to resize header`);
         lerpHSL(color, alpha) {
           this.getHSL(_hslA);
           color.getHSL(_hslB);
-          const h2 = lerp(_hslA.h, _hslB.h, alpha);
-          const s2 = lerp(_hslA.s, _hslB.s, alpha);
-          const l2 = lerp(_hslA.l, _hslB.l, alpha);
-          this.setHSL(h2, s2, l2);
+          const h = lerp(_hslA.h, _hslB.h, alpha);
+          const s = lerp(_hslA.s, _hslB.s, alpha);
+          const l = lerp(_hslA.l, _hslB.l, alpha);
+          this.setHSL(h, s, l);
           return this;
         }
         setFromVector3(v) {
@@ -81851,15 +81398,15 @@ You can use close({ resize: true }) to resize header`);
           return this;
         }
         applyMatrix3(m) {
-          const r2 = this.r, g2 = this.g, b = this.b;
-          const e2 = m.elements;
-          this.r = e2[0] * r2 + e2[3] * g2 + e2[6] * b;
-          this.g = e2[1] * r2 + e2[4] * g2 + e2[7] * b;
-          this.b = e2[2] * r2 + e2[5] * g2 + e2[8] * b;
+          const r = this.r, g = this.g, b = this.b;
+          const e = m.elements;
+          this.r = e[0] * r + e[3] * g + e[6] * b;
+          this.g = e[1] * r + e[4] * g + e[7] * b;
+          this.b = e[2] * r + e[5] * g + e[8] * b;
           return this;
         }
-        equals(c2) {
-          return c2.r === this.r && c2.g === this.g && c2.b === this.b;
+        equals(c) {
+          return c.r === this.r && c.g === this.g && c.b === this.b;
         }
         fromArray(array, offset = 0) {
           this.r = array[offset];
@@ -81977,8 +81524,8 @@ You can use close({ resize: true }) to resize header`);
         copyAt(index1, attribute, index2) {
           index1 *= this.itemSize;
           index2 *= attribute.itemSize;
-          for (let i2 = 0, l2 = this.itemSize; i2 < l2; i2++) {
-            this.array[index1 + i2] = attribute.array[index2 + i2];
+          for (let i = 0, l = this.itemSize; i < l; i++) {
+            this.array[index1 + i] = attribute.array[index2 + i];
           }
           return this;
         }
@@ -81988,41 +81535,41 @@ You can use close({ resize: true }) to resize header`);
         }
         applyMatrix3(m) {
           if (this.itemSize === 2) {
-            for (let i2 = 0, l2 = this.count; i2 < l2; i2++) {
-              _vector2$1.fromBufferAttribute(this, i2);
+            for (let i = 0, l = this.count; i < l; i++) {
+              _vector2$1.fromBufferAttribute(this, i);
               _vector2$1.applyMatrix3(m);
-              this.setXY(i2, _vector2$1.x, _vector2$1.y);
+              this.setXY(i, _vector2$1.x, _vector2$1.y);
             }
           } else if (this.itemSize === 3) {
-            for (let i2 = 0, l2 = this.count; i2 < l2; i2++) {
-              _vector$8.fromBufferAttribute(this, i2);
+            for (let i = 0, l = this.count; i < l; i++) {
+              _vector$8.fromBufferAttribute(this, i);
               _vector$8.applyMatrix3(m);
-              this.setXYZ(i2, _vector$8.x, _vector$8.y, _vector$8.z);
+              this.setXYZ(i, _vector$8.x, _vector$8.y, _vector$8.z);
             }
           }
           return this;
         }
         applyMatrix4(m) {
-          for (let i2 = 0, l2 = this.count; i2 < l2; i2++) {
-            _vector$8.fromBufferAttribute(this, i2);
+          for (let i = 0, l = this.count; i < l; i++) {
+            _vector$8.fromBufferAttribute(this, i);
             _vector$8.applyMatrix4(m);
-            this.setXYZ(i2, _vector$8.x, _vector$8.y, _vector$8.z);
+            this.setXYZ(i, _vector$8.x, _vector$8.y, _vector$8.z);
           }
           return this;
         }
         applyNormalMatrix(m) {
-          for (let i2 = 0, l2 = this.count; i2 < l2; i2++) {
-            _vector$8.fromBufferAttribute(this, i2);
+          for (let i = 0, l = this.count; i < l; i++) {
+            _vector$8.fromBufferAttribute(this, i);
             _vector$8.applyNormalMatrix(m);
-            this.setXYZ(i2, _vector$8.x, _vector$8.y, _vector$8.z);
+            this.setXYZ(i, _vector$8.x, _vector$8.y, _vector$8.z);
           }
           return this;
         }
         transformDirection(m) {
-          for (let i2 = 0, l2 = this.count; i2 < l2; i2++) {
-            _vector$8.fromBufferAttribute(this, i2);
+          for (let i = 0, l = this.count; i < l; i++) {
+            _vector$8.fromBufferAttribute(this, i);
             _vector$8.transformDirection(m);
-            this.setXYZ(i2, _vector$8.x, _vector$8.y, _vector$8.z);
+            this.setXYZ(i, _vector$8.x, _vector$8.y, _vector$8.z);
           }
           return this;
         }
@@ -82297,8 +81844,8 @@ You can use close({ resize: true }) to resize header`);
         }
         setFromPoints(points) {
           const position3 = [];
-          for (let i2 = 0, l2 = points.length; i2 < l2; i2++) {
-            const point = points[i2];
+          for (let i = 0, l = points.length; i < l; i++) {
+            const point = points[i];
             position3.push(point.x, point.y, point.z || 0);
           }
           this.setAttribute("position", new Float32BufferAttribute(position3, 3));
@@ -82321,8 +81868,8 @@ You can use close({ resize: true }) to resize header`);
           if (position3 !== void 0) {
             this.boundingBox.setFromBufferAttribute(position3);
             if (morphAttributesPosition) {
-              for (let i2 = 0, il = morphAttributesPosition.length; i2 < il; i2++) {
-                const morphAttribute = morphAttributesPosition[i2];
+              for (let i = 0, il = morphAttributesPosition.length; i < il; i++) {
+                const morphAttribute = morphAttributesPosition[i];
                 _box$1.setFromBufferAttribute(morphAttribute);
                 if (this.morphTargetsRelative) {
                   _vector$7.addVectors(this.boundingBox.min, _box$1.min);
@@ -82357,8 +81904,8 @@ You can use close({ resize: true }) to resize header`);
             const center = this.boundingSphere.center;
             _box$1.setFromBufferAttribute(position3);
             if (morphAttributesPosition) {
-              for (let i2 = 0, il = morphAttributesPosition.length; i2 < il; i2++) {
-                const morphAttribute = morphAttributesPosition[i2];
+              for (let i = 0, il = morphAttributesPosition.length; i < il; i++) {
+                const morphAttribute = morphAttributesPosition[i];
                 _boxMorphTargets.setFromBufferAttribute(morphAttribute);
                 if (this.morphTargetsRelative) {
                   _vector$7.addVectors(_box$1.min, _boxMorphTargets.min);
@@ -82373,13 +81920,13 @@ You can use close({ resize: true }) to resize header`);
             }
             _box$1.getCenter(center);
             let maxRadiusSq = 0;
-            for (let i2 = 0, il = position3.count; i2 < il; i2++) {
-              _vector$7.fromBufferAttribute(position3, i2);
+            for (let i = 0, il = position3.count; i < il; i++) {
+              _vector$7.fromBufferAttribute(position3, i);
               maxRadiusSq = Math.max(maxRadiusSq, center.distanceToSquared(_vector$7));
             }
             if (morphAttributesPosition) {
-              for (let i2 = 0, il = morphAttributesPosition.length; i2 < il; i2++) {
-                const morphAttribute = morphAttributesPosition[i2];
+              for (let i = 0, il = morphAttributesPosition.length; i < il; i++) {
+                const morphAttribute = morphAttributesPosition[i];
                 const morphTargetsRelative = this.morphTargetsRelative;
                 for (let j = 0, jl = morphAttribute.count; j < jl; j++) {
                   _vector$7.fromBufferAttribute(morphAttribute, j);
@@ -82414,33 +81961,33 @@ You can use close({ resize: true }) to resize header`);
           }
           const tangents = this.getAttribute("tangent").array;
           const tan1 = [], tan2 = [];
-          for (let i2 = 0; i2 < nVertices; i2++) {
-            tan1[i2] = new Vector3();
-            tan2[i2] = new Vector3();
+          for (let i = 0; i < nVertices; i++) {
+            tan1[i] = new Vector3();
+            tan2[i] = new Vector3();
           }
           const vA = new Vector3(), vB = new Vector3(), vC = new Vector3(), uvA = new Vector2(), uvB = new Vector2(), uvC = new Vector2(), sdir = new Vector3(), tdir = new Vector3();
-          function handleTriangle(a2, b, c2) {
-            vA.fromArray(positions, a2 * 3);
+          function handleTriangle(a, b, c) {
+            vA.fromArray(positions, a * 3);
             vB.fromArray(positions, b * 3);
-            vC.fromArray(positions, c2 * 3);
-            uvA.fromArray(uvs, a2 * 2);
+            vC.fromArray(positions, c * 3);
+            uvA.fromArray(uvs, a * 2);
             uvB.fromArray(uvs, b * 2);
-            uvC.fromArray(uvs, c2 * 2);
+            uvC.fromArray(uvs, c * 2);
             vB.sub(vA);
             vC.sub(vA);
             uvB.sub(uvA);
             uvC.sub(uvA);
-            const r2 = 1 / (uvB.x * uvC.y - uvC.x * uvB.y);
-            if (!isFinite(r2))
+            const r = 1 / (uvB.x * uvC.y - uvC.x * uvB.y);
+            if (!isFinite(r))
               return;
-            sdir.copy(vB).multiplyScalar(uvC.y).addScaledVector(vC, -uvB.y).multiplyScalar(r2);
-            tdir.copy(vC).multiplyScalar(uvB.x).addScaledVector(vB, -uvC.x).multiplyScalar(r2);
-            tan1[a2].add(sdir);
+            sdir.copy(vB).multiplyScalar(uvC.y).addScaledVector(vC, -uvB.y).multiplyScalar(r);
+            tdir.copy(vC).multiplyScalar(uvB.x).addScaledVector(vB, -uvC.x).multiplyScalar(r);
+            tan1[a].add(sdir);
             tan1[b].add(sdir);
-            tan1[c2].add(sdir);
-            tan2[a2].add(tdir);
+            tan1[c].add(sdir);
+            tan2[a].add(tdir);
             tan2[b].add(tdir);
-            tan2[c2].add(tdir);
+            tan2[c].add(tdir);
           }
           let groups = this.groups;
           if (groups.length === 0) {
@@ -82449,8 +81996,8 @@ You can use close({ resize: true }) to resize header`);
               count: indices.length
             }];
           }
-          for (let i2 = 0, il = groups.length; i2 < il; ++i2) {
-            const group = groups[i2];
+          for (let i = 0, il = groups.length; i < il; ++i) {
+            const group = groups[i];
             const start = group.start;
             const count = group.count;
             for (let j = start, jl = start + count; j < jl; j += 3) {
@@ -82462,14 +82009,14 @@ You can use close({ resize: true }) to resize header`);
             }
           }
           const tmp = new Vector3(), tmp2 = new Vector3();
-          const n2 = new Vector3(), n22 = new Vector3();
+          const n = new Vector3(), n2 = new Vector3();
           function handleVertex(v) {
-            n2.fromArray(normals, v * 3);
-            n22.copy(n2);
-            const t2 = tan1[v];
-            tmp.copy(t2);
-            tmp.sub(n2.multiplyScalar(n2.dot(t2))).normalize();
-            tmp2.crossVectors(n22, t2);
+            n.fromArray(normals, v * 3);
+            n2.copy(n);
+            const t = tan1[v];
+            tmp.copy(t);
+            tmp.sub(n.multiplyScalar(n.dot(t))).normalize();
+            tmp2.crossVectors(n2, t);
             const test = tmp2.dot(tan2[v]);
             const w = test < 0 ? -1 : 1;
             tangents[v * 4] = tmp.x;
@@ -82477,8 +82024,8 @@ You can use close({ resize: true }) to resize header`);
             tangents[v * 4 + 2] = tmp.z;
             tangents[v * 4 + 3] = w;
           }
-          for (let i2 = 0, il = groups.length; i2 < il; ++i2) {
-            const group = groups[i2];
+          for (let i = 0, il = groups.length; i < il; ++i) {
+            const group = groups[i];
             const start = group.start;
             const count = group.count;
             for (let j = start, jl = start + count; j < jl; j += 3) {
@@ -82497,18 +82044,18 @@ You can use close({ resize: true }) to resize header`);
               normalAttribute = new BufferAttribute(new Float32Array(positionAttribute.count * 3), 3);
               this.setAttribute("normal", normalAttribute);
             } else {
-              for (let i2 = 0, il = normalAttribute.count; i2 < il; i2++) {
-                normalAttribute.setXYZ(i2, 0, 0, 0);
+              for (let i = 0, il = normalAttribute.count; i < il; i++) {
+                normalAttribute.setXYZ(i, 0, 0, 0);
               }
             }
             const pA = new Vector3(), pB = new Vector3(), pC = new Vector3();
             const nA = new Vector3(), nB = new Vector3(), nC = new Vector3();
             const cb = new Vector3(), ab = new Vector3();
             if (index) {
-              for (let i2 = 0, il = index.count; i2 < il; i2 += 3) {
-                const vA = index.getX(i2 + 0);
-                const vB = index.getX(i2 + 1);
-                const vC = index.getX(i2 + 2);
+              for (let i = 0, il = index.count; i < il; i += 3) {
+                const vA = index.getX(i + 0);
+                const vB = index.getX(i + 1);
+                const vC = index.getX(i + 2);
                 pA.fromBufferAttribute(positionAttribute, vA);
                 pB.fromBufferAttribute(positionAttribute, vB);
                 pC.fromBufferAttribute(positionAttribute, vC);
@@ -82526,16 +82073,16 @@ You can use close({ resize: true }) to resize header`);
                 normalAttribute.setXYZ(vC, nC.x, nC.y, nC.z);
               }
             } else {
-              for (let i2 = 0, il = positionAttribute.count; i2 < il; i2 += 3) {
-                pA.fromBufferAttribute(positionAttribute, i2 + 0);
-                pB.fromBufferAttribute(positionAttribute, i2 + 1);
-                pC.fromBufferAttribute(positionAttribute, i2 + 2);
+              for (let i = 0, il = positionAttribute.count; i < il; i += 3) {
+                pA.fromBufferAttribute(positionAttribute, i + 0);
+                pB.fromBufferAttribute(positionAttribute, i + 1);
+                pC.fromBufferAttribute(positionAttribute, i + 2);
                 cb.subVectors(pC, pB);
                 ab.subVectors(pA, pB);
                 cb.cross(ab);
-                normalAttribute.setXYZ(i2 + 0, cb.x, cb.y, cb.z);
-                normalAttribute.setXYZ(i2 + 1, cb.x, cb.y, cb.z);
-                normalAttribute.setXYZ(i2 + 2, cb.x, cb.y, cb.z);
+                normalAttribute.setXYZ(i + 0, cb.x, cb.y, cb.z);
+                normalAttribute.setXYZ(i + 1, cb.x, cb.y, cb.z);
+                normalAttribute.setXYZ(i + 2, cb.x, cb.y, cb.z);
               }
             }
             this.normalizeNormals();
@@ -82544,10 +82091,10 @@ You can use close({ resize: true }) to resize header`);
         }
         normalizeNormals() {
           const normals = this.attributes.normal;
-          for (let i2 = 0, il = normals.count; i2 < il; i2++) {
-            _vector$7.fromBufferAttribute(normals, i2);
+          for (let i = 0, il = normals.count; i < il; i++) {
+            _vector$7.fromBufferAttribute(normals, i);
             _vector$7.normalize();
-            normals.setXYZ(i2, _vector$7.x, _vector$7.y, _vector$7.z);
+            normals.setXYZ(i, _vector$7.x, _vector$7.y, _vector$7.z);
           }
         }
         toNonIndexed() {
@@ -82557,11 +82104,11 @@ You can use close({ resize: true }) to resize header`);
             const normalized = attribute.normalized;
             const array2 = new array.constructor(indices2.length * itemSize);
             let index = 0, index2 = 0;
-            for (let i2 = 0, l2 = indices2.length; i2 < l2; i2++) {
+            for (let i = 0, l = indices2.length; i < l; i++) {
               if (attribute.isInterleavedBufferAttribute) {
-                index = indices2[i2] * attribute.data.stride + attribute.offset;
+                index = indices2[i] * attribute.data.stride + attribute.offset;
               } else {
-                index = indices2[i2] * itemSize;
+                index = indices2[i] * itemSize;
               }
               for (let j = 0; j < itemSize; j++) {
                 array2[index2++] = array[index++];
@@ -82585,8 +82132,8 @@ You can use close({ resize: true }) to resize header`);
           for (const name in morphAttributes) {
             const morphArray = [];
             const morphAttribute = morphAttributes[name];
-            for (let i2 = 0, il = morphAttribute.length; i2 < il; i2++) {
-              const attribute = morphAttribute[i2];
+            for (let i = 0, il = morphAttribute.length; i < il; i++) {
+              const attribute = morphAttribute[i];
               const newAttribute = convertBufferAttribute(attribute, indices);
               morphArray.push(newAttribute);
             }
@@ -82594,8 +82141,8 @@ You can use close({ resize: true }) to resize header`);
           }
           geometry2.morphTargetsRelative = this.morphTargetsRelative;
           const groups = this.groups;
-          for (let i2 = 0, l2 = groups.length; i2 < l2; i2++) {
-            const group = groups[i2];
+          for (let i = 0, l = groups.length; i < l; i++) {
+            const group = groups[i];
             geometry2.addGroup(group.start, group.count, group.materialIndex);
           }
           return geometry2;
@@ -82640,8 +82187,8 @@ You can use close({ resize: true }) to resize header`);
           for (const key in this.morphAttributes) {
             const attributeArray = this.morphAttributes[key];
             const array = [];
-            for (let i2 = 0, il = attributeArray.length; i2 < il; i2++) {
-              const attribute = attributeArray[i2];
+            for (let i = 0, il = attributeArray.length; i < il; i++) {
+              const attribute = attributeArray[i];
               array.push(attribute.toJSON(data.data));
             }
             if (array.length > 0) {
@@ -82691,15 +82238,15 @@ You can use close({ resize: true }) to resize header`);
           for (const name in morphAttributes) {
             const array = [];
             const morphAttribute = morphAttributes[name];
-            for (let i2 = 0, l2 = morphAttribute.length; i2 < l2; i2++) {
-              array.push(morphAttribute[i2].clone(data));
+            for (let i = 0, l = morphAttribute.length; i < l; i++) {
+              array.push(morphAttribute[i].clone(data));
             }
             this.morphAttributes[name] = array;
           }
           this.morphTargetsRelative = source.morphTargetsRelative;
           const groups = source.groups;
-          for (let i2 = 0, l2 = groups.length; i2 < l2; i2++) {
-            const group = groups[i2];
+          for (let i = 0, l = groups.length; i < l; i++) {
+            const group = groups[i];
             this.addGroup(group.start, group.count, group.materialIndex);
           }
           const boundingBox = source.boundingBox;
@@ -82783,9 +82330,9 @@ You can use close({ resize: true }) to resize header`);
           const morphInfluences = this.morphTargetInfluences;
           if (morphPosition && morphInfluences) {
             _morphA.set(0, 0, 0);
-            for (let i2 = 0, il = morphPosition.length; i2 < il; i2++) {
-              const influence = morphInfluences[i2];
-              const morphAttribute = morphPosition[i2];
+            for (let i = 0, il = morphPosition.length; i < il; i++) {
+              const influence = morphInfluences[i];
+              const morphAttribute = morphPosition[i];
               if (influence === 0)
                 continue;
               _tempA.fromBufferAttribute(morphAttribute, index);
@@ -82837,16 +82384,16 @@ You can use close({ resize: true }) to resize header`);
           const drawRange = geometry.drawRange;
           if (index !== null) {
             if (Array.isArray(material)) {
-              for (let i2 = 0, il = groups.length; i2 < il; i2++) {
-                const group = groups[i2];
+              for (let i = 0, il = groups.length; i < il; i++) {
+                const group = groups[i];
                 const groupMaterial = material[group.materialIndex];
                 const start = Math.max(group.start, drawRange.start);
                 const end = Math.min(index.count, Math.min(group.start + group.count, drawRange.start + drawRange.count));
                 for (let j = start, jl = end; j < jl; j += 3) {
-                  const a2 = index.getX(j);
+                  const a = index.getX(j);
                   const b = index.getX(j + 1);
-                  const c2 = index.getX(j + 2);
-                  intersection = checkGeometryIntersection(this, groupMaterial, raycaster, rayLocalSpace, uv, uv1, normal, a2, b, c2);
+                  const c = index.getX(j + 2);
+                  intersection = checkGeometryIntersection(this, groupMaterial, raycaster, rayLocalSpace, uv, uv1, normal, a, b, c);
                   if (intersection) {
                     intersection.faceIndex = Math.floor(j / 3);
                     intersection.face.materialIndex = group.materialIndex;
@@ -82857,29 +82404,29 @@ You can use close({ resize: true }) to resize header`);
             } else {
               const start = Math.max(0, drawRange.start);
               const end = Math.min(index.count, drawRange.start + drawRange.count);
-              for (let i2 = start, il = end; i2 < il; i2 += 3) {
-                const a2 = index.getX(i2);
-                const b = index.getX(i2 + 1);
-                const c2 = index.getX(i2 + 2);
-                intersection = checkGeometryIntersection(this, material, raycaster, rayLocalSpace, uv, uv1, normal, a2, b, c2);
+              for (let i = start, il = end; i < il; i += 3) {
+                const a = index.getX(i);
+                const b = index.getX(i + 1);
+                const c = index.getX(i + 2);
+                intersection = checkGeometryIntersection(this, material, raycaster, rayLocalSpace, uv, uv1, normal, a, b, c);
                 if (intersection) {
-                  intersection.faceIndex = Math.floor(i2 / 3);
+                  intersection.faceIndex = Math.floor(i / 3);
                   intersects.push(intersection);
                 }
               }
             }
           } else if (position3 !== void 0) {
             if (Array.isArray(material)) {
-              for (let i2 = 0, il = groups.length; i2 < il; i2++) {
-                const group = groups[i2];
+              for (let i = 0, il = groups.length; i < il; i++) {
+                const group = groups[i];
                 const groupMaterial = material[group.materialIndex];
                 const start = Math.max(group.start, drawRange.start);
                 const end = Math.min(position3.count, Math.min(group.start + group.count, drawRange.start + drawRange.count));
                 for (let j = start, jl = end; j < jl; j += 3) {
-                  const a2 = j;
+                  const a = j;
                   const b = j + 1;
-                  const c2 = j + 2;
-                  intersection = checkGeometryIntersection(this, groupMaterial, raycaster, rayLocalSpace, uv, uv1, normal, a2, b, c2);
+                  const c = j + 2;
+                  intersection = checkGeometryIntersection(this, groupMaterial, raycaster, rayLocalSpace, uv, uv1, normal, a, b, c);
                   if (intersection) {
                     intersection.faceIndex = Math.floor(j / 3);
                     intersection.face.materialIndex = group.materialIndex;
@@ -82890,13 +82437,13 @@ You can use close({ resize: true }) to resize header`);
             } else {
               const start = Math.max(0, drawRange.start);
               const end = Math.min(position3.count, drawRange.start + drawRange.count);
-              for (let i2 = start, il = end; i2 < il; i2 += 3) {
-                const a2 = i2;
-                const b = i2 + 1;
-                const c2 = i2 + 2;
-                intersection = checkGeometryIntersection(this, material, raycaster, rayLocalSpace, uv, uv1, normal, a2, b, c2);
+              for (let i = start, il = end; i < il; i += 3) {
+                const a = i;
+                const b = i + 1;
+                const c = i + 2;
+                intersection = checkGeometryIntersection(this, material, raycaster, rayLocalSpace, uv, uv1, normal, a, b, c);
                 if (intersection) {
-                  intersection.faceIndex = Math.floor(i2 / 3);
+                  intersection.faceIndex = Math.floor(i / 3);
                   intersects.push(intersection);
                 }
               }
@@ -82936,7 +82483,7 @@ You can use close({ resize: true }) to resize header`);
           this.setAttribute("position", new Float32BufferAttribute(vertices, 3));
           this.setAttribute("normal", new Float32BufferAttribute(normals, 3));
           this.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
-          function buildPlane(u2, v, w, udir, vdir, width2, height2, depth2, gridX, gridY, materialIndex) {
+          function buildPlane(u, v, w, udir, vdir, width2, height2, depth2, gridX, gridY, materialIndex) {
             const segmentWidth = width2 / gridX;
             const segmentHeight = height2 / gridY;
             const widthHalf = width2 / 2;
@@ -82951,11 +82498,11 @@ You can use close({ resize: true }) to resize header`);
               const y = iy * segmentHeight - heightHalf;
               for (let ix = 0; ix < gridX1; ix++) {
                 const x = ix * segmentWidth - widthHalf;
-                vector[u2] = x * udir;
+                vector[u] = x * udir;
                 vector[v] = y * vdir;
                 vector[w] = depthHalf;
                 vertices.push(vector.x, vector.y, vector.z);
-                vector[u2] = 0;
+                vector[u] = 0;
                 vector[v] = 0;
                 vector[w] = depth2 > 0 ? 1 : -1;
                 normals.push(vector.x, vector.y, vector.z);
@@ -82966,12 +82513,12 @@ You can use close({ resize: true }) to resize header`);
             }
             for (let iy = 0; iy < gridY; iy++) {
               for (let ix = 0; ix < gridX; ix++) {
-                const a2 = numberOfVertices + ix + gridX1 * iy;
+                const a = numberOfVertices + ix + gridX1 * iy;
                 const b = numberOfVertices + ix + gridX1 * (iy + 1);
-                const c2 = numberOfVertices + (ix + 1) + gridX1 * (iy + 1);
-                const d2 = numberOfVertices + (ix + 1) + gridX1 * iy;
-                indices.push(a2, b, d2);
-                indices.push(b, c2, d2);
+                const c = numberOfVertices + (ix + 1) + gridX1 * (iy + 1);
+                const d = numberOfVertices + (ix + 1) + gridX1 * iy;
+                indices.push(a, b, d);
+                indices.push(b, c, d);
                 groupCount += 6;
               }
             }
@@ -83131,8 +82678,8 @@ You can use close({ resize: true }) to resize header`);
         }
         getWorldDirection(target2) {
           this.updateWorldMatrix(true, false);
-          const e2 = this.matrixWorld.elements;
-          return target2.set(-e2[8], -e2[9], -e2[10]).normalize();
+          const e = this.matrixWorld.elements;
+          return target2.set(-e[8], -e[9], -e[10]).normalize();
         }
         updateMatrixWorld(force) {
           super.updateMatrixWorld(force);
@@ -83510,8 +83057,8 @@ You can use close({ resize: true }) to resize header`);
         }
         clear(renderer, color, depth, stencil) {
           const currentRenderTarget = renderer.getRenderTarget();
-          for (let i2 = 0; i2 < 6; i2++) {
-            renderer.setRenderTarget(this, i2);
+          for (let i = 0; i < 6; i++) {
+            renderer.setRenderTarget(this, i);
             renderer.clear(color, depth, stencil);
           }
           renderer.setRenderTarget(currentRenderTarget);
@@ -83541,9 +83088,9 @@ You can use close({ resize: true }) to resize header`);
           this.constant = -point.dot(this.normal);
           return this;
         }
-        setFromCoplanarPoints(a2, b, c2) {
-          const normal = _vector1.subVectors(c2, b).cross(_vector2.subVectors(a2, b)).normalize();
-          this.setFromNormalAndCoplanarPoint(normal, a2);
+        setFromCoplanarPoints(a, b, c) {
+          const normal = _vector1.subVectors(c, b).cross(_vector2.subVectors(a, b)).normalize();
+          this.setFromNormalAndCoplanarPoint(normal, a);
           return this;
         }
         copy(plane) {
@@ -83580,11 +83127,11 @@ You can use close({ resize: true }) to resize header`);
             }
             return null;
           }
-          const t2 = -(line.start.dot(this.normal) + this.constant) / denominator;
-          if (t2 < 0 || t2 > 1) {
+          const t = -(line.start.dot(this.normal) + this.constant) / denominator;
+          if (t < 0 || t > 1) {
             return null;
           }
-          return target2.copy(line.start).addScaledVector(direction, t2);
+          return target2.copy(line.start).addScaledVector(direction, t);
         }
         intersectsLine(line) {
           const startSign = this.distanceToPoint(line.start);
@@ -83636,8 +83183,8 @@ You can use close({ resize: true }) to resize header`);
         }
         copy(frustum) {
           const planes = this.planes;
-          for (let i2 = 0; i2 < 6; i2++) {
-            planes[i2].copy(frustum.planes[i2]);
+          for (let i = 0; i < 6; i++) {
+            planes[i].copy(frustum.planes[i]);
           }
           return this;
         }
@@ -83685,8 +83232,8 @@ You can use close({ resize: true }) to resize header`);
           const planes = this.planes;
           const center = sphere.center;
           const negRadius = -sphere.radius;
-          for (let i2 = 0; i2 < 6; i2++) {
-            const distance = planes[i2].distanceToPoint(center);
+          for (let i = 0; i < 6; i++) {
+            const distance = planes[i].distanceToPoint(center);
             if (distance < negRadius) {
               return false;
             }
@@ -83695,8 +83242,8 @@ You can use close({ resize: true }) to resize header`);
         }
         intersectsBox(box) {
           const planes = this.planes;
-          for (let i2 = 0; i2 < 6; i2++) {
-            const plane = planes[i2];
+          for (let i = 0; i < 6; i++) {
+            const plane = planes[i];
             _vector$6.x = plane.normal.x > 0 ? box.max.x : box.min.x;
             _vector$6.y = plane.normal.y > 0 ? box.max.y : box.min.y;
             _vector$6.z = plane.normal.z > 0 ? box.max.z : box.min.z;
@@ -83708,8 +83255,8 @@ You can use close({ resize: true }) to resize header`);
         }
         containsPoint(point) {
           const planes = this.planes;
-          for (let i2 = 0; i2 < 6; i2++) {
-            if (planes[i2].distanceToPoint(point) < 0) {
+          for (let i = 0; i < 6; i++) {
+            if (planes[i].distanceToPoint(point) < 0) {
               return false;
             }
           }
@@ -83753,12 +83300,12 @@ You can use close({ resize: true }) to resize header`);
           }
           for (let iy = 0; iy < gridY; iy++) {
             for (let ix = 0; ix < gridX; ix++) {
-              const a2 = ix + gridX1 * iy;
+              const a = ix + gridX1 * iy;
               const b = ix + gridX1 * (iy + 1);
-              const c2 = ix + 1 + gridX1 * (iy + 1);
-              const d2 = ix + 1 + gridX1 * iy;
-              indices.push(a2, b, d2);
-              indices.push(b, c2, d2);
+              const c = ix + 1 + gridX1 * (iy + 1);
+              const d = ix + 1 + gridX1 * iy;
+              indices.push(a, b, d);
+              indices.push(b, c, d);
             }
           }
           this.setIndex(indices);
@@ -84690,8 +84237,8 @@ You can use close({ resize: true }) to resize header`);
             this._blurMaterial.dispose();
           if (this._pingPongRenderTarget !== null)
             this._pingPongRenderTarget.dispose();
-          for (let i2 = 0; i2 < this._lodPlanes.length; i2++) {
-            this._lodPlanes[i2].dispose();
+          for (let i = 0; i < this._lodPlanes.length; i++) {
+            this._lodPlanes[i].dispose();
           }
         }
         _cleanup(outputTarget) {
@@ -84771,20 +84318,20 @@ You can use close({ resize: true }) to resize header`);
             backgroundMaterial.color.copy(_clearColor);
             useSolidColor = true;
           }
-          for (let i2 = 0; i2 < 6; i2++) {
-            const col = i2 % 3;
+          for (let i = 0; i < 6; i++) {
+            const col = i % 3;
             if (col === 0) {
-              cubeCamera.up.set(0, upSign[i2], 0);
-              cubeCamera.lookAt(forwardSign[i2], 0, 0);
+              cubeCamera.up.set(0, upSign[i], 0);
+              cubeCamera.lookAt(forwardSign[i], 0, 0);
             } else if (col === 1) {
-              cubeCamera.up.set(0, 0, upSign[i2]);
-              cubeCamera.lookAt(0, forwardSign[i2], 0);
+              cubeCamera.up.set(0, 0, upSign[i]);
+              cubeCamera.lookAt(0, forwardSign[i], 0);
             } else {
-              cubeCamera.up.set(0, upSign[i2], 0);
-              cubeCamera.lookAt(0, 0, forwardSign[i2]);
+              cubeCamera.up.set(0, upSign[i], 0);
+              cubeCamera.lookAt(0, 0, forwardSign[i]);
             }
             const size = this._cubeSize;
-            _setViewport(cubeUVRenderTarget, col * size, i2 > 2 ? size : 0, size, size);
+            _setViewport(cubeUVRenderTarget, col * size, i > 2 ? size : 0, size, size);
             renderer.setRenderTarget(cubeUVRenderTarget);
             if (useSolidColor) {
               renderer.render(backgroundBox, cubeCamera);
@@ -84823,10 +84370,10 @@ You can use close({ resize: true }) to resize header`);
           const renderer = this._renderer;
           const autoClear = renderer.autoClear;
           renderer.autoClear = false;
-          for (let i2 = 1; i2 < this._lodPlanes.length; i2++) {
-            const sigma = Math.sqrt(this._sigmas[i2] * this._sigmas[i2] - this._sigmas[i2 - 1] * this._sigmas[i2 - 1]);
-            const poleAxis = _axisDirections[(i2 - 1) % _axisDirections.length];
-            this._blur(cubeUVRenderTarget, i2 - 1, i2, sigma, poleAxis);
+          for (let i = 1; i < this._lodPlanes.length; i++) {
+            const sigma = Math.sqrt(this._sigmas[i] * this._sigmas[i] - this._sigmas[i - 1] * this._sigmas[i - 1]);
+            const poleAxis = _axisDirections[(i - 1) % _axisDirections.length];
+            this._blur(cubeUVRenderTarget, i - 1, i, sigma, poleAxis);
           }
           renderer.autoClear = autoClear;
         }
@@ -84878,18 +84425,18 @@ You can use close({ resize: true }) to resize header`);
           }
           const weights = [];
           let sum = 0;
-          for (let i2 = 0; i2 < MAX_SAMPLES; ++i2) {
-            const x2 = i2 / sigmaPixels;
+          for (let i = 0; i < MAX_SAMPLES; ++i) {
+            const x2 = i / sigmaPixels;
             const weight = Math.exp(-x2 * x2 / 2);
             weights.push(weight);
-            if (i2 === 0) {
+            if (i === 0) {
               sum += weight;
-            } else if (i2 < samples) {
+            } else if (i < samples) {
               sum += 2 * weight;
             }
           }
-          for (let i2 = 0; i2 < weights.length; i2++) {
-            weights[i2] = weights[i2] / sum;
+          for (let i = 0; i < weights.length; i++) {
+            weights[i] = weights[i] / sum;
           }
           blurUniforms["envMap"].value = targetIn.texture;
           blurUniforms["samples"].value = samples;
@@ -84943,9 +84490,9 @@ You can use close({ resize: true }) to resize header`);
         }
         setValue(gl, value, textures) {
           const seq = this.seq;
-          for (let i2 = 0, n2 = seq.length; i2 !== n2; ++i2) {
-            const u2 = seq[i2];
-            u2.setValue(gl, value[u2.id], textures);
+          for (let i = 0, n = seq.length; i !== n; ++i) {
+            const u = seq[i];
+            u.setValue(gl, value[u.id], textures);
           }
         }
       };
@@ -84954,16 +84501,16 @@ You can use close({ resize: true }) to resize header`);
         constructor(gl, program) {
           this.seq = [];
           this.map = {};
-          const n2 = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
-          for (let i2 = 0; i2 < n2; ++i2) {
-            const info = gl.getActiveUniform(program, i2), addr = gl.getUniformLocation(program, info.name);
+          const n = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
+          for (let i = 0; i < n; ++i) {
+            const info = gl.getActiveUniform(program, i), addr = gl.getUniformLocation(program, info.name);
             parseUniform(info, addr, this);
           }
         }
         setValue(gl, name, value, textures) {
-          const u2 = this.map[name];
-          if (u2 !== void 0)
-            u2.setValue(gl, value, textures);
+          const u = this.map[name];
+          if (u !== void 0)
+            u.setValue(gl, value, textures);
         }
         setOptional(gl, object, name) {
           const v = object[name];
@@ -84971,21 +84518,21 @@ You can use close({ resize: true }) to resize header`);
             this.setValue(gl, name, v);
         }
         static upload(gl, seq, values, textures) {
-          for (let i2 = 0, n2 = seq.length; i2 !== n2; ++i2) {
-            const u2 = seq[i2], v = values[u2.id];
+          for (let i = 0, n = seq.length; i !== n; ++i) {
+            const u = seq[i], v = values[u.id];
             if (v.needsUpdate !== false) {
-              u2.setValue(gl, v.value, textures);
+              u.setValue(gl, v.value, textures);
             }
           }
         }
         static seqWithValue(seq, values) {
-          const r2 = [];
-          for (let i2 = 0, n2 = seq.length; i2 !== n2; ++i2) {
-            const u2 = seq[i2];
-            if (u2.id in values)
-              r2.push(u2);
+          const r = [];
+          for (let i = 0, n = seq.length; i !== n; ++i) {
+            const u = seq[i];
+            if (u.id in values)
+              r.push(u);
           }
-          return r2;
+          return r;
         }
       };
       programIdCount = 0;
@@ -85435,12 +84982,12 @@ You can use close({ resize: true }) to resize header`);
             session.removeEventListener("squeezeend", onSessionEvent);
             session.removeEventListener("end", onSessionEnd);
             session.removeEventListener("inputsourceschange", onInputSourcesChange);
-            for (let i2 = 0; i2 < controllers.length; i2++) {
-              const inputSource = controllerInputSources[i2];
+            for (let i = 0; i < controllers.length; i++) {
+              const inputSource = controllerInputSources[i];
               if (inputSource === null)
                 continue;
-              controllerInputSources[i2] = null;
-              controllers[i2].disconnect(inputSource);
+              controllerInputSources[i] = null;
+              controllers[i].disconnect(inputSource);
             }
             _currentDepthNear = null;
             _currentDepthFar = null;
@@ -85567,26 +85114,26 @@ You can use close({ resize: true }) to resize header`);
             }
           };
           function onInputSourcesChange(event) {
-            for (let i2 = 0; i2 < event.removed.length; i2++) {
-              const inputSource = event.removed[i2];
+            for (let i = 0; i < event.removed.length; i++) {
+              const inputSource = event.removed[i];
               const index = controllerInputSources.indexOf(inputSource);
               if (index >= 0) {
                 controllerInputSources[index] = null;
                 controllers[index].disconnect(inputSource);
               }
             }
-            for (let i2 = 0; i2 < event.added.length; i2++) {
-              const inputSource = event.added[i2];
+            for (let i = 0; i < event.added.length; i++) {
+              const inputSource = event.added[i];
               let controllerIndex = controllerInputSources.indexOf(inputSource);
               if (controllerIndex === -1) {
-                for (let i3 = 0; i3 < controllers.length; i3++) {
-                  if (i3 >= controllerInputSources.length) {
+                for (let i2 = 0; i2 < controllers.length; i2++) {
+                  if (i2 >= controllerInputSources.length) {
                     controllerInputSources.push(inputSource);
-                    controllerIndex = i3;
+                    controllerIndex = i2;
                     break;
-                  } else if (controllerInputSources[i3] === null) {
-                    controllerInputSources[i3] = inputSource;
-                    controllerIndex = i3;
+                  } else if (controllerInputSources[i2] === null) {
+                    controllerInputSources[i2] = inputSource;
+                    controllerIndex = i2;
                     break;
                   }
                 }
@@ -85655,8 +85202,8 @@ You can use close({ resize: true }) to resize header`);
             const parent = camera.parent;
             const cameras2 = cameraXR.cameras;
             updateCamera(cameraXR, parent);
-            for (let i2 = 0; i2 < cameras2.length; i2++) {
-              updateCamera(cameras2[i2], parent);
+            for (let i = 0; i < cameras2.length; i++) {
+              updateCamera(cameras2[i], parent);
             }
             if (cameras2.length === 2) {
               setProjectionFromUnion(cameraXR, cameraL, cameraR);
@@ -85715,15 +85262,15 @@ You can use close({ resize: true }) to resize header`);
                 cameraXR.cameras.length = 0;
                 cameraXRNeedsUpdate = true;
               }
-              for (let i2 = 0; i2 < views.length; i2++) {
-                const view = views[i2];
+              for (let i = 0; i < views.length; i++) {
+                const view = views[i];
                 let viewport = null;
                 if (glBaseLayer !== null) {
                   viewport = glBaseLayer.getViewport(view);
                 } else {
                   const glSubImage = glBinding.getViewSubImage(glProjLayer, view);
                   viewport = glSubImage.viewport;
-                  if (i2 === 0) {
+                  if (i === 0) {
                     renderer.setRenderTargetTextures(
                       newRenderTarget,
                       glSubImage.colorTexture,
@@ -85732,19 +85279,19 @@ You can use close({ resize: true }) to resize header`);
                     renderer.setRenderTarget(newRenderTarget);
                   }
                 }
-                let camera = cameras[i2];
+                let camera = cameras[i];
                 if (camera === void 0) {
                   camera = new PerspectiveCamera();
-                  camera.layers.enable(i2);
+                  camera.layers.enable(i);
                   camera.viewport = new Vector4();
-                  cameras[i2] = camera;
+                  cameras[i] = camera;
                 }
                 camera.matrix.fromArray(view.transform.matrix);
                 camera.matrix.decompose(camera.position, camera.quaternion, camera.scale);
                 camera.projectionMatrix.fromArray(view.projectionMatrix);
                 camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
                 camera.viewport.set(viewport.x, viewport.y, viewport.width, viewport.height);
-                if (i2 === 0) {
+                if (i === 0) {
                   cameraXR.matrix.copy(camera.matrix);
                   cameraXR.matrix.decompose(cameraXR.position, cameraXR.quaternion, cameraXR.scale);
                 }
@@ -85753,9 +85300,9 @@ You can use close({ resize: true }) to resize header`);
                 }
               }
             }
-            for (let i2 = 0; i2 < controllers.length; i2++) {
-              const inputSource = controllerInputSources[i2];
-              const controller = controllers[i2];
+            for (let i = 0; i < controllers.length; i++) {
+              const inputSource = controllerInputSources[i];
+              const controller = controllers[i];
               if (inputSource !== null && controller !== void 0) {
                 controller.update(inputSource, frame, customReferenceSpace || referenceSpace);
               }
@@ -85860,8 +85407,8 @@ You can use close({ resize: true }) to resize header`);
           }
           let _gl = context;
           function getContext(contextNames, contextAttributes) {
-            for (let i2 = 0; i2 < contextNames.length; i2++) {
-              const contextName = contextNames[i2];
+            for (let i = 0; i < contextNames.length; i++) {
+              const contextName = contextNames[i];
               const context2 = canvas.getContext(contextName, contextAttributes);
               if (context2 !== null)
                 return context2;
@@ -86068,21 +85615,21 @@ You can use close({ resize: true }) to resize header`);
                 const targetType = _currentRenderTarget.texture.type;
                 const isUnsignedType = targetType === UnsignedByteType || targetType === UnsignedIntType || targetType === UnsignedShortType || targetType === UnsignedInt248Type || targetType === UnsignedShort4444Type || targetType === UnsignedShort5551Type;
                 const clearColor = background.getClearColor();
-                const a2 = background.getClearAlpha();
-                const r2 = clearColor.r;
-                const g2 = clearColor.g;
+                const a = background.getClearAlpha();
+                const r = clearColor.r;
+                const g = clearColor.g;
                 const b = clearColor.b;
                 if (isUnsignedType) {
-                  uintClearColor[0] = r2;
-                  uintClearColor[1] = g2;
+                  uintClearColor[0] = r;
+                  uintClearColor[1] = g;
                   uintClearColor[2] = b;
-                  uintClearColor[3] = a2;
+                  uintClearColor[3] = a;
                   _gl.clearBufferuiv(_gl.COLOR, 0, uintClearColor);
                 } else {
-                  intClearColor[0] = r2;
-                  intClearColor[1] = g2;
+                  intClearColor[0] = r;
+                  intClearColor[1] = g;
                   intClearColor[2] = b;
-                  intClearColor[3] = a2;
+                  intClearColor[3] = a;
                   _gl.clearBufferiv(_gl.COLOR, 0, intClearColor);
                 }
               } else {
@@ -86273,8 +85820,8 @@ You can use close({ resize: true }) to resize header`);
               const material = object.material;
               if (material) {
                 if (Array.isArray(material)) {
-                  for (let i2 = 0; i2 < material.length; i2++) {
-                    const material2 = material[i2];
+                  for (let i = 0; i < material.length; i++) {
+                    const material2 = material[i];
                     prepare(material2, scene, object);
                   }
                 } else {
@@ -86353,8 +85900,8 @@ You can use close({ resize: true }) to resize header`);
             currentRenderState.setupLights(_this._useLegacyLights);
             if (camera.isArrayCamera) {
               const cameras = camera.cameras;
-              for (let i2 = 0, l2 = cameras.length; i2 < l2; i2++) {
-                const camera2 = cameras[i2];
+              for (let i = 0, l = cameras.length; i < l; i++) {
+                const camera2 = cameras[i];
                 renderScene(currentRenderList, scene, camera2, camera2.viewport);
               }
             } else {
@@ -86426,8 +85973,8 @@ You can use close({ resize: true }) to resize header`);
                   }
                   if (Array.isArray(material)) {
                     const groups = geometry.groups;
-                    for (let i2 = 0, l2 = groups.length; i2 < l2; i2++) {
-                      const group = groups[i2];
+                    for (let i = 0, l = groups.length; i < l; i++) {
+                      const group = groups[i];
                       const groupMaterial = material[group.materialIndex];
                       if (groupMaterial && groupMaterial.visible) {
                         currentRenderList.push(object, geometry, groupMaterial, groupOrder, _vector3.z, group);
@@ -86440,8 +85987,8 @@ You can use close({ resize: true }) to resize header`);
               }
             }
             const children = object.children;
-            for (let i2 = 0, l2 = children.length; i2 < l2; i2++) {
-              projectObject(children[i2], camera, groupOrder, sortObjects);
+            for (let i = 0, l = children.length; i < l; i++) {
+              projectObject(children[i], camera, groupOrder, sortObjects);
             }
           }
           function renderScene(currentRenderList2, scene, camera, viewport) {
@@ -86495,8 +86042,8 @@ You can use close({ resize: true }) to resize header`);
             textures.updateMultisampleRenderTarget(_transmissionRenderTarget);
             textures.updateRenderTargetMipmap(_transmissionRenderTarget);
             let renderTargetNeedsUpdate = false;
-            for (let i2 = 0, l2 = transmissiveObjects.length; i2 < l2; i2++) {
-              const renderItem = transmissiveObjects[i2];
+            for (let i = 0, l = transmissiveObjects.length; i < l; i++) {
+              const renderItem = transmissiveObjects[i];
               const object = renderItem.object;
               const geometry = renderItem.geometry;
               const material = renderItem.material;
@@ -86521,8 +86068,8 @@ You can use close({ resize: true }) to resize header`);
           }
           function renderObjects(renderList, scene, camera) {
             const overrideMaterial = scene.isScene === true ? scene.overrideMaterial : null;
-            for (let i2 = 0, l2 = renderList.length; i2 < l2; i2++) {
-              const renderItem = renderList[i2];
+            for (let i = 0, l = renderList.length; i < l; i++) {
+              const renderItem = renderList[i];
               const object = renderItem.object;
               const geometry = renderItem.geometry;
               const material = overrideMaterial === null ? renderItem.material : overrideMaterial;
@@ -86794,9 +86341,9 @@ You can use close({ resize: true }) to resize header`);
             p_uniforms.setValue(_gl, "modelMatrix", object.matrixWorld);
             if (material.isShaderMaterial || material.isRawShaderMaterial) {
               const groups = material.uniformsGroups;
-              for (let i2 = 0, l2 = groups.length; i2 < l2; i2++) {
+              for (let i = 0, l = groups.length; i < l; i++) {
                 if (capabilities.isWebGL2) {
-                  const group = groups[i2];
+                  const group = groups[i];
                   uniformsGroups.update(group, program);
                   uniformsGroups.bind(group, program);
                 } else {
@@ -87097,7 +86644,7 @@ You can use close({ resize: true }) to resize header`);
           this.settings = null;
           this.DefaultSettings_ = {};
         }
-        evaluate(t2) {
+        evaluate(t) {
           const pp = this.parameterPositions;
           let i1 = this._cachedIndex, t1 = pp[i1], t0 = pp[i1 - 1];
           validate_interval: {
@@ -87105,10 +86652,10 @@ You can use close({ resize: true }) to resize header`);
               let right;
               linear_scan: {
                 forward_scan:
-                  if (!(t2 < t1)) {
+                  if (!(t < t1)) {
                     for (let giveUpAt = i1 + 2; ; ) {
                       if (t1 === void 0) {
-                        if (t2 < t0)
+                        if (t < t0)
                           break forward_scan;
                         i1 = pp.length;
                         this._cachedIndex = i1;
@@ -87118,16 +86665,16 @@ You can use close({ resize: true }) to resize header`);
                         break;
                       t0 = t1;
                       t1 = pp[++i1];
-                      if (t2 < t1) {
+                      if (t < t1) {
                         break seek;
                       }
                     }
                     right = pp.length;
                     break linear_scan;
                   }
-                if (!(t2 >= t0)) {
+                if (!(t >= t0)) {
                   const t1global = pp[1];
-                  if (t2 < t1global) {
+                  if (t < t1global) {
                     i1 = 2;
                     t0 = t1global;
                   }
@@ -87140,7 +86687,7 @@ You can use close({ resize: true }) to resize header`);
                       break;
                     t1 = t0;
                     t0 = pp[--i1 - 1];
-                    if (t2 >= t0) {
+                    if (t >= t0) {
                       break seek;
                     }
                   }
@@ -87152,7 +86699,7 @@ You can use close({ resize: true }) to resize header`);
               }
               while (i1 < right) {
                 const mid = i1 + right >>> 1;
-                if (t2 < pp[mid]) {
+                if (t < pp[mid]) {
                   right = mid;
                 } else {
                   i1 = mid + 1;
@@ -87173,15 +86720,15 @@ You can use close({ resize: true }) to resize header`);
             this._cachedIndex = i1;
             this.intervalChanged_(i1, t0, t1);
           }
-          return this.interpolate_(i1, t0, t2, t1);
+          return this.interpolate_(i1, t0, t, t1);
         }
         getSettings_() {
           return this.settings || this.DefaultSettings_;
         }
         copySampleValue_(index) {
           const result = this.resultBuffer, values = this.sampleValues, stride = this.valueSize, offset = index * stride;
-          for (let i2 = 0; i2 !== stride; ++i2) {
-            result[i2] = values[offset + i2];
+          for (let i = 0; i !== stride; ++i) {
+            result[i] = values[offset + i];
           }
           return result;
         }
@@ -87243,14 +86790,14 @@ You can use close({ resize: true }) to resize header`);
           this._offsetPrev = iPrev * stride;
           this._offsetNext = iNext * stride;
         }
-        interpolate_(i1, t0, t2, t1) {
-          const result = this.resultBuffer, values = this.sampleValues, stride = this.valueSize, o1 = i1 * stride, o0 = o1 - stride, oP = this._offsetPrev, oN = this._offsetNext, wP = this._weightPrev, wN = this._weightNext, p2 = (t2 - t0) / (t1 - t0), pp = p2 * p2, ppp = pp * p2;
-          const sP = -wP * ppp + 2 * wP * pp - wP * p2;
-          const s0 = (1 + wP) * ppp + (-1.5 - 2 * wP) * pp + (-0.5 + wP) * p2 + 1;
-          const s1 = (-1 - wN) * ppp + (1.5 + wN) * pp + 0.5 * p2;
+        interpolate_(i1, t0, t, t1) {
+          const result = this.resultBuffer, values = this.sampleValues, stride = this.valueSize, o1 = i1 * stride, o0 = o1 - stride, oP = this._offsetPrev, oN = this._offsetNext, wP = this._weightPrev, wN = this._weightNext, p = (t - t0) / (t1 - t0), pp = p * p, ppp = pp * p;
+          const sP = -wP * ppp + 2 * wP * pp - wP * p;
+          const s0 = (1 + wP) * ppp + (-1.5 - 2 * wP) * pp + (-0.5 + wP) * p + 1;
+          const s1 = (-1 - wN) * ppp + (1.5 + wN) * pp + 0.5 * p;
           const sN = wN * ppp - wN * pp;
-          for (let i2 = 0; i2 !== stride; ++i2) {
-            result[i2] = sP * values[oP + i2] + s0 * values[o0 + i2] + s1 * values[o1 + i2] + sN * values[oN + i2];
+          for (let i = 0; i !== stride; ++i) {
+            result[i] = sP * values[oP + i] + s0 * values[o0 + i] + s1 * values[o1 + i] + sN * values[oN + i];
           }
           return result;
         }
@@ -87259,10 +86806,10 @@ You can use close({ resize: true }) to resize header`);
         constructor(parameterPositions, sampleValues, sampleSize, resultBuffer) {
           super(parameterPositions, sampleValues, sampleSize, resultBuffer);
         }
-        interpolate_(i1, t0, t2, t1) {
-          const result = this.resultBuffer, values = this.sampleValues, stride = this.valueSize, offset1 = i1 * stride, offset0 = offset1 - stride, weight1 = (t2 - t0) / (t1 - t0), weight0 = 1 - weight1;
-          for (let i2 = 0; i2 !== stride; ++i2) {
-            result[i2] = values[offset0 + i2] * weight0 + values[offset1 + i2] * weight1;
+        interpolate_(i1, t0, t, t1) {
+          const result = this.resultBuffer, values = this.sampleValues, stride = this.valueSize, offset1 = i1 * stride, offset0 = offset1 - stride, weight1 = (t - t0) / (t1 - t0), weight0 = 1 - weight1;
+          for (let i = 0; i !== stride; ++i) {
+            result[i] = values[offset0 + i] * weight0 + values[offset1 + i] * weight1;
           }
           return result;
         }
@@ -87361,8 +86908,8 @@ You can use close({ resize: true }) to resize header`);
         shift(timeOffset) {
           if (timeOffset !== 0) {
             const times = this.times;
-            for (let i2 = 0, n2 = times.length; i2 !== n2; ++i2) {
-              times[i2] += timeOffset;
+            for (let i = 0, n = times.length; i !== n; ++i) {
+              times[i] += timeOffset;
             }
           }
           return this;
@@ -87371,8 +86918,8 @@ You can use close({ resize: true }) to resize header`);
         scale(timeScale) {
           if (timeScale !== 1) {
             const times = this.times;
-            for (let i2 = 0, n2 = times.length; i2 !== n2; ++i2) {
-              times[i2] *= timeScale;
+            for (let i = 0, n = times.length; i !== n; ++i) {
+              times[i] *= timeScale;
             }
           }
           return this;
@@ -87414,15 +86961,15 @@ You can use close({ resize: true }) to resize header`);
             valid = false;
           }
           let prevTime = null;
-          for (let i2 = 0; i2 !== nKeys; i2++) {
-            const currTime = times[i2];
+          for (let i = 0; i !== nKeys; i++) {
+            const currTime = times[i];
             if (typeof currTime === "number" && isNaN(currTime)) {
-              console.error("THREE.KeyframeTrack: Time is not a valid number.", this, i2, currTime);
+              console.error("THREE.KeyframeTrack: Time is not a valid number.", this, i, currTime);
               valid = false;
               break;
             }
             if (prevTime !== null && prevTime > currTime) {
-              console.error("THREE.KeyframeTrack: Out of order keys.", this, i2, currTime, prevTime);
+              console.error("THREE.KeyframeTrack: Out of order keys.", this, i, currTime, prevTime);
               valid = false;
               break;
             }
@@ -87430,10 +86977,10 @@ You can use close({ resize: true }) to resize header`);
           }
           if (values !== void 0) {
             if (isTypedArray(values)) {
-              for (let i2 = 0, n2 = values.length; i2 !== n2; ++i2) {
-                const value = values[i2];
+              for (let i = 0, n = values.length; i !== n; ++i) {
+                const value = values[i];
                 if (isNaN(value)) {
-                  console.error("THREE.KeyframeTrack: Value is not a valid number.", this, i2, value);
+                  console.error("THREE.KeyframeTrack: Value is not a valid number.", this, i, value);
                   valid = false;
                   break;
                 }
@@ -87447,13 +86994,13 @@ You can use close({ resize: true }) to resize header`);
         optimize() {
           const times = arraySlice(this.times), values = arraySlice(this.values), stride = this.getValueSize(), smoothInterpolation = this.getInterpolation() === InterpolateSmooth, lastIndex = times.length - 1;
           let writeIndex = 1;
-          for (let i2 = 1; i2 < lastIndex; ++i2) {
+          for (let i = 1; i < lastIndex; ++i) {
             let keep = false;
-            const time = times[i2];
-            const timeNext = times[i2 + 1];
-            if (time !== timeNext && (i2 !== 1 || time !== times[0])) {
+            const time = times[i];
+            const timeNext = times[i + 1];
+            if (time !== timeNext && (i !== 1 || time !== times[0])) {
               if (!smoothInterpolation) {
-                const offset = i2 * stride, offsetP = offset - stride, offsetN = offset + stride;
+                const offset = i * stride, offsetP = offset - stride, offsetN = offset + stride;
                 for (let j = 0; j !== stride; ++j) {
                   const value = values[offset + j];
                   if (value !== values[offsetP + j] || value !== values[offsetN + j]) {
@@ -87466,9 +87013,9 @@ You can use close({ resize: true }) to resize header`);
               }
             }
             if (keep) {
-              if (i2 !== writeIndex) {
-                times[writeIndex] = times[i2];
-                const readOffset = i2 * stride, writeOffset = writeIndex * stride;
+              if (i !== writeIndex) {
+                times[writeIndex] = times[i];
+                const readOffset = i * stride, writeOffset = writeIndex * stride;
                 for (let j = 0; j !== stride; ++j) {
                   values[writeOffset + j] = values[readOffset + j];
                 }
@@ -87521,8 +87068,8 @@ You can use close({ resize: true }) to resize header`);
         constructor(parameterPositions, sampleValues, sampleSize, resultBuffer) {
           super(parameterPositions, sampleValues, sampleSize, resultBuffer);
         }
-        interpolate_(i1, t0, t2, t1) {
-          const result = this.resultBuffer, values = this.sampleValues, stride = this.valueSize, alpha = (t2 - t0) / (t1 - t0);
+        interpolate_(i1, t0, t, t1) {
+          const result = this.resultBuffer, values = this.sampleValues, stride = this.valueSize, alpha = (t - t0) / (t1 - t0);
           let offset = i1 * stride;
           for (let end = offset + stride; offset !== end; offset += 4) {
             Quaternion.slerpFlat(result, 0, values, offset - stride, values, offset, alpha);
@@ -87608,9 +87155,9 @@ You can use close({ resize: true }) to resize header`);
             return this;
           };
           this.getHandler = function(file) {
-            for (let i2 = 0, l2 = handlers.length; i2 < l2; i2 += 2) {
-              const regex = handlers[i2];
-              const loader = handlers[i2 + 1];
+            for (let i = 0, l = handlers.length; i < l; i += 2) {
+              const regex = handlers[i];
+              const loader = handlers[i + 1];
               if (regex.global)
                 regex.lastIndex = 0;
               if (regex.test(file)) {
@@ -87689,20 +87236,20 @@ You can use close({ resize: true }) to resize header`);
         }
         setValue(array, offset) {
           const bindings = this._bindings;
-          for (let i2 = this._targetGroup.nCachedObjects_, n2 = bindings.length; i2 !== n2; ++i2) {
-            bindings[i2].setValue(array, offset);
+          for (let i = this._targetGroup.nCachedObjects_, n = bindings.length; i !== n; ++i) {
+            bindings[i].setValue(array, offset);
           }
         }
         bind() {
           const bindings = this._bindings;
-          for (let i2 = this._targetGroup.nCachedObjects_, n2 = bindings.length; i2 !== n2; ++i2) {
-            bindings[i2].bind();
+          for (let i = this._targetGroup.nCachedObjects_, n = bindings.length; i !== n; ++i) {
+            bindings[i].bind();
           }
         }
         unbind() {
           const bindings = this._bindings;
-          for (let i2 = this._targetGroup.nCachedObjects_, n2 = bindings.length; i2 !== n2; ++i2) {
-            bindings[i2].unbind();
+          for (let i = this._targetGroup.nCachedObjects_, n = bindings.length; i !== n; ++i) {
+            bindings[i].unbind();
           }
         }
       };
@@ -87771,8 +87318,8 @@ You can use close({ resize: true }) to resize header`);
           }
           if (root.children) {
             const searchNodeSubtree = function(children) {
-              for (let i2 = 0; i2 < children.length; i2++) {
-                const childNode = children[i2];
+              for (let i = 0; i < children.length; i++) {
+                const childNode = children[i];
                 if (childNode.name === nodeName || childNode.uuid === nodeName) {
                   return childNode;
                 }
@@ -87800,8 +87347,8 @@ You can use close({ resize: true }) to resize header`);
         }
         _getValue_array(buffer3, offset) {
           const source = this.resolvedProperty;
-          for (let i2 = 0, n2 = source.length; i2 !== n2; ++i2) {
-            buffer3[offset++] = source[i2];
+          for (let i = 0, n = source.length; i !== n; ++i) {
+            buffer3[offset++] = source[i];
           }
         }
         _getValue_arrayElement(buffer3, offset) {
@@ -87825,21 +87372,21 @@ You can use close({ resize: true }) to resize header`);
         // EntireArray
         _setValue_array(buffer3, offset) {
           const dest = this.resolvedProperty;
-          for (let i2 = 0, n2 = dest.length; i2 !== n2; ++i2) {
-            dest[i2] = buffer3[offset++];
+          for (let i = 0, n = dest.length; i !== n; ++i) {
+            dest[i] = buffer3[offset++];
           }
         }
         _setValue_array_setNeedsUpdate(buffer3, offset) {
           const dest = this.resolvedProperty;
-          for (let i2 = 0, n2 = dest.length; i2 !== n2; ++i2) {
-            dest[i2] = buffer3[offset++];
+          for (let i = 0, n = dest.length; i !== n; ++i) {
+            dest[i] = buffer3[offset++];
           }
           this.targetObject.needsUpdate = true;
         }
         _setValue_array_setMatrixWorldNeedsUpdate(buffer3, offset) {
           const dest = this.resolvedProperty;
-          for (let i2 = 0, n2 = dest.length; i2 !== n2; ++i2) {
-            dest[i2] = buffer3[offset++];
+          for (let i = 0, n = dest.length; i !== n; ++i) {
+            dest[i] = buffer3[offset++];
           }
           this.targetObject.matrixWorldNeedsUpdate = true;
         }
@@ -87912,9 +87459,9 @@ You can use close({ resize: true }) to resize header`);
                   return;
                 }
                 targetObject = targetObject.skeleton.bones;
-                for (let i2 = 0; i2 < targetObject.length; i2++) {
-                  if (targetObject[i2].name === objectIndex) {
-                    objectIndex = i2;
+                for (let i = 0; i < targetObject.length; i++) {
+                  if (targetObject[i].name === objectIndex) {
+                    objectIndex = i;
                     break;
                   }
                 }
@@ -88428,9 +87975,9 @@ You can use close({ resize: true }) to resize header`);
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
             const w = rect.width;
-            const h2 = rect.height;
+            const h = rect.height;
             mouse.x = x / w * 2 - 1;
-            mouse.y = -(y / h2) * 2 + 1;
+            mouse.y = -(y / h) * 2 + 1;
             dollyDirection.set(mouse.x, mouse.y, 1).unproject(scope.object).sub(scope.object.position).normalize();
           }
           function clampDistance(dist) {
@@ -88817,9 +88364,9 @@ You can use close({ resize: true }) to resize header`);
           }
           function removePointer(event) {
             delete pointerPositions[event.pointerId];
-            for (let i2 = 0; i2 < pointers.length; i2++) {
-              if (pointers[i2].pointerId == event.pointerId) {
-                pointers.splice(i2, 1);
+            for (let i = 0; i < pointers.length; i++) {
+              if (pointers[i].pointerId == event.pointerId) {
+                pointers.splice(i, 1);
                 return;
               }
             }
@@ -88841,27 +88388,6 @@ You can use close({ resize: true }) to resize header`);
           scope.domElement.addEventListener("pointercancel", onPointerUp);
           scope.domElement.addEventListener("wheel", onMouseWheel, { passive: false });
           this.update();
-        }
-      };
-    }
-  });
-
-  // node_modules/three/examples/jsm/controls/MapControls.js
-  var MapControls_exports = {};
-  __export(MapControls_exports, {
-    MapControls: () => MapControls
-  });
-  var MapControls;
-  var init_MapControls = __esm({
-    "node_modules/three/examples/jsm/controls/MapControls.js"() {
-      init_three_module();
-      init_OrbitControls();
-      MapControls = class extends OrbitControls {
-        constructor(object, domElement) {
-          super(object, domElement);
-          this.screenSpacePanning = false;
-          this.mouseButtons = { LEFT: MOUSE.PAN, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.ROTATE };
-          this.touches = { ONE: TOUCH.PAN, TWO: TOUCH.DOLLY_ROTATE };
         }
       };
     }
@@ -88894,12 +88420,10 @@ You can use close({ resize: true }) to resize header`);
         exports2["@ipld/car"] = (init_index_browser(), __toCommonJS(index_browser_exports));
         exports2["cbor-x"] = (init_cbor_x(), __toCommonJS(cbor_x_exports));
         exports2["multiformats"] = { CID };
-        if (typeof window === "undefined" && typeof importScripts !== "undefined") {
+        if (typeof window !== "undefined" || typeof importScripts !== "undefined") {
           exports2["three"] = require_three();
           exports2["three/addons/libs/stats.module.js"] = (init_stats_module(), __toCommonJS(stats_module_exports));
-          exports2["three/addons/libs/lil-gui.module.min.js"] = (init_lil_gui_module_min(), __toCommonJS(lil_gui_module_min_exports));
           exports2["three/addons/controls/OrbitControls.js"] = (init_OrbitControls(), __toCommonJS(OrbitControls_exports));
-          exports2["three/addons/controls/MapControls.js"] = (init_MapControls(), __toCommonJS(MapControls_exports));
         }
         if (!exportToGlobal.__logOnce) {
           exportToGlobal.__logOnce = true;
@@ -88918,15 +88442,6 @@ three/build/three.cjs:
    * @license
    * Copyright 2010-2023 Three.js Authors
    * SPDX-License-Identifier: MIT
-   *)
-
-three/examples/jsm/libs/lil-gui.module.min.js:
-  (**
-   * lil-gui
-   * https://lil-gui.georgealways.com
-   * @version 0.17.0
-   * @author George Michael Brower
-   * @license MIT
    *)
 
 three/build/three.module.js:

@@ -13,6 +13,8 @@ function atlas(invokeType) {
    * }} FeedRecordTypeMap
    */
 
+  /** @typedef {[handle: string, x: number, y: number, weight: number, displayName?: string]} UserTuple */
+
   /** @param {{
    *  post(author: string, postID: string, text: string, replyTo?: { shortDID: string, postID: string }, replyToThread?: { shortDID: string, postID: string });
    *  repost(who: string, whose: string, postID: string);
@@ -33,6 +35,7 @@ function atlas(invokeType) {
     const CarReader = cacheRequire('@ipld/car').CarReader;
 
     if (!cbor_x.__extended42) {
+      cbor_x.__extended42 = true;
       cbor_x.addExtension({
         Class: multiformats.CID,
         tag: 42,
@@ -224,20 +227,197 @@ function atlas(invokeType) {
     return calcCRC32;
   })();
 
+  async function runBrowser(invokeType) {
+    const users = await boot();
+    /** @type {typeof import('three')} */
+    const THREE = /** @type {*} */(atlas).imports['three'];
+    const Stats = /** @type {*} */(atlas).imports['three/addons/libs/stats.module.js'].default;
+    const { OrbitControls } = /** @type {*} */(atlas).imports['three/addons/controls/OrbitControls.js'];
 
-  function runBrowser(invokeType) {
-    if (invokeType === 'init') {
-      // before anything loaded, show skeleton UI
+    console.log('Users: ', users);
+    threedshell();
+
+    async function boot() {
+      const INIT_UI_FADE_MSEC = 2000;
+        // @ts-ignore
+      const waitForRunBrowserNext = new Promise(resolve => runBrowser = resolve);
+
+        // @ts-ignore
+      const waitForUsersLoaded = new Promise(resolve => typeof hot !== 'undefined' ? resolve(hot) : hot = resolve);
+
+      let timedout = await Promise.race([
+        Promise.all([waitForUsersLoaded, waitForRunBrowserNext]),
+        new Promise(resolve => setTimeout(() => resolve('timedout'), 600))]);
+
+      if (timedout === 'timedout') {
+        const initUI = createInitUI();
+        await waitForUsersLoaded;
+        await waitForRunBrowserNext;
+        initUI.style.opacity = '0';
+        initUI.style.pointerEvents = 'none';
+        setTimeout(() => {
+          initUI.remove();
+        }, INIT_UI_FADE_MSEC);
+      }
+
+      /** @type {{ [shortDID: string]: UserTuple}} */
+      const users = await waitForUsersLoaded;
+      return users;
+
+      function createInitUI() {
+        elem('style', {
+          parent: document.head,
+          innerHTML: `
+        .atlas-init {
+          position: fixed;
+          bottom: 0; left: 0; width: 100%;
+          text-align: center;
+          transition: opacity: ${INIT_UI_FADE_MSEC}ms;
+        }
+      `});
+
+        const initUI = elem('div', {
+          className: 'atlas-init',
+          parent: document.body,
+          opacity: '0',
+          children: [
+            elem('h1', { textContent: 'Loading...' }),
+            elem('p', { textContent: 'Application code and user accounts base is loading.' })
+          ]
+        });
+
+        setTimeout(() => initUI.style.opacity = '1', 1);
+
+        return initUI;
+      }
     }
 
-    debugDumpFirehose();
+    async function threedshell() {
+      const {
+        scene,
+        camera,
+        lights,
+        renderer,
+        stats,
+        clock,
+        controls
+      } = setups();
+
+      const domElements = appendToDOM();
+      handleWindowResizes();
+      startAnimation();
+
+      function setups() {
+        const camera = new THREE.PerspectiveCamera(
+          15,
+          window.innerWidth / window.innerHeight, 1, 10 * 1000 * 1000);
+        camera.position.set(-10500, 10500, 1500);
+      // TODO: restore camera position from window.name
+
+        const scene = new THREE.Scene();
+        //scene.background = new THREE.Color(0xA0A0A0);
+
+        const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.7);
+        dirLight1.position.set(3000, 1500, -3000);
+        scene.add(dirLight1);
+
+        const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.7);
+        dirLight2.position.set(-3000, 1500, -3000);
+        scene.add(dirLight2);
+
+        // const pointLight = new THREE.PointLight(0xffffff, 3, 0, 0);
+        // pointLight.position.set(0, 2000, 4000);
+        // // scene.add(pointLight);
+
+        // const pointLight2 = new THREE.PointLight(0xffffff, 3, 0, 0);
+        // pointLight2.position.set(2000, 0, 4000);
+        // // scene.add(pointLight2);
+
+        const ambientLight = new THREE.AmbientLight(0x101010, 3);
+        scene.add(ambientLight);
+
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        const stats = new Stats();
+
+        const clock = new THREE.Clock();
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.maxDistance = 40 * 1000;
+        controls.enableDamping = true;
+
+        return {
+          scene,
+          camera,
+          lights: { dirLight1, dirLight2, ambientLight },
+          renderer,
+          stats,
+          clock,
+          controls
+        };
+      }
+
+      function appendToDOM() {
+        const root = elem('div', { parent: document.body, style: 'position: fixed; left: 0; top: 0; width: 100%; height: 100%;' });
+        renderer.domElement.style.cssText = `
+        position: fixed;
+        left: 0; top: 0; width: 100%; height: 100%;
+        `;
+        renderer.domElement.className = 'atlas-3d';
+        root.appendChild(renderer.domElement);
+        stats.domElement.style.position = 'relative';
+
+        let title, rightStatus;
+        const titleBar = elem('div', {
+          style: ` position: fixed; left: 0; top: 0; width: 100%; height: auto; background: rgba(0,0,0,0.5); color: gold; display: grid; grid-template-rows: auto; grid-template-columns: auto 1fr auto; `,
+          parent: root,
+          children: [
+            stats.domElement,
+            title = elem('h3', { textContent: 'Atlas 3D', style: 'text-align: center; font-weight: 100; margin-left: -29px' }),
+            rightStatus = elem('div', { textContent: '*' })
+          ]
+        });
+
+        return { root, titleBar, title, rightStatus };
+      }
+
+
+      function handleWindowResizes() {
+        window.addEventListener('resize', onWindowResize);
+
+        function onWindowResize() {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+      }
+
+      function startAnimation() {
+
+        requestAnimationFrame(continueAnimating);
+
+        function continueAnimating() {
+          requestAnimationFrame(continueAnimating);
+          animate();
+        }
+
+        function animate() {
+          stats.begin();
+          const delta = clock.getDelta();
+          renderer.render(scene, camera);
+          controls.update(delta);
+          stats.end();
+        }
+      }
+    }
 
     /**
- * @param {TagName} tagName
- * @param {(Omit<Partial<HTMLElement['style']> & Partial<HTMLElement>, 'children' | 'parent' | 'parentElement'> & { children?: (Element | string | null | void | undefined)[], parent?: Element | null, parentElement?: Element | null  })=} [style]
- * @returns {HTMLElementTagNameMap[TagName]}
- * @template {string} TagName
- */
+     * @param {TagName} tagName
+     * @param {(Omit<Partial<HTMLElement['style']> & Partial<HTMLElement>, 'children' | 'parent' | 'parentElement' | 'style'> & { children?: (Element | string | null | void | undefined)[], parent?: Element | null, parentElement?: Element | null, style?: string | Partial<HTMLElement['style']>  })=} [style]
+     * @returns {HTMLElementTagNameMap[TagName]}
+     * @template {string} TagName
+     */
     function elem(tagName, style) {
       const el = document.createElement(tagName);
 
@@ -285,8 +465,40 @@ function atlas(invokeType) {
     }
   }
 
-  function runNode(invokeType) {
-    //debugDumpFirehose();
+  async function runNode(invokeType) {
+    const fs = require('fs');
+    const path = require('path');
+  }
+
+
+  /** @param {{ [shortDID: string]: UserTuple }} users */
+  function firehoseSpatialAdjustments(users) {
+    // have axis orders, to make it easier to find users near each other
+
+    const horizontalOrderedShortDIDs = Object.keys(users).sort((shortDID1, shortDID2) =>
+      users[shortDID1][1] - users[shortDID2][1]);
+
+    const verticalOrderedShortDIDs = horizontalOrderedShortDIDs.slice().sort((shortDID1, shortDID2) =>
+      users[shortDID1][2] - users[shortDID2][2]);
+
+    const massCenter = getMassCenter(users);
+
+
+  }
+
+  function getMassCenter(users) {
+    let xTotal = 0, yTotal = 0, count = 0;
+    for (const shortDID in users) {
+      const usrTuple = users[shortDID];
+      if (!Array.isArray(usrTuple)) continue;
+      const x = usrTuple[1];
+      const y = usrTuple[2];
+
+      count++;
+      xTotal += x;
+      yTotal += y;
+    }
+    return { x: xTotal / count, y: yTotal / count };
   }
 
   function debugDumpFirehose() {
@@ -367,9 +579,13 @@ function atlas(invokeType) {
     return require(module);
   }
 
-  if (typeof window !== 'undefined' && window && typeof window.alert === 'function')
-    return runBrowser(invokeType);
-  else if (typeof process !== 'undefined' && process && typeof process.stdout?.write === 'function')
-    return runNode(invokeType);
+  // @ts-ignore
+  atlas = function (invokeType) {
+    if (typeof window !== 'undefined' && window && typeof window.alert === 'function')
+      return runBrowser(invokeType);
+    else if (typeof process !== 'undefined' && process && typeof process.stdout?.write === 'function')
+      return runNode(invokeType);
+  };
+  atlas(invokeType);
 
 } atlas('init');
