@@ -2568,7 +2568,14 @@ function atlas(invokeType) {
           try {
             await loadUser(shortDID, proximityTo);
           } catch (error) {
-            console.log('  ' + shortDID + ' failed ', error.message);
+            if (/rate/i.test(error.message) && /limit/i.test(error.message)) {
+              const waitForMsec = 10 * 1000 + 5000 * Math.random();
+              console.log('  ' + shortDID + ' failed ', error.message +
+                ' (pausing for ' + Math.round(waitForMsec / 1000) + ' sec)');
+              await new Promise(resolve => setTimeout(resolve, waitForMsec));
+            } else {
+              console.log('  ' + shortDID + ' failed ', error.message);
+            }
           }
           delete handlingUsers[shortDID];
           exitQueue();
@@ -2603,11 +2610,11 @@ function atlas(invokeType) {
         console.log('Resolving ' + shortDID + '...');
 
         const shortHandle = await getDidHandle(shortDID);
-        await new Promise(resolve => setTimeout(resolve, 20 + 50 * Math.random()));
+        await new Promise(resolve => setTimeout(resolve, 50 + 20 * Math.random()));
         const displayName = await getDidDisplayName(shortDID);
-        await new Promise(resolve => setTimeout(resolve, 20 + 50 * Math.random()));
+        await new Promise(resolve => setTimeout(resolve, 50 + 20 * Math.random()));
         const follows = await getUserFollows(shortDID);
-        await new Promise(resolve => setTimeout(resolve, 20 + 50 * Math.random()));
+        await new Promise(resolve => setTimeout(resolve, 50 + 20 * Math.random()));
         const likes = await getUserLikes(shortDID);
 
         console.log('  ' + shortDID + ' resolved to ' + shortHandle + ' placing it...');
