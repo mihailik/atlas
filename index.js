@@ -2363,9 +2363,9 @@ function atlas(invokeType) {
     const aptorotooo = require('@atproto/repo');
 
     // debugDumpFirehose();
-    syncAllJsonp();
+    // syncAllJsonp();
 
-    //updateHotFromFirehose();
+    updateHotFromFirehose();
 
     /**
      * @param {string} filePath
@@ -2577,7 +2577,7 @@ function atlas(invokeType) {
 
       var running, queued;
       function enterQueue() {
-        const MAX_CONCURRENCY = 3;
+        const MAX_CONCURRENCY = 4;
         if ((running || 0) <= MAX_CONCURRENCY) {
           running = (running || 0) + 1;
           return;
@@ -2599,19 +2599,17 @@ function atlas(invokeType) {
 
       /** @param {string} shortDID @param {(string | undefined)[]=} proximityTo */
       async function loadUser(shortDID, proximityTo) {
-        await new Promise(resolve => setTimeout(resolve, 300 + 350 * Math.random()));
+        await new Promise(resolve => setTimeout(resolve, 400 + 550 * Math.random()));
         console.log('Resolving ' + shortDID + '...');
 
-        const shortHandlePromise = getDidHandle(shortDID);
-        const displayNamePromise = getDidDisplayName(shortDID);
-        const followsPromise = getUserFollows(shortDID);
-        const likesPromise = getUserLikes(shortDID);
+        const shortHandle = await getDidHandle(shortDID);
+        await new Promise(resolve => setTimeout(resolve, 20 + 50 * Math.random()));
+        const displayName = await getDidDisplayName(shortDID);
+        await new Promise(resolve => setTimeout(resolve, 20 + 50 * Math.random()));
+        const follows = await getUserFollows(shortDID);
+        await new Promise(resolve => setTimeout(resolve, 20 + 50 * Math.random()));
+        const likes = await getUserLikes(shortDID);
 
-        const [shortHandle, displayName, follows, likes] = await Promise.all([
-          shortHandlePromise,
-          displayNamePromise,
-          followsPromise,
-          likesPromise]);
         console.log('  ' + shortDID + ' resolved to ' + shortHandle + ' placing it...');
 
         /** @type {typeof hotUsers} */
