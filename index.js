@@ -244,12 +244,14 @@ function atlas(invokeType) {
 
         // @ts-ignore
       let waitForUsersLoaded = new Promise((resolve, reject) => typeof hot !== 'undefined' ? resolve(hot) :
+        // @ts-ignore
         hot = value =>
           value.message ? reject(value) : resolve(value))
         .catch(() => {
           return new Promise((resolve, reject) => {
             const loadAbsoluteScript = document.createElement('script');
             loadAbsoluteScript.onerror = reject;
+            // @ts-ignore
             hot = resolve;
             loadAbsoluteScript.src = 'https://mihailik.github.io/atlas-db-jsonp/users/hot.js';
             loadAbsoluteScript.defer = true;
@@ -321,7 +323,7 @@ function atlas(invokeType) {
 
       const domElements = appendToDOM();
       handleWindowResizes();
-      webgl_buffergeometry_instancing_demo();
+      const shaderState = webgl_buffergeometry_instancing_demo();
       startAnimation();
 
       function setupScene() {
@@ -429,6 +431,17 @@ function atlas(invokeType) {
         function renderFrame() {
           stats.begin();
           const delta = clock.getDelta();
+          shaderState.material.uniforms['time'].value = clock.elapsedTime;
+          // const cameraDistanceXZ = Math.sqrt(
+          //   camera.position.x * camera.position.x +
+          //   camera.position.z * camera.position.z);
+
+          // const cameraAngle = Math.atan2(camera.position.x, camera.position.z) + 0.1;
+          // camera.position.x = Math.cos(cameraAngle) * cameraDistanceXZ;
+          // camera.position.z = Math.sin(cameraAngle) * cameraDistanceXZ;
+
+          // camera.lookAt(0, 0, 0);
+          // camera.updateMatrixWorld(true);
 
           renderer.render(scene, camera);
           controls.update(delta);
@@ -439,9 +452,9 @@ function atlas(invokeType) {
       function webgl_buffergeometry_instancing_demo() {
 
         const positions = [
-          0.025, - 0.025, -0.01,
-          -0.025, 0.025, -0.01,
-          0, 0, 0.03
+          0.025, 0, 0,
+          0, 0.025, 0,
+          0, 0, 0.025
         ];
         const offsets = [];
         const colors = [];
@@ -466,7 +479,7 @@ function atlas(invokeType) {
           const yRatiod = (y - bounds.y.min) / (bounds.y.max - bounds.y.min);
           const r = Math.sqrt(xRatiod * xRatiod + yRatiod * yRatiod);
 
-          offsets.push(xRatiod - 0.5, (1 - r * r) * 0.6, yRatiod - 0.5);
+          offsets.push(xRatiod - 0.5, (1 - r * r) * 0.2, yRatiod - 0.5);
 
           // colors
           colors.push(Math.random(), Math.random(), Math.random(), Math.random());
@@ -481,8 +494,7 @@ function atlas(invokeType) {
 
         const material = new THREE.ShaderMaterial({
           uniforms: {
-            'time': { value: 1.0 },
-            'sineTime': { value: 1.0 }
+            'time': { value: 1.0 }
           },
           vertexShader: `
 		precision highp float;
@@ -527,6 +539,12 @@ function atlas(invokeType) {
 
         const mesh = new THREE.Mesh(geometry, material);
         scene.add(mesh);
+
+        return {
+          mesh,
+          geometry,
+          material
+        };
       }
     }
 
