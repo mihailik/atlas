@@ -87,10 +87,12 @@ function atlas(invokeType) {
      * @template T
      */
     async function repeatUntilSuccess(fn, repeats) {
-      for (let i = 0; i < (repeats || 5) - 1; i++) {
+      if (!repeats) repeats = 5;
+      for (let i = 0; i < repeats - 1; i++) {
         try {
           return await fn();
         } catch (error) {
+          await new Promise(resolve => setTimeout(resolve, 100 * (i + 1)));
         }
       }
       return await fn();
@@ -131,26 +133,11 @@ function atlas(invokeType) {
       async function handleMessage(e) {
         if (e.data instanceof Blob) {
           const messageBuf = await e.data.arrayBuffer();
-          // @ts-ignore
-          const [header, body] = cbor_x.decodeMultiple(new Uint8Array(messageBuf));
+          const entry = cbor_x.decodeMultiple(new Uint8Array(messageBuf));
+          if (!entry) return;
+          const [header, body] = /** @type {any[]} */(entry);
           if (header.op !== 1) return;
           subscription.next(body);
-          // const car = await ipld_car.CarReader.fromBytes(body.blocks);
-          // for (const op of body.ops) {
-          //   if (!op.cid) continue;
-          //   const block = await car.get(op.cid);
-          //   if (!block) return;
-
-          //   const record = cbor_x.decode(block.bytes);
-          //   if (record.$type === "app.bsky.feed.post" && typeof record.text === "string") {
-          //     // Optional filter out empty posts
-          //     if (record.text.length > 0) {
-          //       const rkey = op.path.split("/").at(-1);
-
-          //       await _appendToFeed(body.repo, record, rkey);
-          //     }
-          //   }
-          // }
         }
       }
     }
@@ -195,13 +182,28 @@ function atlas(invokeType) {
 
     /** @param {string?} cursor */
     async function* listReposStreaming(cursor) {
-      const agent = unauthenticatedAgent();
+      let agent = unauthenticatedAgent();
 
       while (true) {
         const reply = await api.repeatUntilSuccess(() => agent.com.atproto.sync.listRepos({ cursor: cursor ?? undefined, limit: 1000 }));
 
-        if (!reply.data.cursor || reply.data.cursor === cursor) return;
-        yield reply.data;
+        if (reply.data.repos?.length)
+          yield reply.data;
+
+        if (!reply.data.cursor || reply.data.cursor === cursor) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          agent = unauthenticatedAgent();
+          const tryOvercome = await api.repeatUntilSuccess(() => agent.com.atproto.sync.listRepos({ cursor: cursor ?? undefined, limit: 1000 }));
+          if (tryOvercome.data.cursor && tryOvercome.data.cursor !== cursor) {
+            if (tryOvercome.data.repos?.length)
+              yield tryOvercome.data;
+            cursor = tryOvercome.data.cursor;
+            continue;
+          }
+
+          return;
+        }
+
         cursor = reply.data.cursor;
       }
     }
@@ -702,6 +704,7 @@ function atlas(invokeType) {
 
       const cursorsJsonPath = require('path').resolve(__dirname, 'db/cursors.json');
       const usersJsonPath = require('path').resolve(__dirname, 'db/users.json');
+      const reportEveryMsec = 15000;
 
       async function continueEnrichUsers(users) {
         if (!users)
@@ -711,22 +714,30 @@ function atlas(invokeType) {
         const agent = api.unauthenticatedAgent();
 
         let totalEnrichedUsers = 0;
-        const startTime = Date.now();
+        const startTime = Date.now() + Math.random() * reportEveryMsec;
         let lastReport = startTime;
+        let addedSinceLastReport = 0;
+        let skippedSinceLastReport = 0;
         for (const shortDID of usersToEnrich) {
           if (users[shortDID]) continue;
 
           const startEntryTime = Date.now();
           const did = utils.unwrapShortDID(shortDID);
           //const followRecords = await agent.com.atproto.repo.listRecords({ repo: did, collection: 'app.bsky.graph.follow' });
-          const describeProfilePromise = api.repeatUntilSuccess(() => agent.com.atproto.repo.describeRepo({ repo: did }));
-          const profileRecordsPromise = api.repeatUntilSuccess(() => agent.com.atproto.repo.listRecords({ repo: did, collection: 'app.bsky.actor.profile' }));
+          const describeProfilePromise = agent.com.atproto.repo.describeRepo({ repo: did })
+            .catch(err => console.log('com.atproto.repo.describeRepo ', shortDID, ' ' + err.message));
+          const profileRecordsPromise = agent.com.atproto.repo.listRecords({ repo: did, collection: 'app.bsky.actor.profile' })
+            .catch(err => console.log('com.atproto.repo.listRecords ', shortDID, ' ' + err.message));
 
           const describeProfile = await describeProfilePromise;
           const profileRecords = await profileRecordsPromise;
 
+          if (!describeProfile || !profileRecords)
+            continue;
+
           if (profileRecords.data.records.length > 1) {
             console.log(profileRecords.data.records.length + ' PROFILE RECORDS FOR ' + shortDID);
+            skippedSinceLastReport++;
             continue;
           }
 
@@ -734,27 +745,39 @@ function atlas(invokeType) {
           const shortHandle = utils.shortenHandle(handle);
           const displayName = /** @type {*} */(profileRecords.data.records[0]?.value)?.displayName;
 
-          if (!users[shortDID]) {
+          if (users[shortDID]) {
+            skippedSinceLastReport++;
+          } else {
             users[shortDID] =
               displayName ? [shortHandle, displayName] :
                 shortHandle;
-            
+
+            addedSinceLastReport++;
             totalEnrichedUsers++;
 
             const now = Date.now();
-            if (now - lastReport > 5000) {
+            if (now - lastReport > reportEveryMsec) {
               console.log(
-                'DESCRIBEREPOS/LISTRECORDS ',
-                did,
-                ' ' + shortHandle + ' ' + (shortHandle === handle ? ' <**>' : ''),
+                '\x1b[31mDESCRIBEREPOS/LISTRECORDS ',
+                '[' + (!skippedSinceLastReport ? addedSinceLastReport : addedSinceLastReport + ' of ' + (addedSinceLastReport + skippedSinceLastReport)) + ']',
+                ' ...' + shortDID + '/' + shortHandle + ' ' + (shortHandle === handle ? ' <**>' : ''),
                 ' in ' + (now - startEntryTime) / 1000 + 's (' +
-                totalEnrichedUsers + ' in ' + (now - startTime) / 1000 + 's, ' + (totalEnrichedUsers / (now - startTime) * 1000).toFixed(1).replace(/0+$/, '') + ' per second)'
+                totalEnrichedUsers + ' in ' + ((now - startTime) / 1000).toFixed(2).replace(/\.?0+$/, '') + 's, ' + (totalEnrichedUsers / (now - startTime) * 1000).toFixed(1).replace(/\.?0+$/, '') + ' per second)' +
+                '\x1b[39m'
               );
+              writeUsers(users);
               lastReport = now;
+              addedSinceLastReport = 0;
+              skippedSinceLastReport = 0;
             }
           }
-
         }
+
+        const now = Date.now();
+        console.log(
+          '\x1b[31mDESCRIBEREPOS/LISTRECORDS ' + totalEnrichedUsers + ' in ' + (now - startTime) / 1000 + 's, ' + (totalEnrichedUsers / (now - startTime) * 1000).toFixed(1).replace(/\.?0+$/, '') + ' per second\n' +
+          '------- COMPLETE\x1b[39m\n\n',
+        );
       }
 
       async function continueDumpAllUsers(users) {
@@ -768,37 +791,57 @@ function atlas(invokeType) {
         console.log({ cursor: listRepos });
         let totalAddedUsers = 0;
 
+        let batchAddedUsers = 0;
+        let batchWholeSize = 0;
+        let lastReport = Date.now() + Math.random() * reportEveryMsec;
         for await (const batchEntry of api.listReposStreaming(listRepos)) {
-          let batchAddedUsers = 0;
+          batchWholeSize += batchEntry.repos.length;
           for (const actor of batchEntry.repos) {
             const shortDID = utils.shortenDID(actor.did);
-            if (!(shortDID in users)) continue;
+            if (!(shortDID in users) || typeof users[shortDID] !== 'undefined') continue;
             users[shortDID] = 0;
             batchAddedUsers++;
+            totalAddedUsers++;
           }
 
           listRepos = batchEntry.cursor;
-          totalAddedUsers += batchAddedUsers;
 
-          writeUsers(users);
-
-          const currentCursorsJson = JSON.parse(fs.readFileSync(cursorsJsonPath, 'utf8'));
-          currentCursorsJson.users.listRepos = listRepos;
           const now = Date.now();
-          currentCursorsJson.users.timestamp = now;
-          fs.writeFileSync(cursorsJsonPath, JSON.stringify(currentCursorsJson, null, 2), 'utf8');
 
+          if (now - lastReport > reportEveryMsec) {
+            writeUsers(users);
 
-          console.log(
-            'LISTREPOS ',
-            batchEntry.cursor,
-            '[' + (batchAddedUsers === batchEntry.repos.length ? batchAddedUsers : batchAddedUsers + ' of ' + batchEntry.repos.length) + '] ' + batchEntry.repos[0].did + '...' + batchEntry.repos[batchEntry.repos.length - 1].did,
-            ' in ' + (now - startBatchTime) / 1000 + 's (' +
-            totalAddedUsers + ' in ' + (now - startTime) / 1000 + 's, ' + (totalAddedUsers / (now - startTime) * 1000).toFixed(3).replace(/0+$/, '') + ' per second)'
-          );
+            const currentCursorsJson = JSON.parse(fs.readFileSync(cursorsJsonPath, 'utf8'));
+            currentCursorsJson.users.listRepos = listRepos;
+            currentCursorsJson.users.timestamp = now;
+            fs.writeFileSync(cursorsJsonPath, JSON.stringify(currentCursorsJson, null, 2), 'utf8');
 
-          startBatchTime = now;
+            console.log(
+              '\x1b[36mLISTREPOS ',
+                '[' + (batchAddedUsers === batchWholeSize ? batchAddedUsers : batchAddedUsers + ' of ' + batchWholeSize) + '] ...' + utils.shortenDID(batchEntry.repos[batchEntry.repos.length - 1].did),
+              ' in ' + (now - startBatchTime) / 1000 + 's (' +
+              totalAddedUsers + ' in ' + (now - startTime) / 1000 + 's, ' + (totalAddedUsers / (now - startTime) * 1000).toFixed(1).replace(/\.?0+$/, '') + ' per second)' +
+              '\x1b[39m'
+            );
+
+            startBatchTime = now;
+            lastReport = now;
+            batchAddedUsers = 0;
+            batchWholeSize = 0;
+          }
         }
+
+        const now = Date.now();
+        const passedSinceMin = (now - timestamp) / 1000 / 60;
+        console.log(
+          '\x1b[36mLISTREPOS ',
+          totalAddedUsers + ' in ' + (now - startTime) / 1000 + 's, ' + (totalAddedUsers / (now - startTime) * 1000).toFixed(1).replace(/\.?0+$/, '') + ' per second\n' +
+          'since: ' + Math.round(passedSinceMin) + 'min ago (' + (totalAddedUsers / (passedSinceMin / 60)).toFixed(2).replace(/\.?0+$/, '') + ' per hour)\n' +
+          Object.keys(users).length + ' users total\n' +
+          Object.keys(users).filter((shortDID) => !users[shortDID]).length + ' raw DID\n' +
+          Object.keys(users).filter((shortDID) => users[shortDID]).length + ' populated\n' +
+          '------- COMPLETE\x1b[39m\n\n'
+        );
 
       }
 
@@ -813,37 +856,45 @@ function atlas(invokeType) {
         console.log({ cursor: searchActors });
         let totalAddedUsers = 0;
 
+        let lastReport = Date.now() + Math.random() * reportEveryMsec;
+        let batchAddedUsers = 0;
+        let batchWholeSize = 0;
         for await (const batchEntry of api.searchActorsStreaming({ cursor: searchActors, term: 'bsky.social' })) {
-          let batchAddedUsers = 0;
+          batchWholeSize += batchEntry.actors.length;
           for (const actor of batchEntry.actors) {
             const shortDID = utils.shortenDID(actor.did);
             if (users[shortDID]) continue;
             const shortHandle = utils.shortenHandle(actor.handle);
             users[shortDID] = actor.displayName ? [shortHandle, actor.displayName] : shortHandle;
             batchAddedUsers++;
+            totalAddedUsers++;
           }
 
           searchActors = batchEntry.cursor;
-          totalAddedUsers += batchAddedUsers;
 
-          writeUsers(users);
-
-          const currentCursorsJson = JSON.parse(fs.readFileSync(cursorsJsonPath, 'utf8'));
-          currentCursorsJson.users.searchActors = searchActors;
           const now = Date.now();
-          currentCursorsJson.users.timestamp = now;
-          fs.writeFileSync(cursorsJsonPath, JSON.stringify(currentCursorsJson, null, 2), 'utf8');
+          if (now - lastReport > reportEveryMsec) {
+            writeUsers(users);
+
+            const currentCursorsJson = JSON.parse(fs.readFileSync(cursorsJsonPath, 'utf8'));
+            currentCursorsJson.users.searchActors = searchActors;
+            currentCursorsJson.users.timestamp = now;
+            fs.writeFileSync(cursorsJsonPath, JSON.stringify(currentCursorsJson, null, 2), 'utf8');
 
 
-          console.log(
-            'SEARCHACTORS ',
-            batchEntry.cursor,
-            '[' + (batchAddedUsers === batchEntry.actors.length ? batchAddedUsers : batchAddedUsers + '..' + batchEntry.actors.length) + '] ' + utils.shortenHandle(batchEntry.actors[0].handle) + '...' + utils.shortenHandle(batchEntry.actors[batchEntry.actors.length - 1].handle),
-            ' in ' + (now - startBatchTime) / 1000 + 's (' +
-            totalAddedUsers + ' in ' + (now - startTime) / 1000 + 's, ' + (totalAddedUsers / (now - startTime) * 1000).toFixed(3).replace(/0+$/, '') + ' per second)'
-          );
+            console.log(
+              'SEARCHACTORS ',
+              '[' + (batchAddedUsers === batchWholeSize ? batchAddedUsers : batchAddedUsers + ' of ' + batchWholeSize) + '] ...' +
+              utils.shortenDID(batchEntry.actors[batchEntry.actors.length - 1].did) + '/' + utils.shortenHandle(batchEntry.actors[batchEntry.actors.length - 1].handle),
+              ' in ' + (now - startBatchTime) / 1000 + 's (' +
+              totalAddedUsers + ' in ' + (now - startTime) / 1000 + 's, ' + (totalAddedUsers / (now - startTime) * 1000).toFixed(1).replace(/\.0+$/, '') + ' per second)'
+            );
 
-          startBatchTime = now;
+            startBatchTime = now;
+            batchAddedUsers = 0;
+            batchWholeSize = 0;
+            lastReport = now;
+          }
         }
 
       }
@@ -857,6 +908,12 @@ function atlas(invokeType) {
       async function continueUpdateUsers() {
         const usersJsonPath = path.resolve(__dirname, 'db/users.json');
         const users = JSON.parse(fs.readFileSync(usersJsonPath, 'utf8'));
+
+        console.log(
+          Object.keys(users).length + ' users total\n' +
+          Object.keys(users).filter((shortDID) => !users[shortDID]).length + ' raw DID\n' +
+          Object.keys(users).filter((shortDID) => users[shortDID]).length + ' populated');
+
         const finishUserDetails = continueDumpUserDetails(users);
         const finishAllUsers = continueDumpAllUsers(users);
         const finishEnrichingUsers = continueEnrichUsers(users);
