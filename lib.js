@@ -15,11 +15,11 @@
     for (var name in all)
       __defProp(target2, name, { get: all[name], enumerable: true });
   };
-  var __copyProps = (to, from3, except, desc) => {
-    if (from3 && typeof from3 === "object" || typeof from3 === "function") {
-      for (let key of __getOwnPropNames(from3))
+  var __copyProps = (to, from2, except, desc) => {
+    if (from2 && typeof from2 === "object" || typeof from2 === "function") {
+      for (let key of __getOwnPropNames(from2))
         if (!__hasOwnProp.call(to, key) && key !== except)
-          __defProp(to, key, { get: () => from3[key], enumerable: !(desc = __getOwnPropDesc(from3, key)) || desc.enumerable });
+          __defProp(to, key, { get: () => from2[key], enumerable: !(desc = __getOwnPropDesc(from2, key)) || desc.enumerable });
     }
     return to;
   };
@@ -32,89 +32,6 @@
     mod
   ));
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-
-  // node_modules/multiformats/vendor/varint.js
-  function encode(num, out, offset) {
-    out = out || [];
-    offset = offset || 0;
-    var oldOffset = offset;
-    while (num >= INT) {
-      out[offset++] = num & 255 | MSB;
-      num /= 128;
-    }
-    while (num & MSBALL) {
-      out[offset++] = num & 255 | MSB;
-      num >>>= 7;
-    }
-    out[offset] = num | 0;
-    encode.bytes = offset - oldOffset + 1;
-    return out;
-  }
-  function read(buf3, offset) {
-    var res = 0, offset = offset || 0, shift = 0, counter = offset, b, l = buf3.length;
-    do {
-      if (counter >= l) {
-        read.bytes = 0;
-        throw new RangeError("Could not decode varint");
-      }
-      b = buf3[counter++];
-      res += shift < 28 ? (b & REST$1) << shift : (b & REST$1) * Math.pow(2, shift);
-      shift += 7;
-    } while (b >= MSB$1);
-    read.bytes = counter - offset;
-    return res;
-  }
-  var encode_1, MSB, REST, MSBALL, INT, decode, MSB$1, REST$1, N1, N2, N3, N4, N5, N6, N7, N8, N9, length, varint, _brrp_varint, varint_default;
-  var init_varint = __esm({
-    "node_modules/multiformats/vendor/varint.js"() {
-      encode_1 = encode;
-      MSB = 128;
-      REST = 127;
-      MSBALL = ~REST;
-      INT = Math.pow(2, 31);
-      decode = read;
-      MSB$1 = 128;
-      REST$1 = 127;
-      N1 = Math.pow(2, 7);
-      N2 = Math.pow(2, 14);
-      N3 = Math.pow(2, 21);
-      N4 = Math.pow(2, 28);
-      N5 = Math.pow(2, 35);
-      N6 = Math.pow(2, 42);
-      N7 = Math.pow(2, 49);
-      N8 = Math.pow(2, 56);
-      N9 = Math.pow(2, 63);
-      length = function(value) {
-        return value < N1 ? 1 : value < N2 ? 2 : value < N3 ? 3 : value < N4 ? 4 : value < N5 ? 5 : value < N6 ? 6 : value < N7 ? 7 : value < N8 ? 8 : value < N9 ? 9 : 10;
-      };
-      varint = {
-        encode: encode_1,
-        decode,
-        encodingLength: length
-      };
-      _brrp_varint = varint;
-      varint_default = _brrp_varint;
-    }
-  });
-
-  // node_modules/multiformats/src/varint.js
-  var decode2, encodeTo, encodingLength;
-  var init_varint2 = __esm({
-    "node_modules/multiformats/src/varint.js"() {
-      init_varint();
-      decode2 = (data, offset = 0) => {
-        const code = varint_default.decode(data, offset);
-        return [code, varint_default.decode.bytes];
-      };
-      encodeTo = (int, target2, offset = 0) => {
-        varint_default.encode(int, target2, offset);
-        return target2;
-      };
-      encodingLength = (int) => {
-        return varint_default.encodingLength(int);
-      };
-    }
-  });
 
   // node_modules/multiformats/src/bytes.js
   var empty, equals, coerce;
@@ -147,62 +64,6 @@
     }
   });
 
-  // node_modules/multiformats/src/hashes/digest.js
-  var create, decode3, equals2, Digest;
-  var init_digest = __esm({
-    "node_modules/multiformats/src/hashes/digest.js"() {
-      init_bytes();
-      init_varint2();
-      create = (code, digest) => {
-        const size = digest.byteLength;
-        const sizeOffset = encodingLength(code);
-        const digestOffset = sizeOffset + encodingLength(size);
-        const bytes = new Uint8Array(digestOffset + size);
-        encodeTo(code, bytes, 0);
-        encodeTo(size, bytes, sizeOffset);
-        bytes.set(digest, digestOffset);
-        return new Digest(code, size, digest, bytes);
-      };
-      decode3 = (multihash) => {
-        const bytes = coerce(multihash);
-        const [code, sizeOffset] = decode2(bytes);
-        const [size, digestOffset] = decode2(bytes.subarray(sizeOffset));
-        const digest = bytes.subarray(sizeOffset + digestOffset);
-        if (digest.byteLength !== size) {
-          throw new Error("Incorrect length");
-        }
-        return new Digest(code, size, digest, bytes);
-      };
-      equals2 = (a, b) => {
-        if (a === b) {
-          return true;
-        } else {
-          const data = (
-            /** @type {{code?:unknown, size?:unknown, bytes?:unknown}} */
-            b
-          );
-          return a.code === data.code && a.size === data.size && data.bytes instanceof Uint8Array && equals(a.bytes, data.bytes);
-        }
-      };
-      Digest = class {
-        /**
-         * Creates a multihash digest.
-         *
-         * @param {Code} code
-         * @param {Size} size
-         * @param {Uint8Array} digest
-         * @param {Uint8Array} bytes
-         */
-        constructor(code, size, digest, bytes) {
-          this.code = code;
-          this.size = size;
-          this.digest = digest;
-          this.bytes = bytes;
-        }
-      };
-    }
-  });
-
   // node_modules/multiformats/vendor/base-x.js
   function base(ALPHABET, name) {
     if (ALPHABET.length >= 255) {
@@ -224,7 +85,7 @@
     var LEADER = ALPHABET.charAt(0);
     var FACTOR = Math.log(BASE) / Math.log(256);
     var iFACTOR = Math.log(256) / Math.log(BASE);
-    function encode9(source) {
+    function encode6(source) {
       if (source instanceof Uint8Array)
         ;
       else if (ArrayBuffer.isView(source)) {
@@ -239,7 +100,7 @@
         return "";
       }
       var zeroes = 0;
-      var length3 = 0;
+      var length2 = 0;
       var pbegin = 0;
       var pend = source.length;
       while (pbegin !== pend && source[pbegin] === 0) {
@@ -251,7 +112,7 @@
       while (pbegin !== pend) {
         var carry = source[pbegin];
         var i2 = 0;
-        for (var it1 = size - 1; (carry !== 0 || i2 < length3) && it1 !== -1; it1--, i2++) {
+        for (var it1 = size - 1; (carry !== 0 || i2 < length2) && it1 !== -1; it1--, i2++) {
           carry += 256 * b58[it1] >>> 0;
           b58[it1] = carry % BASE >>> 0;
           carry = carry / BASE >>> 0;
@@ -259,10 +120,10 @@
         if (carry !== 0) {
           throw new Error("Non-zero carry");
         }
-        length3 = i2;
+        length2 = i2;
         pbegin++;
       }
-      var it2 = size - length3;
+      var it2 = size - length2;
       while (it2 !== size && b58[it2] === 0) {
         it2++;
       }
@@ -284,7 +145,7 @@
         return;
       }
       var zeroes = 0;
-      var length3 = 0;
+      var length2 = 0;
       while (source[psz] === LEADER) {
         zeroes++;
         psz++;
@@ -297,7 +158,7 @@
           return;
         }
         var i2 = 0;
-        for (var it3 = size - 1; (carry !== 0 || i2 < length3) && it3 !== -1; it3--, i2++) {
+        for (var it3 = size - 1; (carry !== 0 || i2 < length2) && it3 !== -1; it3--, i2++) {
           carry += BASE * b256[it3] >>> 0;
           b256[it3] = carry % 256 >>> 0;
           carry = carry / 256 >>> 0;
@@ -305,13 +166,13 @@
         if (carry !== 0) {
           throw new Error("Non-zero carry");
         }
-        length3 = i2;
+        length2 = i2;
         psz++;
       }
       if (source[psz] === " ") {
         return;
       }
-      var it4 = size - length3;
+      var it4 = size - length2;
       while (it4 !== size && b256[it4] === 0) {
         it4++;
       }
@@ -322,17 +183,17 @@
       }
       return vch;
     }
-    function decode13(string) {
-      var buffer3 = decodeUnsafe(string);
-      if (buffer3) {
-        return buffer3;
+    function decode8(string) {
+      var buffer2 = decodeUnsafe(string);
+      if (buffer2) {
+        return buffer2;
       }
       throw new Error(`Non-${name} character`);
     }
     return {
-      encode: encode9,
+      encode: encode6,
       decodeUnsafe,
-      decode: decode13
+      decode: decode8
     };
   }
   var src, _brrp__multiformats_scope_baseX, base_x_default;
@@ -345,7 +206,7 @@
   });
 
   // node_modules/multiformats/src/bases/base.js
-  var Encoder, Decoder, ComposedDecoder, or, Codec, from, baseX, decode4, encode2, rfc4648;
+  var Encoder, Decoder, ComposedDecoder, or, Codec, from, baseX, decode, encode, rfc4648;
   var init_base = __esm({
     "node_modules/multiformats/src/bases/base.js"() {
       init_base_x();
@@ -484,20 +345,20 @@
           return this.decoder.decode(input);
         }
       };
-      from = ({ name, prefix, encode: encode9, decode: decode13 }) => new Codec(name, prefix, encode9, decode13);
+      from = ({ name, prefix, encode: encode6, decode: decode8 }) => new Codec(name, prefix, encode6, decode8);
       baseX = ({ prefix, name, alphabet }) => {
-        const { encode: encode9, decode: decode13 } = base_x_default(alphabet, name);
+        const { encode: encode6, decode: decode8 } = base_x_default(alphabet, name);
         return from({
           prefix,
           name,
-          encode: encode9,
+          encode: encode6,
           /**
            * @param {string} text
            */
-          decode: (text) => coerce(decode13(text))
+          decode: (text) => coerce(decode8(text))
         });
       };
-      decode4 = (string, alphabet, bitsPerChar, name) => {
+      decode = (string, alphabet, bitsPerChar, name) => {
         const codes = {};
         for (let i = 0; i < alphabet.length; ++i) {
           codes[alphabet[i]] = i;
@@ -508,41 +369,41 @@
         }
         const out = new Uint8Array(end * bitsPerChar / 8 | 0);
         let bits = 0;
-        let buffer3 = 0;
+        let buffer2 = 0;
         let written = 0;
         for (let i = 0; i < end; ++i) {
           const value = codes[string[i]];
           if (value === void 0) {
             throw new SyntaxError(`Non-${name} character`);
           }
-          buffer3 = buffer3 << bitsPerChar | value;
+          buffer2 = buffer2 << bitsPerChar | value;
           bits += bitsPerChar;
           if (bits >= 8) {
             bits -= 8;
-            out[written++] = 255 & buffer3 >> bits;
+            out[written++] = 255 & buffer2 >> bits;
           }
         }
-        if (bits >= bitsPerChar || 255 & buffer3 << 8 - bits) {
+        if (bits >= bitsPerChar || 255 & buffer2 << 8 - bits) {
           throw new SyntaxError("Unexpected end of data");
         }
         return out;
       };
-      encode2 = (data, alphabet, bitsPerChar) => {
+      encode = (data, alphabet, bitsPerChar) => {
         const pad = alphabet[alphabet.length - 1] === "=";
         const mask = (1 << bitsPerChar) - 1;
         let out = "";
         let bits = 0;
-        let buffer3 = 0;
+        let buffer2 = 0;
         for (let i = 0; i < data.length; ++i) {
-          buffer3 = buffer3 << 8 | data[i];
+          buffer2 = buffer2 << 8 | data[i];
           bits += 8;
           while (bits > bitsPerChar) {
             bits -= bitsPerChar;
-            out += alphabet[mask & buffer3 >> bits];
+            out += alphabet[mask & buffer2 >> bits];
           }
         }
         if (bits) {
-          out += alphabet[mask & buffer3 << bitsPerChar - bits];
+          out += alphabet[mask & buffer2 << bitsPerChar - bits];
         }
         if (pad) {
           while (out.length * bitsPerChar & 7) {
@@ -556,31 +417,13 @@
           prefix,
           name,
           encode(input) {
-            return encode2(input, alphabet, bitsPerChar);
+            return encode(input, alphabet, bitsPerChar);
           },
           decode(input) {
-            return decode4(input, alphabet, bitsPerChar, name);
+            return decode(input, alphabet, bitsPerChar, name);
           }
         });
       };
-    }
-  });
-
-  // node_modules/multiformats/src/bases/base58.js
-  var base58btc, base58flickr;
-  var init_base58 = __esm({
-    "node_modules/multiformats/src/bases/base58.js"() {
-      init_base();
-      base58btc = baseX({
-        name: "base58btc",
-        prefix: "z",
-        alphabet: "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-      });
-      base58flickr = baseX({
-        name: "base58flickr",
-        prefix: "Z",
-        alphabet: "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
-      });
     }
   });
 
@@ -646,6 +489,163 @@
     }
   });
 
+  // node_modules/multiformats/src/bases/base58.js
+  var base58btc, base58flickr;
+  var init_base58 = __esm({
+    "node_modules/multiformats/src/bases/base58.js"() {
+      init_base();
+      base58btc = baseX({
+        name: "base58btc",
+        prefix: "z",
+        alphabet: "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+      });
+      base58flickr = baseX({
+        name: "base58flickr",
+        prefix: "Z",
+        alphabet: "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      });
+    }
+  });
+
+  // node_modules/multiformats/vendor/varint.js
+  function encode2(num, out, offset) {
+    out = out || [];
+    offset = offset || 0;
+    var oldOffset = offset;
+    while (num >= INT) {
+      out[offset++] = num & 255 | MSB;
+      num /= 128;
+    }
+    while (num & MSBALL) {
+      out[offset++] = num & 255 | MSB;
+      num >>>= 7;
+    }
+    out[offset] = num | 0;
+    encode2.bytes = offset - oldOffset + 1;
+    return out;
+  }
+  function read(buf2, offset) {
+    var res = 0, offset = offset || 0, shift = 0, counter = offset, b, l = buf2.length;
+    do {
+      if (counter >= l) {
+        read.bytes = 0;
+        throw new RangeError("Could not decode varint");
+      }
+      b = buf2[counter++];
+      res += shift < 28 ? (b & REST$1) << shift : (b & REST$1) * Math.pow(2, shift);
+      shift += 7;
+    } while (b >= MSB$1);
+    read.bytes = counter - offset;
+    return res;
+  }
+  var encode_1, MSB, REST, MSBALL, INT, decode2, MSB$1, REST$1, N1, N2, N3, N4, N5, N6, N7, N8, N9, length, varint, _brrp_varint, varint_default;
+  var init_varint = __esm({
+    "node_modules/multiformats/vendor/varint.js"() {
+      encode_1 = encode2;
+      MSB = 128;
+      REST = 127;
+      MSBALL = ~REST;
+      INT = Math.pow(2, 31);
+      decode2 = read;
+      MSB$1 = 128;
+      REST$1 = 127;
+      N1 = Math.pow(2, 7);
+      N2 = Math.pow(2, 14);
+      N3 = Math.pow(2, 21);
+      N4 = Math.pow(2, 28);
+      N5 = Math.pow(2, 35);
+      N6 = Math.pow(2, 42);
+      N7 = Math.pow(2, 49);
+      N8 = Math.pow(2, 56);
+      N9 = Math.pow(2, 63);
+      length = function(value) {
+        return value < N1 ? 1 : value < N2 ? 2 : value < N3 ? 3 : value < N4 ? 4 : value < N5 ? 5 : value < N6 ? 6 : value < N7 ? 7 : value < N8 ? 8 : value < N9 ? 9 : 10;
+      };
+      varint = {
+        encode: encode_1,
+        decode: decode2,
+        encodingLength: length
+      };
+      _brrp_varint = varint;
+      varint_default = _brrp_varint;
+    }
+  });
+
+  // node_modules/multiformats/src/varint.js
+  var decode3, encodeTo, encodingLength;
+  var init_varint2 = __esm({
+    "node_modules/multiformats/src/varint.js"() {
+      init_varint();
+      decode3 = (data, offset = 0) => {
+        const code = varint_default.decode(data, offset);
+        return [code, varint_default.decode.bytes];
+      };
+      encodeTo = (int, target2, offset = 0) => {
+        varint_default.encode(int, target2, offset);
+        return target2;
+      };
+      encodingLength = (int) => {
+        return varint_default.encodingLength(int);
+      };
+    }
+  });
+
+  // node_modules/multiformats/src/hashes/digest.js
+  var create, decode4, equals2, Digest;
+  var init_digest = __esm({
+    "node_modules/multiformats/src/hashes/digest.js"() {
+      init_bytes();
+      init_varint2();
+      create = (code, digest) => {
+        const size = digest.byteLength;
+        const sizeOffset = encodingLength(code);
+        const digestOffset = sizeOffset + encodingLength(size);
+        const bytes = new Uint8Array(digestOffset + size);
+        encodeTo(code, bytes, 0);
+        encodeTo(size, bytes, sizeOffset);
+        bytes.set(digest, digestOffset);
+        return new Digest(code, size, digest, bytes);
+      };
+      decode4 = (multihash) => {
+        const bytes = coerce(multihash);
+        const [code, sizeOffset] = decode3(bytes);
+        const [size, digestOffset] = decode3(bytes.subarray(sizeOffset));
+        const digest = bytes.subarray(sizeOffset + digestOffset);
+        if (digest.byteLength !== size) {
+          throw new Error("Incorrect length");
+        }
+        return new Digest(code, size, digest, bytes);
+      };
+      equals2 = (a, b) => {
+        if (a === b) {
+          return true;
+        } else {
+          const data = (
+            /** @type {{code?:unknown, size?:unknown, bytes?:unknown}} */
+            b
+          );
+          return a.code === data.code && a.size === data.size && data.bytes instanceof Uint8Array && equals(a.bytes, data.bytes);
+        }
+      };
+      Digest = class {
+        /**
+         * Creates a multihash digest.
+         *
+         * @param {Code} code
+         * @param {Size} size
+         * @param {Uint8Array} digest
+         * @param {Uint8Array} bytes
+         */
+        constructor(code, size, digest, bytes) {
+          this.code = code;
+          this.size = size;
+          this.digest = digest;
+          this.bytes = bytes;
+        }
+      };
+    }
+  });
+
   // node_modules/multiformats/src/link/interface.js
   var init_interface = __esm({
     "node_modules/multiformats/src/link/interface.js"() {
@@ -656,13 +656,13 @@
   var format, cache, baseCache, CID, parseCIDtoBytes, toStringV0, toStringV1, DAG_PB_CODE, SHA_256_CODE, encodeCID, cidSymbol;
   var init_cid = __esm({
     "node_modules/multiformats/src/cid.js"() {
-      init_varint2();
-      init_digest();
-      init_base58();
       init_base32();
+      init_base58();
       init_bytes();
+      init_digest();
+      init_varint2();
       init_interface();
-      format = (link, base3) => {
+      format = (link, base2) => {
         const { bytes, version } = link;
         switch (version) {
           case 0:
@@ -670,26 +670,26 @@
               bytes,
               baseCache(link),
               /** @type {API.MultibaseEncoder<"z">} */
-              base3 || base58btc.encoder
+              base2 || base58btc.encoder
             );
           default:
             return toStringV1(
               bytes,
               baseCache(link),
               /** @type {API.MultibaseEncoder<Prefix>} */
-              base3 || base32.encoder
+              base2 || base32.encoder
             );
         }
       };
       cache = /* @__PURE__ */ new WeakMap();
       baseCache = (cid) => {
-        const baseCache3 = cache.get(cid);
-        if (baseCache3 == null) {
-          const baseCache4 = /* @__PURE__ */ new Map();
-          cache.set(cid, baseCache4);
-          return baseCache4;
+        const baseCache2 = cache.get(cid);
+        if (baseCache2 == null) {
+          const baseCache3 = /* @__PURE__ */ new Map();
+          cache.set(cid, baseCache3);
+          return baseCache3;
         }
-        return baseCache3;
+        return baseCache2;
       };
       CID = class _CID {
         /**
@@ -697,7 +697,6 @@
          * @param {Format} code - Code of the codec content is encoded in, see https://github.com/multiformats/multicodec/blob/master/table.csv
          * @param {API.MultihashDigest<Alg>} multihash - (Multi)hash of the of the content.
          * @param {Uint8Array} bytes
-         *
          */
         constructor(version, code, multihash, bytes) {
           this.code = code;
@@ -810,9 +809,12 @@
          * @param {API.MultibaseEncoder<string>} [base]
          * @returns {string}
          */
-        toString(base3) {
-          return format(this, base3);
+        toString(base2) {
+          return format(this, base2);
         }
+        /**
+         * @returns {API.LinkJSON<this>}
+         */
         toJSON() {
           return { "/": format(this) };
         }
@@ -867,7 +869,7 @@
             const { version, multihash, code } = value;
             const digest = (
               /** @type {API.MultihashDigest<Alg>} */
-              decode3(multihash)
+              decode4(multihash)
             );
             return _CID.create(version, code, digest);
           } else {
@@ -1018,8 +1020,8 @@
         static inspectBytes(initialBytes) {
           let offset = 0;
           const next = () => {
-            const [i, length3] = decode2(initialBytes.subarray(offset));
-            offset += length3;
+            const [i, length2] = decode3(initialBytes.subarray(offset));
+            offset += length2;
             return i;
           };
           let version = (
@@ -1069,8 +1071,8 @@
          * @param {API.MultibaseDecoder<Prefix>} [base]
          * @returns {CID<Data, Code, Alg, Ver>}
          */
-        static parse(source, base3) {
-          const [prefix, bytes] = parseCIDtoBytes(source, base3);
+        static parse(source, base2) {
+          const [prefix, bytes] = parseCIDtoBytes(source, base2);
           const cid = _CID.decode(bytes);
           if (cid.version === 0 && source[0] !== "Q") {
             throw Error("Version 0 CID string must not include multibase prefix");
@@ -1079,10 +1081,10 @@
           return cid;
         }
       };
-      parseCIDtoBytes = (source, base3) => {
+      parseCIDtoBytes = (source, base2) => {
         switch (source[0]) {
           case "Q": {
-            const decoder2 = base3 || base58btc;
+            const decoder2 = base2 || base58btc;
             return [
               /** @type {Prefix} */
               base58btc.prefix,
@@ -1090,7 +1092,7 @@
             ];
           }
           case base58btc.prefix: {
-            const decoder2 = base3 || base58btc;
+            const decoder2 = base2 || base58btc;
             return [
               /** @type {Prefix} */
               base58btc.prefix,
@@ -1098,7 +1100,7 @@
             ];
           }
           case base32.prefix: {
-            const decoder2 = base3 || base32;
+            const decoder2 = base2 || base32;
             return [
               /** @type {Prefix} */
               base32.prefix,
@@ -1106,7 +1108,7 @@
             ];
           }
           default: {
-            if (base3 == null) {
+            if (base2 == null) {
               throw Error(
                 "To parse non base32 or base58btc encoded CID multibase decoder must be provided"
               );
@@ -1114,31 +1116,31 @@
             return [
               /** @type {Prefix} */
               source[0],
-              base3.decode(source)
+              base2.decode(source)
             ];
           }
         }
       };
-      toStringV0 = (bytes, cache3, base3) => {
-        const { prefix } = base3;
+      toStringV0 = (bytes, cache2, base2) => {
+        const { prefix } = base2;
         if (prefix !== base58btc.prefix) {
-          throw Error(`Cannot string encode V0 in ${base3.name} encoding`);
+          throw Error(`Cannot string encode V0 in ${base2.name} encoding`);
         }
-        const cid = cache3.get(prefix);
+        const cid = cache2.get(prefix);
         if (cid == null) {
-          const cid2 = base3.encode(bytes).slice(1);
-          cache3.set(prefix, cid2);
+          const cid2 = base2.encode(bytes).slice(1);
+          cache2.set(prefix, cid2);
           return cid2;
         } else {
           return cid;
         }
       };
-      toStringV1 = (bytes, cache3, base3) => {
-        const { prefix } = base3;
-        const cid = cache3.get(prefix);
+      toStringV1 = (bytes, cache2, base2) => {
+        const { prefix } = base2;
+        const cid = cache2.get(prefix);
         if (cid == null) {
-          const cid2 = base3.encode(bytes);
-          cache3.set(prefix, cid2);
+          const cid2 = base2.encode(bytes);
+          cache2.set(prefix, cid2);
           return cid2;
         } else {
           return cid;
@@ -1175,11 +1177,11 @@
   // node_modules/multiformats/src/index.js
   var init_src = __esm({
     "node_modules/multiformats/src/index.js"() {
-      init_cid();
-      init_varint2();
       init_bytes();
-      init_hasher();
+      init_cid();
       init_digest();
+      init_hasher();
+      init_varint2();
       init_interface2();
     }
   });
@@ -1624,8 +1626,8 @@
   function damp(x, y, lambda, dt) {
     return lerp(x, y, 1 - Math.exp(-lambda * dt));
   }
-  function pingpong(x, length3 = 1) {
-    return length3 - Math.abs(euclideanModulo(x, length3 * 2) - length3);
+  function pingpong(x, length2 = 1) {
+    return length2 - Math.abs(euclideanModulo(x, length2 * 2) - length2);
   }
   function smoothstep(x, min, max) {
     if (x <= min)
@@ -1756,8 +1758,8 @@
     }
     return false;
   }
-  function getTypedArray(type, buffer3) {
-    return new TYPED_ARRAYS[type](buffer3);
+  function getTypedArray(type, buffer2) {
+    return new TYPED_ARRAYS[type](buffer2);
   }
   function createElementNS(name) {
     return document.createElementNS("http://www.w3.org/1999/xhtml", name);
@@ -1829,9 +1831,9 @@
     return p;
   }
   function _generateTables() {
-    const buffer3 = new ArrayBuffer(4);
-    const floatView = new Float32Array(buffer3);
-    const uint32View = new Uint32Array(buffer3);
+    const buffer2 = new ArrayBuffer(4);
+    const floatView = new Float32Array(buffer2);
+    const uint32View = new Uint32Array(buffer2);
     const baseTable = new Uint32Array(512);
     const shiftTable = new Uint32Array(512);
     for (let i = 0; i < 256; ++i) {
@@ -1978,12 +1980,12 @@
     }
     return intersection;
   }
-  function cloneUniforms(src4) {
+  function cloneUniforms(src3) {
     const dst = {};
-    for (const u in src4) {
+    for (const u in src3) {
       dst[u] = {};
-      for (const p in src4[u]) {
-        const property = src4[u][p];
+      for (const p in src3[u]) {
+        const property = src3[u][p];
         if (property && (property.isColor || property.isMatrix3 || property.isMatrix4 || property.isVector2 || property.isVector3 || property.isVector4 || property.isTexture || property.isQuaternion)) {
           if (property.isRenderTargetTexture) {
             console.warn("UniformsUtils: Textures of render targets cannot be cloned via cloneUniforms() or mergeUniforms().");
@@ -2010,10 +2012,10 @@
     }
     return merged;
   }
-  function cloneUniformsGroups(src4) {
+  function cloneUniformsGroups(src3) {
     const dst = [];
-    for (let u = 0; u < src4.length; u++) {
-      dst.push(src4[u].clone());
+    for (let u = 0; u < src3.length; u++) {
+      dst.push(src3[u].clone());
     }
     return dst;
   }
@@ -2059,8 +2061,8 @@
     function createBuffer(attribute, bufferType) {
       const array = attribute.array;
       const usage = attribute.usage;
-      const buffer3 = gl.createBuffer();
-      gl.bindBuffer(bufferType, buffer3);
+      const buffer2 = gl.createBuffer();
+      gl.bindBuffer(bufferType, buffer2);
       gl.bufferData(bufferType, array, usage);
       attribute.onUploadCallback();
       let type;
@@ -2092,16 +2094,16 @@
         throw new Error("THREE.WebGLAttributes: Unsupported buffer data format: " + array);
       }
       return {
-        buffer: buffer3,
+        buffer: buffer2,
         type,
         bytesPerElement: array.BYTES_PER_ELEMENT,
         version: attribute.version
       };
     }
-    function updateBuffer(buffer3, attribute, bufferType) {
+    function updateBuffer(buffer2, attribute, bufferType) {
       const array = attribute.array;
       const updateRange = attribute.updateRange;
-      gl.bindBuffer(bufferType, buffer3);
+      gl.bindBuffer(bufferType, buffer2);
       if (updateRange.count === -1) {
         gl.bufferSubData(bufferType, 0, array);
       } else {
@@ -2427,7 +2429,7 @@
       return false;
     }
     function saveCache(object, geometry, program, index) {
-      const cache3 = {};
+      const cache2 = {};
       const attributes2 = geometry.attributes;
       let attributesNum = 0;
       const programAttributes = program.getAttributes();
@@ -2446,11 +2448,11 @@
           if (attribute && attribute.data) {
             data.data = attribute.data;
           }
-          cache3[name] = data;
+          cache2[name] = data;
           attributesNum++;
         }
       }
-      currentState.attributes = cache3;
+      currentState.attributes = cache2;
       currentState.attributesNum = attributesNum;
       currentState.index = index;
     }
@@ -2520,7 +2522,7 @@
             const attribute = attributes.get(geometryAttribute);
             if (attribute === void 0)
               continue;
-            const buffer3 = attribute.buffer;
+            const buffer2 = attribute.buffer;
             const type = attribute.type;
             const bytesPerElement = attribute.bytesPerElement;
             const integer = capabilities.isWebGL2 === true && (type === gl.INT || type === gl.UNSIGNED_INT || geometryAttribute.gpuType === IntType);
@@ -2540,7 +2542,7 @@
                   enableAttribute(programAttribute.location + i);
                 }
               }
-              gl.bindBuffer(gl.ARRAY_BUFFER, buffer3);
+              gl.bindBuffer(gl.ARRAY_BUFFER, buffer2);
               for (let i = 0; i < programAttribute.locationSize; i++) {
                 vertexAttribPointer(
                   programAttribute.location + i,
@@ -2565,7 +2567,7 @@
                   enableAttribute(programAttribute.location + i);
                 }
               }
-              gl.bindBuffer(gl.ARRAY_BUFFER, buffer3);
+              gl.bindBuffer(gl.ARRAY_BUFFER, buffer2);
               for (let i = 0; i < programAttribute.locationSize; i++) {
                 vertexAttribPointer(
                   programAttribute.location + i,
@@ -3236,12 +3238,12 @@
     }
     function isCubeTextureComplete(image) {
       let count = 0;
-      const length3 = 6;
-      for (let i = 0; i < length3; i++) {
+      const length2 = 6;
+      for (let i = 0; i < length2; i++) {
         if (image[i] !== void 0)
           count++;
       }
-      return count === length3;
+      return count === length2;
     }
     function onTextureDispose(event) {
       const texture = event.target;
@@ -3560,8 +3562,8 @@
             height = Math.ceil(width / capabilities.maxTextureSize);
             width = capabilities.maxTextureSize;
           }
-          const buffer3 = new Float32Array(width * height * 4 * morphTargetsCount);
-          const texture = new DataArrayTexture(buffer3, width, height, morphTargetsCount);
+          const buffer2 = new Float32Array(width * height * 4 * morphTargetsCount);
+          const texture = new DataArrayTexture(buffer2, width, height, morphTargetsCount);
           texture.type = FloatType;
           texture.needsUpdate = true;
           const vertexDataStride = vertexDataCount * 4;
@@ -3574,24 +3576,24 @@
               const stride = j * vertexDataStride;
               if (hasMorphPosition === true) {
                 morph.fromBufferAttribute(morphTarget, j);
-                buffer3[offset + stride + 0] = morph.x;
-                buffer3[offset + stride + 1] = morph.y;
-                buffer3[offset + stride + 2] = morph.z;
-                buffer3[offset + stride + 3] = 0;
+                buffer2[offset + stride + 0] = morph.x;
+                buffer2[offset + stride + 1] = morph.y;
+                buffer2[offset + stride + 2] = morph.z;
+                buffer2[offset + stride + 3] = 0;
               }
               if (hasMorphNormals === true) {
                 morph.fromBufferAttribute(morphNormal, j);
-                buffer3[offset + stride + 4] = morph.x;
-                buffer3[offset + stride + 5] = morph.y;
-                buffer3[offset + stride + 6] = morph.z;
-                buffer3[offset + stride + 7] = 0;
+                buffer2[offset + stride + 4] = morph.x;
+                buffer2[offset + stride + 5] = morph.y;
+                buffer2[offset + stride + 6] = morph.z;
+                buffer2[offset + stride + 7] = 0;
               }
               if (hasMorphColors === true) {
                 morph.fromBufferAttribute(morphColor, j);
-                buffer3[offset + stride + 8] = morph.x;
-                buffer3[offset + stride + 9] = morph.y;
-                buffer3[offset + stride + 10] = morph.z;
-                buffer3[offset + stride + 11] = morphColor.itemSize === 4 ? morph.w : 1;
+                buffer2[offset + stride + 8] = morph.x;
+                buffer2[offset + stride + 9] = morph.y;
+                buffer2[offset + stride + 10] = morph.z;
+                buffer2[offset + stride + 11] = morphColor.itemSize === 4 ? morph.w : 1;
               }
             }
           }
@@ -3613,23 +3615,23 @@
         program.getUniforms().setValue(gl, "morphTargetsTexture", entry.texture, textures);
         program.getUniforms().setValue(gl, "morphTargetsTextureSize", entry.size);
       } else {
-        const length3 = objectInfluences === void 0 ? 0 : objectInfluences.length;
+        const length2 = objectInfluences === void 0 ? 0 : objectInfluences.length;
         let influences = influencesList[geometry.id];
-        if (influences === void 0 || influences.length !== length3) {
+        if (influences === void 0 || influences.length !== length2) {
           influences = [];
-          for (let i = 0; i < length3; i++) {
+          for (let i = 0; i < length2; i++) {
             influences[i] = [i, 0];
           }
           influencesList[geometry.id] = influences;
         }
-        for (let i = 0; i < length3; i++) {
+        for (let i = 0; i < length2; i++) {
           const influence = influences[i];
           influence[0] = i;
           influence[1] = objectInfluences[i];
         }
         influences.sort(absNumericalSort);
         for (let i = 0; i < 8; i++) {
-          if (i < length3 && influences[i][1]) {
+          if (i < length2 && influences[i][1]) {
             workInfluences[i][0] = influences[i][0];
             workInfluences[i][1] = influences[i][1];
           } else {
@@ -3764,258 +3766,258 @@
     return r;
   }
   function setValueV1f(gl, v) {
-    const cache3 = this.cache;
-    if (cache3[0] === v)
+    const cache2 = this.cache;
+    if (cache2[0] === v)
       return;
     gl.uniform1f(this.addr, v);
-    cache3[0] = v;
+    cache2[0] = v;
   }
   function setValueV2f(gl, v) {
-    const cache3 = this.cache;
+    const cache2 = this.cache;
     if (v.x !== void 0) {
-      if (cache3[0] !== v.x || cache3[1] !== v.y) {
+      if (cache2[0] !== v.x || cache2[1] !== v.y) {
         gl.uniform2f(this.addr, v.x, v.y);
-        cache3[0] = v.x;
-        cache3[1] = v.y;
+        cache2[0] = v.x;
+        cache2[1] = v.y;
       }
     } else {
-      if (arraysEqual(cache3, v))
+      if (arraysEqual(cache2, v))
         return;
       gl.uniform2fv(this.addr, v);
-      copyArray(cache3, v);
+      copyArray(cache2, v);
     }
   }
   function setValueV3f(gl, v) {
-    const cache3 = this.cache;
+    const cache2 = this.cache;
     if (v.x !== void 0) {
-      if (cache3[0] !== v.x || cache3[1] !== v.y || cache3[2] !== v.z) {
+      if (cache2[0] !== v.x || cache2[1] !== v.y || cache2[2] !== v.z) {
         gl.uniform3f(this.addr, v.x, v.y, v.z);
-        cache3[0] = v.x;
-        cache3[1] = v.y;
-        cache3[2] = v.z;
+        cache2[0] = v.x;
+        cache2[1] = v.y;
+        cache2[2] = v.z;
       }
     } else if (v.r !== void 0) {
-      if (cache3[0] !== v.r || cache3[1] !== v.g || cache3[2] !== v.b) {
+      if (cache2[0] !== v.r || cache2[1] !== v.g || cache2[2] !== v.b) {
         gl.uniform3f(this.addr, v.r, v.g, v.b);
-        cache3[0] = v.r;
-        cache3[1] = v.g;
-        cache3[2] = v.b;
+        cache2[0] = v.r;
+        cache2[1] = v.g;
+        cache2[2] = v.b;
       }
     } else {
-      if (arraysEqual(cache3, v))
+      if (arraysEqual(cache2, v))
         return;
       gl.uniform3fv(this.addr, v);
-      copyArray(cache3, v);
+      copyArray(cache2, v);
     }
   }
   function setValueV4f(gl, v) {
-    const cache3 = this.cache;
+    const cache2 = this.cache;
     if (v.x !== void 0) {
-      if (cache3[0] !== v.x || cache3[1] !== v.y || cache3[2] !== v.z || cache3[3] !== v.w) {
+      if (cache2[0] !== v.x || cache2[1] !== v.y || cache2[2] !== v.z || cache2[3] !== v.w) {
         gl.uniform4f(this.addr, v.x, v.y, v.z, v.w);
-        cache3[0] = v.x;
-        cache3[1] = v.y;
-        cache3[2] = v.z;
-        cache3[3] = v.w;
+        cache2[0] = v.x;
+        cache2[1] = v.y;
+        cache2[2] = v.z;
+        cache2[3] = v.w;
       }
     } else {
-      if (arraysEqual(cache3, v))
+      if (arraysEqual(cache2, v))
         return;
       gl.uniform4fv(this.addr, v);
-      copyArray(cache3, v);
+      copyArray(cache2, v);
     }
   }
   function setValueM2(gl, v) {
-    const cache3 = this.cache;
+    const cache2 = this.cache;
     const elements = v.elements;
     if (elements === void 0) {
-      if (arraysEqual(cache3, v))
+      if (arraysEqual(cache2, v))
         return;
       gl.uniformMatrix2fv(this.addr, false, v);
-      copyArray(cache3, v);
+      copyArray(cache2, v);
     } else {
-      if (arraysEqual(cache3, elements))
+      if (arraysEqual(cache2, elements))
         return;
       mat2array.set(elements);
       gl.uniformMatrix2fv(this.addr, false, mat2array);
-      copyArray(cache3, elements);
+      copyArray(cache2, elements);
     }
   }
   function setValueM3(gl, v) {
-    const cache3 = this.cache;
+    const cache2 = this.cache;
     const elements = v.elements;
     if (elements === void 0) {
-      if (arraysEqual(cache3, v))
+      if (arraysEqual(cache2, v))
         return;
       gl.uniformMatrix3fv(this.addr, false, v);
-      copyArray(cache3, v);
+      copyArray(cache2, v);
     } else {
-      if (arraysEqual(cache3, elements))
+      if (arraysEqual(cache2, elements))
         return;
       mat3array.set(elements);
       gl.uniformMatrix3fv(this.addr, false, mat3array);
-      copyArray(cache3, elements);
+      copyArray(cache2, elements);
     }
   }
   function setValueM4(gl, v) {
-    const cache3 = this.cache;
+    const cache2 = this.cache;
     const elements = v.elements;
     if (elements === void 0) {
-      if (arraysEqual(cache3, v))
+      if (arraysEqual(cache2, v))
         return;
       gl.uniformMatrix4fv(this.addr, false, v);
-      copyArray(cache3, v);
+      copyArray(cache2, v);
     } else {
-      if (arraysEqual(cache3, elements))
+      if (arraysEqual(cache2, elements))
         return;
       mat4array.set(elements);
       gl.uniformMatrix4fv(this.addr, false, mat4array);
-      copyArray(cache3, elements);
+      copyArray(cache2, elements);
     }
   }
   function setValueV1i(gl, v) {
-    const cache3 = this.cache;
-    if (cache3[0] === v)
+    const cache2 = this.cache;
+    if (cache2[0] === v)
       return;
     gl.uniform1i(this.addr, v);
-    cache3[0] = v;
+    cache2[0] = v;
   }
   function setValueV2i(gl, v) {
-    const cache3 = this.cache;
+    const cache2 = this.cache;
     if (v.x !== void 0) {
-      if (cache3[0] !== v.x || cache3[1] !== v.y) {
+      if (cache2[0] !== v.x || cache2[1] !== v.y) {
         gl.uniform2i(this.addr, v.x, v.y);
-        cache3[0] = v.x;
-        cache3[1] = v.y;
+        cache2[0] = v.x;
+        cache2[1] = v.y;
       }
     } else {
-      if (arraysEqual(cache3, v))
+      if (arraysEqual(cache2, v))
         return;
       gl.uniform2iv(this.addr, v);
-      copyArray(cache3, v);
+      copyArray(cache2, v);
     }
   }
   function setValueV3i(gl, v) {
-    const cache3 = this.cache;
+    const cache2 = this.cache;
     if (v.x !== void 0) {
-      if (cache3[0] !== v.x || cache3[1] !== v.y || cache3[2] !== v.z) {
+      if (cache2[0] !== v.x || cache2[1] !== v.y || cache2[2] !== v.z) {
         gl.uniform3i(this.addr, v.x, v.y, v.z);
-        cache3[0] = v.x;
-        cache3[1] = v.y;
-        cache3[2] = v.z;
+        cache2[0] = v.x;
+        cache2[1] = v.y;
+        cache2[2] = v.z;
       }
     } else {
-      if (arraysEqual(cache3, v))
+      if (arraysEqual(cache2, v))
         return;
       gl.uniform3iv(this.addr, v);
-      copyArray(cache3, v);
+      copyArray(cache2, v);
     }
   }
   function setValueV4i(gl, v) {
-    const cache3 = this.cache;
+    const cache2 = this.cache;
     if (v.x !== void 0) {
-      if (cache3[0] !== v.x || cache3[1] !== v.y || cache3[2] !== v.z || cache3[3] !== v.w) {
+      if (cache2[0] !== v.x || cache2[1] !== v.y || cache2[2] !== v.z || cache2[3] !== v.w) {
         gl.uniform4i(this.addr, v.x, v.y, v.z, v.w);
-        cache3[0] = v.x;
-        cache3[1] = v.y;
-        cache3[2] = v.z;
-        cache3[3] = v.w;
+        cache2[0] = v.x;
+        cache2[1] = v.y;
+        cache2[2] = v.z;
+        cache2[3] = v.w;
       }
     } else {
-      if (arraysEqual(cache3, v))
+      if (arraysEqual(cache2, v))
         return;
       gl.uniform4iv(this.addr, v);
-      copyArray(cache3, v);
+      copyArray(cache2, v);
     }
   }
   function setValueV1ui(gl, v) {
-    const cache3 = this.cache;
-    if (cache3[0] === v)
+    const cache2 = this.cache;
+    if (cache2[0] === v)
       return;
     gl.uniform1ui(this.addr, v);
-    cache3[0] = v;
+    cache2[0] = v;
   }
   function setValueV2ui(gl, v) {
-    const cache3 = this.cache;
+    const cache2 = this.cache;
     if (v.x !== void 0) {
-      if (cache3[0] !== v.x || cache3[1] !== v.y) {
+      if (cache2[0] !== v.x || cache2[1] !== v.y) {
         gl.uniform2ui(this.addr, v.x, v.y);
-        cache3[0] = v.x;
-        cache3[1] = v.y;
+        cache2[0] = v.x;
+        cache2[1] = v.y;
       }
     } else {
-      if (arraysEqual(cache3, v))
+      if (arraysEqual(cache2, v))
         return;
       gl.uniform2uiv(this.addr, v);
-      copyArray(cache3, v);
+      copyArray(cache2, v);
     }
   }
   function setValueV3ui(gl, v) {
-    const cache3 = this.cache;
+    const cache2 = this.cache;
     if (v.x !== void 0) {
-      if (cache3[0] !== v.x || cache3[1] !== v.y || cache3[2] !== v.z) {
+      if (cache2[0] !== v.x || cache2[1] !== v.y || cache2[2] !== v.z) {
         gl.uniform3ui(this.addr, v.x, v.y, v.z);
-        cache3[0] = v.x;
-        cache3[1] = v.y;
-        cache3[2] = v.z;
+        cache2[0] = v.x;
+        cache2[1] = v.y;
+        cache2[2] = v.z;
       }
     } else {
-      if (arraysEqual(cache3, v))
+      if (arraysEqual(cache2, v))
         return;
       gl.uniform3uiv(this.addr, v);
-      copyArray(cache3, v);
+      copyArray(cache2, v);
     }
   }
   function setValueV4ui(gl, v) {
-    const cache3 = this.cache;
+    const cache2 = this.cache;
     if (v.x !== void 0) {
-      if (cache3[0] !== v.x || cache3[1] !== v.y || cache3[2] !== v.z || cache3[3] !== v.w) {
+      if (cache2[0] !== v.x || cache2[1] !== v.y || cache2[2] !== v.z || cache2[3] !== v.w) {
         gl.uniform4ui(this.addr, v.x, v.y, v.z, v.w);
-        cache3[0] = v.x;
-        cache3[1] = v.y;
-        cache3[2] = v.z;
-        cache3[3] = v.w;
+        cache2[0] = v.x;
+        cache2[1] = v.y;
+        cache2[2] = v.z;
+        cache2[3] = v.w;
       }
     } else {
-      if (arraysEqual(cache3, v))
+      if (arraysEqual(cache2, v))
         return;
       gl.uniform4uiv(this.addr, v);
-      copyArray(cache3, v);
+      copyArray(cache2, v);
     }
   }
   function setValueT1(gl, v, textures) {
-    const cache3 = this.cache;
+    const cache2 = this.cache;
     const unit = textures.allocateTextureUnit();
-    if (cache3[0] !== unit) {
+    if (cache2[0] !== unit) {
       gl.uniform1i(this.addr, unit);
-      cache3[0] = unit;
+      cache2[0] = unit;
     }
     textures.setTexture2D(v || emptyTexture, unit);
   }
   function setValueT3D1(gl, v, textures) {
-    const cache3 = this.cache;
+    const cache2 = this.cache;
     const unit = textures.allocateTextureUnit();
-    if (cache3[0] !== unit) {
+    if (cache2[0] !== unit) {
       gl.uniform1i(this.addr, unit);
-      cache3[0] = unit;
+      cache2[0] = unit;
     }
     textures.setTexture3D(v || empty3dTexture, unit);
   }
   function setValueT6(gl, v, textures) {
-    const cache3 = this.cache;
+    const cache2 = this.cache;
     const unit = textures.allocateTextureUnit();
-    if (cache3[0] !== unit) {
+    if (cache2[0] !== unit) {
       gl.uniform1i(this.addr, unit);
-      cache3[0] = unit;
+      cache2[0] = unit;
     }
     textures.setTextureCube(v || emptyCubeTexture, unit);
   }
   function setValueT2DArray1(gl, v, textures) {
-    const cache3 = this.cache;
+    const cache2 = this.cache;
     const unit = textures.allocateTextureUnit();
-    if (cache3[0] !== unit) {
+    if (cache2[0] !== unit) {
       gl.uniform1i(this.addr, unit);
-      cache3[0] = unit;
+      cache2[0] = unit;
     }
     textures.setTexture2DArray(v || emptyArrayTexture, unit);
   }
@@ -4129,48 +4131,48 @@
     gl.uniform4uiv(this.addr, v);
   }
   function setValueT1Array(gl, v, textures) {
-    const cache3 = this.cache;
+    const cache2 = this.cache;
     const n = v.length;
     const units = allocTexUnits(textures, n);
-    if (!arraysEqual(cache3, units)) {
+    if (!arraysEqual(cache2, units)) {
       gl.uniform1iv(this.addr, units);
-      copyArray(cache3, units);
+      copyArray(cache2, units);
     }
     for (let i = 0; i !== n; ++i) {
       textures.setTexture2D(v[i] || emptyTexture, units[i]);
     }
   }
   function setValueT3DArray(gl, v, textures) {
-    const cache3 = this.cache;
+    const cache2 = this.cache;
     const n = v.length;
     const units = allocTexUnits(textures, n);
-    if (!arraysEqual(cache3, units)) {
+    if (!arraysEqual(cache2, units)) {
       gl.uniform1iv(this.addr, units);
-      copyArray(cache3, units);
+      copyArray(cache2, units);
     }
     for (let i = 0; i !== n; ++i) {
       textures.setTexture3D(v[i] || empty3dTexture, units[i]);
     }
   }
   function setValueT6Array(gl, v, textures) {
-    const cache3 = this.cache;
+    const cache2 = this.cache;
     const n = v.length;
     const units = allocTexUnits(textures, n);
-    if (!arraysEqual(cache3, units)) {
+    if (!arraysEqual(cache2, units)) {
       gl.uniform1iv(this.addr, units);
-      copyArray(cache3, units);
+      copyArray(cache2, units);
     }
     for (let i = 0; i !== n; ++i) {
       textures.setTextureCube(v[i] || emptyCubeTexture, units[i]);
     }
   }
   function setValueT2DArrayArray(gl, v, textures) {
-    const cache3 = this.cache;
+    const cache2 = this.cache;
     const n = v.length;
     const units = allocTexUnits(textures, n);
-    if (!arraysEqual(cache3, units)) {
+    if (!arraysEqual(cache2, units)) {
       gl.uniform1iv(this.addr, units);
-      copyArray(cache3, units);
+      copyArray(cache2, units);
     }
     for (let i = 0; i !== n; ++i) {
       textures.setTexture2DArray(v[i] || emptyArrayTexture, units[i]);
@@ -4270,9 +4272,9 @@
   function handleSource(string, errorLine) {
     const lines = string.split("\n");
     const lines2 = [];
-    const from3 = Math.max(errorLine - 6, 0);
+    const from2 = Math.max(errorLine - 6, 0);
     const to = Math.min(errorLine + 6, lines.length);
-    for (let i = from3; i < to; i++) {
+    for (let i = from2; i < to; i++) {
       const line = i + 1;
       lines2.push(`${line === errorLine ? ">" : " "} ${line}: ${lines[i]}`);
     }
@@ -5566,7 +5568,7 @@
     return (lightB.castShadow ? 2 : 0) - (lightA.castShadow ? 2 : 0) + (lightB.map ? 1 : 0) - (lightA.map ? 1 : 0);
   }
   function WebGLLights(extensions2, capabilities) {
-    const cache3 = new UniformsCache();
+    const cache2 = new UniformsCache();
     const shadowCache = ShadowUniformsCache();
     const state = {
       version: 0,
@@ -5638,7 +5640,7 @@
             state.probe[j].addScaledVector(light.sh.coefficients[j], intensity);
           }
         } else if (light.isDirectionalLight) {
-          const uniforms = cache3.get(light);
+          const uniforms = cache2.get(light);
           uniforms.color.copy(light.color).multiplyScalar(light.intensity * scaleFactor);
           if (light.castShadow) {
             const shadow = light.shadow;
@@ -5655,7 +5657,7 @@
           state.directional[directionalLength] = uniforms;
           directionalLength++;
         } else if (light.isSpotLight) {
-          const uniforms = cache3.get(light);
+          const uniforms = cache2.get(light);
           uniforms.position.setFromMatrixPosition(light.matrixWorld);
           uniforms.color.copy(color).multiplyScalar(intensity * scaleFactor);
           uniforms.distance = distance;
@@ -5684,14 +5686,14 @@
           }
           spotLength++;
         } else if (light.isRectAreaLight) {
-          const uniforms = cache3.get(light);
+          const uniforms = cache2.get(light);
           uniforms.color.copy(color).multiplyScalar(intensity);
           uniforms.halfWidth.set(light.width * 0.5, 0, 0);
           uniforms.halfHeight.set(0, light.height * 0.5, 0);
           state.rectArea[rectAreaLength] = uniforms;
           rectAreaLength++;
         } else if (light.isPointLight) {
-          const uniforms = cache3.get(light);
+          const uniforms = cache2.get(light);
           uniforms.color.copy(light.color).multiplyScalar(light.intensity * scaleFactor);
           uniforms.distance = light.distance;
           uniforms.decay = light.decay;
@@ -5712,7 +5714,7 @@
           state.point[pointLength] = uniforms;
           pointLength++;
         } else if (light.isHemisphereLight) {
-          const uniforms = cache3.get(light);
+          const uniforms = cache2.get(light);
           uniforms.skyColor.copy(light.color).multiplyScalar(intensity * scaleFactor);
           uniforms.groundColor.copy(light.groundColor).multiplyScalar(intensity * scaleFactor);
           state.hemi[hemiLength] = uniforms;
@@ -7909,14 +7911,14 @@
     }
     function verifyColorSpace(texture, image) {
       const colorSpace = texture.colorSpace;
-      const format3 = texture.format;
+      const format2 = texture.format;
       const type = texture.type;
       if (texture.isCompressedTexture === true || texture.isVideoTexture === true || texture.format === _SRGBAFormat)
         return image;
       if (colorSpace !== LinearSRGBColorSpace && colorSpace !== NoColorSpace) {
         if (colorSpace === SRGBColorSpace || colorSpace === DisplayP3ColorSpace) {
           if (isWebGL2 === false) {
-            if (extensions2.has("EXT_sRGB") === true && format3 === RGBAFormat) {
+            if (extensions2.has("EXT_sRGB") === true && format2 === RGBAFormat) {
               texture.format = _SRGBAFormat;
               texture.minFilter = LinearFilter;
               texture.generateMipmaps = false;
@@ -7924,7 +7926,7 @@
               image = ImageUtils.sRGBToLinear(image);
             }
           } else {
-            if (format3 !== RGBAFormat || type !== UnsignedByteType) {
+            if (format2 !== RGBAFormat || type !== UnsignedByteType) {
               console.warn("THREE.WebGLTextures: sRGB encoded textures have to use RGBAFormat and UnsignedByteType.");
             }
           }
@@ -8460,11 +8462,11 @@
       state.uniformBlockBinding(uniformsGroup, webglProgram);
     }
     function update(uniformsGroup, program) {
-      let buffer3 = buffers[uniformsGroup.id];
-      if (buffer3 === void 0) {
+      let buffer2 = buffers[uniformsGroup.id];
+      if (buffer2 === void 0) {
         prepareUniformsGroup(uniformsGroup);
-        buffer3 = createBuffer(uniformsGroup);
-        buffers[uniformsGroup.id] = buffer3;
+        buffer2 = createBuffer(uniformsGroup);
+        buffers[uniformsGroup.id] = buffer2;
         uniformsGroup.addEventListener("dispose", onUniformsGroupsDispose);
       }
       const webglProgram = program.program;
@@ -8478,14 +8480,14 @@
     function createBuffer(uniformsGroup) {
       const bindingPointIndex = allocateBindingPointIndex();
       uniformsGroup.__bindingPointIndex = bindingPointIndex;
-      const buffer3 = gl.createBuffer();
+      const buffer2 = gl.createBuffer();
       const size = uniformsGroup.__size;
       const usage = uniformsGroup.usage;
-      gl.bindBuffer(gl.UNIFORM_BUFFER, buffer3);
+      gl.bindBuffer(gl.UNIFORM_BUFFER, buffer2);
       gl.bufferData(gl.UNIFORM_BUFFER, size, usage);
       gl.bindBuffer(gl.UNIFORM_BUFFER, null);
-      gl.bindBufferBase(gl.UNIFORM_BUFFER, bindingPointIndex, buffer3);
-      return buffer3;
+      gl.bindBufferBase(gl.UNIFORM_BUFFER, bindingPointIndex, buffer2);
+      return buffer2;
     }
     function allocateBindingPointIndex() {
       for (let i = 0; i < maxBindingPoints; i++) {
@@ -8498,13 +8500,13 @@
       return 0;
     }
     function updateBufferData(uniformsGroup) {
-      const buffer3 = buffers[uniformsGroup.id];
+      const buffer2 = buffers[uniformsGroup.id];
       const uniforms = uniformsGroup.uniforms;
-      const cache3 = uniformsGroup.__cache;
-      gl.bindBuffer(gl.UNIFORM_BUFFER, buffer3);
+      const cache2 = uniformsGroup.__cache;
+      gl.bindBuffer(gl.UNIFORM_BUFFER, buffer2);
       for (let i = 0, il = uniforms.length; i < il; i++) {
         const uniform = uniforms[i];
-        if (hasUniformChanged(uniform, i, cache3) === true) {
+        if (hasUniformChanged(uniform, i, cache2) === true) {
           const offset = uniform.__offset;
           const values = Array.isArray(uniform.value) ? uniform.value : [uniform.value];
           let arrayOffset = 0;
@@ -8537,28 +8539,28 @@
       }
       gl.bindBuffer(gl.UNIFORM_BUFFER, null);
     }
-    function hasUniformChanged(uniform, index, cache3) {
+    function hasUniformChanged(uniform, index, cache2) {
       const value = uniform.value;
-      if (cache3[index] === void 0) {
+      if (cache2[index] === void 0) {
         if (typeof value === "number") {
-          cache3[index] = value;
+          cache2[index] = value;
         } else {
           const values = Array.isArray(value) ? value : [value];
           const tempValues = [];
           for (let i = 0; i < values.length; i++) {
             tempValues.push(values[i].clone());
           }
-          cache3[index] = tempValues;
+          cache2[index] = tempValues;
         }
         return true;
       } else {
         if (typeof value === "number") {
-          if (cache3[index] !== value) {
-            cache3[index] = value;
+          if (cache2[index] !== value) {
+            cache2[index] = value;
             return true;
           }
         } else {
-          const cachedObjects = Array.isArray(cache3[index]) ? cache3[index] : [cache3[index]];
+          const cachedObjects = Array.isArray(cache2[index]) ? cache2[index] : [cache2[index]];
           const values = Array.isArray(value) ? value : [value];
           for (let i = 0; i < cachedObjects.length; i++) {
             const cachedObject = cachedObjects[i];
@@ -9206,11 +9208,11 @@
       return true;
     }
   }
-  function arraySlice(array, from3, to) {
+  function arraySlice(array, from2, to) {
     if (isTypedArray(array)) {
-      return new array.constructor(array.subarray(from3, to !== void 0 ? to : array.length));
+      return new array.constructor(array.subarray(from2, to !== void 0 ? to : array.length));
     }
-    return array.slice(from3, to);
+    return array.slice(from2, to);
   }
   function convertArray(array, type, forceClone) {
     if (!array || // let 'undefined' and 'null' pass
@@ -9886,8 +9888,8 @@
           return this;
         }
         clampLength(min, max) {
-          const length3 = this.length();
-          return this.divideScalar(length3 || 1).multiplyScalar(Math.max(min, Math.min(max, length3)));
+          const length2 = this.length();
+          return this.divideScalar(length2 || 1).multiplyScalar(Math.max(min, Math.min(max, length2)));
         }
         floor() {
           this.x = Math.floor(this.x);
@@ -9953,8 +9955,8 @@
         manhattanDistanceTo(v) {
           return Math.abs(this.x - v.x) + Math.abs(this.y - v.y);
         }
-        setLength(length3) {
-          return this.normalize().multiplyScalar(length3);
+        setLength(length2) {
+          return this.normalize().multiplyScalar(length2);
         }
         lerp(v, alpha) {
           this.x += (v.x - this.x) * alpha;
@@ -10485,7 +10487,7 @@
       };
       _textureId = 0;
       Texture = class _Texture extends EventDispatcher {
-        constructor(image = _Texture.DEFAULT_IMAGE, mapping = _Texture.DEFAULT_MAPPING, wrapS = ClampToEdgeWrapping, wrapT = ClampToEdgeWrapping, magFilter = LinearFilter, minFilter = LinearMipmapLinearFilter, format3 = RGBAFormat, type = UnsignedByteType, anisotropy = _Texture.DEFAULT_ANISOTROPY, colorSpace = NoColorSpace) {
+        constructor(image = _Texture.DEFAULT_IMAGE, mapping = _Texture.DEFAULT_MAPPING, wrapS = ClampToEdgeWrapping, wrapT = ClampToEdgeWrapping, magFilter = LinearFilter, minFilter = LinearMipmapLinearFilter, format2 = RGBAFormat, type = UnsignedByteType, anisotropy = _Texture.DEFAULT_ANISOTROPY, colorSpace = NoColorSpace) {
           super();
           this.isTexture = true;
           Object.defineProperty(this, "id", { value: _textureId++ });
@@ -10500,7 +10502,7 @@
           this.magFilter = magFilter;
           this.minFilter = minFilter;
           this.anisotropy = anisotropy;
-          this.format = format3;
+          this.format = format2;
           this.internalFormat = null;
           this.type = type;
           this.offset = new Vector2(0, 0);
@@ -10939,8 +10941,8 @@
           return this;
         }
         clampLength(min, max) {
-          const length3 = this.length();
-          return this.divideScalar(length3 || 1).multiplyScalar(Math.max(min, Math.min(max, length3)));
+          const length2 = this.length();
+          return this.divideScalar(length2 || 1).multiplyScalar(Math.max(min, Math.min(max, length2)));
         }
         floor() {
           this.x = Math.floor(this.x);
@@ -10992,8 +10994,8 @@
         normalize() {
           return this.divideScalar(this.length() || 1);
         }
-        setLength(length3) {
-          return this.normalize().multiplyScalar(length3);
+        setLength(length2) {
+          return this.normalize().multiplyScalar(length2);
         }
         lerp(v, alpha) {
           this.x += (v.x - this.x) * alpha;
@@ -11819,8 +11821,8 @@
           return this;
         }
         clampLength(min, max) {
-          const length3 = this.length();
-          return this.divideScalar(length3 || 1).multiplyScalar(Math.max(min, Math.min(max, length3)));
+          const length2 = this.length();
+          return this.divideScalar(length2 || 1).multiplyScalar(Math.max(min, Math.min(max, length2)));
         }
         floor() {
           this.x = Math.floor(this.x);
@@ -11868,8 +11870,8 @@
         normalize() {
           return this.divideScalar(this.length() || 1);
         }
-        setLength(length3) {
-          return this.normalize().multiplyScalar(length3);
+        setLength(length2) {
+          return this.normalize().multiplyScalar(length2);
         }
         lerp(v, alpha) {
           this.x += (v.x - this.x) * alpha;
@@ -12396,9 +12398,9 @@
           _v1$6.subVectors(point, this.center);
           const lengthSq = _v1$6.lengthSq();
           if (lengthSq > this.radius * this.radius) {
-            const length3 = Math.sqrt(lengthSq);
-            const delta = (length3 - this.radius) * 0.5;
-            this.center.addScaledVector(_v1$6, delta / length3);
+            const length2 = Math.sqrt(lengthSq);
+            const delta = (length2 - this.radius) * 0.5;
+            this.center.addScaledVector(_v1$6, delta / length2);
             this.radius += delta;
           }
           return this;
@@ -14145,10 +14147,10 @@
           }
           output.object = object;
           return output;
-          function extractFromCache(cache3) {
+          function extractFromCache(cache2) {
             const values = [];
-            for (const key in cache3) {
-              const data = cache3[key];
+            for (const key in cache2) {
+              const data = cache2[key];
               delete data.metadata;
               values.push(data);
             }
@@ -14680,10 +14682,10 @@
             data.fog = false;
           if (Object.keys(this.userData).length > 0)
             data.userData = this.userData;
-          function extractFromCache(cache3) {
+          function extractFromCache(cache2) {
             const values = [];
-            for (const key in cache3) {
-              const data2 = cache3[key];
+            for (const key in cache2) {
+              const data2 = cache2[key];
               delete data2.metadata;
               values.push(data2);
             }
@@ -16886,10 +16888,10 @@
         }
       };
       CubeTexture = class extends Texture {
-        constructor(images, mapping, wrapS, wrapT, magFilter, minFilter, format3, type, anisotropy, colorSpace) {
+        constructor(images, mapping, wrapS, wrapT, magFilter, minFilter, format2, type, anisotropy, colorSpace) {
           images = images !== void 0 ? images : [];
           mapping = mapping !== void 0 ? mapping : CubeReflectionMapping;
-          super(images, mapping, wrapS, wrapT, magFilter, minFilter, format3, type, anisotropy, colorSpace);
+          super(images, mapping, wrapS, wrapT, magFilter, minFilter, format2, type, anisotropy, colorSpace);
           this.isCubeTexture = true;
           this.flipY = false;
         }
@@ -18524,20 +18526,20 @@
           this.materialCache.clear();
         }
         _getShaderCacheForMaterial(material) {
-          const cache3 = this.materialCache;
-          let set = cache3.get(material);
+          const cache2 = this.materialCache;
+          let set = cache2.get(material);
           if (set === void 0) {
             set = /* @__PURE__ */ new Set();
-            cache3.set(material, set);
+            cache2.set(material, set);
           }
           return set;
         }
         _getShaderStage(code) {
-          const cache3 = this.shaderCache;
-          let stage = cache3.get(code);
+          const cache2 = this.shaderCache;
+          let stage = cache2.get(code);
           if (stage === void 0) {
             stage = new WebGLShaderStage(code);
-            cache3.set(code, stage);
+            cache2.set(code, stage);
           }
           return stage;
         }
@@ -18808,16 +18810,16 @@
         }
       };
       DepthTexture = class extends Texture {
-        constructor(width, height, type, mapping, wrapS, wrapT, magFilter, minFilter, anisotropy, format3) {
-          format3 = format3 !== void 0 ? format3 : DepthFormat;
-          if (format3 !== DepthFormat && format3 !== DepthStencilFormat) {
+        constructor(width, height, type, mapping, wrapS, wrapT, magFilter, minFilter, anisotropy, format2) {
+          format2 = format2 !== void 0 ? format2 : DepthFormat;
+          if (format2 !== DepthFormat && format2 !== DepthStencilFormat) {
             throw new Error("DepthTexture format must be either THREE.DepthFormat or THREE.DepthStencilFormat");
           }
-          if (type === void 0 && format3 === DepthFormat)
+          if (type === void 0 && format2 === DepthFormat)
             type = UnsignedIntType;
-          if (type === void 0 && format3 === DepthStencilFormat)
+          if (type === void 0 && format2 === DepthStencilFormat)
             type = UnsignedInt248Type;
-          super(null, mapping, wrapS, wrapT, magFilter, minFilter, format3, type, anisotropy);
+          super(null, mapping, wrapS, wrapT, magFilter, minFilter, format2, type, anisotropy);
           this.isDepthTexture = true;
           this.image = { width, height };
           this.magFilter = magFilter !== void 0 ? magFilter : NearestFilter;
@@ -20396,7 +20398,7 @@
             }
             _currentMaterialId = -1;
           };
-          this.readRenderTargetPixels = function(renderTarget, x, y, width, height, buffer3, activeCubeFaceIndex) {
+          this.readRenderTargetPixels = function(renderTarget, x, y, width, height, buffer2, activeCubeFaceIndex) {
             if (!(renderTarget && renderTarget.isWebGLRenderTarget)) {
               console.error("THREE.WebGLRenderer.readRenderTargetPixels: renderTarget is not THREE.WebGLRenderTarget.");
               return;
@@ -20423,7 +20425,7 @@
                   return;
                 }
                 if (x >= 0 && x <= renderTarget.width - width && (y >= 0 && y <= renderTarget.height - height)) {
-                  _gl.readPixels(x, y, width, height, utils.convert(textureFormat), utils.convert(textureType), buffer3);
+                  _gl.readPixels(x, y, width, height, utils.convert(textureFormat), utils.convert(textureType), buffer2);
                 }
               } finally {
                 const framebuffer2 = _currentRenderTarget !== null ? properties.get(_currentRenderTarget).__webglFramebuffer : null;
@@ -21294,8 +21296,8 @@
         }
       };
       DataTexture = class extends Texture {
-        constructor(data = null, width = 1, height = 1, format3, type, mapping, wrapS, wrapT, magFilter = NearestFilter, minFilter = NearestFilter, anisotropy, colorSpace) {
-          super(null, mapping, wrapS, wrapT, magFilter, minFilter, format3, type, anisotropy, colorSpace);
+        constructor(data = null, width = 1, height = 1, format2, type, mapping, wrapS, wrapT, magFilter = NearestFilter, minFilter = NearestFilter, anisotropy, colorSpace) {
+          super(null, mapping, wrapS, wrapT, magFilter, minFilter, format2, type, anisotropy, colorSpace);
           this.isDataTexture = true;
           this.image = { data, width, height };
           this.generateMipmaps = false;
@@ -21859,8 +21861,8 @@
         }
       };
       VideoTexture = class extends Texture {
-        constructor(video, mapping, wrapS, wrapT, magFilter, minFilter, format3, type, anisotropy) {
-          super(video, mapping, wrapS, wrapT, magFilter, minFilter, format3, type, anisotropy);
+        constructor(video, mapping, wrapS, wrapT, magFilter, minFilter, format2, type, anisotropy) {
+          super(video, mapping, wrapS, wrapT, magFilter, minFilter, format2, type, anisotropy);
           this.isVideoTexture = true;
           this.minFilter = minFilter !== void 0 ? minFilter : LinearFilter;
           this.magFilter = magFilter !== void 0 ? magFilter : LinearFilter;
@@ -21896,8 +21898,8 @@
         }
       };
       CompressedTexture = class extends Texture {
-        constructor(mipmaps, width, height, format3, type, mapping, wrapS, wrapT, magFilter, minFilter, anisotropy, colorSpace) {
-          super(null, mapping, wrapS, wrapT, magFilter, minFilter, format3, type, anisotropy, colorSpace);
+        constructor(mipmaps, width, height, format2, type, mapping, wrapS, wrapT, magFilter, minFilter, anisotropy, colorSpace) {
+          super(null, mapping, wrapS, wrapT, magFilter, minFilter, format2, type, anisotropy, colorSpace);
           this.isCompressedTexture = true;
           this.image = { width, height };
           this.mipmaps = mipmaps;
@@ -21906,24 +21908,24 @@
         }
       };
       CompressedArrayTexture = class extends CompressedTexture {
-        constructor(mipmaps, width, height, depth, format3, type) {
-          super(mipmaps, width, height, format3, type);
+        constructor(mipmaps, width, height, depth, format2, type) {
+          super(mipmaps, width, height, format2, type);
           this.isCompressedArrayTexture = true;
           this.image.depth = depth;
           this.wrapR = ClampToEdgeWrapping;
         }
       };
       CompressedCubeTexture = class extends CompressedTexture {
-        constructor(images, format3, type) {
-          super(void 0, images[0].width, images[0].height, format3, type, CubeReflectionMapping);
+        constructor(images, format2, type) {
+          super(void 0, images[0].width, images[0].height, format2, type, CubeReflectionMapping);
           this.isCompressedCubeTexture = true;
           this.isCubeTexture = true;
           this.image = images;
         }
       };
       CanvasTexture = class extends Texture {
-        constructor(canvas, mapping, wrapS, wrapT, magFilter, minFilter, format3, type, anisotropy) {
-          super(canvas, mapping, wrapS, wrapT, magFilter, minFilter, format3, type, anisotropy);
+        constructor(canvas, mapping, wrapS, wrapT, magFilter, minFilter, format2, type, anisotropy) {
+          super(canvas, mapping, wrapS, wrapT, magFilter, minFilter, format2, type, anisotropy);
           this.isCanvasTexture = true;
           this.needsUpdate = true;
         }
@@ -21972,18 +21974,18 @@
             return this.cacheArcLengths;
           }
           this.needsUpdate = false;
-          const cache3 = [];
+          const cache2 = [];
           let current, last = this.getPoint(0);
           let sum = 0;
-          cache3.push(0);
+          cache2.push(0);
           for (let p = 1; p <= divisions; p++) {
             current = this.getPoint(p / divisions);
             sum += current.distanceTo(last);
-            cache3.push(sum);
+            cache2.push(sum);
             last = current;
           }
-          this.cacheArcLengths = cache3;
-          return cache3;
+          this.cacheArcLengths = cache2;
+          return cache2;
         }
         updateArcLengths() {
           this.needsUpdate = true;
@@ -22966,11 +22968,11 @@
           }
           for (let i = 0; i < segments; i++) {
             for (let j = 0; j < points.length - 1; j++) {
-              const base3 = j + i * points.length;
-              const a = base3;
-              const b = base3 + points.length;
-              const c = base3 + points.length + 1;
-              const d = base3 + 1;
+              const base2 = j + i * points.length;
+              const a = base2;
+              const b = base2 + points.length;
+              const c = base2 + points.length + 1;
+              const d = base2 + 1;
               indices.push(a, b, d);
               indices.push(c, d, b);
             }
@@ -22990,15 +22992,15 @@
         }
       };
       CapsuleGeometry = class _CapsuleGeometry extends LatheGeometry {
-        constructor(radius = 1, length3 = 1, capSegments = 4, radialSegments = 8) {
+        constructor(radius = 1, length2 = 1, capSegments = 4, radialSegments = 8) {
           const path = new Path();
-          path.absarc(0, -length3 / 2, radius, Math.PI * 1.5, 0);
-          path.absarc(0, length3 / 2, radius, 0, Math.PI * 0.5);
+          path.absarc(0, -length2 / 2, radius, Math.PI * 1.5, 0);
+          path.absarc(0, length2 / 2, radius, 0, Math.PI * 0.5);
           super(path.getPoints(capSegments), radialSegments);
           this.type = "CapsuleGeometry";
           this.parameters = {
             radius,
-            length: length3,
+            length: length2,
             capSegments,
             radialSegments
           };
@@ -25717,22 +25719,22 @@
         // IMPORTANT: We do not shift around keys to the start of the track time, because for interpolated keys this will change their values
         trim(startTime, endTime) {
           const times = this.times, nKeys = times.length;
-          let from3 = 0, to = nKeys - 1;
-          while (from3 !== nKeys && times[from3] < startTime) {
-            ++from3;
+          let from2 = 0, to = nKeys - 1;
+          while (from2 !== nKeys && times[from2] < startTime) {
+            ++from2;
           }
           while (to !== -1 && times[to] > endTime) {
             --to;
           }
           ++to;
-          if (from3 !== 0 || to !== nKeys) {
-            if (from3 >= to) {
+          if (from2 !== 0 || to !== nKeys) {
+            if (from2 >= to) {
               to = Math.max(to, 1);
-              from3 = to - 1;
+              from2 = to - 1;
             }
             const stride = this.getValueSize();
-            this.times = arraySlice(times, from3, to);
-            this.values = arraySlice(this.values, from3 * stride, to * stride);
+            this.times = arraySlice(times, from2, to);
+            this.values = arraySlice(this.values, from2 * stride, to * stride);
           }
           return this;
         }
@@ -26429,8 +26431,8 @@
           loader.setWithCredentials(scope.withCredentials);
           let loaded = 0;
           function loadTexture(i) {
-            loader.load(url[i], function(buffer3) {
-              const texDatas = scope.parse(buffer3, true);
+            loader.load(url[i], function(buffer2) {
+              const texDatas = scope.parse(buffer2, true);
               images[i] = {
                 width: texDatas.width,
                 height: texDatas.height,
@@ -26454,8 +26456,8 @@
               loadTexture(i);
             }
           } else {
-            loader.load(url, function(buffer3) {
-              const texDatas = scope.parse(buffer3, true);
+            loader.load(url, function(buffer2) {
+              const texDatas = scope.parse(buffer2, true);
               if (texDatas.isCubemap) {
                 const faces = texDatas.mipmaps.length / texDatas.mipmapCount;
                 for (let f = 0; f < faces; f++) {
@@ -26574,10 +26576,10 @@
           loader.setRequestHeader(this.requestHeader);
           loader.setPath(this.path);
           loader.setWithCredentials(scope.withCredentials);
-          loader.load(url, function(buffer3) {
+          loader.load(url, function(buffer2) {
             let texData;
             try {
-              texData = scope.parse(buffer3);
+              texData = scope.parse(buffer2);
             } catch (error) {
               if (onError !== void 0) {
                 onError(error);
@@ -27573,8 +27575,8 @@
               return interleavedBufferMap[uuid];
             const interleavedBuffers = json2.interleavedBuffers;
             const interleavedBuffer = interleavedBuffers[uuid];
-            const buffer3 = getArrayBuffer(json2, interleavedBuffer.buffer);
-            const array = getTypedArray(interleavedBuffer.type, buffer3);
+            const buffer2 = getArrayBuffer(json2, interleavedBuffer.buffer);
+            const array = getTypedArray(interleavedBuffer.type, buffer2);
             const ib = new InterleavedBuffer(array, interleavedBuffer.stride);
             ib.uuid = interleavedBuffer.uuid;
             interleavedBufferMap[uuid] = ib;
@@ -27806,17 +27808,17 @@
           return geometries;
         }
         parseMaterials(json, textures) {
-          const cache3 = {};
+          const cache2 = {};
           const materials = {};
           if (json !== void 0) {
             const loader = new MaterialLoader();
             loader.setTextures(textures);
             for (let i = 0, l = json.length; i < l; i++) {
               const data = json[i];
-              if (cache3[data.uuid] === void 0) {
-                cache3[data.uuid] = loader.parse(data);
+              if (cache2[data.uuid] === void 0) {
+                cache2[data.uuid] = loader.parse(data);
               }
-              materials[data.uuid] = cache3[data.uuid];
+              materials[data.uuid] = cache2[data.uuid];
             }
           }
           return materials;
@@ -28367,9 +28369,9 @@
           loader.setPath(this.path);
           loader.setRequestHeader(this.requestHeader);
           loader.setWithCredentials(this.withCredentials);
-          loader.load(url, function(buffer3) {
+          loader.load(url, function(buffer2) {
             try {
-              const bufferCopy = buffer3.slice(0);
+              const bufferCopy = buffer2.slice(0);
               const context = AudioContext.getContext();
               context.decodeAudioData(bufferCopy, function(audioBuffer) {
                 onLoad(audioBuffer);
@@ -28435,31 +28437,31 @@
           };
         }
         update(camera) {
-          const cache3 = this._cache;
-          const needsUpdate = cache3.focus !== camera.focus || cache3.fov !== camera.fov || cache3.aspect !== camera.aspect * this.aspect || cache3.near !== camera.near || cache3.far !== camera.far || cache3.zoom !== camera.zoom || cache3.eyeSep !== this.eyeSep;
+          const cache2 = this._cache;
+          const needsUpdate = cache2.focus !== camera.focus || cache2.fov !== camera.fov || cache2.aspect !== camera.aspect * this.aspect || cache2.near !== camera.near || cache2.far !== camera.far || cache2.zoom !== camera.zoom || cache2.eyeSep !== this.eyeSep;
           if (needsUpdate) {
-            cache3.focus = camera.focus;
-            cache3.fov = camera.fov;
-            cache3.aspect = camera.aspect * this.aspect;
-            cache3.near = camera.near;
-            cache3.far = camera.far;
-            cache3.zoom = camera.zoom;
-            cache3.eyeSep = this.eyeSep;
+            cache2.focus = camera.focus;
+            cache2.fov = camera.fov;
+            cache2.aspect = camera.aspect * this.aspect;
+            cache2.near = camera.near;
+            cache2.far = camera.far;
+            cache2.zoom = camera.zoom;
+            cache2.eyeSep = this.eyeSep;
             _projectionMatrix.copy(camera.projectionMatrix);
-            const eyeSepHalf = cache3.eyeSep / 2;
-            const eyeSepOnProjection = eyeSepHalf * cache3.near / cache3.focus;
-            const ymax = cache3.near * Math.tan(DEG2RAD * cache3.fov * 0.5) / cache3.zoom;
+            const eyeSepHalf = cache2.eyeSep / 2;
+            const eyeSepOnProjection = eyeSepHalf * cache2.near / cache2.focus;
+            const ymax = cache2.near * Math.tan(DEG2RAD * cache2.fov * 0.5) / cache2.zoom;
             let xmin, xmax;
             _eyeLeft.elements[12] = -eyeSepHalf;
             _eyeRight.elements[12] = eyeSepHalf;
-            xmin = -ymax * cache3.aspect + eyeSepOnProjection;
-            xmax = ymax * cache3.aspect + eyeSepOnProjection;
-            _projectionMatrix.elements[0] = 2 * cache3.near / (xmax - xmin);
+            xmin = -ymax * cache2.aspect + eyeSepOnProjection;
+            xmax = ymax * cache2.aspect + eyeSepOnProjection;
+            _projectionMatrix.elements[0] = 2 * cache2.near / (xmax - xmin);
             _projectionMatrix.elements[8] = (xmax + xmin) / (xmax - xmin);
             this.cameraL.projectionMatrix.copy(_projectionMatrix);
-            xmin = -ymax * cache3.aspect - eyeSepOnProjection;
-            xmax = ymax * cache3.aspect - eyeSepOnProjection;
-            _projectionMatrix.elements[0] = 2 * cache3.near / (xmax - xmin);
+            xmin = -ymax * cache2.aspect - eyeSepOnProjection;
+            xmax = ymax * cache2.aspect - eyeSepOnProjection;
+            _projectionMatrix.elements[0] = 2 * cache2.near / (xmax - xmin);
             _projectionMatrix.elements[8] = (xmax + xmin) / (xmax - xmin);
             this.cameraR.projectionMatrix.copy(_projectionMatrix);
           }
@@ -28935,38 +28937,38 @@
         }
         // accumulate data in the 'incoming' region into 'accu<i>'
         accumulate(accuIndex, weight) {
-          const buffer3 = this.buffer, stride = this.valueSize, offset = accuIndex * stride + stride;
+          const buffer2 = this.buffer, stride = this.valueSize, offset = accuIndex * stride + stride;
           let currentWeight = this.cumulativeWeight;
           if (currentWeight === 0) {
             for (let i = 0; i !== stride; ++i) {
-              buffer3[offset + i] = buffer3[i];
+              buffer2[offset + i] = buffer2[i];
             }
             currentWeight = weight;
           } else {
             currentWeight += weight;
             const mix = weight / currentWeight;
-            this._mixBufferRegion(buffer3, offset, 0, mix, stride);
+            this._mixBufferRegion(buffer2, offset, 0, mix, stride);
           }
           this.cumulativeWeight = currentWeight;
         }
         // accumulate data in the 'incoming' region into 'add'
         accumulateAdditive(weight) {
-          const buffer3 = this.buffer, stride = this.valueSize, offset = stride * this._addIndex;
+          const buffer2 = this.buffer, stride = this.valueSize, offset = stride * this._addIndex;
           if (this.cumulativeWeightAdditive === 0) {
             this._setIdentity();
           }
-          this._mixBufferRegionAdditive(buffer3, offset, 0, weight, stride);
+          this._mixBufferRegionAdditive(buffer2, offset, 0, weight, stride);
           this.cumulativeWeightAdditive += weight;
         }
         // apply the state of 'accu<i>' to the binding when accus differ
         apply(accuIndex) {
-          const stride = this.valueSize, buffer3 = this.buffer, offset = accuIndex * stride + stride, weight = this.cumulativeWeight, weightAdditive = this.cumulativeWeightAdditive, binding = this.binding;
+          const stride = this.valueSize, buffer2 = this.buffer, offset = accuIndex * stride + stride, weight = this.cumulativeWeight, weightAdditive = this.cumulativeWeightAdditive, binding = this.binding;
           this.cumulativeWeight = 0;
           this.cumulativeWeightAdditive = 0;
           if (weight < 1) {
             const originalValueOffset = stride * this._origIndex;
             this._mixBufferRegion(
-              buffer3,
+              buffer2,
               offset,
               originalValueOffset,
               1 - weight,
@@ -28974,11 +28976,11 @@
             );
           }
           if (weightAdditive > 0) {
-            this._mixBufferRegionAdditive(buffer3, offset, this._addIndex * stride, 1, stride);
+            this._mixBufferRegionAdditive(buffer2, offset, this._addIndex * stride, 1, stride);
           }
           for (let i = stride, e = stride + stride; i !== e; ++i) {
-            if (buffer3[i] !== buffer3[i + stride]) {
-              binding.setValue(buffer3, offset);
+            if (buffer2[i] !== buffer2[i + stride]) {
+              binding.setValue(buffer2, offset);
               break;
             }
           }
@@ -28986,10 +28988,10 @@
         // remember the state of the bound property and copy it to both accus
         saveOriginalState() {
           const binding = this.binding;
-          const buffer3 = this.buffer, stride = this.valueSize, originalValueOffset = stride * this._origIndex;
-          binding.getValue(buffer3, originalValueOffset);
+          const buffer2 = this.buffer, stride = this.valueSize, originalValueOffset = stride * this._origIndex;
+          binding.getValue(buffer2, originalValueOffset);
           for (let i = stride, e = originalValueOffset; i !== e; ++i) {
-            buffer3[i] = buffer3[originalValueOffset + i % stride];
+            buffer2[i] = buffer2[originalValueOffset + i % stride];
           }
           this._setIdentity();
           this.cumulativeWeight = 0;
@@ -29019,32 +29021,32 @@
           }
         }
         // mix functions
-        _select(buffer3, dstOffset, srcOffset, t, stride) {
+        _select(buffer2, dstOffset, srcOffset, t, stride) {
           if (t >= 0.5) {
             for (let i = 0; i !== stride; ++i) {
-              buffer3[dstOffset + i] = buffer3[srcOffset + i];
+              buffer2[dstOffset + i] = buffer2[srcOffset + i];
             }
           }
         }
-        _slerp(buffer3, dstOffset, srcOffset, t) {
-          Quaternion.slerpFlat(buffer3, dstOffset, buffer3, dstOffset, buffer3, srcOffset, t);
+        _slerp(buffer2, dstOffset, srcOffset, t) {
+          Quaternion.slerpFlat(buffer2, dstOffset, buffer2, dstOffset, buffer2, srcOffset, t);
         }
-        _slerpAdditive(buffer3, dstOffset, srcOffset, t, stride) {
+        _slerpAdditive(buffer2, dstOffset, srcOffset, t, stride) {
           const workOffset = this._workIndex * stride;
-          Quaternion.multiplyQuaternionsFlat(buffer3, workOffset, buffer3, dstOffset, buffer3, srcOffset);
-          Quaternion.slerpFlat(buffer3, dstOffset, buffer3, dstOffset, buffer3, workOffset, t);
+          Quaternion.multiplyQuaternionsFlat(buffer2, workOffset, buffer2, dstOffset, buffer2, srcOffset);
+          Quaternion.slerpFlat(buffer2, dstOffset, buffer2, dstOffset, buffer2, workOffset, t);
         }
-        _lerp(buffer3, dstOffset, srcOffset, t, stride) {
+        _lerp(buffer2, dstOffset, srcOffset, t, stride) {
           const s = 1 - t;
           for (let i = 0; i !== stride; ++i) {
             const j = dstOffset + i;
-            buffer3[j] = buffer3[j] * s + buffer3[srcOffset + i] * t;
+            buffer2[j] = buffer2[j] * s + buffer2[srcOffset + i] * t;
           }
         }
-        _lerpAdditive(buffer3, dstOffset, srcOffset, t, stride) {
+        _lerpAdditive(buffer2, dstOffset, srcOffset, t, stride) {
           for (let i = 0; i !== stride; ++i) {
             const j = dstOffset + i;
-            buffer3[j] = buffer3[j] + buffer3[srcOffset + i] * t;
+            buffer2[j] = buffer2[j] + buffer2[srcOffset + i] * t;
           }
         }
       };
@@ -29180,76 +29182,76 @@
         _setValue_unavailable() {
         }
         // Getters
-        _getValue_direct(buffer3, offset) {
-          buffer3[offset] = this.targetObject[this.propertyName];
+        _getValue_direct(buffer2, offset) {
+          buffer2[offset] = this.targetObject[this.propertyName];
         }
-        _getValue_array(buffer3, offset) {
+        _getValue_array(buffer2, offset) {
           const source = this.resolvedProperty;
           for (let i = 0, n = source.length; i !== n; ++i) {
-            buffer3[offset++] = source[i];
+            buffer2[offset++] = source[i];
           }
         }
-        _getValue_arrayElement(buffer3, offset) {
-          buffer3[offset] = this.resolvedProperty[this.propertyIndex];
+        _getValue_arrayElement(buffer2, offset) {
+          buffer2[offset] = this.resolvedProperty[this.propertyIndex];
         }
-        _getValue_toArray(buffer3, offset) {
-          this.resolvedProperty.toArray(buffer3, offset);
+        _getValue_toArray(buffer2, offset) {
+          this.resolvedProperty.toArray(buffer2, offset);
         }
         // Direct
-        _setValue_direct(buffer3, offset) {
-          this.targetObject[this.propertyName] = buffer3[offset];
+        _setValue_direct(buffer2, offset) {
+          this.targetObject[this.propertyName] = buffer2[offset];
         }
-        _setValue_direct_setNeedsUpdate(buffer3, offset) {
-          this.targetObject[this.propertyName] = buffer3[offset];
+        _setValue_direct_setNeedsUpdate(buffer2, offset) {
+          this.targetObject[this.propertyName] = buffer2[offset];
           this.targetObject.needsUpdate = true;
         }
-        _setValue_direct_setMatrixWorldNeedsUpdate(buffer3, offset) {
-          this.targetObject[this.propertyName] = buffer3[offset];
+        _setValue_direct_setMatrixWorldNeedsUpdate(buffer2, offset) {
+          this.targetObject[this.propertyName] = buffer2[offset];
           this.targetObject.matrixWorldNeedsUpdate = true;
         }
         // EntireArray
-        _setValue_array(buffer3, offset) {
+        _setValue_array(buffer2, offset) {
           const dest = this.resolvedProperty;
           for (let i = 0, n = dest.length; i !== n; ++i) {
-            dest[i] = buffer3[offset++];
+            dest[i] = buffer2[offset++];
           }
         }
-        _setValue_array_setNeedsUpdate(buffer3, offset) {
+        _setValue_array_setNeedsUpdate(buffer2, offset) {
           const dest = this.resolvedProperty;
           for (let i = 0, n = dest.length; i !== n; ++i) {
-            dest[i] = buffer3[offset++];
+            dest[i] = buffer2[offset++];
           }
           this.targetObject.needsUpdate = true;
         }
-        _setValue_array_setMatrixWorldNeedsUpdate(buffer3, offset) {
+        _setValue_array_setMatrixWorldNeedsUpdate(buffer2, offset) {
           const dest = this.resolvedProperty;
           for (let i = 0, n = dest.length; i !== n; ++i) {
-            dest[i] = buffer3[offset++];
+            dest[i] = buffer2[offset++];
           }
           this.targetObject.matrixWorldNeedsUpdate = true;
         }
         // ArrayElement
-        _setValue_arrayElement(buffer3, offset) {
-          this.resolvedProperty[this.propertyIndex] = buffer3[offset];
+        _setValue_arrayElement(buffer2, offset) {
+          this.resolvedProperty[this.propertyIndex] = buffer2[offset];
         }
-        _setValue_arrayElement_setNeedsUpdate(buffer3, offset) {
-          this.resolvedProperty[this.propertyIndex] = buffer3[offset];
+        _setValue_arrayElement_setNeedsUpdate(buffer2, offset) {
+          this.resolvedProperty[this.propertyIndex] = buffer2[offset];
           this.targetObject.needsUpdate = true;
         }
-        _setValue_arrayElement_setMatrixWorldNeedsUpdate(buffer3, offset) {
-          this.resolvedProperty[this.propertyIndex] = buffer3[offset];
+        _setValue_arrayElement_setMatrixWorldNeedsUpdate(buffer2, offset) {
+          this.resolvedProperty[this.propertyIndex] = buffer2[offset];
           this.targetObject.matrixWorldNeedsUpdate = true;
         }
         // HasToFromArray
-        _setValue_fromArray(buffer3, offset) {
-          this.resolvedProperty.fromArray(buffer3, offset);
+        _setValue_fromArray(buffer2, offset) {
+          this.resolvedProperty.fromArray(buffer2, offset);
         }
-        _setValue_fromArray_setNeedsUpdate(buffer3, offset) {
-          this.resolvedProperty.fromArray(buffer3, offset);
+        _setValue_fromArray_setNeedsUpdate(buffer2, offset) {
+          this.resolvedProperty.fromArray(buffer2, offset);
           this.targetObject.needsUpdate = true;
         }
-        _setValue_fromArray_setMatrixWorldNeedsUpdate(buffer3, offset) {
-          this.resolvedProperty.fromArray(buffer3, offset);
+        _setValue_fromArray_setMatrixWorldNeedsUpdate(buffer2, offset) {
+          this.resolvedProperty.fromArray(buffer2, offset);
           this.targetObject.matrixWorldNeedsUpdate = true;
         }
         _getValue_unbound(targetArray, offset) {
@@ -30388,10 +30390,10 @@
         }
       };
       GLBufferAttribute = class {
-        constructor(buffer3, type, itemSize, elementSize, count) {
+        constructor(buffer2, type, itemSize, elementSize, count) {
           this.isGLBufferAttribute = true;
           this.name = "";
-          this.buffer = buffer3;
+          this.buffer = buffer2;
           this.type = type;
           this.itemSize = itemSize;
           this.elementSize = elementSize;
@@ -30402,8 +30404,8 @@
           if (value === true)
             this.version++;
         }
-        setBuffer(buffer3) {
-          this.buffer = buffer3;
+        setBuffer(buffer2) {
+          this.buffer = buffer2;
           return this;
         }
         setType(type, elementSize) {
@@ -31330,7 +31332,7 @@
       _axis = /* @__PURE__ */ new Vector3();
       ArrowHelper = class extends Object3D {
         // dir is assumed to be normalized
-        constructor(dir = new Vector3(0, 0, 1), origin2 = new Vector3(0, 0, 0), length3 = 1, color = 16776960, headLength = length3 * 0.2, headWidth = headLength * 0.2) {
+        constructor(dir = new Vector3(0, 0, 1), origin2 = new Vector3(0, 0, 0), length2 = 1, color = 16776960, headLength = length2 * 0.2, headWidth = headLength * 0.2) {
           super();
           this.type = "ArrowHelper";
           if (_lineGeometry === void 0) {
@@ -31347,7 +31349,7 @@
           this.cone.matrixAutoUpdate = false;
           this.add(this.cone);
           this.setDirection(dir);
-          this.setLength(length3, headLength, headWidth);
+          this.setLength(length2, headLength, headWidth);
         }
         setDirection(dir) {
           if (dir.y > 0.99999) {
@@ -31360,11 +31362,11 @@
             this.quaternion.setFromAxisAngle(_axis, radians);
           }
         }
-        setLength(length3, headLength = length3 * 0.2, headWidth = headLength * 0.2) {
-          this.line.scale.set(1, Math.max(1e-4, length3 - headLength), 1);
+        setLength(length2, headLength = length2 * 0.2, headWidth = headLength * 0.2) {
+          this.line.scale.set(1, Math.max(1e-4, length2 - headLength), 1);
           this.line.updateMatrix();
           this.cone.scale.set(headWidth, headLength, headWidth);
-          this.cone.position.y = length3;
+          this.cone.position.y = length2;
           this.cone.updateMatrix();
         }
         setColor(color) {
@@ -32919,7 +32921,7 @@
       }
       var viewportQuadVertex = "precision highp float;attribute vec2 aUV;varying vec2 vUV;void main(){vUV=aUV;gl_Position=vec4(mix(vec2(-1.0),vec2(1.0),aUV),0.0,1.0);}";
       var copyTexFragment = "precision highp float;uniform sampler2D tex;varying vec2 vUV;void main(){gl_FragColor=texture2D(tex,vUV);}";
-      var cache3 = /* @__PURE__ */ new WeakMap();
+      var cache2 = /* @__PURE__ */ new WeakMap();
       var glContextParams = {
         premultipliedAlpha: false,
         preserveDrawingBuffer: true,
@@ -32928,7 +32930,7 @@
       };
       function withWebGLContext(glOrCanvas, callback) {
         var gl = glOrCanvas.getContext ? glOrCanvas.getContext("webgl", glContextParams) : glOrCanvas;
-        var wrapper = cache3.get(gl);
+        var wrapper = cache2.get(gl);
         if (!wrapper) {
           let getExtension = function(name) {
             var ext = extensions2[name];
@@ -32939,9 +32941,9 @@
               }
             }
             return ext;
-          }, compileShader = function(src4, type) {
+          }, compileShader = function(src3, type) {
             var shader = gl.createShader(type);
-            gl.shaderSource(shader, src4);
+            gl.shaderSource(shader, src3);
             gl.compileShader(shader);
             return shader;
           }, withProgram = function(name, vert, frag, func) {
@@ -33038,7 +33040,7 @@
             handleContextLoss();
             e.preventDefault();
           }, false);
-          cache3.set(gl, wrapper = {
+          cache2.set(gl, wrapper = {
             gl,
             isWebGL2,
             getExtension,
@@ -34210,9 +34212,9 @@
         segments.forEach(function(ref) {
           var start2 = ref[0];
           var end2 = ref[1];
-          var slice3 = indices.slice(start2, end2 + 1);
-          for (var i2 = slice3.length; i2--; ) {
-            indices[end2 - i2] = slice3[i2];
+          var slice2 = indices.slice(start2, end2 + 1);
+          for (var i2 = slice2.length; i2--; ) {
+            indices[end2 - i2] = slice2[i2];
           }
         });
         return indices;
@@ -34292,15 +34294,15 @@
     const DerivedMaterial = function DerivedMaterial2() {
       return derive(options.chained ? baseMaterial : baseMaterial.clone());
     };
-    const derive = function(base3) {
-      const derived = Object.create(base3, descriptor);
+    const derive = function(base2) {
+      const derived = Object.create(base2, descriptor);
       Object.defineProperty(derived, "baseMaterial", { value: baseMaterial });
       Object.defineProperty(derived, "id", { value: materialInstanceId++ });
       derived.uuid = generateUUID2();
-      derived.uniforms = assign({}, base3.uniforms, options.uniforms);
-      derived.defines = assign({}, base3.defines, options.defines);
+      derived.uniforms = assign({}, base2.uniforms, options.uniforms);
+      derived.defines = assign({}, base2.defines, options.defines);
       derived.defines[`TROIKA_DERIVED_MATERIAL_${optionsKey}`] = "";
-      derived.extensions = assign({}, base3.extensions, options.extensions);
+      derived.extensions = assign({}, base2.extensions, options.extensions);
       derived._listeners = void 0;
       return derived;
     };
@@ -36097,15 +36099,15 @@ void main() {
       };
       return fontObj;
     }
-    return function parse(buffer3) {
-      const peek = new Uint8Array(buffer3, 0, 4);
+    return function parse(buffer2) {
+      const peek = new Uint8Array(buffer2, 0, 4);
       const tag = Typr._bin.readASCII(peek, 0, 4);
       if (tag === "wOFF") {
-        buffer3 = woff2otf(buffer3);
+        buffer2 = woff2otf(buffer2);
       } else if (tag === "wOF2") {
         throw new Error("woff2 fonts not supported");
       }
-      return wrapFontObj(Typr.parse(buffer3)[0]);
+      return wrapFontObj(Typr.parse(buffer2)[0]);
     };
   }
   function unicodeFontResolverClientFactory() {
@@ -36358,11 +36360,11 @@ void main() {
                   prevCharResult = NEEDS_FALLBACK;
                 } else {
                   charResolutions[i] = j;
-                  const { src: src4, unicodeRange } = userFonts[j];
+                  const { src: src3, unicodeRange } = userFonts[j];
                   if (!unicodeRange || isCodeInRanges(codePoint, unicodeRange)) {
-                    const fontObj = parsedFonts[src4];
+                    const fontObj = parsedFonts[src3];
                     if (!fontObj) {
-                      loadFont(src4, () => {
+                      loadFont(src3, () => {
                         resolveUserFonts(i);
                       });
                       return;
@@ -36853,8 +36855,8 @@ void main() {
           }
         }
         const fontData = [];
-        metricsByFont.forEach(({ index, src: src4, unitsPerEm, ascender, descender, lineHeight: lineHeight2, capHeight, xHeight }) => {
-          fontData[index] = { src: src4, unitsPerEm, ascender, descender, lineHeight: lineHeight2, capHeight, xHeight };
+        metricsByFont.forEach(({ index, src: src3, unitsPerEm, ascender, descender, lineHeight: lineHeight2, capHeight, xHeight }) => {
+          fontData[index] = { src: src3, unitsPerEm, ascender, descender, lineHeight: lineHeight2, capHeight, xHeight };
         });
         timings.typesetting = now3() - typesetStart;
         callback({
@@ -38331,21 +38333,18 @@ if (edgeAlpha == 0.0) {
         for (var name2 in all)
           __defProp2(target2, name2, { get: all[name2], enumerable: true });
       };
-      var __copyProps2 = (to, from32, except, desc) => {
-        if (from32 && typeof from32 === "object" || typeof from32 === "function") {
-          for (let key of __getOwnPropNames2(from32))
+      var __copyProps2 = (to, from3, except, desc) => {
+        if (from3 && typeof from3 === "object" || typeof from3 === "function") {
+          for (let key of __getOwnPropNames2(from3))
             if (!__hasOwnProp2.call(to, key) && key !== except)
-              __defProp2(to, key, { get: () => from32[key], enumerable: !(desc = __getOwnPropDesc2(from32, key)) || desc.enumerable });
+              __defProp2(to, key, { get: () => from3[key], enumerable: !(desc = __getOwnPropDesc2(from3, key)) || desc.enumerable });
         }
         return to;
       };
-      var __toESM2 = (mod, isNodeMode, target2) => (target2 = mod != null ? __create2(__getProtoOf2(mod)) : {}, __copyProps2(
-        isNodeMode || !mod || !mod.__esModule ? __defProp2(target2, "default", { value: mod, enumerable: true }) : target2,
-        mod
-      ));
+      var __toESM2 = (mod, isNodeMode, target2) => (target2 = mod != null ? __create2(__getProtoOf2(mod)) : {}, __copyProps2(isNodeMode || !mod || !mod.__esModule ? __defProp2(target2, "default", { value: mod, enumerable: true }) : target2, mod));
       var __toCommonJS2 = (mod) => __copyProps2(__defProp2({}, "__esModule", { value: true }), mod);
       var require_boundaries = __commonJS2({
-        "../../node_modules/graphemer/lib/boundaries.js"(exports2) {
+        "../../node_modules/.pnpm/graphemer@1.4.0/node_modules/graphemer/lib/boundaries.js"(exports2) {
           "use strict";
           Object.defineProperty(exports2, "__esModule", { value: true });
           exports2.EXTENDED_PICTOGRAPHIC = exports2.CLUSTER_BREAK = void 0;
@@ -38374,7 +38373,7 @@ if (edgeAlpha == 0.0) {
         }
       });
       var require_GraphemerHelper = __commonJS2({
-        "../../node_modules/graphemer/lib/GraphemerHelper.js"(exports2) {
+        "../../node_modules/.pnpm/graphemer@1.4.0/node_modules/graphemer/lib/GraphemerHelper.js"(exports2) {
           "use strict";
           Object.defineProperty(exports2, "__esModule", { value: true });
           var boundaries_1 = require_boundaries();
@@ -38466,7 +38465,7 @@ if (edgeAlpha == 0.0) {
         }
       });
       var require_GraphemerIterator = __commonJS2({
-        "../../node_modules/graphemer/lib/GraphemerIterator.js"(exports2) {
+        "../../node_modules/.pnpm/graphemer@1.4.0/node_modules/graphemer/lib/GraphemerIterator.js"(exports2) {
           "use strict";
           Object.defineProperty(exports2, "__esModule", { value: true });
           var GraphemerIterator = class {
@@ -38497,7 +38496,7 @@ if (edgeAlpha == 0.0) {
         }
       });
       var require_Graphemer = __commonJS2({
-        "../../node_modules/graphemer/lib/Graphemer.js"(exports2) {
+        "../../node_modules/.pnpm/graphemer@1.4.0/node_modules/graphemer/lib/Graphemer.js"(exports2) {
           "use strict";
           var __importDefault = exports2 && exports2.__importDefault || function(mod) {
             return mod && mod.__esModule ? mod : { "default": mod };
@@ -38581,7 +38580,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.CONTROL;
                                   }
                                 } else {
-                                  if (10 === code2) {
+                                  if (code2 === 10) {
                                     return boundaries_1.CLUSTER_BREAK.LF;
                                   }
                                 }
@@ -38592,7 +38591,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 14) {
-                                    if (13 === code2) {
+                                    if (code2 === 13) {
                                       return boundaries_1.CLUSTER_BREAK.CR;
                                     }
                                   } else {
@@ -38609,7 +38608,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.CONTROL;
                                   }
                                 } else {
-                                  if (173 === code2) {
+                                  if (code2 === 173) {
                                     return boundaries_1.CLUSTER_BREAK.CONTROL;
                                   }
                                 }
@@ -38635,7 +38634,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 1552) {
                               if (code2 < 1476) {
                                 if (code2 < 1473) {
-                                  if (1471 === code2) {
+                                  if (code2 === 1471) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -38650,7 +38649,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 1536) {
-                                    if (1479 === code2) {
+                                    if (code2 === 1479) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
@@ -38668,7 +38667,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 1611) {
-                                    if (1564 === code2) {
+                                    if (code2 === 1564) {
                                       return boundaries_1.CLUSTER_BREAK.CONTROL;
                                     }
                                   } else {
@@ -38679,7 +38678,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 1750) {
-                                  if (1648 === code2) {
+                                  if (code2 === 1648) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -38688,7 +38687,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
-                                    if (1757 === code2) {
+                                    if (code2 === 1757) {
                                       return boundaries_1.CLUSTER_BREAK.PREPEND;
                                     }
                                   }
@@ -38715,10 +38714,10 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (1807 === code2) {
+                                  if (code2 === 1807) {
                                     return boundaries_1.CLUSTER_BREAK.PREPEND;
                                   }
-                                  if (1809 === code2) {
+                                  if (code2 === 1809) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
@@ -38741,7 +38740,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 2070) {
-                                    if (2045 === code2) {
+                                    if (code2 === 2045) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
@@ -38793,7 +38792,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
-                                    if (2274 === code2) {
+                                    if (code2 === 2274) {
                                       return boundaries_1.CLUSTER_BREAK.PREPEND;
                                     }
                                   }
@@ -38804,10 +38803,10 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (2307 === code2) {
+                                  if (code2 === 2307) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
-                                  if (2362 === code2) {
+                                  if (code2 === 2362) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
@@ -38820,10 +38819,10 @@ if (edgeAlpha == 0.0) {
                           if (code2 < 2434) {
                             if (code2 < 2381) {
                               if (code2 < 2366) {
-                                if (2363 === code2) {
+                                if (code2 === 2363) {
                                   return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                 }
-                                if (2364 === code2) {
+                                if (code2 === 2364) {
                                   return boundaries_1.CLUSTER_BREAK.EXTEND;
                                 }
                               } else {
@@ -38846,7 +38845,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 2385) {
                                 if (code2 < 2382) {
-                                  if (2381 === code2) {
+                                  if (code2 === 2381) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -38865,7 +38864,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
-                                    if (2433 === code2) {
+                                    if (code2 === 2433) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   }
@@ -38880,13 +38879,13 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
-                                  if (2492 === code2) {
+                                  if (code2 === 2492) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
                               } else {
                                 if (code2 < 2495) {
-                                  if (2494 === code2) {
+                                  if (code2 === 2494) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -38913,14 +38912,14 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   } else {
-                                    if (2509 === code2) {
+                                    if (code2 === 2509) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   }
                                 }
                               } else {
                                 if (code2 < 2530) {
-                                  if (2519 === code2) {
+                                  if (code2 === 2519) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -38929,7 +38928,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
-                                    if (2558 === code2) {
+                                    if (code2 === 2558) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   }
@@ -38946,13 +38945,13 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (2563 === code2) {
+                                  if (code2 === 2563) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 }
                               } else {
                                 if (code2 < 2622) {
-                                  if (2620 === code2) {
+                                  if (code2 === 2620) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -38979,7 +38978,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
-                                    if (2641 === code2) {
+                                    if (code2 === 2641) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   }
@@ -38991,7 +38990,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 2689) {
-                                    if (2677 === code2) {
+                                    if (code2 === 2677) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
@@ -39005,10 +39004,10 @@ if (edgeAlpha == 0.0) {
                           } else {
                             if (code2 < 2761) {
                               if (code2 < 2750) {
-                                if (2691 === code2) {
+                                if (code2 === 2691) {
                                   return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                 }
-                                if (2748 === code2) {
+                                if (code2 === 2748) {
                                   return boundaries_1.CLUSTER_BREAK.EXTEND;
                                 }
                               } else {
@@ -39031,7 +39030,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 2786) {
                                 if (code2 < 2763) {
-                                  if (2761 === code2) {
+                                  if (code2 === 2761) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
@@ -39040,7 +39039,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   } else {
-                                    if (2765 === code2) {
+                                    if (code2 === 2765) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   }
@@ -39056,7 +39055,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
-                                    if (2817 === code2) {
+                                    if (code2 === 2817) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   }
@@ -39077,7 +39076,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
-                                  if (2876 === code2) {
+                                  if (code2 === 2876) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
@@ -39088,7 +39087,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 2881) {
-                                    if (2880 === code2) {
+                                    if (code2 === 2880) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   } else {
@@ -39111,7 +39110,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 2901) {
-                                  if (2893 === code2) {
+                                  if (code2 === 2893) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -39130,20 +39129,20 @@ if (edgeAlpha == 0.0) {
                           } else {
                             if (code2 < 3014) {
                               if (code2 < 3007) {
-                                if (2946 === code2) {
+                                if (code2 === 2946) {
                                   return boundaries_1.CLUSTER_BREAK.EXTEND;
                                 }
-                                if (3006 === code2) {
+                                if (code2 === 3006) {
                                   return boundaries_1.CLUSTER_BREAK.EXTEND;
                                 }
                               } else {
                                 if (code2 < 3008) {
-                                  if (3007 === code2) {
+                                  if (code2 === 3007) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
                                   if (code2 < 3009) {
-                                    if (3008 === code2) {
+                                    if (code2 === 3008) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
@@ -39165,19 +39164,19 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   } else {
-                                    if (3021 === code2) {
+                                    if (code2 === 3021) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   }
                                 }
                               } else {
                                 if (code2 < 3072) {
-                                  if (3031 === code2) {
+                                  if (code2 === 3031) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
                                   if (code2 < 3073) {
-                                    if (3072 === code2) {
+                                    if (code2 === 3072) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
@@ -39193,10 +39192,10 @@ if (edgeAlpha == 0.0) {
                           if (code2 < 3262) {
                             if (code2 < 3146) {
                               if (code2 < 3134) {
-                                if (3076 === code2) {
+                                if (code2 === 3076) {
                                   return boundaries_1.CLUSTER_BREAK.EXTEND;
                                 }
-                                if (3132 === code2) {
+                                if (code2 === 3132) {
                                   return boundaries_1.CLUSTER_BREAK.EXTEND;
                                 }
                               } else {
@@ -39235,7 +39234,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 3202) {
-                                  if (3201 === code2) {
+                                  if (code2 === 3201) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -39244,7 +39243,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   } else {
-                                    if (3260 === code2) {
+                                    if (code2 === 3260) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   }
@@ -39254,10 +39253,10 @@ if (edgeAlpha == 0.0) {
                           } else {
                             if (code2 < 3270) {
                               if (code2 < 3264) {
-                                if (3262 === code2) {
+                                if (code2 === 3262) {
                                   return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                 }
-                                if (3263 === code2) {
+                                if (code2 === 3263) {
                                   return boundaries_1.CLUSTER_BREAK.EXTEND;
                                 }
                               } else {
@@ -39267,7 +39266,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 3267) {
-                                    if (3266 === code2) {
+                                    if (code2 === 3266) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
@@ -39280,7 +39279,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 3276) {
                                 if (code2 < 3271) {
-                                  if (3270 === code2) {
+                                  if (code2 === 3270) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -39320,7 +39319,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 3391) {
                               if (code2 < 3330) {
                                 if (code2 < 3328) {
-                                  if (3315 === code2) {
+                                  if (code2 === 3315) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
@@ -39339,7 +39338,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
-                                    if (3390 === code2) {
+                                    if (code2 === 3390) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   }
@@ -39367,7 +39366,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   } else {
-                                    if (3405 === code2) {
+                                    if (code2 === 3405) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   }
@@ -39377,10 +39376,10 @@ if (edgeAlpha == 0.0) {
                           } else {
                             if (code2 < 3530) {
                               if (code2 < 3426) {
-                                if (3406 === code2) {
+                                if (code2 === 3406) {
                                   return boundaries_1.CLUSTER_BREAK.PREPEND;
                                 }
-                                if (3415 === code2) {
+                                if (code2 === 3415) {
                                   return boundaries_1.CLUSTER_BREAK.EXTEND;
                                 }
                               } else {
@@ -39390,7 +39389,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 3458) {
-                                    if (3457 === code2) {
+                                    if (code2 === 3457) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
@@ -39403,12 +39402,12 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 3538) {
                                 if (code2 < 3535) {
-                                  if (3530 === code2) {
+                                  if (code2 === 3530) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
                                   if (code2 < 3536) {
-                                    if (3535 === code2) {
+                                    if (code2 === 3535) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
@@ -39424,7 +39423,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 3544) {
-                                    if (3542 === code2) {
+                                    if (code2 === 3542) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
@@ -39441,7 +39440,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 3655) {
                               if (code2 < 3633) {
                                 if (code2 < 3570) {
-                                  if (3551 === code2) {
+                                  if (code2 === 3551) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -39451,12 +39450,12 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 3635) {
-                                  if (3633 === code2) {
+                                  if (code2 === 3633) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
                                   if (code2 < 3636) {
-                                    if (3635 === code2) {
+                                    if (code2 === 3635) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   } else {
@@ -39473,10 +39472,10 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (3761 === code2) {
+                                  if (code2 === 3761) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
-                                  if (3763 === code2) {
+                                  if (code2 === 3763) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 }
@@ -39501,15 +39500,15 @@ if (edgeAlpha == 0.0) {
                           } else {
                             if (code2 < 3967) {
                               if (code2 < 3897) {
-                                if (3893 === code2) {
+                                if (code2 === 3893) {
                                   return boundaries_1.CLUSTER_BREAK.EXTEND;
                                 }
-                                if (3895 === code2) {
+                                if (code2 === 3895) {
                                   return boundaries_1.CLUSTER_BREAK.EXTEND;
                                 }
                               } else {
                                 if (code2 < 3902) {
-                                  if (3897 === code2) {
+                                  if (code2 === 3897) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -39527,7 +39526,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 3981) {
                                 if (code2 < 3968) {
-                                  if (3967 === code2) {
+                                  if (code2 === 3967) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
@@ -39552,7 +39551,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
-                                    if (4038 === code2) {
+                                    if (code2 === 4038) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   }
@@ -39575,7 +39574,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (4145 === code2) {
+                                  if (code2 === 4145) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 }
@@ -39628,10 +39627,10 @@ if (edgeAlpha == 0.0) {
                           } else {
                             if (code2 < 4352) {
                               if (code2 < 4229) {
-                                if (4226 === code2) {
+                                if (code2 === 4226) {
                                   return boundaries_1.CLUSTER_BREAK.EXTEND;
                                 }
-                                if (4228 === code2) {
+                                if (code2 === 4228) {
                                   return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                 }
                               } else {
@@ -39640,10 +39639,10 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (4237 === code2) {
+                                  if (code2 === 4237) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
-                                  if (4253 === code2) {
+                                  if (code2 === 4253) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
@@ -39676,7 +39675,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
-                                    if (5909 === code2) {
+                                    if (code2 === 5909) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   }
@@ -39693,7 +39692,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (5940 === code2) {
+                                  if (code2 === 5940) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 }
@@ -39717,7 +39716,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 6078) {
                                 if (code2 < 6071) {
-                                  if (6070 === code2) {
+                                  if (code2 === 6070) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
@@ -39732,7 +39731,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 6087) {
-                                    if (6086 === code2) {
+                                    if (code2 === 6086) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
@@ -39751,7 +39750,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (6109 === code2) {
+                                  if (code2 === 6109) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
@@ -39761,10 +39760,10 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (6158 === code2) {
+                                  if (code2 === 6158) {
                                     return boundaries_1.CLUSTER_BREAK.CONTROL;
                                   }
-                                  if (6159 === code2) {
+                                  if (code2 === 6159) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
@@ -39777,7 +39776,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 6432) {
-                                    if (6313 === code2) {
+                                    if (code2 === 6313) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
@@ -39816,7 +39815,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
-                                  if (6450 === code2) {
+                                  if (code2 === 6450) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
@@ -39844,20 +39843,20 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
-                                  if (6683 === code2) {
+                                  if (code2 === 6683) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
                               } else {
                                 if (code2 < 6742) {
-                                  if (6741 === code2) {
+                                  if (code2 === 6741) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
-                                  if (6742 === code2) {
+                                  if (code2 === 6742) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
-                                  if (6743 === code2) {
+                                  if (code2 === 6743) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 }
@@ -39871,13 +39870,13 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (6752 === code2) {
+                                  if (code2 === 6752) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
                               } else {
                                 if (code2 < 6757) {
-                                  if (6754 === code2) {
+                                  if (code2 === 6754) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -39900,7 +39899,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 6832) {
-                                    if (6783 === code2) {
+                                    if (code2 === 6783) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
@@ -39916,7 +39915,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 6964) {
-                                    if (6916 === code2) {
+                                    if (code2 === 6916) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   } else {
@@ -39932,10 +39931,10 @@ if (edgeAlpha == 0.0) {
                           if (code2 < 7080) {
                             if (code2 < 7019) {
                               if (code2 < 6973) {
-                                if (6971 === code2) {
+                                if (code2 === 6971) {
                                   return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                 }
-                                if (6972 === code2) {
+                                if (code2 === 6972) {
                                   return boundaries_1.CLUSTER_BREAK.EXTEND;
                                 }
                               } else {
@@ -39945,7 +39944,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 6979) {
-                                    if (6978 === code2) {
+                                    if (code2 === 6978) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
@@ -39967,14 +39966,14 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
-                                    if (7042 === code2) {
+                                    if (code2 === 7042) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   }
                                 }
                               } else {
                                 if (code2 < 7074) {
-                                  if (7073 === code2) {
+                                  if (code2 === 7073) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
@@ -39998,7 +39997,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (7082 === code2) {
+                                  if (code2 === 7082) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 }
@@ -40008,10 +40007,10 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (7142 === code2) {
+                                  if (code2 === 7142) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
-                                  if (7143 === code2) {
+                                  if (code2 === 7143) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 }
@@ -40028,14 +40027,14 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   } else {
-                                    if (7149 === code2) {
+                                    if (code2 === 7149) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   }
                                 }
                               } else {
                                 if (code2 < 7151) {
-                                  if (7150 === code2) {
+                                  if (code2 === 7150) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
@@ -40093,7 +40092,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (7393 === code2) {
+                                  if (code2 === 7393) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 }
@@ -40103,10 +40102,10 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (7405 === code2) {
+                                  if (code2 === 7405) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
-                                  if (7412 === code2) {
+                                  if (code2 === 7412) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
@@ -40116,7 +40115,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 8205) {
                               if (code2 < 7616) {
                                 if (code2 < 7416) {
-                                  if (7415 === code2) {
+                                  if (code2 === 7415) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
@@ -40130,10 +40129,10 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (8203 === code2) {
+                                  if (code2 === 8203) {
                                     return boundaries_1.CLUSTER_BREAK.CONTROL;
                                   }
-                                  if (8204 === code2) {
+                                  if (code2 === 8204) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
@@ -40141,7 +40140,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 8288) {
                                 if (code2 < 8206) {
-                                  if (8205 === code2) {
+                                  if (code2 === 8205) {
                                     return boundaries_1.CLUSTER_BREAK.ZWJ;
                                   }
                                 } else {
@@ -40179,7 +40178,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 42612) {
                               if (code2 < 12330) {
                                 if (code2 < 11744) {
-                                  if (11647 === code2) {
+                                  if (code2 === 11647) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -40223,14 +40222,14 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 43014) {
-                                  if (43010 === code2) {
+                                  if (code2 === 43010) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (43014 === code2) {
+                                  if (code2 === 43014) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
-                                  if (43019 === code2) {
+                                  if (code2 === 43019) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
@@ -40250,12 +40249,12 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 43052) {
-                                  if (43047 === code2) {
+                                  if (code2 === 43047) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
                                   if (code2 < 43136) {
-                                    if (43052 === code2) {
+                                    if (code2 === 43052) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
@@ -40284,7 +40283,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 43302) {
-                                  if (43263 === code2) {
+                                  if (code2 === 43263) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -40322,10 +40321,10 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (43395 === code2) {
+                                  if (code2 === 43395) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
-                                  if (43443 === code2) {
+                                  if (code2 === 43443) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
@@ -40363,7 +40362,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 43573) {
                               if (code2 < 43567) {
                                 if (code2 < 43561) {
-                                  if (43493 === code2) {
+                                  if (code2 === 43493) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -40395,23 +40394,23 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (43587 === code2) {
+                                  if (code2 === 43587) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
-                                  if (43596 === code2) {
+                                  if (code2 === 43596) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
                               } else {
                                 if (code2 < 43644) {
-                                  if (43597 === code2) {
+                                  if (code2 === 43597) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
-                                  if (43644 === code2) {
+                                  if (code2 === 43644) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
-                                  if (43696 === code2) {
+                                  if (code2 === 43696) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
@@ -40437,10 +40436,10 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (43713 === code2) {
+                                  if (code2 === 43713) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
-                                  if (43755 === code2) {
+                                  if (code2 === 43755) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 }
@@ -40457,14 +40456,14 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   } else {
-                                    if (43765 === code2) {
+                                    if (code2 === 43765) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   }
                                 }
                               } else {
                                 if (code2 < 44003) {
-                                  if (43766 === code2) {
+                                  if (code2 === 43766) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -40473,7 +40472,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   } else {
-                                    if (44005 === code2) {
+                                    if (code2 === 44005) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   }
@@ -40488,7 +40487,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
-                                  if (44008 === code2) {
+                                  if (code2 === 44008) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
@@ -40498,10 +40497,10 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
-                                  if (44012 === code2) {
+                                  if (code2 === 44012) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
-                                  if (44013 === code2) {
+                                  if (code2 === 44013) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
@@ -40509,7 +40508,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 44061) {
                                 if (code2 < 44033) {
-                                  if (44032 === code2) {
+                                  if (code2 === 44032) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -40518,7 +40517,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (44060 === code2) {
+                                    if (code2 === 44060) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -40530,7 +40529,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 44089) {
-                                    if (44088 === code2) {
+                                    if (code2 === 44088) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -40555,7 +40554,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 44173) {
                               if (code2 < 44144) {
                                 if (code2 < 44117) {
-                                  if (44116 === code2) {
+                                  if (code2 === 44116) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -40565,7 +40564,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 44145) {
-                                  if (44144 === code2) {
+                                  if (code2 === 44144) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -40574,7 +40573,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (44172 === code2) {
+                                    if (code2 === 44172) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -40587,7 +40586,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (44200 === code2) {
+                                  if (code2 === 44200) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -40598,7 +40597,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 44229) {
-                                    if (44228 === code2) {
+                                    if (code2 === 44228) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -40613,7 +40612,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 44313) {
                               if (code2 < 44284) {
                                 if (code2 < 44257) {
-                                  if (44256 === code2) {
+                                  if (code2 === 44256) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -40623,7 +40622,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 44285) {
-                                  if (44284 === code2) {
+                                  if (code2 === 44284) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -40632,7 +40631,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (44312 === code2) {
+                                    if (code2 === 44312) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -40646,7 +40645,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 44341) {
-                                    if (44340 === code2) {
+                                    if (code2 === 44340) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -40657,7 +40656,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 44369) {
-                                  if (44368 === code2) {
+                                  if (code2 === 44368) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -40666,7 +40665,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (44396 === code2) {
+                                    if (code2 === 44396) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -40683,7 +40682,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (44424 === code2) {
+                                  if (code2 === 44424) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -40694,7 +40693,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 44453) {
-                                    if (44452 === code2) {
+                                    if (code2 === 44452) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -40707,7 +40706,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 44508) {
                                 if (code2 < 44481) {
-                                  if (44480 === code2) {
+                                  if (code2 === 44480) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -40717,7 +40716,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 44509) {
-                                  if (44508 === code2) {
+                                  if (code2 === 44508) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -40726,7 +40725,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (44536 === code2) {
+                                    if (code2 === 44536) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -40741,7 +40740,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (44564 === code2) {
+                                  if (code2 === 44564) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -40752,7 +40751,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 44593) {
-                                    if (44592 === code2) {
+                                    if (code2 === 44592) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -40765,7 +40764,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 44649) {
                                 if (code2 < 44621) {
-                                  if (44620 === code2) {
+                                  if (code2 === 44620) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -40774,7 +40773,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (44648 === code2) {
+                                    if (code2 === 44648) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -40786,7 +40785,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 44677) {
-                                    if (44676 === code2) {
+                                    if (code2 === 44676) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -40805,7 +40804,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 44761) {
                               if (code2 < 44732) {
                                 if (code2 < 44705) {
-                                  if (44704 === code2) {
+                                  if (code2 === 44704) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -40815,7 +40814,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 44733) {
-                                  if (44732 === code2) {
+                                  if (code2 === 44732) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -40824,7 +40823,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (44760 === code2) {
+                                    if (code2 === 44760) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -40837,7 +40836,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (44788 === code2) {
+                                  if (code2 === 44788) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -40848,7 +40847,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 44817) {
-                                    if (44816 === code2) {
+                                    if (code2 === 44816) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -40863,7 +40862,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 44901) {
                               if (code2 < 44872) {
                                 if (code2 < 44845) {
-                                  if (44844 === code2) {
+                                  if (code2 === 44844) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -40873,7 +40872,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 44873) {
-                                  if (44872 === code2) {
+                                  if (code2 === 44872) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -40882,7 +40881,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (44900 === code2) {
+                                    if (code2 === 44900) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -40896,7 +40895,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 44929) {
-                                    if (44928 === code2) {
+                                    if (code2 === 44928) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -40907,7 +40906,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 44957) {
-                                  if (44956 === code2) {
+                                  if (code2 === 44956) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -40916,7 +40915,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (44984 === code2) {
+                                    if (code2 === 44984) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -40933,7 +40932,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (45012 === code2) {
+                                  if (code2 === 45012) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -40944,7 +40943,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 45041) {
-                                    if (45040 === code2) {
+                                    if (code2 === 45040) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -40957,7 +40956,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 45097) {
                                 if (code2 < 45069) {
-                                  if (45068 === code2) {
+                                  if (code2 === 45068) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -40966,7 +40965,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (45096 === code2) {
+                                    if (code2 === 45096) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -40978,7 +40977,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 45125) {
-                                    if (45124 === code2) {
+                                    if (code2 === 45124) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -40993,7 +40992,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 45209) {
                               if (code2 < 45180) {
                                 if (code2 < 45153) {
-                                  if (45152 === code2) {
+                                  if (code2 === 45152) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41003,7 +41002,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 45181) {
-                                  if (45180 === code2) {
+                                  if (code2 === 45180) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41012,7 +41011,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (45208 === code2) {
+                                    if (code2 === 45208) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41026,7 +41025,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 45237) {
-                                    if (45236 === code2) {
+                                    if (code2 === 45236) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41037,7 +41036,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 45265) {
-                                  if (45264 === code2) {
+                                  if (code2 === 45264) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41046,7 +41045,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (45292 === code2) {
+                                    if (code2 === 45292) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41067,7 +41066,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (45320 === code2) {
+                                  if (code2 === 45320) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -41078,7 +41077,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 45349) {
-                                    if (45348 === code2) {
+                                    if (code2 === 45348) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41091,7 +41090,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 45404) {
                                 if (code2 < 45377) {
-                                  if (45376 === code2) {
+                                  if (code2 === 45376) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41101,7 +41100,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 45405) {
-                                  if (45404 === code2) {
+                                  if (code2 === 45404) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41110,7 +41109,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (45432 === code2) {
+                                    if (code2 === 45432) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41125,7 +41124,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (45460 === code2) {
+                                  if (code2 === 45460) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -41136,7 +41135,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 45489) {
-                                    if (45488 === code2) {
+                                    if (code2 === 45488) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41149,7 +41148,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 45545) {
                                 if (code2 < 45517) {
-                                  if (45516 === code2) {
+                                  if (code2 === 45516) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41158,7 +41157,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (45544 === code2) {
+                                    if (code2 === 45544) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41170,7 +41169,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 45573) {
-                                    if (45572 === code2) {
+                                    if (code2 === 45572) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41187,7 +41186,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 45657) {
                               if (code2 < 45628) {
                                 if (code2 < 45601) {
-                                  if (45600 === code2) {
+                                  if (code2 === 45600) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41197,7 +41196,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 45629) {
-                                  if (45628 === code2) {
+                                  if (code2 === 45628) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41206,7 +41205,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (45656 === code2) {
+                                    if (code2 === 45656) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41220,7 +41219,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 45685) {
-                                    if (45684 === code2) {
+                                    if (code2 === 45684) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41231,7 +41230,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 45713) {
-                                  if (45712 === code2) {
+                                  if (code2 === 45712) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41240,7 +41239,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (45740 === code2) {
+                                    if (code2 === 45740) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41255,7 +41254,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (45768 === code2) {
+                                  if (code2 === 45768) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -41266,7 +41265,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 45797) {
-                                    if (45796 === code2) {
+                                    if (code2 === 45796) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41279,7 +41278,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 45853) {
                                 if (code2 < 45825) {
-                                  if (45824 === code2) {
+                                  if (code2 === 45824) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41288,7 +41287,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (45852 === code2) {
+                                    if (code2 === 45852) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41300,7 +41299,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 45881) {
-                                    if (45880 === code2) {
+                                    if (code2 === 45880) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41319,7 +41318,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 45965) {
                               if (code2 < 45936) {
                                 if (code2 < 45909) {
-                                  if (45908 === code2) {
+                                  if (code2 === 45908) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41329,7 +41328,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 45937) {
-                                  if (45936 === code2) {
+                                  if (code2 === 45936) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41338,7 +41337,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (45964 === code2) {
+                                    if (code2 === 45964) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41351,7 +41350,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (45992 === code2) {
+                                  if (code2 === 45992) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -41362,7 +41361,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 46021) {
-                                    if (46020 === code2) {
+                                    if (code2 === 46020) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41377,7 +41376,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 46105) {
                               if (code2 < 46076) {
                                 if (code2 < 46049) {
-                                  if (46048 === code2) {
+                                  if (code2 === 46048) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41387,7 +41386,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 46077) {
-                                  if (46076 === code2) {
+                                  if (code2 === 46076) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41396,7 +41395,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (46104 === code2) {
+                                    if (code2 === 46104) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41410,7 +41409,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 46133) {
-                                    if (46132 === code2) {
+                                    if (code2 === 46132) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41421,7 +41420,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 46161) {
-                                  if (46160 === code2) {
+                                  if (code2 === 46160) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41430,7 +41429,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (46188 === code2) {
+                                    if (code2 === 46188) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41447,7 +41446,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (46216 === code2) {
+                                  if (code2 === 46216) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -41458,7 +41457,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 46245) {
-                                    if (46244 === code2) {
+                                    if (code2 === 46244) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41471,7 +41470,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 46301) {
                                 if (code2 < 46273) {
-                                  if (46272 === code2) {
+                                  if (code2 === 46272) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41480,7 +41479,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (46300 === code2) {
+                                    if (code2 === 46300) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41492,7 +41491,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 46329) {
-                                    if (46328 === code2) {
+                                    if (code2 === 46328) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41507,7 +41506,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 46413) {
                               if (code2 < 46384) {
                                 if (code2 < 46357) {
-                                  if (46356 === code2) {
+                                  if (code2 === 46356) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41517,7 +41516,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 46385) {
-                                  if (46384 === code2) {
+                                  if (code2 === 46384) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41526,7 +41525,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (46412 === code2) {
+                                    if (code2 === 46412) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41540,7 +41539,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 46441) {
-                                    if (46440 === code2) {
+                                    if (code2 === 46440) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41551,7 +41550,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 46469) {
-                                  if (46468 === code2) {
+                                  if (code2 === 46468) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41560,7 +41559,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (46496 === code2) {
+                                    if (code2 === 46496) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41583,7 +41582,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (46524 === code2) {
+                                  if (code2 === 46524) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -41594,7 +41593,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 46553) {
-                                    if (46552 === code2) {
+                                    if (code2 === 46552) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41607,7 +41606,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 46608) {
                                 if (code2 < 46581) {
-                                  if (46580 === code2) {
+                                  if (code2 === 46580) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41617,7 +41616,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 46609) {
-                                  if (46608 === code2) {
+                                  if (code2 === 46608) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41626,7 +41625,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (46636 === code2) {
+                                    if (code2 === 46636) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41641,7 +41640,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (46664 === code2) {
+                                  if (code2 === 46664) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -41652,7 +41651,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 46693) {
-                                    if (46692 === code2) {
+                                    if (code2 === 46692) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41665,7 +41664,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 46749) {
                                 if (code2 < 46721) {
-                                  if (46720 === code2) {
+                                  if (code2 === 46720) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41674,7 +41673,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (46748 === code2) {
+                                    if (code2 === 46748) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41686,7 +41685,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 46777) {
-                                    if (46776 === code2) {
+                                    if (code2 === 46776) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41703,7 +41702,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 46861) {
                               if (code2 < 46832) {
                                 if (code2 < 46805) {
-                                  if (46804 === code2) {
+                                  if (code2 === 46804) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41713,7 +41712,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 46833) {
-                                  if (46832 === code2) {
+                                  if (code2 === 46832) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41722,7 +41721,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (46860 === code2) {
+                                    if (code2 === 46860) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41736,7 +41735,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 46889) {
-                                    if (46888 === code2) {
+                                    if (code2 === 46888) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41747,7 +41746,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 46917) {
-                                  if (46916 === code2) {
+                                  if (code2 === 46916) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41756,7 +41755,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (46944 === code2) {
+                                    if (code2 === 46944) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41771,7 +41770,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (46972 === code2) {
+                                  if (code2 === 46972) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -41782,7 +41781,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 47001) {
-                                    if (47e3 === code2) {
+                                    if (code2 === 47e3) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41795,7 +41794,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 47057) {
                                 if (code2 < 47029) {
-                                  if (47028 === code2) {
+                                  if (code2 === 47028) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41804,7 +41803,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (47056 === code2) {
+                                    if (code2 === 47056) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41816,7 +41815,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 47085) {
-                                    if (47084 === code2) {
+                                    if (code2 === 47084) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41835,7 +41834,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 47169) {
                               if (code2 < 47140) {
                                 if (code2 < 47113) {
-                                  if (47112 === code2) {
+                                  if (code2 === 47112) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41845,7 +41844,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 47141) {
-                                  if (47140 === code2) {
+                                  if (code2 === 47140) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41854,7 +41853,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (47168 === code2) {
+                                    if (code2 === 47168) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41867,7 +41866,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (47196 === code2) {
+                                  if (code2 === 47196) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -41878,7 +41877,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 47225) {
-                                    if (47224 === code2) {
+                                    if (code2 === 47224) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41893,7 +41892,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 47309) {
                               if (code2 < 47280) {
                                 if (code2 < 47253) {
-                                  if (47252 === code2) {
+                                  if (code2 === 47252) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41903,7 +41902,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 47281) {
-                                  if (47280 === code2) {
+                                  if (code2 === 47280) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41912,7 +41911,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (47308 === code2) {
+                                    if (code2 === 47308) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41926,7 +41925,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 47337) {
-                                    if (47336 === code2) {
+                                    if (code2 === 47336) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41937,7 +41936,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 47365) {
-                                  if (47364 === code2) {
+                                  if (code2 === 47364) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41946,7 +41945,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (47392 === code2) {
+                                    if (code2 === 47392) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -41963,7 +41962,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (47420 === code2) {
+                                  if (code2 === 47420) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -41974,7 +41973,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 47449) {
-                                    if (47448 === code2) {
+                                    if (code2 === 47448) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -41987,7 +41986,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 47505) {
                                 if (code2 < 47477) {
-                                  if (47476 === code2) {
+                                  if (code2 === 47476) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -41996,7 +41995,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (47504 === code2) {
+                                    if (code2 === 47504) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42008,7 +42007,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 47533) {
-                                    if (47532 === code2) {
+                                    if (code2 === 47532) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42023,7 +42022,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 47617) {
                               if (code2 < 47588) {
                                 if (code2 < 47561) {
-                                  if (47560 === code2) {
+                                  if (code2 === 47560) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42033,7 +42032,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 47589) {
-                                  if (47588 === code2) {
+                                  if (code2 === 47588) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42042,7 +42041,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (47616 === code2) {
+                                    if (code2 === 47616) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42056,7 +42055,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 47645) {
-                                    if (47644 === code2) {
+                                    if (code2 === 47644) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42067,7 +42066,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 47673) {
-                                  if (47672 === code2) {
+                                  if (code2 === 47672) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42076,7 +42075,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (47700 === code2) {
+                                    if (code2 === 47700) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42097,7 +42096,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (47728 === code2) {
+                                  if (code2 === 47728) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -42108,7 +42107,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 47757) {
-                                    if (47756 === code2) {
+                                    if (code2 === 47756) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42121,7 +42120,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 47812) {
                                 if (code2 < 47785) {
-                                  if (47784 === code2) {
+                                  if (code2 === 47784) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42131,7 +42130,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 47813) {
-                                  if (47812 === code2) {
+                                  if (code2 === 47812) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42140,7 +42139,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (47840 === code2) {
+                                    if (code2 === 47840) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42155,7 +42154,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (47868 === code2) {
+                                  if (code2 === 47868) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -42166,7 +42165,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 47897) {
-                                    if (47896 === code2) {
+                                    if (code2 === 47896) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42179,7 +42178,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 47953) {
                                 if (code2 < 47925) {
-                                  if (47924 === code2) {
+                                  if (code2 === 47924) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42188,7 +42187,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (47952 === code2) {
+                                    if (code2 === 47952) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42200,7 +42199,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 47981) {
-                                    if (47980 === code2) {
+                                    if (code2 === 47980) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42217,7 +42216,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 48065) {
                               if (code2 < 48036) {
                                 if (code2 < 48009) {
-                                  if (48008 === code2) {
+                                  if (code2 === 48008) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42227,7 +42226,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 48037) {
-                                  if (48036 === code2) {
+                                  if (code2 === 48036) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42236,7 +42235,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (48064 === code2) {
+                                    if (code2 === 48064) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42250,7 +42249,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 48093) {
-                                    if (48092 === code2) {
+                                    if (code2 === 48092) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42261,7 +42260,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 48121) {
-                                  if (48120 === code2) {
+                                  if (code2 === 48120) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42270,7 +42269,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (48148 === code2) {
+                                    if (code2 === 48148) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42285,7 +42284,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (48176 === code2) {
+                                  if (code2 === 48176) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -42296,7 +42295,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 48205) {
-                                    if (48204 === code2) {
+                                    if (code2 === 48204) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42309,7 +42308,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 48261) {
                                 if (code2 < 48233) {
-                                  if (48232 === code2) {
+                                  if (code2 === 48232) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42318,7 +42317,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (48260 === code2) {
+                                    if (code2 === 48260) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42330,7 +42329,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 48289) {
-                                    if (48288 === code2) {
+                                    if (code2 === 48288) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42349,7 +42348,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 48373) {
                               if (code2 < 48344) {
                                 if (code2 < 48317) {
-                                  if (48316 === code2) {
+                                  if (code2 === 48316) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42359,7 +42358,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 48345) {
-                                  if (48344 === code2) {
+                                  if (code2 === 48344) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42368,7 +42367,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (48372 === code2) {
+                                    if (code2 === 48372) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42381,7 +42380,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (48400 === code2) {
+                                  if (code2 === 48400) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -42392,7 +42391,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 48429) {
-                                    if (48428 === code2) {
+                                    if (code2 === 48428) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42407,7 +42406,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 48513) {
                               if (code2 < 48484) {
                                 if (code2 < 48457) {
-                                  if (48456 === code2) {
+                                  if (code2 === 48456) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42417,7 +42416,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 48485) {
-                                  if (48484 === code2) {
+                                  if (code2 === 48484) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42426,7 +42425,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (48512 === code2) {
+                                    if (code2 === 48512) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42440,7 +42439,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 48541) {
-                                    if (48540 === code2) {
+                                    if (code2 === 48540) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42451,7 +42450,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 48569) {
-                                  if (48568 === code2) {
+                                  if (code2 === 48568) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42460,7 +42459,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (48596 === code2) {
+                                    if (code2 === 48596) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42477,7 +42476,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (48624 === code2) {
+                                  if (code2 === 48624) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -42488,7 +42487,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 48653) {
-                                    if (48652 === code2) {
+                                    if (code2 === 48652) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42501,7 +42500,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 48709) {
                                 if (code2 < 48681) {
-                                  if (48680 === code2) {
+                                  if (code2 === 48680) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42510,7 +42509,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (48708 === code2) {
+                                    if (code2 === 48708) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42522,7 +42521,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 48737) {
-                                    if (48736 === code2) {
+                                    if (code2 === 48736) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42537,7 +42536,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 48821) {
                               if (code2 < 48792) {
                                 if (code2 < 48765) {
-                                  if (48764 === code2) {
+                                  if (code2 === 48764) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42547,7 +42546,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 48793) {
-                                  if (48792 === code2) {
+                                  if (code2 === 48792) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42556,7 +42555,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (48820 === code2) {
+                                    if (code2 === 48820) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42570,7 +42569,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 48849) {
-                                    if (48848 === code2) {
+                                    if (code2 === 48848) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42581,7 +42580,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 48877) {
-                                  if (48876 === code2) {
+                                  if (code2 === 48876) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42590,7 +42589,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (48904 === code2) {
+                                    if (code2 === 48904) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42617,7 +42616,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (48932 === code2) {
+                                  if (code2 === 48932) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -42628,7 +42627,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 48961) {
-                                    if (48960 === code2) {
+                                    if (code2 === 48960) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42641,7 +42640,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 49016) {
                                 if (code2 < 48989) {
-                                  if (48988 === code2) {
+                                  if (code2 === 48988) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42651,7 +42650,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 49017) {
-                                  if (49016 === code2) {
+                                  if (code2 === 49016) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42660,7 +42659,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (49044 === code2) {
+                                    if (code2 === 49044) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42675,7 +42674,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (49072 === code2) {
+                                  if (code2 === 49072) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -42686,7 +42685,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 49101) {
-                                    if (49100 === code2) {
+                                    if (code2 === 49100) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42699,7 +42698,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 49157) {
                                 if (code2 < 49129) {
-                                  if (49128 === code2) {
+                                  if (code2 === 49128) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42708,7 +42707,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (49156 === code2) {
+                                    if (code2 === 49156) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42720,7 +42719,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 49185) {
-                                    if (49184 === code2) {
+                                    if (code2 === 49184) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42737,7 +42736,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 49269) {
                               if (code2 < 49240) {
                                 if (code2 < 49213) {
-                                  if (49212 === code2) {
+                                  if (code2 === 49212) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42747,7 +42746,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 49241) {
-                                  if (49240 === code2) {
+                                  if (code2 === 49240) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42756,7 +42755,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (49268 === code2) {
+                                    if (code2 === 49268) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42769,7 +42768,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (49296 === code2) {
+                                  if (code2 === 49296) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -42780,7 +42779,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 49325) {
-                                    if (49324 === code2) {
+                                    if (code2 === 49324) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42795,7 +42794,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 49409) {
                               if (code2 < 49380) {
                                 if (code2 < 49353) {
-                                  if (49352 === code2) {
+                                  if (code2 === 49352) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42805,7 +42804,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 49381) {
-                                  if (49380 === code2) {
+                                  if (code2 === 49380) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42814,7 +42813,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (49408 === code2) {
+                                    if (code2 === 49408) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42828,7 +42827,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 49437) {
-                                    if (49436 === code2) {
+                                    if (code2 === 49436) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42839,7 +42838,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 49465) {
-                                  if (49464 === code2) {
+                                  if (code2 === 49464) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42848,7 +42847,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (49492 === code2) {
+                                    if (code2 === 49492) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42867,7 +42866,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (49520 === code2) {
+                                  if (code2 === 49520) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -42878,7 +42877,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 49549) {
-                                    if (49548 === code2) {
+                                    if (code2 === 49548) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42891,7 +42890,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 49604) {
                                 if (code2 < 49577) {
-                                  if (49576 === code2) {
+                                  if (code2 === 49576) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42901,7 +42900,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 49605) {
-                                  if (49604 === code2) {
+                                  if (code2 === 49604) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42910,7 +42909,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (49632 === code2) {
+                                    if (code2 === 49632) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42925,7 +42924,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (49660 === code2) {
+                                  if (code2 === 49660) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -42936,7 +42935,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 49689) {
-                                    if (49688 === code2) {
+                                    if (code2 === 49688) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42949,7 +42948,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 49745) {
                                 if (code2 < 49717) {
-                                  if (49716 === code2) {
+                                  if (code2 === 49716) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42958,7 +42957,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (49744 === code2) {
+                                    if (code2 === 49744) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -42970,7 +42969,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 49773) {
-                                    if (49772 === code2) {
+                                    if (code2 === 49772) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -42987,7 +42986,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 49857) {
                               if (code2 < 49828) {
                                 if (code2 < 49801) {
-                                  if (49800 === code2) {
+                                  if (code2 === 49800) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -42997,7 +42996,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 49829) {
-                                  if (49828 === code2) {
+                                  if (code2 === 49828) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43006,7 +43005,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (49856 === code2) {
+                                    if (code2 === 49856) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43020,7 +43019,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 49885) {
-                                    if (49884 === code2) {
+                                    if (code2 === 49884) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43031,7 +43030,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 49913) {
-                                  if (49912 === code2) {
+                                  if (code2 === 49912) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43040,7 +43039,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (49940 === code2) {
+                                    if (code2 === 49940) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43055,7 +43054,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (49968 === code2) {
+                                  if (code2 === 49968) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -43066,7 +43065,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 49997) {
-                                    if (49996 === code2) {
+                                    if (code2 === 49996) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43079,7 +43078,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 50053) {
                                 if (code2 < 50025) {
-                                  if (50024 === code2) {
+                                  if (code2 === 50024) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43088,7 +43087,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (50052 === code2) {
+                                    if (code2 === 50052) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43100,7 +43099,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 50081) {
-                                    if (50080 === code2) {
+                                    if (code2 === 50080) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43121,7 +43120,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 50165) {
                               if (code2 < 50136) {
                                 if (code2 < 50109) {
-                                  if (50108 === code2) {
+                                  if (code2 === 50108) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43131,7 +43130,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 50137) {
-                                  if (50136 === code2) {
+                                  if (code2 === 50136) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43140,7 +43139,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (50164 === code2) {
+                                    if (code2 === 50164) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43153,7 +43152,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (50192 === code2) {
+                                  if (code2 === 50192) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -43164,7 +43163,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 50221) {
-                                    if (50220 === code2) {
+                                    if (code2 === 50220) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43179,7 +43178,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 50305) {
                               if (code2 < 50276) {
                                 if (code2 < 50249) {
-                                  if (50248 === code2) {
+                                  if (code2 === 50248) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43189,7 +43188,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 50277) {
-                                  if (50276 === code2) {
+                                  if (code2 === 50276) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43198,7 +43197,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (50304 === code2) {
+                                    if (code2 === 50304) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43212,7 +43211,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 50333) {
-                                    if (50332 === code2) {
+                                    if (code2 === 50332) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43223,7 +43222,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 50361) {
-                                  if (50360 === code2) {
+                                  if (code2 === 50360) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43232,7 +43231,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (50388 === code2) {
+                                    if (code2 === 50388) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43249,7 +43248,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (50416 === code2) {
+                                  if (code2 === 50416) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -43260,7 +43259,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 50445) {
-                                    if (50444 === code2) {
+                                    if (code2 === 50444) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43273,7 +43272,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 50501) {
                                 if (code2 < 50473) {
-                                  if (50472 === code2) {
+                                  if (code2 === 50472) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43282,7 +43281,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (50500 === code2) {
+                                    if (code2 === 50500) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43294,7 +43293,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 50529) {
-                                    if (50528 === code2) {
+                                    if (code2 === 50528) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43309,7 +43308,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 50613) {
                               if (code2 < 50584) {
                                 if (code2 < 50557) {
-                                  if (50556 === code2) {
+                                  if (code2 === 50556) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43319,7 +43318,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 50585) {
-                                  if (50584 === code2) {
+                                  if (code2 === 50584) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43328,7 +43327,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (50612 === code2) {
+                                    if (code2 === 50612) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43342,7 +43341,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 50641) {
-                                    if (50640 === code2) {
+                                    if (code2 === 50640) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43353,7 +43352,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 50669) {
-                                  if (50668 === code2) {
+                                  if (code2 === 50668) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43362,7 +43361,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (50696 === code2) {
+                                    if (code2 === 50696) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43381,7 +43380,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (50724 === code2) {
+                                  if (code2 === 50724) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -43392,7 +43391,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 50753) {
-                                    if (50752 === code2) {
+                                    if (code2 === 50752) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43405,7 +43404,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 50808) {
                                 if (code2 < 50781) {
-                                  if (50780 === code2) {
+                                  if (code2 === 50780) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43415,7 +43414,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 50809) {
-                                  if (50808 === code2) {
+                                  if (code2 === 50808) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43424,7 +43423,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (50836 === code2) {
+                                    if (code2 === 50836) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43439,7 +43438,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (50864 === code2) {
+                                  if (code2 === 50864) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -43450,7 +43449,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 50893) {
-                                    if (50892 === code2) {
+                                    if (code2 === 50892) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43463,7 +43462,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 50949) {
                                 if (code2 < 50921) {
-                                  if (50920 === code2) {
+                                  if (code2 === 50920) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43472,7 +43471,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (50948 === code2) {
+                                    if (code2 === 50948) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43484,7 +43483,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 50977) {
-                                    if (50976 === code2) {
+                                    if (code2 === 50976) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43501,7 +43500,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 51061) {
                               if (code2 < 51032) {
                                 if (code2 < 51005) {
-                                  if (51004 === code2) {
+                                  if (code2 === 51004) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43511,7 +43510,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 51033) {
-                                  if (51032 === code2) {
+                                  if (code2 === 51032) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43520,7 +43519,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (51060 === code2) {
+                                    if (code2 === 51060) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43534,7 +43533,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 51089) {
-                                    if (51088 === code2) {
+                                    if (code2 === 51088) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43545,7 +43544,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 51117) {
-                                  if (51116 === code2) {
+                                  if (code2 === 51116) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43554,7 +43553,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (51144 === code2) {
+                                    if (code2 === 51144) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43569,7 +43568,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (51172 === code2) {
+                                  if (code2 === 51172) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -43580,7 +43579,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 51201) {
-                                    if (51200 === code2) {
+                                    if (code2 === 51200) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43593,7 +43592,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 51257) {
                                 if (code2 < 51229) {
-                                  if (51228 === code2) {
+                                  if (code2 === 51228) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43602,7 +43601,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (51256 === code2) {
+                                    if (code2 === 51256) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43614,7 +43613,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 51285) {
-                                    if (51284 === code2) {
+                                    if (code2 === 51284) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43637,7 +43636,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 51369) {
                               if (code2 < 51340) {
                                 if (code2 < 51313) {
-                                  if (51312 === code2) {
+                                  if (code2 === 51312) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43647,7 +43646,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 51341) {
-                                  if (51340 === code2) {
+                                  if (code2 === 51340) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43656,7 +43655,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (51368 === code2) {
+                                    if (code2 === 51368) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43669,7 +43668,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (51396 === code2) {
+                                  if (code2 === 51396) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -43680,7 +43679,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 51425) {
-                                    if (51424 === code2) {
+                                    if (code2 === 51424) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43695,7 +43694,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 51509) {
                               if (code2 < 51480) {
                                 if (code2 < 51453) {
-                                  if (51452 === code2) {
+                                  if (code2 === 51452) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43705,7 +43704,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 51481) {
-                                  if (51480 === code2) {
+                                  if (code2 === 51480) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43714,7 +43713,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (51508 === code2) {
+                                    if (code2 === 51508) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43728,7 +43727,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 51537) {
-                                    if (51536 === code2) {
+                                    if (code2 === 51536) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43739,7 +43738,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 51565) {
-                                  if (51564 === code2) {
+                                  if (code2 === 51564) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43748,7 +43747,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (51592 === code2) {
+                                    if (code2 === 51592) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43765,7 +43764,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (51620 === code2) {
+                                  if (code2 === 51620) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -43776,7 +43775,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 51649) {
-                                    if (51648 === code2) {
+                                    if (code2 === 51648) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43789,7 +43788,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 51705) {
                                 if (code2 < 51677) {
-                                  if (51676 === code2) {
+                                  if (code2 === 51676) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43798,7 +43797,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (51704 === code2) {
+                                    if (code2 === 51704) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43810,7 +43809,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 51733) {
-                                    if (51732 === code2) {
+                                    if (code2 === 51732) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43825,7 +43824,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 51817) {
                               if (code2 < 51788) {
                                 if (code2 < 51761) {
-                                  if (51760 === code2) {
+                                  if (code2 === 51760) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43835,7 +43834,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 51789) {
-                                  if (51788 === code2) {
+                                  if (code2 === 51788) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43844,7 +43843,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (51816 === code2) {
+                                    if (code2 === 51816) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43858,7 +43857,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 51845) {
-                                    if (51844 === code2) {
+                                    if (code2 === 51844) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43869,7 +43868,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 51873) {
-                                  if (51872 === code2) {
+                                  if (code2 === 51872) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43878,7 +43877,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (51900 === code2) {
+                                    if (code2 === 51900) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43897,7 +43896,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (51928 === code2) {
+                                  if (code2 === 51928) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -43908,7 +43907,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 51957) {
-                                    if (51956 === code2) {
+                                    if (code2 === 51956) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43921,7 +43920,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 52012) {
                                 if (code2 < 51985) {
-                                  if (51984 === code2) {
+                                  if (code2 === 51984) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43931,7 +43930,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 52013) {
-                                  if (52012 === code2) {
+                                  if (code2 === 52012) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43940,7 +43939,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (52040 === code2) {
+                                    if (code2 === 52040) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -43955,7 +43954,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (52068 === code2) {
+                                  if (code2 === 52068) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -43966,7 +43965,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 52097) {
-                                    if (52096 === code2) {
+                                    if (code2 === 52096) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -43979,7 +43978,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 52153) {
                                 if (code2 < 52125) {
-                                  if (52124 === code2) {
+                                  if (code2 === 52124) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -43988,7 +43987,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (52152 === code2) {
+                                    if (code2 === 52152) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44000,7 +43999,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 52181) {
-                                    if (52180 === code2) {
+                                    if (code2 === 52180) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44017,7 +44016,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 52265) {
                               if (code2 < 52236) {
                                 if (code2 < 52209) {
-                                  if (52208 === code2) {
+                                  if (code2 === 52208) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44027,7 +44026,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 52237) {
-                                  if (52236 === code2) {
+                                  if (code2 === 52236) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44036,7 +44035,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (52264 === code2) {
+                                    if (code2 === 52264) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44050,7 +44049,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 52293) {
-                                    if (52292 === code2) {
+                                    if (code2 === 52292) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44061,7 +44060,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 52321) {
-                                  if (52320 === code2) {
+                                  if (code2 === 52320) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44070,7 +44069,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (52348 === code2) {
+                                    if (code2 === 52348) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44085,7 +44084,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (52376 === code2) {
+                                  if (code2 === 52376) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -44096,7 +44095,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 52405) {
-                                    if (52404 === code2) {
+                                    if (code2 === 52404) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44109,7 +44108,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 52461) {
                                 if (code2 < 52433) {
-                                  if (52432 === code2) {
+                                  if (code2 === 52432) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44118,7 +44117,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (52460 === code2) {
+                                    if (code2 === 52460) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44130,7 +44129,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 52489) {
-                                    if (52488 === code2) {
+                                    if (code2 === 52488) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44151,7 +44150,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 52573) {
                               if (code2 < 52544) {
                                 if (code2 < 52517) {
-                                  if (52516 === code2) {
+                                  if (code2 === 52516) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44161,7 +44160,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 52545) {
-                                  if (52544 === code2) {
+                                  if (code2 === 52544) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44170,7 +44169,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (52572 === code2) {
+                                    if (code2 === 52572) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44183,7 +44182,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (52600 === code2) {
+                                  if (code2 === 52600) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -44194,7 +44193,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 52629) {
-                                    if (52628 === code2) {
+                                    if (code2 === 52628) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44209,7 +44208,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 52713) {
                               if (code2 < 52684) {
                                 if (code2 < 52657) {
-                                  if (52656 === code2) {
+                                  if (code2 === 52656) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44219,7 +44218,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 52685) {
-                                  if (52684 === code2) {
+                                  if (code2 === 52684) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44228,7 +44227,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (52712 === code2) {
+                                    if (code2 === 52712) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44242,7 +44241,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 52741) {
-                                    if (52740 === code2) {
+                                    if (code2 === 52740) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44253,7 +44252,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 52769) {
-                                  if (52768 === code2) {
+                                  if (code2 === 52768) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44262,7 +44261,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (52796 === code2) {
+                                    if (code2 === 52796) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44279,7 +44278,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (52824 === code2) {
+                                  if (code2 === 52824) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -44290,7 +44289,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 52853) {
-                                    if (52852 === code2) {
+                                    if (code2 === 52852) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44303,7 +44302,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 52909) {
                                 if (code2 < 52881) {
-                                  if (52880 === code2) {
+                                  if (code2 === 52880) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44312,7 +44311,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (52908 === code2) {
+                                    if (code2 === 52908) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44324,7 +44323,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 52937) {
-                                    if (52936 === code2) {
+                                    if (code2 === 52936) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44339,7 +44338,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 53021) {
                               if (code2 < 52992) {
                                 if (code2 < 52965) {
-                                  if (52964 === code2) {
+                                  if (code2 === 52964) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44349,7 +44348,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 52993) {
-                                  if (52992 === code2) {
+                                  if (code2 === 52992) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44358,7 +44357,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (53020 === code2) {
+                                    if (code2 === 53020) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44372,7 +44371,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 53049) {
-                                    if (53048 === code2) {
+                                    if (code2 === 53048) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44383,7 +44382,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 53077) {
-                                  if (53076 === code2) {
+                                  if (code2 === 53076) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44392,7 +44391,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (53104 === code2) {
+                                    if (code2 === 53104) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44411,7 +44410,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (53132 === code2) {
+                                  if (code2 === 53132) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -44422,7 +44421,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 53161) {
-                                    if (53160 === code2) {
+                                    if (code2 === 53160) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44435,7 +44434,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 53216) {
                                 if (code2 < 53189) {
-                                  if (53188 === code2) {
+                                  if (code2 === 53188) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44445,7 +44444,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 53217) {
-                                  if (53216 === code2) {
+                                  if (code2 === 53216) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44454,7 +44453,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (53244 === code2) {
+                                    if (code2 === 53244) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44469,7 +44468,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (53272 === code2) {
+                                  if (code2 === 53272) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -44480,7 +44479,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 53301) {
-                                    if (53300 === code2) {
+                                    if (code2 === 53300) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44493,7 +44492,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 53357) {
                                 if (code2 < 53329) {
-                                  if (53328 === code2) {
+                                  if (code2 === 53328) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44502,7 +44501,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (53356 === code2) {
+                                    if (code2 === 53356) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44514,7 +44513,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 53385) {
-                                    if (53384 === code2) {
+                                    if (code2 === 53384) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44531,7 +44530,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 53469) {
                               if (code2 < 53440) {
                                 if (code2 < 53413) {
-                                  if (53412 === code2) {
+                                  if (code2 === 53412) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44541,7 +44540,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 53441) {
-                                  if (53440 === code2) {
+                                  if (code2 === 53440) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44550,7 +44549,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (53468 === code2) {
+                                    if (code2 === 53468) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44564,7 +44563,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 53497) {
-                                    if (53496 === code2) {
+                                    if (code2 === 53496) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44575,7 +44574,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 53525) {
-                                  if (53524 === code2) {
+                                  if (code2 === 53524) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44584,7 +44583,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (53552 === code2) {
+                                    if (code2 === 53552) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44599,7 +44598,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (53580 === code2) {
+                                  if (code2 === 53580) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -44610,7 +44609,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 53609) {
-                                    if (53608 === code2) {
+                                    if (code2 === 53608) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44623,7 +44622,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 53665) {
                                 if (code2 < 53637) {
-                                  if (53636 === code2) {
+                                  if (code2 === 53636) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44632,7 +44631,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (53664 === code2) {
+                                    if (code2 === 53664) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44644,7 +44643,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 53693) {
-                                    if (53692 === code2) {
+                                    if (code2 === 53692) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44669,7 +44668,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 53777) {
                               if (code2 < 53748) {
                                 if (code2 < 53721) {
-                                  if (53720 === code2) {
+                                  if (code2 === 53720) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44679,7 +44678,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 53749) {
-                                  if (53748 === code2) {
+                                  if (code2 === 53748) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44688,7 +44687,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (53776 === code2) {
+                                    if (code2 === 53776) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44701,7 +44700,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (53804 === code2) {
+                                  if (code2 === 53804) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -44712,7 +44711,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 53833) {
-                                    if (53832 === code2) {
+                                    if (code2 === 53832) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44727,7 +44726,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 53917) {
                               if (code2 < 53888) {
                                 if (code2 < 53861) {
-                                  if (53860 === code2) {
+                                  if (code2 === 53860) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44737,7 +44736,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 53889) {
-                                  if (53888 === code2) {
+                                  if (code2 === 53888) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44746,7 +44745,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (53916 === code2) {
+                                    if (code2 === 53916) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44760,7 +44759,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 53945) {
-                                    if (53944 === code2) {
+                                    if (code2 === 53944) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44771,7 +44770,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 53973) {
-                                  if (53972 === code2) {
+                                  if (code2 === 53972) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44780,7 +44779,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (54e3 === code2) {
+                                    if (code2 === 54e3) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44797,7 +44796,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (54028 === code2) {
+                                  if (code2 === 54028) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -44808,7 +44807,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 54057) {
-                                    if (54056 === code2) {
+                                    if (code2 === 54056) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44821,7 +44820,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 54112) {
                                 if (code2 < 54085) {
-                                  if (54084 === code2) {
+                                  if (code2 === 54084) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44831,7 +44830,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 54113) {
-                                  if (54112 === code2) {
+                                  if (code2 === 54112) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44840,7 +44839,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (54140 === code2) {
+                                    if (code2 === 54140) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44855,7 +44854,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (54168 === code2) {
+                                  if (code2 === 54168) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -44866,7 +44865,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 54197) {
-                                    if (54196 === code2) {
+                                    if (code2 === 54196) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44879,7 +44878,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 54253) {
                                 if (code2 < 54225) {
-                                  if (54224 === code2) {
+                                  if (code2 === 54224) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44888,7 +44887,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (54252 === code2) {
+                                    if (code2 === 54252) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44900,7 +44899,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 54281) {
-                                    if (54280 === code2) {
+                                    if (code2 === 54280) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44919,7 +44918,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 54365) {
                               if (code2 < 54336) {
                                 if (code2 < 54309) {
-                                  if (54308 === code2) {
+                                  if (code2 === 54308) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44929,7 +44928,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 54337) {
-                                  if (54336 === code2) {
+                                  if (code2 === 54336) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44938,7 +44937,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (54364 === code2) {
+                                    if (code2 === 54364) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -44951,7 +44950,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (54392 === code2) {
+                                  if (code2 === 54392) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -44962,7 +44961,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 54421) {
-                                    if (54420 === code2) {
+                                    if (code2 === 54420) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -44977,7 +44976,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 54505) {
                               if (code2 < 54476) {
                                 if (code2 < 54449) {
-                                  if (54448 === code2) {
+                                  if (code2 === 54448) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44987,7 +44986,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 54477) {
-                                  if (54476 === code2) {
+                                  if (code2 === 54476) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -44996,7 +44995,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (54504 === code2) {
+                                    if (code2 === 54504) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -45010,7 +45009,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 54533) {
-                                    if (54532 === code2) {
+                                    if (code2 === 54532) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -45021,7 +45020,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 54561) {
-                                  if (54560 === code2) {
+                                  if (code2 === 54560) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -45030,7 +45029,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (54588 === code2) {
+                                    if (code2 === 54588) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -45047,7 +45046,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (54616 === code2) {
+                                  if (code2 === 54616) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -45058,7 +45057,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 54645) {
-                                    if (54644 === code2) {
+                                    if (code2 === 54644) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -45071,7 +45070,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 54701) {
                                 if (code2 < 54673) {
-                                  if (54672 === code2) {
+                                  if (code2 === 54672) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -45080,7 +45079,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (54700 === code2) {
+                                    if (code2 === 54700) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -45092,7 +45091,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 54729) {
-                                    if (54728 === code2) {
+                                    if (code2 === 54728) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -45107,7 +45106,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 54813) {
                               if (code2 < 54784) {
                                 if (code2 < 54757) {
-                                  if (54756 === code2) {
+                                  if (code2 === 54756) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -45117,7 +45116,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 54785) {
-                                  if (54784 === code2) {
+                                  if (code2 === 54784) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -45126,7 +45125,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (54812 === code2) {
+                                    if (code2 === 54812) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -45140,7 +45139,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 54841) {
-                                    if (54840 === code2) {
+                                    if (code2 === 54840) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -45151,7 +45150,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 54869) {
-                                  if (54868 === code2) {
+                                  if (code2 === 54868) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -45160,7 +45159,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (54896 === code2) {
+                                    if (code2 === 54896) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -45181,7 +45180,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (54924 === code2) {
+                                  if (code2 === 54924) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -45192,7 +45191,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 54953) {
-                                    if (54952 === code2) {
+                                    if (code2 === 54952) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -45205,7 +45204,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 55008) {
                                 if (code2 < 54981) {
-                                  if (54980 === code2) {
+                                  if (code2 === 54980) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -45215,7 +45214,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 55009) {
-                                  if (55008 === code2) {
+                                  if (code2 === 55008) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -45224,7 +45223,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (55036 === code2) {
+                                    if (code2 === 55036) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -45239,7 +45238,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.LVT;
                                   }
                                 } else {
-                                  if (55064 === code2) {
+                                  if (code2 === 55064) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 }
@@ -45250,7 +45249,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 55093) {
-                                    if (55092 === code2) {
+                                    if (code2 === 55092) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -45263,7 +45262,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 55149) {
                                 if (code2 < 55121) {
-                                  if (55120 === code2) {
+                                  if (code2 === 55120) {
                                     return boundaries_1.CLUSTER_BREAK.LV;
                                   }
                                 } else {
@@ -45272,7 +45271,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.LVT;
                                     }
                                   } else {
-                                    if (55148 === code2) {
+                                    if (code2 === 55148) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   }
@@ -45284,7 +45283,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 55177) {
-                                    if (55176 === code2) {
+                                    if (code2 === 55176) {
                                       return boundaries_1.CLUSTER_BREAK.LV;
                                     }
                                   } else {
@@ -45311,7 +45310,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 65024) {
-                                  if (64286 === code2) {
+                                  if (code2 === 64286) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -45329,7 +45328,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 66045) {
                                 if (code2 < 65438) {
-                                  if (65279 === code2) {
+                                  if (code2 === 65279) {
                                     return boundaries_1.CLUSTER_BREAK.CONTROL;
                                   }
                                 } else {
@@ -45345,12 +45344,12 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 66272) {
-                                  if (66045 === code2) {
+                                  if (code2 === 66045) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
                                   if (code2 < 66422) {
-                                    if (66272 === code2) {
+                                    if (code2 === 66272) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
@@ -45384,7 +45383,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
-                                    if (68159 === code2) {
+                                    if (code2 === 68159) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   }
@@ -45432,15 +45431,15 @@ if (edgeAlpha == 0.0) {
                           if (code2 < 69815) {
                             if (code2 < 69747) {
                               if (code2 < 69634) {
-                                if (69632 === code2) {
+                                if (code2 === 69632) {
                                   return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                 }
-                                if (69633 === code2) {
+                                if (code2 === 69633) {
                                   return boundaries_1.CLUSTER_BREAK.EXTEND;
                                 }
                               } else {
                                 if (code2 < 69688) {
-                                  if (69634 === code2) {
+                                  if (code2 === 69634) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
@@ -45449,7 +45448,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
-                                    if (69744 === code2) {
+                                    if (code2 === 69744) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   }
@@ -45468,7 +45467,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 69808) {
-                                  if (69762 === code2) {
+                                  if (code2 === 69762) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
@@ -45498,14 +45497,14 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 69826) {
-                                  if (69821 === code2) {
+                                  if (code2 === 69821) {
                                     return boundaries_1.CLUSTER_BREAK.PREPEND;
                                   }
                                 } else {
-                                  if (69826 === code2) {
+                                  if (code2 === 69826) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
-                                  if (69837 === code2) {
+                                  if (code2 === 69837) {
                                     return boundaries_1.CLUSTER_BREAK.PREPEND;
                                   }
                                 }
@@ -45522,7 +45521,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
-                                    if (69932 === code2) {
+                                    if (code2 === 69932) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   }
@@ -45538,7 +45537,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   } else {
-                                    if (70003 === code2) {
+                                    if (code2 === 70003) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   }
@@ -45555,7 +45554,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (70018 === code2) {
+                                  if (code2 === 70018) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 }
@@ -45588,14 +45587,14 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
-                                    if (70094 === code2) {
+                                    if (code2 === 70094) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   }
                                 }
                               } else {
                                 if (code2 < 70188) {
-                                  if (70095 === code2) {
+                                  if (code2 === 70095) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -45619,13 +45618,13 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
-                                  if (70196 === code2) {
+                                  if (code2 === 70196) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
                               } else {
                                 if (code2 < 70198) {
-                                  if (70197 === code2) {
+                                  if (code2 === 70197) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
@@ -45634,7 +45633,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
-                                    if (70206 === code2) {
+                                    if (code2 === 70206) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   }
@@ -45643,12 +45642,12 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 70371) {
                                 if (code2 < 70367) {
-                                  if (70209 === code2) {
+                                  if (code2 === 70209) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
                                   if (code2 < 70368) {
-                                    if (70367 === code2) {
+                                    if (code2 === 70367) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
@@ -45691,18 +45690,18 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (70462 === code2) {
+                                  if (code2 === 70462) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
                               } else {
                                 if (code2 < 70464) {
-                                  if (70463 === code2) {
+                                  if (code2 === 70463) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
                                   if (code2 < 70465) {
-                                    if (70464 === code2) {
+                                    if (code2 === 70464) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
@@ -45725,7 +45724,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 70498) {
-                                  if (70487 === code2) {
+                                  if (code2 === 70487) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -45773,20 +45772,20 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 70832) {
                                 if (code2 < 70726) {
-                                  if (70725 === code2) {
+                                  if (code2 === 70725) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
-                                  if (70726 === code2) {
+                                  if (code2 === 70726) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
-                                  if (70750 === code2) {
+                                  if (code2 === 70750) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
                               } else {
                                 if (code2 < 70833) {
-                                  if (70832 === code2) {
+                                  if (code2 === 70832) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -45807,10 +45806,10 @@ if (edgeAlpha == 0.0) {
                           if (code2 < 71096) {
                             if (code2 < 70847) {
                               if (code2 < 70843) {
-                                if (70841 === code2) {
+                                if (code2 === 70841) {
                                   return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                 }
-                                if (70842 === code2) {
+                                if (code2 === 70842) {
                                   return boundaries_1.CLUSTER_BREAK.EXTEND;
                                 }
                               } else {
@@ -45819,10 +45818,10 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
-                                  if (70845 === code2) {
+                                  if (code2 === 70845) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
-                                  if (70846 === code2) {
+                                  if (code2 === 70846) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 }
@@ -45835,7 +45834,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 70850) {
-                                    if (70849 === code2) {
+                                    if (code2 === 70849) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   } else {
@@ -45846,7 +45845,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 71088) {
-                                  if (71087 === code2) {
+                                  if (code2 === 71087) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -45876,7 +45875,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 71103) {
-                                  if (71102 === code2) {
+                                  if (code2 === 71102) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
@@ -45910,12 +45909,12 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 71230) {
-                                  if (71229 === code2) {
+                                  if (code2 === 71229) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
                                   if (code2 < 71231) {
-                                    if (71230 === code2) {
+                                    if (code2 === 71230) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   } else {
@@ -45933,15 +45932,15 @@ if (edgeAlpha == 0.0) {
                           if (code2 < 71463) {
                             if (code2 < 71350) {
                               if (code2 < 71341) {
-                                if (71339 === code2) {
+                                if (code2 === 71339) {
                                   return boundaries_1.CLUSTER_BREAK.EXTEND;
                                 }
-                                if (71340 === code2) {
+                                if (code2 === 71340) {
                                   return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                 }
                               } else {
                                 if (code2 < 71342) {
-                                  if (71341 === code2) {
+                                  if (code2 === 71341) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -45958,10 +45957,10 @@ if (edgeAlpha == 0.0) {
                               }
                             } else {
                               if (code2 < 71453) {
-                                if (71350 === code2) {
+                                if (code2 === 71350) {
                                   return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                 }
-                                if (71351 === code2) {
+                                if (code2 === 71351) {
                                   return boundaries_1.CLUSTER_BREAK.EXTEND;
                                 }
                               } else {
@@ -45975,7 +45974,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
-                                    if (71462 === code2) {
+                                    if (code2 === 71462) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   }
@@ -46001,7 +46000,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 71737) {
-                                    if (71736 === code2) {
+                                    if (code2 === 71736) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   } else {
@@ -46014,7 +46013,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 71995) {
                                 if (code2 < 71985) {
-                                  if (71984 === code2) {
+                                  if (code2 === 71984) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -46034,10 +46033,10 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (71997 === code2) {
+                                  if (code2 === 71997) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
-                                  if (71998 === code2) {
+                                  if (code2 === 71998) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
@@ -46048,22 +46047,22 @@ if (edgeAlpha == 0.0) {
                           if (code2 < 72193) {
                             if (code2 < 72145) {
                               if (code2 < 72001) {
-                                if (71999 === code2) {
+                                if (code2 === 71999) {
                                   return boundaries_1.CLUSTER_BREAK.PREPEND;
                                 }
-                                if (72e3 === code2) {
+                                if (code2 === 72e3) {
                                   return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                 }
                               } else {
                                 if (code2 < 72002) {
-                                  if (72001 === code2) {
+                                  if (code2 === 72001) {
                                     return boundaries_1.CLUSTER_BREAK.PREPEND;
                                   }
                                 } else {
-                                  if (72002 === code2) {
+                                  if (code2 === 72002) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
-                                  if (72003 === code2) {
+                                  if (code2 === 72003) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
@@ -46091,10 +46090,10 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
-                                  if (72160 === code2) {
+                                  if (code2 === 72160) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
-                                  if (72164 === code2) {
+                                  if (code2 === 72164) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 }
@@ -46114,12 +46113,12 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 72250) {
-                                  if (72249 === code2) {
+                                  if (code2 === 72249) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
                                   if (code2 < 72251) {
-                                    if (72250 === code2) {
+                                    if (code2 === 72250) {
                                       return boundaries_1.CLUSTER_BREAK.PREPEND;
                                     }
                                   } else {
@@ -46132,7 +46131,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 72281) {
                                 if (code2 < 72273) {
-                                  if (72263 === code2) {
+                                  if (code2 === 72263) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -46174,7 +46173,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 72766) {
                               if (code2 < 72751) {
                                 if (code2 < 72344) {
-                                  if (72343 === code2) {
+                                  if (code2 === 72343) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
@@ -46184,7 +46183,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 72752) {
-                                  if (72751 === code2) {
+                                  if (code2 === 72751) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
@@ -46201,10 +46200,10 @@ if (edgeAlpha == 0.0) {
                               }
                             } else {
                               if (code2 < 72850) {
-                                if (72766 === code2) {
+                                if (code2 === 72766) {
                                   return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                 }
-                                if (72767 === code2) {
+                                if (code2 === 72767) {
                                   return boundaries_1.CLUSTER_BREAK.EXTEND;
                                 }
                               } else {
@@ -46214,7 +46213,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 72874) {
-                                    if (72873 === code2) {
+                                    if (code2 === 72873) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   } else {
@@ -46229,7 +46228,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 73018) {
                               if (code2 < 72884) {
                                 if (code2 < 72882) {
-                                  if (72881 === code2) {
+                                  if (code2 === 72881) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
@@ -46239,7 +46238,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 72885) {
-                                  if (72884 === code2) {
+                                  if (code2 === 72884) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 } else {
@@ -46257,7 +46256,7 @@ if (edgeAlpha == 0.0) {
                             } else {
                               if (code2 < 73030) {
                                 if (code2 < 73020) {
-                                  if (73018 === code2) {
+                                  if (code2 === 73018) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -46273,12 +46272,12 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 73031) {
-                                  if (73030 === code2) {
+                                  if (code2 === 73030) {
                                     return boundaries_1.CLUSTER_BREAK.PREPEND;
                                   }
                                 } else {
                                   if (code2 < 73098) {
-                                    if (73031 === code2) {
+                                    if (code2 === 73031) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
@@ -46305,14 +46304,14 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 73110) {
-                                  if (73109 === code2) {
+                                  if (code2 === 73109) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (73110 === code2) {
+                                  if (code2 === 73110) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
-                                  if (73111 === code2) {
+                                  if (code2 === 73111) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
@@ -46336,12 +46335,12 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 73475) {
-                                  if (73474 === code2) {
+                                  if (code2 === 73474) {
                                     return boundaries_1.CLUSTER_BREAK.PREPEND;
                                   }
                                 } else {
                                   if (code2 < 73524) {
-                                    if (73475 === code2) {
+                                    if (code2 === 73475) {
                                       return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                     }
                                   } else {
@@ -46366,14 +46365,14 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 73537) {
-                                  if (73536 === code2) {
+                                  if (code2 === 73536) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (73537 === code2) {
+                                  if (code2 === 73537) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
-                                  if (73538 === code2) {
+                                  if (code2 === 73538) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 }
@@ -46386,7 +46385,7 @@ if (edgeAlpha == 0.0) {
                                   }
                                 } else {
                                   if (code2 < 78919) {
-                                    if (78912 === code2) {
+                                    if (code2 === 78912) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
@@ -46406,7 +46405,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
-                                    if (94031 === code2) {
+                                    if (code2 === 94031) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   }
@@ -46431,7 +46430,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 94192) {
-                                  if (94180 === code2) {
+                                  if (code2 === 94180) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -46463,10 +46462,10 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (119141 === code2) {
+                                  if (code2 === 119141) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
-                                  if (119142 === code2) {
+                                  if (code2 === 119142) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 }
@@ -46480,7 +46479,7 @@ if (edgeAlpha == 0.0) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
-                                  if (119149 === code2) {
+                                  if (code2 === 119149) {
                                     return boundaries_1.CLUSTER_BREAK.SPACINGMARK;
                                   }
                                 }
@@ -46529,7 +46528,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
-                                    if (121461 === code2) {
+                                    if (code2 === 121461) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   }
@@ -46542,7 +46541,7 @@ if (edgeAlpha == 0.0) {
                             if (code2 < 122907) {
                               if (code2 < 121505) {
                                 if (code2 < 121499) {
-                                  if (121476 === code2) {
+                                  if (code2 === 121476) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -46586,7 +46585,7 @@ if (edgeAlpha == 0.0) {
                                 }
                               } else {
                                 if (code2 < 123184) {
-                                  if (123023 === code2) {
+                                  if (code2 === 123023) {
                                     return boundaries_1.CLUSTER_BREAK.EXTEND;
                                   }
                                 } else {
@@ -46595,7 +46594,7 @@ if (edgeAlpha == 0.0) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   } else {
-                                    if (123566 === code2) {
+                                    if (code2 === 123566) {
                                       return boundaries_1.CLUSTER_BREAK.EXTEND;
                                     }
                                   }
@@ -46681,26 +46680,26 @@ if (edgeAlpha == 0.0) {
                   if (code2 < 9e3) {
                     if (code2 < 8482) {
                       if (code2 < 8252) {
-                        if (169 === code2) {
+                        if (code2 === 169) {
                           return boundaries_1.EXTENDED_PICTOGRAPHIC;
                         }
-                        if (174 === code2) {
+                        if (code2 === 174) {
                           return boundaries_1.EXTENDED_PICTOGRAPHIC;
                         }
                       } else {
-                        if (8252 === code2) {
+                        if (code2 === 8252) {
                           return boundaries_1.EXTENDED_PICTOGRAPHIC;
                         }
-                        if (8265 === code2) {
+                        if (code2 === 8265) {
                           return boundaries_1.EXTENDED_PICTOGRAPHIC;
                         }
                       }
                     } else {
                       if (code2 < 8596) {
-                        if (8482 === code2) {
+                        if (code2 === 8482) {
                           return boundaries_1.EXTENDED_PICTOGRAPHIC;
                         }
-                        if (8505 === code2) {
+                        if (code2 === 8505) {
                           return boundaries_1.EXTENDED_PICTOGRAPHIC;
                         }
                       } else {
@@ -46724,15 +46723,15 @@ if (edgeAlpha == 0.0) {
                   } else {
                     if (code2 < 9410) {
                       if (code2 < 9167) {
-                        if (9e3 === code2) {
+                        if (code2 === 9e3) {
                           return boundaries_1.EXTENDED_PICTOGRAPHIC;
                         }
-                        if (9096 === code2) {
+                        if (code2 === 9096) {
                           return boundaries_1.EXTENDED_PICTOGRAPHIC;
                         }
                       } else {
                         if (code2 < 9193) {
-                          if (9167 === code2) {
+                          if (code2 === 9167) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
                         } else {
@@ -46750,7 +46749,7 @@ if (edgeAlpha == 0.0) {
                     } else {
                       if (code2 < 9654) {
                         if (code2 < 9642) {
-                          if (9410 === code2) {
+                          if (code2 === 9410) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
                         } else {
@@ -46760,12 +46759,12 @@ if (edgeAlpha == 0.0) {
                         }
                       } else {
                         if (code2 < 9664) {
-                          if (9654 === code2) {
+                          if (code2 === 9654) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
                         } else {
                           if (code2 < 9723) {
-                            if (9664 === code2) {
+                            if (code2 === 9664) {
                               return boundaries_1.EXTENDED_PICTOGRAPHIC;
                             }
                           } else {
@@ -46809,22 +46808,22 @@ if (edgeAlpha == 0.0) {
                       }
                     } else {
                       if (code2 < 10013) {
-                        if (10004 === code2) {
+                        if (code2 === 10004) {
                           return boundaries_1.EXTENDED_PICTOGRAPHIC;
                         }
-                        if (10006 === code2) {
+                        if (code2 === 10006) {
                           return boundaries_1.EXTENDED_PICTOGRAPHIC;
                         }
                       } else {
                         if (code2 < 10017) {
-                          if (10013 === code2) {
+                          if (code2 === 10013) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
                         } else {
-                          if (10017 === code2) {
+                          if (code2 === 10017) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
-                          if (10024 === code2) {
+                          if (code2 === 10024) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
                         }
@@ -46838,20 +46837,20 @@ if (edgeAlpha == 0.0) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
                         } else {
-                          if (10052 === code2) {
+                          if (code2 === 10052) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
                         }
                       } else {
                         if (code2 < 10060) {
-                          if (10055 === code2) {
+                          if (code2 === 10055) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
                         } else {
-                          if (10060 === code2) {
+                          if (code2 === 10060) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
-                          if (10062 === code2) {
+                          if (code2 === 10062) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
                         }
@@ -46863,7 +46862,7 @@ if (edgeAlpha == 0.0) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
                         } else {
-                          if (10071 === code2) {
+                          if (code2 === 10071) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
                         }
@@ -46878,7 +46877,7 @@ if (edgeAlpha == 0.0) {
                               return boundaries_1.EXTENDED_PICTOGRAPHIC;
                             }
                           } else {
-                            if (10145 === code2) {
+                            if (code2 === 10145) {
                               return boundaries_1.EXTENDED_PICTOGRAPHIC;
                             }
                           }
@@ -46892,10 +46891,10 @@ if (edgeAlpha == 0.0) {
                   if (code2 < 12951) {
                     if (code2 < 11035) {
                       if (code2 < 10548) {
-                        if (10160 === code2) {
+                        if (code2 === 10160) {
                           return boundaries_1.EXTENDED_PICTOGRAPHIC;
                         }
-                        if (10175 === code2) {
+                        if (code2 === 10175) {
                           return boundaries_1.EXTENDED_PICTOGRAPHIC;
                         }
                       } else {
@@ -46916,20 +46915,20 @@ if (edgeAlpha == 0.0) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
                         } else {
-                          if (11088 === code2) {
+                          if (code2 === 11088) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
                         }
                       } else {
                         if (code2 < 12336) {
-                          if (11093 === code2) {
+                          if (code2 === 11093) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
                         } else {
-                          if (12336 === code2) {
+                          if (code2 === 12336) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
-                          if (12349 === code2) {
+                          if (code2 === 12349) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
                         }
@@ -46938,10 +46937,10 @@ if (edgeAlpha == 0.0) {
                   } else {
                     if (code2 < 127340) {
                       if (code2 < 126976) {
-                        if (12951 === code2) {
+                        if (code2 === 12951) {
                           return boundaries_1.EXTENDED_PICTOGRAPHIC;
                         }
-                        if (12953 === code2) {
+                        if (code2 === 12953) {
                           return boundaries_1.EXTENDED_PICTOGRAPHIC;
                         }
                       } else {
@@ -46955,7 +46954,7 @@ if (edgeAlpha == 0.0) {
                               return boundaries_1.EXTENDED_PICTOGRAPHIC;
                             }
                           } else {
-                            if (127279 === code2) {
+                            if (code2 === 127279) {
                               return boundaries_1.EXTENDED_PICTOGRAPHIC;
                             }
                           }
@@ -46974,7 +46973,7 @@ if (edgeAlpha == 0.0) {
                         }
                       } else {
                         if (code2 < 127377) {
-                          if (127374 === code2) {
+                          if (code2 === 127374) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
                         } else {
@@ -47000,13 +46999,13 @@ if (edgeAlpha == 0.0) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
                         } else {
-                          if (127514 === code2) {
+                          if (code2 === 127514) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
                         }
                       } else {
                         if (code2 < 127538) {
-                          if (127535 === code2) {
+                          if (code2 === 127535) {
                             return boundaries_1.EXTENDED_PICTOGRAPHIC;
                           }
                         } else {
@@ -47118,7 +47117,7 @@ if (edgeAlpha == 0.0) {
         }
       });
       var require_lib2 = __commonJS2({
-        "../../node_modules/graphemer/lib/index.js"(exports2) {
+        "../../node_modules/.pnpm/graphemer@1.4.0/node_modules/graphemer/lib/index.js"(exports2) {
           "use strict";
           var __importDefault = exports2 && exports2.__importDefault || function(mod) {
             return mod && mod.__esModule ? mod : { "default": mod };
@@ -47129,24 +47128,24 @@ if (edgeAlpha == 0.0) {
         }
       });
       var require_dist2 = __commonJS2({
-        "../../node_modules/iso-datestring-validator/dist/index.js"(exports2) {
+        "../../node_modules/.pnpm/iso-datestring-validator@2.2.2/node_modules/iso-datestring-validator/dist/index.js"(exports2) {
           (() => {
             "use strict";
             var e = { d: (t2, r2) => {
               for (var n2 in r2)
                 e.o(r2, n2) && !e.o(t2, n2) && Object.defineProperty(t2, n2, { enumerable: true, get: r2[n2] });
             }, o: (e2, t2) => Object.prototype.hasOwnProperty.call(e2, t2), r: (e2) => {
-              "undefined" != typeof Symbol && Symbol.toStringTag && Object.defineProperty(e2, Symbol.toStringTag, { value: "Module" }), Object.defineProperty(e2, "__esModule", { value: true });
+              typeof Symbol != "undefined" && Symbol.toStringTag && Object.defineProperty(e2, Symbol.toStringTag, { value: "Module" }), Object.defineProperty(e2, "__esModule", { value: true });
             } }, t = {};
             function r(e2, t2) {
-              return void 0 === t2 && (t2 = "-"), new RegExp("^(?!0{4}" + t2 + "0{2}" + t2 + "0{2})((?=[0-9]{4}" + t2 + "(((0[^2])|1[0-2])|02(?=" + t2 + "(([0-1][0-9])|2[0-8])))" + t2 + "[0-9]{2})|(?=((([13579][26])|([2468][048])|(0[48]))0{2})|([0-9]{2}((((0|[2468])[48])|[2468][048])|([13579][26])))" + t2 + "02" + t2 + "29))([0-9]{4})" + t2 + "(?!((0[469])|11)" + t2 + "31)((0[1,3-9]|1[0-2])|(02(?!" + t2 + "3)))" + t2 + "(0[1-9]|[1-2][0-9]|3[0-1])$").test(e2);
+              return t2 === void 0 && (t2 = "-"), new RegExp("^(?!0{4}" + t2 + "0{2}" + t2 + "0{2})((?=[0-9]{4}" + t2 + "(((0[^2])|1[0-2])|02(?=" + t2 + "(([0-1][0-9])|2[0-8])))" + t2 + "[0-9]{2})|(?=((([13579][26])|([2468][048])|(0[48]))0{2})|([0-9]{2}((((0|[2468])[48])|[2468][048])|([13579][26])))" + t2 + "02" + t2 + "29))([0-9]{4})" + t2 + "(?!((0[469])|11)" + t2 + "31)((0[1,3-9]|1[0-2])|(02(?!" + t2 + "3)))" + t2 + "(0[1-9]|[1-2][0-9]|3[0-1])$").test(e2);
             }
             function n(e2) {
               var t2 = /\D/.exec(e2);
               return t2 ? t2[0] : "";
             }
             function i(e2, t2, r2) {
-              void 0 === t2 && (t2 = ":"), void 0 === r2 && (r2 = false);
+              t2 === void 0 && (t2 = ":"), r2 === void 0 && (r2 = false);
               var i2 = new RegExp("^([0-1]|2(?=([0-3])|4" + t2 + "00))[0-9]" + t2 + "[0-5][0-9](" + t2 + "([0-5]|6(?=0))[0-9])?(.[0-9]{1,9})?$");
               if (!r2 || !/[Z+\-]/.test(e2))
                 return i2.test(e2);
@@ -47154,7 +47153,7 @@ if (edgeAlpha == 0.0) {
                 return i2.test(e2.replace("Z", ""));
               var o2 = e2.includes("+"), a2 = e2.split(/[+-]/), u2 = a2[0], d2 = a2[1];
               return i2.test(u2) && function(e3, t3, r3) {
-                return void 0 === r3 && (r3 = ":"), new RegExp(t3 ? "^(0(?!(2" + r3 + "4)|0" + r3 + "3)|1(?=([0-1]|2(?=" + r3 + "[04])|[34](?=" + r3 + "0))))([03469](?=" + r3 + "[03])|[17](?=" + r3 + "0)|2(?=" + r3 + "[04])|5(?=" + r3 + "[034])|8(?=" + r3 + "[04]))" + r3 + "([03](?=0)|4(?=5))[05]$" : "^(0(?=[^0])|1(?=[0-2]))([39](?=" + r3 + "[03])|[0-24-8](?=" + r3 + "00))" + r3 + "[03]0$").test(e3);
+                return r3 === void 0 && (r3 = ":"), new RegExp(t3 ? "^(0(?!(2" + r3 + "4)|0" + r3 + "3)|1(?=([0-1]|2(?=" + r3 + "[04])|[34](?=" + r3 + "0))))([03469](?=" + r3 + "[03])|[17](?=" + r3 + "0)|2(?=" + r3 + "[04])|5(?=" + r3 + "[034])|8(?=" + r3 + "[04]))" + r3 + "([03](?=0)|4(?=5))[05]$" : "^(0(?=[^0])|1(?=[0-2]))([39](?=" + r3 + "[03])|[0-24-8](?=" + r3 + "00))" + r3 + "[03]0$").test(e3);
               }(d2, o2, n(d2));
             }
             function o(e2) {
@@ -47165,7 +47164,7 @@ if (edgeAlpha == 0.0) {
               return u2 && i(a2, s, true);
             }
             function a(e2, t2) {
-              return void 0 === t2 && (t2 = "-"), new RegExp("^[0-9]{4}" + t2 + "(0(?=[^0])|1(?=[0-2]))[0-9]$").test(e2);
+              return t2 === void 0 && (t2 = "-"), new RegExp("^[0-9]{4}" + t2 + "(0(?=[^0])|1(?=[0-2]))[0-9]$").test(e2);
             }
             e.r(t), e.d(t, { isValidDate: () => r, isValidISODateString: () => o, isValidTime: () => i, isValidYearMonth: () => a });
             var u = exports2;
@@ -47175,8 +47174,8 @@ if (edgeAlpha == 0.0) {
           })();
         }
       });
-      var src_exports4 = {};
-      __export2(src_exports4, {
+      var src_exports2 = {};
+      __export2(src_exports2, {
         APP_BSKY_GRAPH: () => APP_BSKY_GRAPH,
         ActorNS: () => ActorNS,
         AdminNS: () => AdminNS,
@@ -47204,13 +47203,16 @@ if (edgeAlpha == 0.0) {
         AppBskyFeedGetFeedGenerators: () => getFeedGenerators_exports,
         AppBskyFeedGetFeedSkeleton: () => getFeedSkeleton_exports,
         AppBskyFeedGetLikes: () => getLikes_exports,
+        AppBskyFeedGetListFeed: () => getListFeed_exports,
         AppBskyFeedGetPostThread: () => getPostThread_exports,
         AppBskyFeedGetPosts: () => getPosts_exports,
         AppBskyFeedGetRepostedBy: () => getRepostedBy_exports,
+        AppBskyFeedGetSuggestedFeeds: () => getSuggestedFeeds_exports,
         AppBskyFeedGetTimeline: () => getTimeline_exports,
         AppBskyFeedLike: () => like_exports,
         AppBskyFeedPost: () => post_exports,
         AppBskyFeedRepost: () => repost_exports,
+        AppBskyFeedThreadgate: () => threadgate_exports,
         AppBskyGraphBlock: () => block_exports,
         AppBskyGraphDefs: () => defs_exports7,
         AppBskyGraphFollow: () => follow_exports,
@@ -47218,10 +47220,13 @@ if (edgeAlpha == 0.0) {
         AppBskyGraphGetFollowers: () => getFollowers_exports,
         AppBskyGraphGetFollows: () => getFollows_exports,
         AppBskyGraphGetList: () => getList_exports,
+        AppBskyGraphGetListBlocks: () => getListBlocks_exports,
         AppBskyGraphGetListMutes: () => getListMutes_exports,
         AppBskyGraphGetLists: () => getLists_exports,
         AppBskyGraphGetMutes: () => getMutes_exports,
+        AppBskyGraphGetSuggestedFollowsByActor: () => getSuggestedFollowsByActor_exports,
         AppBskyGraphList: () => list_exports,
+        AppBskyGraphListblock: () => listblock_exports,
         AppBskyGraphListitem: () => listitem_exports,
         AppBskyGraphMuteActor: () => muteActor_exports,
         AppBskyGraphMuteActorList: () => muteActorList_exports,
@@ -47259,7 +47264,6 @@ if (edgeAlpha == 0.0) {
         ComAtprotoAdminGetModerationReports: () => getModerationReports_exports,
         ComAtprotoAdminGetRecord: () => getRecord_exports,
         ComAtprotoAdminGetRepo: () => getRepo_exports,
-        ComAtprotoAdminRebaseRepo: () => rebaseRepo_exports,
         ComAtprotoAdminResolveModerationReports: () => resolveModerationReports_exports,
         ComAtprotoAdminReverseModerationAction: () => reverseModerationAction_exports,
         ComAtprotoAdminSearchRepos: () => searchRepos_exports,
@@ -47281,7 +47285,6 @@ if (edgeAlpha == 0.0) {
         ComAtprotoRepoGetRecord: () => getRecord_exports2,
         ComAtprotoRepoListRecords: () => listRecords_exports,
         ComAtprotoRepoPutRecord: () => putRecord_exports,
-        ComAtprotoRepoRebaseRepo: () => rebaseRepo_exports2,
         ComAtprotoRepoStrongRef: () => strongRef_exports,
         ComAtprotoRepoUploadBlob: () => uploadBlob_exports,
         ComAtprotoServerCreateAccount: () => createAccount_exports,
@@ -47304,8 +47307,8 @@ if (edgeAlpha == 0.0) {
         ComAtprotoSyncGetBlob: () => getBlob_exports,
         ComAtprotoSyncGetBlocks: () => getBlocks_exports,
         ComAtprotoSyncGetCheckout: () => getCheckout_exports,
-        ComAtprotoSyncGetCommitPath: () => getCommitPath_exports,
         ComAtprotoSyncGetHead: () => getHead_exports,
+        ComAtprotoSyncGetLatestCommit: () => getLatestCommit_exports,
         ComAtprotoSyncGetRecord: () => getRecord_exports3,
         ComAtprotoSyncGetRepo: () => getRepo_exports2,
         ComAtprotoSyncListBlobs: () => listBlobs_exports,
@@ -47325,6 +47328,7 @@ if (edgeAlpha == 0.0) {
         LabelNS: () => LabelNS,
         LikeRecord: () => LikeRecord,
         ListRecord: () => ListRecord,
+        ListblockRecord: () => ListblockRecord,
         ListitemRecord: () => ListitemRecord,
         ModerationDecision: () => ModerationDecision,
         ModerationNS: () => ModerationNS,
@@ -47338,6 +47342,7 @@ if (edgeAlpha == 0.0) {
         RichtextNS: () => RichtextNS,
         ServerNS: () => ServerNS,
         SyncNS: () => SyncNS,
+        ThreadgateRecord: () => ThreadgateRecord,
         UnicodeString: () => UnicodeString,
         UnspeccedNS: () => UnspeccedNS,
         default: () => AtpAgent,
@@ -47352,12 +47357,10 @@ if (edgeAlpha == 0.0) {
         sanitizeRichText: () => sanitizeRichText,
         stringifyLex: () => stringifyLex
       });
-      module.exports = __toCommonJS2(src_exports4);
+      module.exports = __toCommonJS2(src_exports2);
       var ensureValidHandle = (handle2) => {
         if (!/^[a-zA-Z0-9.-]*$/.test(handle2)) {
-          throw new InvalidHandleError(
-            "Disallowed characters in handle (ASCII letters, digits, dashes, periods only)"
-          );
+          throw new InvalidHandleError("Disallowed characters in handle (ASCII letters, digits, dashes, periods only)");
         }
         if (handle2.length > 253) {
           throw new InvalidHandleError("Handle is too long (253 chars max)");
@@ -47375,14 +47378,10 @@ if (edgeAlpha == 0.0) {
             throw new InvalidHandleError("Handle part too long (max 63 chars)");
           }
           if (l.endsWith("-") || l.startsWith("-")) {
-            throw new InvalidHandleError(
-              "Handle parts can not start or end with hyphens"
-            );
+            throw new InvalidHandleError("Handle parts can not start or end with hyphens");
           }
           if (i + 1 == labels.length && !/^[a-zA-Z]/.test(l)) {
-            throw new InvalidHandleError(
-              "Handle final component (TLD) must start with ASCII letter"
-            );
+            throw new InvalidHandleError("Handle final component (TLD) must start with ASCII letter");
           }
         }
       };
@@ -47390,15 +47389,11 @@ if (edgeAlpha == 0.0) {
       };
       var ensureValidDid = (did2) => {
         if (!/^[a-zA-Z0-9._:%-]*$/.test(did2)) {
-          throw new InvalidDidError(
-            "Disallowed characters in DID (ASCII letters, digits, and a couple other characters only)"
-          );
+          throw new InvalidDidError("Disallowed characters in DID (ASCII letters, digits, and a couple other characters only)");
         }
         const parts = did2.split(":");
         if (parts.length < 3) {
-          throw new InvalidDidError(
-            "DID requires prefix, method, and method-specific content"
-          );
+          throw new InvalidDidError("DID requires prefix, method, and method-specific content");
         }
         if (parts[0] != "did") {
           throw new InvalidDidError('DID requires "did:" prefix');
@@ -47449,9 +47444,7 @@ if (edgeAlpha == 0.0) {
       var ensureValidNsid = (nsid2) => {
         const toCheck = nsid2;
         if (!/^[a-zA-Z0-9.-]*$/.test(toCheck)) {
-          throw new InvalidNsidError(
-            "Disallowed characters in NSID (ASCII letters, digits, dashes, periods only)"
-          );
+          throw new InvalidNsidError("Disallowed characters in NSID (ASCII letters, digits, dashes, periods only)");
         }
         if (toCheck.length > 253 + 1 + 63) {
           throw new InvalidNsidError("NSID is too long (317 chars max)");
@@ -47509,29 +47502,21 @@ if (edgeAlpha == 0.0) {
         }
         if (parts.length >= 4) {
           if (parts[3].length == 0) {
-            throw new Error(
-              "ATURI can not have a slash after authority without a path segment"
-            );
+            throw new Error("ATURI can not have a slash after authority without a path segment");
           }
           try {
             ensureValidNsid(parts[3]);
           } catch {
-            throw new Error(
-              "ATURI requires first path segment (if supplied) to be valid NSID"
-            );
+            throw new Error("ATURI requires first path segment (if supplied) to be valid NSID");
           }
         }
         if (parts.length >= 5) {
           if (parts[4].length == 0) {
-            throw new Error(
-              "ATURI can not have a slash after collection, unless record key is provided"
-            );
+            throw new Error("ATURI can not have a slash after collection, unless record key is provided");
           }
         }
         if (parts.length >= 6) {
-          throw new Error(
-            "ATURI path can have at most two parts, and no trailing slash"
-          );
+          throw new Error("ATURI path can have at most two parts, and no trailing slash");
         }
         if (uriParts.length >= 2 && fragmentPart == null) {
           throw new Error("ATURI fragment must be non-empty and start with slash");
@@ -47551,12 +47536,12 @@ if (edgeAlpha == 0.0) {
       var ATP_URI_REGEX = /^(at:\/\/)?((?:did:[a-z0-9:%-]+)|(?:[a-z0-9][a-z0-9.:-]*))(\/[^?#\s]*)?(\?[^#\s]+)?(#[^\s]+)?$/i;
       var RELATIVE_REGEX = /^(\/[^?#\s]*)?(\?[^#\s]+)?(#[^\s]+)?$/i;
       var AtUri = class {
-        constructor(uri2, base33) {
+        constructor(uri2, base3) {
           let parsed;
-          if (base33) {
-            parsed = parse(base33);
+          if (base3) {
+            parsed = parse(base3);
             if (!parsed) {
-              throw new Error(`Invalid at uri: ${base33}`);
+              throw new Error(`Invalid at uri: ${base3}`);
             }
             const relativep = parseRelative(uri2);
             if (!relativep) {
@@ -48467,14 +48452,11 @@ if (edgeAlpha == 0.0) {
           const parsedType = this._getType(input);
           if (parsedType !== ZodParsedType.string) {
             const ctx2 = this._getOrReturnCtx(input);
-            addIssueToContext(
-              ctx2,
-              {
-                code: ZodIssueCode.invalid_type,
-                expected: ZodParsedType.string,
-                received: ctx2.parsedType
-              }
-            );
+            addIssueToContext(ctx2, {
+              code: ZodIssueCode.invalid_type,
+              expected: ZodParsedType.string,
+              received: ctx2.parsedType
+            });
             return INVALID;
           }
           const status = new ParseStatus();
@@ -49703,9 +49685,7 @@ if (edgeAlpha == 0.0) {
               const value = ctx.data[key];
               pairs.push({
                 key: { status: "valid", value: key },
-                value: catchall._parse(
-                  new ParseInputLazyPath(ctx, value, ctx.path, key)
-                ),
+                value: catchall._parse(new ParseInputLazyPath(ctx, value, ctx.path, key)),
                 alwaysSet: key in ctx.data
               });
             }
@@ -50782,23 +50762,23 @@ if (edgeAlpha == 0.0) {
           }
           if (effect.type === "transform") {
             if (ctx.common.async === false) {
-              const base33 = this._def.schema._parseSync({
+              const base3 = this._def.schema._parseSync({
                 data: ctx.data,
                 path: ctx.path,
                 parent: ctx
               });
-              if (!isValid(base33))
-                return base33;
-              const result = effect.transform(base33.value, checkCtx);
+              if (!isValid(base3))
+                return base3;
+              const result = effect.transform(base3.value, checkCtx);
               if (result instanceof Promise) {
                 throw new Error(`Asynchronous transform encountered during synchronous parse operation. Use .parseAsync instead.`);
               }
               return { status: status.value, value: result };
             } else {
-              return this._def.schema._parseAsync({ data: ctx.data, path: ctx.path, parent: ctx }).then((base33) => {
-                if (!isValid(base33))
-                  return base33;
-                return Promise.resolve(effect.transform(base33.value, checkCtx)).then((result) => ({ status: status.value, value: result }));
+              return this._def.schema._parseAsync({ data: ctx.data, path: ctx.path, parent: ctx }).then((base3) => {
+                if (!isValid(base3))
+                  return base3;
+                return Promise.resolve(effect.transform(base3.value, checkCtx)).then((result) => ({ status: status.value, value: result }));
               });
             }
           }
@@ -51122,7 +51102,7 @@ if (edgeAlpha == 0.0) {
       var ostring = () => stringType().optional();
       var onumber = () => numberType().optional();
       var oboolean = () => booleanType().optional();
-      var coerce3 = {
+      var coerce2 = {
         string: (arg) => ZodString.create({ ...arg, coerce: true }),
         number: (arg) => ZodNumber.create({ ...arg, coerce: true }),
         boolean: (arg) => ZodBoolean.create({
@@ -51202,7 +51182,7 @@ if (edgeAlpha == 0.0) {
         get ZodFirstPartyTypeKind() {
           return ZodFirstPartyTypeKind;
         },
-        coerce: coerce3,
+        coerce: coerce2,
         any: anyType,
         array: arrayType,
         bigint: bigIntType,
@@ -51250,10 +51230,10 @@ if (edgeAlpha == 0.0) {
       var check_exports = {};
       __export2(check_exports, {
         assure: () => assure,
-        is: () => is3,
+        is: () => is2,
         isObject: () => isObject
       });
-      var is3 = (obj, def2) => {
+      var is2 = (obj, def2) => {
         return def2.safeParse(obj).success;
       };
       var assure = (def2, obj) => {
@@ -51262,79 +51242,79 @@ if (edgeAlpha == 0.0) {
       var isObject = (obj) => {
         return typeof obj === "object" && obj !== null;
       };
-      var encode_13 = encode9;
-      var MSB3 = 128;
-      var REST3 = 127;
-      var MSBALL3 = ~REST3;
-      var INT3 = Math.pow(2, 31);
-      function encode9(num, out, offset) {
+      var encode_12 = encode6;
+      var MSB2 = 128;
+      var REST2 = 127;
+      var MSBALL2 = ~REST2;
+      var INT2 = Math.pow(2, 31);
+      function encode6(num, out, offset) {
         out = out || [];
         offset = offset || 0;
         var oldOffset = offset;
-        while (num >= INT3) {
-          out[offset++] = num & 255 | MSB3;
+        while (num >= INT2) {
+          out[offset++] = num & 255 | MSB2;
           num /= 128;
         }
-        while (num & MSBALL3) {
-          out[offset++] = num & 255 | MSB3;
+        while (num & MSBALL2) {
+          out[offset++] = num & 255 | MSB2;
           num >>>= 7;
         }
         out[offset] = num | 0;
-        encode9.bytes = offset - oldOffset + 1;
+        encode6.bytes = offset - oldOffset + 1;
         return out;
       }
-      var decode13 = read4;
-      var MSB$13 = 128;
-      var REST$13 = 127;
-      function read4(buf3, offset) {
-        var res = 0, offset = offset || 0, shift = 0, counter = offset, b, l = buf3.length;
+      var decode8 = read3;
+      var MSB$12 = 128;
+      var REST$12 = 127;
+      function read3(buf2, offset) {
+        var res = 0, offset = offset || 0, shift = 0, counter = offset, b, l = buf2.length;
         do {
           if (counter >= l) {
-            read4.bytes = 0;
+            read3.bytes = 0;
             throw new RangeError("Could not decode varint");
           }
-          b = buf3[counter++];
-          res += shift < 28 ? (b & REST$13) << shift : (b & REST$13) * Math.pow(2, shift);
+          b = buf2[counter++];
+          res += shift < 28 ? (b & REST$12) << shift : (b & REST$12) * Math.pow(2, shift);
           shift += 7;
-        } while (b >= MSB$13);
-        read4.bytes = counter - offset;
+        } while (b >= MSB$12);
+        read3.bytes = counter - offset;
         return res;
       }
-      var N13 = Math.pow(2, 7);
-      var N23 = Math.pow(2, 14);
-      var N33 = Math.pow(2, 21);
-      var N43 = Math.pow(2, 28);
-      var N53 = Math.pow(2, 35);
-      var N63 = Math.pow(2, 42);
-      var N73 = Math.pow(2, 49);
-      var N83 = Math.pow(2, 56);
-      var N93 = Math.pow(2, 63);
-      var length3 = function(value) {
-        return value < N13 ? 1 : value < N23 ? 2 : value < N33 ? 3 : value < N43 ? 4 : value < N53 ? 5 : value < N63 ? 6 : value < N73 ? 7 : value < N83 ? 8 : value < N93 ? 9 : 10;
+      var N12 = Math.pow(2, 7);
+      var N22 = Math.pow(2, 14);
+      var N32 = Math.pow(2, 21);
+      var N42 = Math.pow(2, 28);
+      var N52 = Math.pow(2, 35);
+      var N62 = Math.pow(2, 42);
+      var N72 = Math.pow(2, 49);
+      var N82 = Math.pow(2, 56);
+      var N92 = Math.pow(2, 63);
+      var length2 = function(value) {
+        return value < N12 ? 1 : value < N22 ? 2 : value < N32 ? 3 : value < N42 ? 4 : value < N52 ? 5 : value < N62 ? 6 : value < N72 ? 7 : value < N82 ? 8 : value < N92 ? 9 : 10;
       };
-      var varint6 = {
-        encode: encode_13,
-        decode: decode13,
-        encodingLength: length3
+      var varint5 = {
+        encode: encode_12,
+        decode: decode8,
+        encodingLength: length2
       };
-      var _brrp_varint3 = varint6;
-      var varint_default3 = _brrp_varint3;
+      var _brrp_varint2 = varint5;
+      var varint_default2 = _brrp_varint2;
       var decode22 = (data, offset = 0) => {
-        const code2 = varint_default3.decode(data, offset);
+        const code2 = varint_default2.decode(data, offset);
         return [
           code2,
-          varint_default3.decode.bytes
+          varint_default2.decode.bytes
         ];
       };
-      var encodeTo3 = (int, target2, offset = 0) => {
-        varint_default3.encode(int, target2, offset);
+      var encodeTo2 = (int, target2, offset = 0) => {
+        varint_default2.encode(int, target2, offset);
         return target2;
       };
-      var encodingLength3 = (int) => {
-        return varint_default3.encodingLength(int);
+      var encodingLength2 = (int) => {
+        return varint_default2.encodingLength(int);
       };
-      var empty3 = new Uint8Array(0);
-      var equals6 = (aa, bb) => {
+      var empty2 = new Uint8Array(0);
+      var equals4 = (aa, bb) => {
         if (aa === bb)
           return true;
         if (aa.byteLength !== bb.byteLength) {
@@ -51357,17 +51337,17 @@ if (edgeAlpha == 0.0) {
         }
         throw new Error("Unknown type, must be binary type");
       };
-      var fromString3 = (str) => new TextEncoder().encode(str);
-      var toString3 = (b) => new TextDecoder().decode(b);
-      var create4 = (code2, digest2) => {
+      var fromString2 = (str) => new TextEncoder().encode(str);
+      var toString2 = (b) => new TextDecoder().decode(b);
+      var create3 = (code2, digest2) => {
         const size = digest2.byteLength;
-        const sizeOffset = encodingLength3(code2);
-        const digestOffset = sizeOffset + encodingLength3(size);
+        const sizeOffset = encodingLength2(code2);
+        const digestOffset = sizeOffset + encodingLength2(size);
         const bytes2 = new Uint8Array(digestOffset + size);
-        encodeTo3(code2, bytes2, 0);
-        encodeTo3(size, bytes2, sizeOffset);
+        encodeTo2(code2, bytes2, 0);
+        encodeTo2(size, bytes2, sizeOffset);
         bytes2.set(digest2, digestOffset);
-        return new Digest3(code2, size, digest2, bytes2);
+        return new Digest2(code2, size, digest2, bytes2);
       };
       var decode32 = (multihash) => {
         const bytes2 = coerce22(multihash);
@@ -51377,16 +51357,16 @@ if (edgeAlpha == 0.0) {
         if (digest2.byteLength !== size) {
           throw new Error("Incorrect length");
         }
-        return new Digest3(code2, size, digest2, bytes2);
+        return new Digest2(code2, size, digest2, bytes2);
       };
       var equals22 = (a, b) => {
         if (a === b) {
           return true;
         } else {
-          return a.code === b.code && a.size === b.size && equals6(a.bytes, b.bytes);
+          return a.code === b.code && a.size === b.size && equals4(a.bytes, b.bytes);
         }
       };
-      var Digest3 = class {
+      var Digest2 = class {
         constructor(code2, size, digest2, bytes2) {
           this.code = code2;
           this.size = size;
@@ -51396,10 +51376,10 @@ if (edgeAlpha == 0.0) {
       };
       var base58_exports = {};
       __export2(base58_exports, {
-        base58btc: () => base58btc3,
-        base58flickr: () => base58flickr3
+        base58btc: () => base58btc2,
+        base58flickr: () => base58flickr2
       });
-      function base3(ALPHABET, name2) {
+      function base2(ALPHABET, name2) {
         if (ALPHABET.length >= 255) {
           throw new TypeError("Alphabet too long");
         }
@@ -51518,9 +51498,9 @@ if (edgeAlpha == 0.0) {
           return vch;
         }
         function decode62(string3) {
-          var buffer3 = decodeUnsafe(string3);
-          if (buffer3) {
-            return buffer3;
+          var buffer2 = decodeUnsafe(string3);
+          if (buffer2) {
+            return buffer2;
           }
           throw new Error(`Non-${name2} character`);
         }
@@ -51530,10 +51510,10 @@ if (edgeAlpha == 0.0) {
           decode: decode62
         };
       }
-      var src4 = base3;
-      var _brrp__multiformats_scope_baseX3 = src4;
-      var base_x_default3 = _brrp__multiformats_scope_baseX3;
-      var Encoder4 = class {
+      var src3 = base2;
+      var _brrp__multiformats_scope_baseX2 = src3;
+      var base_x_default2 = _brrp__multiformats_scope_baseX2;
+      var Encoder3 = class {
         constructor(name2, prefix, baseEncode) {
           this.name = name2;
           this.prefix = prefix;
@@ -51547,7 +51527,7 @@ if (edgeAlpha == 0.0) {
           }
         }
       };
-      var Decoder4 = class {
+      var Decoder3 = class {
         constructor(name2, prefix, baseDecode) {
           this.name = name2;
           this.prefix = prefix;
@@ -51568,15 +51548,15 @@ if (edgeAlpha == 0.0) {
           }
         }
         or(decoder22) {
-          return or3(this, decoder22);
+          return or2(this, decoder22);
         }
       };
-      var ComposedDecoder3 = class {
+      var ComposedDecoder2 = class {
         constructor(decoders) {
           this.decoders = decoders;
         }
         or(decoder22) {
-          return or3(this, decoder22);
+          return or2(this, decoder22);
         }
         decode(input) {
           const prefix = input[0];
@@ -51588,18 +51568,18 @@ if (edgeAlpha == 0.0) {
           }
         }
       };
-      var or3 = (left, right) => new ComposedDecoder3({
+      var or2 = (left, right) => new ComposedDecoder2({
         ...left.decoders || { [left.prefix]: left },
         ...right.decoders || { [right.prefix]: right }
       });
-      var Codec3 = class {
+      var Codec2 = class {
         constructor(name2, prefix, baseEncode, baseDecode) {
           this.name = name2;
           this.prefix = prefix;
           this.baseEncode = baseEncode;
           this.baseDecode = baseDecode;
-          this.encoder = new Encoder4(name2, prefix, baseEncode);
-          this.decoder = new Decoder4(name2, prefix, baseDecode);
+          this.encoder = new Encoder3(name2, prefix, baseEncode);
+          this.decoder = new Decoder3(name2, prefix, baseDecode);
         }
         encode(input) {
           return this.encoder.encode(input);
@@ -51608,10 +51588,10 @@ if (edgeAlpha == 0.0) {
           return this.decoder.decode(input);
         }
       };
-      var from3 = ({ name: name2, prefix, encode: encode52, decode: decode62 }) => new Codec3(name2, prefix, encode52, decode62);
-      var baseX3 = ({ prefix, name: name2, alphabet: alphabet2 }) => {
-        const { encode: encode52, decode: decode62 } = base_x_default3(alphabet2, name2);
-        return from3({
+      var from2 = ({ name: name2, prefix, encode: encode52, decode: decode62 }) => new Codec2(name2, prefix, encode52, decode62);
+      var baseX2 = ({ prefix, name: name2, alphabet: alphabet2 }) => {
+        const { encode: encode52, decode: decode62 } = base_x_default2(alphabet2, name2);
+        return from2({
           prefix,
           name: name2,
           encode: encode52,
@@ -51629,21 +51609,21 @@ if (edgeAlpha == 0.0) {
         }
         const out = new Uint8Array(end * bitsPerChar / 8 | 0);
         let bits = 0;
-        let buffer3 = 0;
+        let buffer2 = 0;
         let written = 0;
         for (let i = 0; i < end; ++i) {
           const value = codes[string3[i]];
           if (value === void 0) {
             throw new SyntaxError(`Non-${name2} character`);
           }
-          buffer3 = buffer3 << bitsPerChar | value;
+          buffer2 = buffer2 << bitsPerChar | value;
           bits += bitsPerChar;
           if (bits >= 8) {
             bits -= 8;
-            out[written++] = 255 & buffer3 >> bits;
+            out[written++] = 255 & buffer2 >> bits;
           }
         }
-        if (bits >= bitsPerChar || 255 & buffer3 << 8 - bits) {
+        if (bits >= bitsPerChar || 255 & buffer2 << 8 - bits) {
           throw new SyntaxError("Unexpected end of data");
         }
         return out;
@@ -51653,17 +51633,17 @@ if (edgeAlpha == 0.0) {
         const mask = (1 << bitsPerChar) - 1;
         let out = "";
         let bits = 0;
-        let buffer3 = 0;
+        let buffer2 = 0;
         for (let i = 0; i < data.length; ++i) {
-          buffer3 = buffer3 << 8 | data[i];
+          buffer2 = buffer2 << 8 | data[i];
           bits += 8;
           while (bits > bitsPerChar) {
             bits -= bitsPerChar;
-            out += alphabet2[mask & buffer3 >> bits];
+            out += alphabet2[mask & buffer2 >> bits];
           }
         }
         if (bits) {
-          out += alphabet2[mask & buffer3 << bitsPerChar - bits];
+          out += alphabet2[mask & buffer2 << bitsPerChar - bits];
         }
         if (pad) {
           while (out.length * bitsPerChar & 7) {
@@ -51672,8 +51652,8 @@ if (edgeAlpha == 0.0) {
         }
         return out;
       };
-      var rfc46483 = ({ name: name2, prefix, bitsPerChar, alphabet: alphabet2 }) => {
-        return from3({
+      var rfc46482 = ({ name: name2, prefix, bitsPerChar, alphabet: alphabet2 }) => {
+        return from2({
           prefix,
           name: name2,
           encode(input) {
@@ -51684,83 +51664,83 @@ if (edgeAlpha == 0.0) {
           }
         });
       };
-      var base58btc3 = baseX3({
+      var base58btc2 = baseX2({
         name: "base58btc",
         prefix: "z",
         alphabet: "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
       });
-      var base58flickr3 = baseX3({
+      var base58flickr2 = baseX2({
         name: "base58flickr",
         prefix: "Z",
         alphabet: "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
       });
       var base32_exports = {};
       __export2(base32_exports, {
-        base32: () => base323,
-        base32hex: () => base32hex3,
-        base32hexpad: () => base32hexpad3,
-        base32hexpadupper: () => base32hexpadupper3,
-        base32hexupper: () => base32hexupper3,
-        base32pad: () => base32pad3,
-        base32padupper: () => base32padupper3,
-        base32upper: () => base32upper3,
-        base32z: () => base32z3
+        base32: () => base322,
+        base32hex: () => base32hex2,
+        base32hexpad: () => base32hexpad2,
+        base32hexpadupper: () => base32hexpadupper2,
+        base32hexupper: () => base32hexupper2,
+        base32pad: () => base32pad2,
+        base32padupper: () => base32padupper2,
+        base32upper: () => base32upper2,
+        base32z: () => base32z2
       });
-      var base323 = rfc46483({
+      var base322 = rfc46482({
         prefix: "b",
         name: "base32",
         alphabet: "abcdefghijklmnopqrstuvwxyz234567",
         bitsPerChar: 5
       });
-      var base32upper3 = rfc46483({
+      var base32upper2 = rfc46482({
         prefix: "B",
         name: "base32upper",
         alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567",
         bitsPerChar: 5
       });
-      var base32pad3 = rfc46483({
+      var base32pad2 = rfc46482({
         prefix: "c",
         name: "base32pad",
         alphabet: "abcdefghijklmnopqrstuvwxyz234567=",
         bitsPerChar: 5
       });
-      var base32padupper3 = rfc46483({
+      var base32padupper2 = rfc46482({
         prefix: "C",
         name: "base32padupper",
         alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567=",
         bitsPerChar: 5
       });
-      var base32hex3 = rfc46483({
+      var base32hex2 = rfc46482({
         prefix: "v",
         name: "base32hex",
         alphabet: "0123456789abcdefghijklmnopqrstuv",
         bitsPerChar: 5
       });
-      var base32hexupper3 = rfc46483({
+      var base32hexupper2 = rfc46482({
         prefix: "V",
         name: "base32hexupper",
         alphabet: "0123456789ABCDEFGHIJKLMNOPQRSTUV",
         bitsPerChar: 5
       });
-      var base32hexpad3 = rfc46483({
+      var base32hexpad2 = rfc46482({
         prefix: "t",
         name: "base32hexpad",
         alphabet: "0123456789abcdefghijklmnopqrstuv=",
         bitsPerChar: 5
       });
-      var base32hexpadupper3 = rfc46483({
+      var base32hexpadupper2 = rfc46482({
         prefix: "T",
         name: "base32hexpadupper",
         alphabet: "0123456789ABCDEFGHIJKLMNOPQRSTUV=",
         bitsPerChar: 5
       });
-      var base32z3 = rfc46483({
+      var base32z2 = rfc46482({
         prefix: "h",
         name: "base32z",
         alphabet: "ybndrfg8ejkmcpqxot1uwisza345h769",
         bitsPerChar: 5
       });
-      var CID3 = class {
+      var CID2 = class {
         constructor(version2, code2, multihash, bytes2) {
           this.code = code2;
           this.version = version2;
@@ -51788,13 +51768,13 @@ if (edgeAlpha == 0.0) {
             }
             default: {
               const { code: code2, multihash } = this;
-              if (code2 !== DAG_PB_CODE3) {
+              if (code2 !== DAG_PB_CODE2) {
                 throw new Error("Cannot convert a non dag-pb CID to CIDv0");
               }
-              if (multihash.code !== SHA_256_CODE3) {
+              if (multihash.code !== SHA_256_CODE2) {
                 throw new Error("Cannot convert non sha2-256 multihash CID to CIDv0");
               }
-              return CID3.createV0(multihash);
+              return CID2.createV0(multihash);
             }
           }
         }
@@ -51802,8 +51782,8 @@ if (edgeAlpha == 0.0) {
           switch (this.version) {
             case 0: {
               const { code: code2, digest: digest2 } = this.multihash;
-              const multihash = create4(code2, digest2);
-              return CID3.createV1(this.code, multihash);
+              const multihash = create3(code2, digest2);
+              return CID2.createV1(this.code, multihash);
             }
             case 1: {
               return this;
@@ -51816,13 +51796,13 @@ if (edgeAlpha == 0.0) {
         equals(other) {
           return other && this.code === other.code && this.version === other.version && equals22(this.multihash, other.multihash);
         }
-        toString(base33) {
+        toString(base3) {
           const { bytes: bytes2, version: version2, _baseCache } = this;
           switch (version2) {
             case 0:
-              return toStringV03(bytes2, _baseCache, base33 || base58btc3.encoder);
+              return toStringV02(bytes2, _baseCache, base3 || base58btc2.encoder);
             default:
-              return toStringV13(bytes2, _baseCache, base33 || base323.encoder);
+              return toStringV12(bytes2, _baseCache, base3 || base322.encoder);
           }
         }
         toJSON() {
@@ -51840,7 +51820,7 @@ if (edgeAlpha == 0.0) {
         }
         static isCID(value) {
           deprecate(/^0\.0/, IS_CID_DEPRECATION);
-          return !!(value && (value[cidSymbol3] || value.asCID === value));
+          return !!(value && (value[cidSymbol2] || value.asCID === value));
         }
         get toBaseEncodedString() {
           throw new Error("Deprecated, use .toString()");
@@ -51858,15 +51838,15 @@ if (edgeAlpha == 0.0) {
           throw new Error('"prefix" property is deprecated');
         }
         static asCID(value) {
-          if (value instanceof CID3) {
+          if (value instanceof CID2) {
             return value;
           } else if (value != null && value.asCID === value) {
             const { version: version2, code: code2, multihash, bytes: bytes2 } = value;
-            return new CID3(version2, code2, multihash, bytes2 || encodeCID3(version2, code2, multihash.bytes));
-          } else if (value != null && value[cidSymbol3] === true) {
+            return new CID2(version2, code2, multihash, bytes2 || encodeCID2(version2, code2, multihash.bytes));
+          } else if (value != null && value[cidSymbol2] === true) {
             const { version: version2, multihash, code: code2 } = value;
             const digest2 = decode32(multihash);
-            return CID3.create(version2, code2, digest2);
+            return CID2.create(version2, code2, digest2);
           } else {
             return null;
           }
@@ -51877,15 +51857,15 @@ if (edgeAlpha == 0.0) {
           }
           switch (version2) {
             case 0: {
-              if (code2 !== DAG_PB_CODE3) {
-                throw new Error(`Version 0 CID must use dag-pb (code: ${DAG_PB_CODE3}) block encoding`);
+              if (code2 !== DAG_PB_CODE2) {
+                throw new Error(`Version 0 CID must use dag-pb (code: ${DAG_PB_CODE2}) block encoding`);
               } else {
-                return new CID3(version2, code2, digest2, digest2.bytes);
+                return new CID2(version2, code2, digest2, digest2.bytes);
               }
             }
             case 1: {
-              const bytes2 = encodeCID3(version2, code2, digest2.bytes);
-              return new CID3(version2, code2, digest2, bytes2);
+              const bytes2 = encodeCID2(version2, code2, digest2.bytes);
+              return new CID2(version2, code2, digest2, bytes2);
             }
             default: {
               throw new Error("Invalid version");
@@ -51893,28 +51873,28 @@ if (edgeAlpha == 0.0) {
           }
         }
         static createV0(digest2) {
-          return CID3.create(0, DAG_PB_CODE3, digest2);
+          return CID2.create(0, DAG_PB_CODE2, digest2);
         }
         static createV1(code2, digest2) {
-          return CID3.create(1, code2, digest2);
+          return CID2.create(1, code2, digest2);
         }
         static decode(bytes2) {
-          const [cid2, remainder] = CID3.decodeFirst(bytes2);
+          const [cid2, remainder] = CID2.decodeFirst(bytes2);
           if (remainder.length) {
             throw new Error("Incorrect length");
           }
           return cid2;
         }
         static decodeFirst(bytes2) {
-          const specs = CID3.inspectBytes(bytes2);
+          const specs = CID2.inspectBytes(bytes2);
           const prefixSize = specs.size - specs.multihashSize;
           const multihashBytes = coerce22(bytes2.subarray(prefixSize, prefixSize + specs.multihashSize));
           if (multihashBytes.byteLength !== specs.multihashSize) {
             throw new Error("Incorrect length");
           }
           const digestBytes = multihashBytes.subarray(specs.multihashSize - specs.digestSize);
-          const digest2 = new Digest3(specs.multihashCode, specs.digestSize, digestBytes, multihashBytes);
-          const cid2 = specs.version === 0 ? CID3.createV0(digest2) : CID3.createV1(specs.codec, digest2);
+          const digest2 = new Digest2(specs.multihashCode, specs.digestSize, digestBytes, multihashBytes);
+          const cid2 = specs.version === 0 ? CID2.createV0(digest2) : CID2.createV1(specs.codec, digest2);
           return [
             cid2,
             bytes2.subarray(specs.size)
@@ -51928,7 +51908,7 @@ if (edgeAlpha == 0.0) {
             return i;
           };
           let version2 = next();
-          let codec = DAG_PB_CODE3;
+          let codec = DAG_PB_CODE2;
           if (version2 === 18) {
             version2 = 0;
             offset = 0;
@@ -51952,84 +51932,84 @@ if (edgeAlpha == 0.0) {
             size
           };
         }
-        static parse(source, base33) {
-          const [prefix, bytes2] = parseCIDtoBytes3(source, base33);
-          const cid2 = CID3.decode(bytes2);
+        static parse(source, base3) {
+          const [prefix, bytes2] = parseCIDtoBytes2(source, base3);
+          const cid2 = CID2.decode(bytes2);
           cid2._baseCache.set(prefix, source);
           return cid2;
         }
       };
-      var parseCIDtoBytes3 = (source, base33) => {
+      var parseCIDtoBytes2 = (source, base3) => {
         switch (source[0]) {
           case "Q": {
-            const decoder22 = base33 || base58btc3;
+            const decoder22 = base3 || base58btc2;
             return [
-              base58btc3.prefix,
-              decoder22.decode(`${base58btc3.prefix}${source}`)
+              base58btc2.prefix,
+              decoder22.decode(`${base58btc2.prefix}${source}`)
             ];
           }
-          case base58btc3.prefix: {
-            const decoder22 = base33 || base58btc3;
+          case base58btc2.prefix: {
+            const decoder22 = base3 || base58btc2;
             return [
-              base58btc3.prefix,
+              base58btc2.prefix,
               decoder22.decode(source)
             ];
           }
-          case base323.prefix: {
-            const decoder22 = base33 || base323;
+          case base322.prefix: {
+            const decoder22 = base3 || base322;
             return [
-              base323.prefix,
+              base322.prefix,
               decoder22.decode(source)
             ];
           }
           default: {
-            if (base33 == null) {
+            if (base3 == null) {
               throw Error("To parse non base32 or base58btc encoded CID multibase decoder must be provided");
             }
             return [
               source[0],
-              base33.decode(source)
+              base3.decode(source)
             ];
           }
         }
       };
-      var toStringV03 = (bytes2, cache3, base33) => {
-        const { prefix } = base33;
-        if (prefix !== base58btc3.prefix) {
-          throw Error(`Cannot string encode V0 in ${base33.name} encoding`);
+      var toStringV02 = (bytes2, cache2, base3) => {
+        const { prefix } = base3;
+        if (prefix !== base58btc2.prefix) {
+          throw Error(`Cannot string encode V0 in ${base3.name} encoding`);
         }
-        const cid2 = cache3.get(prefix);
+        const cid2 = cache2.get(prefix);
         if (cid2 == null) {
-          const cid3 = base33.encode(bytes2).slice(1);
-          cache3.set(prefix, cid3);
+          const cid3 = base3.encode(bytes2).slice(1);
+          cache2.set(prefix, cid3);
           return cid3;
         } else {
           return cid2;
         }
       };
-      var toStringV13 = (bytes2, cache3, base33) => {
-        const { prefix } = base33;
-        const cid2 = cache3.get(prefix);
+      var toStringV12 = (bytes2, cache2, base3) => {
+        const { prefix } = base3;
+        const cid2 = cache2.get(prefix);
         if (cid2 == null) {
-          const cid3 = base33.encode(bytes2);
-          cache3.set(prefix, cid3);
+          const cid3 = base3.encode(bytes2);
+          cache2.set(prefix, cid3);
           return cid3;
         } else {
           return cid2;
         }
       };
-      var DAG_PB_CODE3 = 112;
-      var SHA_256_CODE3 = 18;
-      var encodeCID3 = (version2, code2, multihash) => {
-        const codeOffset = encodingLength3(version2);
-        const hashOffset = codeOffset + encodingLength3(code2);
+      var DAG_PB_CODE2 = 112;
+      var SHA_256_CODE2 = 18;
+      var encodeCID2 = (version2, code2, multihash) => {
+        const codeOffset = encodingLength2(version2);
+        const hashOffset = codeOffset + encodingLength2(code2);
         const bytes2 = new Uint8Array(hashOffset + multihash.byteLength);
-        encodeTo3(version2, bytes2, 0);
-        encodeTo3(code2, bytes2, codeOffset);
+        encodeTo2(version2, bytes2, 0);
+        encodeTo2(code2, bytes2, codeOffset);
         bytes2.set(multihash, hashOffset);
         return bytes2;
       };
-      var cidSymbol3 = Symbol.for("@ipld/js-cid/CID");
+      var cidSymbol2 = Symbol.for("@ipld/js-cid/CID");
       var readonly = {
         writable: false,
         configurable: false,
@@ -52067,17 +52047,17 @@ if (cid) {
       __export2(identity_exports, {
         identity: () => identity
       });
-      var identity = from3({
+      var identity = from2({
         prefix: "\0",
         name: "identity",
-        encode: (buf3) => toString3(buf3),
-        decode: (str) => fromString3(str)
+        encode: (buf2) => toString2(buf2),
+        decode: (str) => fromString2(str)
       });
       var base2_exports = {};
       __export2(base2_exports, {
         base2: () => base22
       });
-      var base22 = rfc46483({
+      var base22 = rfc46482({
         prefix: "0",
         name: "base2",
         alphabet: "01",
@@ -52087,7 +52067,7 @@ if (cid) {
       __export2(base8_exports, {
         base8: () => base8
       });
-      var base8 = rfc46483({
+      var base8 = rfc46482({
         prefix: "7",
         name: "base8",
         alphabet: "01234567",
@@ -52097,7 +52077,7 @@ if (cid) {
       __export2(base10_exports, {
         base10: () => base10
       });
-      var base10 = baseX3({
+      var base10 = baseX2({
         prefix: "9",
         name: "base10",
         alphabet: "0123456789"
@@ -52107,13 +52087,13 @@ if (cid) {
         base16: () => base16,
         base16upper: () => base16upper
       });
-      var base16 = rfc46483({
+      var base16 = rfc46482({
         prefix: "f",
         name: "base16",
         alphabet: "0123456789abcdef",
         bitsPerChar: 4
       });
-      var base16upper = rfc46483({
+      var base16upper = rfc46482({
         prefix: "F",
         name: "base16upper",
         alphabet: "0123456789ABCDEF",
@@ -52124,12 +52104,12 @@ if (cid) {
         base36: () => base36,
         base36upper: () => base36upper
       });
-      var base36 = baseX3({
+      var base36 = baseX2({
         prefix: "k",
         name: "base36",
         alphabet: "0123456789abcdefghijklmnopqrstuvwxyz"
       });
-      var base36upper = baseX3({
+      var base36upper = baseX2({
         prefix: "K",
         name: "base36upper",
         alphabet: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -52141,25 +52121,25 @@ if (cid) {
         base64url: () => base64url,
         base64urlpad: () => base64urlpad
       });
-      var base64 = rfc46483({
+      var base64 = rfc46482({
         prefix: "m",
         name: "base64",
         alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
         bitsPerChar: 6
       });
-      var base64pad = rfc46483({
+      var base64pad = rfc46482({
         prefix: "M",
         name: "base64pad",
         alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
         bitsPerChar: 6
       });
-      var base64url = rfc46483({
+      var base64url = rfc46482({
         prefix: "u",
         name: "base64url",
         alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_",
         bitsPerChar: 6
       });
-      var base64urlpad = rfc46483({
+      var base64urlpad = rfc46482({
         prefix: "U",
         name: "base64urlpad",
         alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_=",
@@ -52195,7 +52175,7 @@ if (cid) {
         }
         return new Uint8Array(byts);
       }
-      var base256emoji = from3({
+      var base256emoji = from2({
         prefix: "\u{1F680}",
         name: "base256emoji",
         encode: encode32,
@@ -52216,7 +52196,7 @@ if (cid) {
         digest(input) {
           if (input instanceof Uint8Array) {
             const result = this.encode(input);
-            return result instanceof Uint8Array ? create4(this.code, result) : result.then((digest2) => create4(this.code, digest2));
+            return result instanceof Uint8Array ? create3(this.code, result) : result.then((digest2) => create3(this.code, digest2));
           } else {
             throw Error("Unknown type, must be binary type");
           }
@@ -52240,15 +52220,15 @@ if (cid) {
       var code = 0;
       var name = "identity";
       var encode42 = coerce22;
-      var digest = (input) => create4(code, encode42(input));
+      var digest = (input) => create3(code, encode42(input));
       var identity2 = {
         code,
         name,
         encode: encode42,
         digest
       };
-      var textEncoder4 = new TextEncoder();
-      var textDecoder3 = new TextDecoder();
+      var textEncoder3 = new TextEncoder();
+      var textDecoder2 = new TextDecoder();
       var bases = {
         ...identity_exports,
         ...base2_exports,
@@ -52277,26 +52257,26 @@ if (cid) {
           decoder: { decode: decode62 }
         };
       }
-      var string = createCodec("utf8", "u", (buf3) => {
+      var string = createCodec("utf8", "u", (buf2) => {
         const decoder22 = new TextDecoder("utf8");
-        return "u" + decoder22.decode(buf3);
+        return "u" + decoder22.decode(buf2);
       }, (str) => {
         const encoder2 = new TextEncoder();
         return encoder2.encode(str.substring(1));
       });
-      var ascii = createCodec("ascii", "a", (buf3) => {
+      var ascii = createCodec("ascii", "a", (buf2) => {
         let string3 = "a";
-        for (let i = 0; i < buf3.length; i++) {
-          string3 += String.fromCharCode(buf3[i]);
+        for (let i = 0; i < buf2.length; i++) {
+          string3 += String.fromCharCode(buf2[i]);
         }
         return string3;
       }, (str) => {
         str = str.substring(1);
-        const buf3 = new Uint8Array(str.length);
+        const buf2 = new Uint8Array(str.length);
         for (let i = 0; i < str.length; i++) {
-          buf3[i] = str.charCodeAt(i);
+          buf2[i] = str.charCodeAt(i);
         }
-        return buf3;
+        return buf2;
       });
       var BASES = {
         utf8: string,
@@ -52309,18 +52289,18 @@ if (cid) {
       };
       var bases_default = BASES;
       function fromString22(string3, encoding = "utf8") {
-        const base33 = bases_default[encoding];
-        if (!base33) {
+        const base3 = bases_default[encoding];
+        if (!base3) {
           throw new Error(`Unsupported encoding "${encoding}"`);
         }
-        return base33.decoder.decode(`${base33.prefix}${string3}`);
+        return base3.decoder.decode(`${base3.prefix}${string3}`);
       }
       function toString22(array2, encoding = "utf8") {
-        const base33 = bases_default[encoding];
-        if (!base33) {
+        const base3 = bases_default[encoding];
+        if (!base3) {
           throw new Error(`Unsupported encoding "${encoding}"`);
         }
-        return base33.encoder.encode(array2).substring(1);
+        return base3.encoder.encode(array2).substring(1);
       }
       var jsonToIpld = (val) => {
         if (Array.isArray(val)) {
@@ -52328,7 +52308,7 @@ if (cid) {
         }
         if (val && typeof val === "object") {
           if (typeof val["$link"] === "string" && Object.keys(val).length === 1) {
-            return CID3.parse(val["$link"]);
+            return CID2.parse(val["$link"]);
           }
           if (typeof val["$bytes"] === "string" && Object.keys(val).length === 1) {
             return fromString22(val["$bytes"], "base64");
@@ -52351,7 +52331,7 @@ if (cid) {
               $bytes: toString22(val, "base64")
             };
           }
-          if (CID3.asCID(val)) {
+          if (CID2.asCID(val)) {
             return {
               $link: val.toString()
             };
@@ -52364,9 +52344,9 @@ if (cid) {
         }
         return val;
       };
-      var cidSchema = z.any().refine((obj) => CID3.asCID(obj) !== null, {
+      var cidSchema = z.any().refine((obj) => CID2.asCID(obj) !== null, {
         message: "Not a CID"
-      }).transform((obj) => CID3.asCID(obj));
+      }).transform((obj) => CID2.asCID(obj));
       var schema = {
         cid: cidSchema,
         bytes: z.instanceof(Uint8Array),
@@ -52438,9 +52418,7 @@ if (cid) {
         } catch {
           return {
             success: false,
-            error: new ValidationError(
-              `${path} must be an iso8601 formatted datetime`
-            )
+            error: new ValidationError(`${path} must be an iso8601 formatted datetime`)
           };
         }
         return { success: true, value };
@@ -52514,7 +52492,7 @@ if (cid) {
       }
       function cid(path, value) {
         try {
-          CID3.parse(value);
+          CID2.parse(value);
         } catch {
           return {
             success: false,
@@ -52529,9 +52507,7 @@ if (cid) {
         }
         return {
           success: false,
-          error: new ValidationError(
-            `${path} must be a well-formed BCP 47 language tag`
-          )
+          error: new ValidationError(`${path} must be a well-formed BCP 47 language tag`)
         };
       }
       function validate(lexicons2, path, def2, value) {
@@ -52611,9 +52587,7 @@ if (cid) {
           if (!def2.enum.includes(value)) {
             return {
               success: false,
-              error: new ValidationError(
-                `${path} must be one of (${def2.enum.join("|")})`
-              )
+              error: new ValidationError(`${path} must be one of (${def2.enum.join("|")})`)
             };
           }
         }
@@ -52621,9 +52595,7 @@ if (cid) {
           if (value > def2.maximum) {
             return {
               success: false,
-              error: new ValidationError(
-                `${path} can not be greater than ${def2.maximum}`
-              )
+              error: new ValidationError(`${path} can not be greater than ${def2.maximum}`)
             };
           }
         }
@@ -52631,9 +52603,7 @@ if (cid) {
           if (value < def2.minimum) {
             return {
               success: false,
-              error: new ValidationError(
-                `${path} can not be less than ${def2.minimum}`
-              )
+              error: new ValidationError(`${path} can not be less than ${def2.minimum}`)
             };
           }
         }
@@ -52667,9 +52637,7 @@ if (cid) {
           if (!def2.enum.includes(value)) {
             return {
               success: false,
-              error: new ValidationError(
-                `${path} must be one of (${def2.enum.join("|")})`
-              )
+              error: new ValidationError(`${path} must be one of (${def2.enum.join("|")})`)
             };
           }
         }
@@ -52677,9 +52645,7 @@ if (cid) {
           if (utf8Len(value) > def2.maxLength) {
             return {
               success: false,
-              error: new ValidationError(
-                `${path} must not be longer than ${def2.maxLength} characters`
-              )
+              error: new ValidationError(`${path} must not be longer than ${def2.maxLength} characters`)
             };
           }
         }
@@ -52687,9 +52653,7 @@ if (cid) {
           if (utf8Len(value) < def2.minLength) {
             return {
               success: false,
-              error: new ValidationError(
-                `${path} must not be shorter than ${def2.minLength} characters`
-              )
+              error: new ValidationError(`${path} must not be shorter than ${def2.minLength} characters`)
             };
           }
         }
@@ -52697,9 +52661,7 @@ if (cid) {
           if (graphemeLen(value) > def2.maxGraphemes) {
             return {
               success: false,
-              error: new ValidationError(
-                `${path} must not be longer than ${def2.maxGraphemes} graphemes`
-              )
+              error: new ValidationError(`${path} must not be longer than ${def2.maxGraphemes} graphemes`)
             };
           }
         }
@@ -52707,9 +52669,7 @@ if (cid) {
           if (graphemeLen(value) < def2.minGraphemes) {
             return {
               success: false,
-              error: new ValidationError(
-                `${path} must not be shorter than ${def2.minGraphemes} graphemes`
-              )
+              error: new ValidationError(`${path} must not be shorter than ${def2.minGraphemes} graphemes`)
             };
           }
         }
@@ -52749,9 +52709,7 @@ if (cid) {
           if (value.byteLength > def2.maxLength) {
             return {
               success: false,
-              error: new ValidationError(
-                `${path} must not be larger than ${def2.maxLength} bytes`
-              )
+              error: new ValidationError(`${path} must not be larger than ${def2.maxLength} bytes`)
             };
           }
         }
@@ -52759,16 +52717,14 @@ if (cid) {
           if (value.byteLength < def2.minLength) {
             return {
               success: false,
-              error: new ValidationError(
-                `${path} must not be smaller than ${def2.minLength} bytes`
-              )
+              error: new ValidationError(`${path} must not be smaller than ${def2.minLength} bytes`)
             };
           }
         }
         return { success: true, value };
       }
       function cidLink(lexicons2, path, def2, value) {
-        if (CID3.asCID(value) === null) {
+        if (CID2.asCID(value) === null) {
           return {
             success: false,
             error: new ValidationError(`${path} must be a CID`)
@@ -52818,7 +52774,7 @@ if (cid) {
           if (check_exports.is(json, typedJsonBlobRef)) {
             return new BlobRef(json.ref, json.mimeType, json.size);
           } else {
-            return new BlobRef(CID3.parse(json.cid), json.mimeType, -1, json);
+            return new BlobRef(CID2.parse(json.cid), json.mimeType, -1, json);
           }
         }
         ipld() {
@@ -52880,9 +52836,7 @@ if (cid) {
           if (value.length > def2.maxLength) {
             return {
               success: false,
-              error: new ValidationError(
-                `${path} must not have more than ${def2.maxLength} elements`
-              )
+              error: new ValidationError(`${path} must not have more than ${def2.maxLength} elements`)
             };
           }
         }
@@ -52890,9 +52844,7 @@ if (cid) {
           if (value.length < def2.minLength) {
             return {
               success: false,
-              error: new ValidationError(
-                `${path} must not have fewer than ${def2.minLength} elements`
-              )
+              error: new ValidationError(`${path} must not have fewer than ${def2.minLength} elements`)
             };
           }
         }
@@ -52968,18 +52920,14 @@ if (cid) {
           if (!isDiscriminatedObject(value)) {
             return {
               success: false,
-              error: new ValidationError(
-                `${path} must be an object which includes the "$type" property`
-              )
+              error: new ValidationError(`${path} must be an object which includes the "$type" property`)
             };
           }
           if (!refsContainType(def2.refs, value.$type)) {
             if (def2.closed) {
               return {
                 success: false,
-                error: new ValidationError(
-                  `${path} $type must be one of ${def2.refs.join(", ")}`
-                )
+                error: new ValidationError(`${path} $type must be one of ${def2.refs.join(", ")}`)
               };
             }
             return { success: true, value };
@@ -53002,9 +52950,7 @@ if (cid) {
         if (concreteDefs.length > 1) {
           return {
             success: false,
-            error: new ValidationError(
-              `${path} did not match any of the expected definitions`
-            )
+            error: new ValidationError(`${path} did not match any of the expected definitions`)
           };
         }
         return { success: false, error };
@@ -53150,11 +53096,9 @@ if (cid) {
         minLength: z.number().int().optional(),
         maxLength: z.number().int().optional()
       }).strict();
-      var lexPrimitiveArray = lexArray.merge(
-        z.object({
-          items: lexPrimitive
-        }).strict()
-      );
+      var lexPrimitiveArray = lexArray.merge(z.object({
+        items: lexPrimitive
+      }).strict());
       var lexToken = z.object({
         type: z.literal("token"),
         description: z.string().optional()
@@ -53164,9 +53108,7 @@ if (cid) {
         description: z.string().optional(),
         required: z.string().array().optional(),
         nullable: z.string().array().optional(),
-        properties: z.record(
-          z.union([lexRefVariant, lexIpldType, lexArray, lexBlob, lexPrimitive])
-        ).optional()
+        properties: z.record(z.union([lexRefVariant, lexIpldType, lexArray, lexBlob, lexPrimitive])).optional()
       }).strict().superRefine(requiredPropertiesRefinement);
       var lexXrpcParameters = z.object({
         type: z.literal("params"),
@@ -53215,64 +53157,61 @@ if (cid) {
         key: z.string().optional(),
         record: lexObject
       }).strict();
-      var lexUserType = z.custom(
-        (val) => {
-          if (!val || typeof val !== "object") {
-            return;
-          }
-          if (val["type"] === void 0) {
-            return;
-          }
-          switch (val["type"]) {
-            case "record":
-              return lexRecord.parse(val);
-            case "query":
-              return lexXrpcQuery.parse(val);
-            case "procedure":
-              return lexXrpcProcedure.parse(val);
-            case "subscription":
-              return lexXrpcSubscription.parse(val);
-            case "blob":
-              return lexBlob.parse(val);
-            case "array":
-              return lexArray.parse(val);
-            case "token":
-              return lexToken.parse(val);
-            case "object":
-              return lexObject.parse(val);
-            case "boolean":
-              return lexBoolean.parse(val);
-            case "integer":
-              return lexInteger.parse(val);
-            case "string":
-              return lexString.parse(val);
-            case "bytes":
-              return lexBytes.parse(val);
-            case "cid-link":
-              return lexCidLink.parse(val);
-            case "unknown":
-              return lexUnknown.parse(val);
-          }
-        },
-        (val) => {
-          if (!val || typeof val !== "object") {
-            return {
-              message: "Must be an object",
-              fatal: true
-            };
-          }
-          if (val["type"] === void 0) {
-            return {
-              message: "Must have a type",
-              fatal: true
-            };
-          }
+      var lexUserType = z.custom((val) => {
+        if (!val || typeof val !== "object") {
+          return;
+        }
+        if (val["type"] === void 0) {
+          return;
+        }
+        switch (val["type"]) {
+          case "record":
+            return lexRecord.parse(val);
+          case "query":
+            return lexXrpcQuery.parse(val);
+          case "procedure":
+            return lexXrpcProcedure.parse(val);
+          case "subscription":
+            return lexXrpcSubscription.parse(val);
+          case "blob":
+            return lexBlob.parse(val);
+          case "array":
+            return lexArray.parse(val);
+          case "token":
+            return lexToken.parse(val);
+          case "object":
+            return lexObject.parse(val);
+          case "boolean":
+            return lexBoolean.parse(val);
+          case "integer":
+            return lexInteger.parse(val);
+          case "string":
+            return lexString.parse(val);
+          case "bytes":
+            return lexBytes.parse(val);
+          case "cid-link":
+            return lexCidLink.parse(val);
+          case "unknown":
+            return lexUnknown.parse(val);
+        }
+      }, (val) => {
+        if (!val || typeof val !== "object") {
           return {
-            message: `Invalid type: ${val["type"]} must be one of: record, query, procedure, subscription, blob, array, token, object, boolean, integer, string, bytes, cid-link, unknown`,
+            message: "Must be an object",
             fatal: true
           };
         }
-      );
+        if (val["type"] === void 0) {
+          return {
+            message: "Must have a type",
+            fatal: true
+          };
+        }
+        return {
+          message: `Invalid type: ${val["type"]} must be one of: record, query, procedure, subscription, blob, array, token, object, boolean, integer, string, bytes, cid-link, unknown`,
+          fatal: true
+        };
+      });
       var lexiconDoc = z.object({
         lexicon: z.literal(1),
         id: z.string().refine((v) => NSID.isValid(v), {
@@ -53371,13 +53310,7 @@ if (cid) {
       }
       function assertValidXrpcMessage(lexicons2, def2, value) {
         if (def2.message?.schema) {
-          return assertValidOneOf(
-            lexicons2,
-            "Message",
-            def2.message.schema,
-            value,
-            true
-          );
+          return assertValidOneOf(lexicons2, "Message", def2.message.schema, value, true);
         }
       }
       var Lexicons = class {
@@ -53395,11 +53328,7 @@ if (cid) {
             lexiconDoc.parse(doc);
           } catch (e) {
             if (e instanceof ZodError) {
-              throw new LexiconDocMalformedError(
-                `Failed to parse schema definition ${doc.id}`,
-                doc,
-                e.issues
-              );
+              throw new LexiconDocMalformedError(`Failed to parse schema definition ${doc.id}`, doc, e.issues);
             } else {
               throw e;
             }
@@ -53440,9 +53369,7 @@ if (cid) {
             throw new LexiconDefNotFoundError(`Lexicon not found: ${uri2}`);
           }
           if (types && !types.includes(def2.type)) {
-            throw new InvalidLexiconError(
-              `Not a ${types.join(" or ")} lexicon: ${uri2}`
-            );
+            throw new InvalidLexiconError(`Not a ${types.join(" or ")} lexicon: ${uri2}`);
           }
           return def2;
         }
@@ -53471,9 +53398,7 @@ if (cid) {
           }
           const $type = value.$type || "";
           if (toLexUri($type) !== lexUri) {
-            throw new ValidationError(
-              `Invalid $type: must be ${lexUri}, got ${$type}`
-            );
+            throw new ValidationError(`Invalid $type: must be ${lexUri}, got ${$type}`);
           }
           return assertValidRecord(this, def2, value);
         }
@@ -53484,11 +53409,7 @@ if (cid) {
             "procedure",
             "subscription"
           ]);
-          return assertValidXrpcParams(
-            this,
-            def2,
-            value
-          );
+          return assertValidXrpcParams(this, def2, value);
         }
         assertValidXrpcInput(lexUri, value) {
           lexUri = toLexUri(lexUri);
@@ -53498,11 +53419,7 @@ if (cid) {
         assertValidXrpcOutput(lexUri, value) {
           lexUri = toLexUri(lexUri);
           const def2 = this.getDefOrThrow(lexUri, ["query", "procedure"]);
-          return assertValidXrpcOutput(
-            this,
-            def2,
-            value
-          );
+          return assertValidXrpcOutput(this, def2, value);
         }
         assertValidXrpcMessage(lexUri, value) {
           lexUri = toLexUri(lexUri);
@@ -53551,7 +53468,7 @@ if (cid) {
           if (val instanceof BlobRef) {
             return val.original;
           }
-          if (CID3.asCID(val) || val instanceof Uint8Array) {
+          if (CID2.asCID(val) || val instanceof Uint8Array) {
             return val;
           }
           const toReturn = {};
@@ -53570,7 +53487,7 @@ if (cid) {
           if ((val["$type"] === "blob" || typeof val["cid"] === "string" && typeof val["mimeType"] === "string") && check_exports.is(val, jsonBlobRef)) {
             return BlobRef.fromJsonRef(val);
           }
-          if (CID3.asCID(val) || val instanceof Uint8Array) {
+          if (CID2.asCID(val) || val instanceof Uint8Array) {
             return val;
           }
           const toReturn = {};
@@ -53743,14 +53660,10 @@ if (cid) {
       };
       var XRPCInvalidResponseError = class extends XRPCError {
         constructor(lexiconNsid, validationError, responseBody) {
-          super(
-            2,
-            ResponseTypeStrings[
-              2
-              /* InvalidResponse */
-            ],
-            `The server gave an invalid response and may be out of date.`
-          );
+          super(2, ResponseTypeStrings[
+            2
+            /* InvalidResponse */
+          ], `The server gave an invalid response and may be out of date.`);
           this.lexiconNsid = lexiconNsid;
           this.validationError = validationError;
           this.responseBody = responseBody;
@@ -53775,10 +53688,7 @@ if (cid) {
               if (paramSchema.type === "array") {
                 const vals = [];
                 vals.concat(value).forEach((val) => {
-                  uri2.searchParams.append(
-                    key,
-                    encodeQueryParam(paramSchema.items.type, val)
-                  );
+                  uri2.searchParams.append(key, encodeQueryParam(paramSchema.items.type, val));
                 });
               } else {
                 uri2.searchParams.set(key, encodeQueryParam(paramSchema.type, value));
@@ -53866,20 +53776,14 @@ if (cid) {
               const str = new TextDecoder().decode(data);
               return jsonStringToLex(str);
             } catch (e) {
-              throw new XRPCError(
-                2,
-                `Failed to parse response body: ${String(e)}`
-              );
+              throw new XRPCError(2, `Failed to parse response body: ${String(e)}`);
             }
           }
           if (mimeType.startsWith("text/") && data?.byteLength) {
             try {
               return new TextDecoder().decode(data);
             } catch (e) {
-              throw new XRPCError(
-                2,
-                `Failed to parse response body: ${String(e)}`
-              );
+              throw new XRPCError(2, `Failed to parse response body: ${String(e)}`);
             }
           }
         }
@@ -53926,9 +53830,7 @@ if (cid) {
         async call(methodNsid, params2, data, opts) {
           const def2 = this.baseClient.lex.getDefOrThrow(methodNsid);
           if (!def2 || def2.type !== "query" && def2.type !== "procedure") {
-            throw new Error(
-              `Invalid lexicon: ${methodNsid}. Must be a query or procedure.`
-            );
+            throw new Error(`Invalid lexicon: ${methodNsid}. Must be a query or procedure.`);
           }
           const httpMethod = getMethodSchemaHTTPMethod(def2);
           const httpUri = constructMethodCallUri(methodNsid, def2, this.uri, params2);
@@ -53939,12 +53841,7 @@ if (cid) {
             },
             encoding: opts?.encoding
           });
-          const res = await this.baseClient.fetch(
-            httpUri,
-            httpMethod,
-            httpHeaders,
-            data
-          );
+          const res = await this.baseClient.fetch(httpUri, httpMethod, httpHeaders, data);
           const resCode = httpResponseCodeToEnum(res.status);
           if (resCode === 200) {
             try {
@@ -53959,12 +53856,7 @@ if (cid) {
             return new XRPCResponse(res.body, res.headers);
           } else {
             if (res.body && isErrorResponseBody(res.body)) {
-              throw new XRPCError(
-                resCode,
-                res.body.error,
-                res.body.message,
-                res.headers
-              );
+              throw new XRPCError(resCode, res.body.error, res.body.message, res.headers);
             } else {
               throw new XRPCError(resCode);
             }
@@ -55000,43 +54892,6 @@ if (cid) {
               errors: [
                 {
                   name: "RepoNotFound"
-                }
-              ]
-            }
-          }
-        },
-        ComAtprotoAdminRebaseRepo: {
-          lexicon: 1,
-          id: "com.atproto.admin.rebaseRepo",
-          defs: {
-            main: {
-              type: "procedure",
-              description: "Administrative action to rebase an account's repo",
-              input: {
-                encoding: "application/json",
-                schema: {
-                  type: "object",
-                  required: ["repo"],
-                  properties: {
-                    repo: {
-                      type: "string",
-                      format: "at-identifier",
-                      description: "The handle or DID of the repo."
-                    },
-                    swapCommit: {
-                      type: "string",
-                      format: "cid",
-                      description: "Compare and swap with the previous commit by cid."
-                    }
-                  }
-                }
-              },
-              errors: [
-                {
-                  name: "InvalidSwap"
-                },
-                {
-                  name: "ConcurrentWrites"
                 }
               ]
             }
@@ -56187,43 +56042,6 @@ if (cid) {
             }
           }
         },
-        ComAtprotoRepoRebaseRepo: {
-          lexicon: 1,
-          id: "com.atproto.repo.rebaseRepo",
-          defs: {
-            main: {
-              type: "procedure",
-              description: "Simple rebase of repo that deletes history",
-              input: {
-                encoding: "application/json",
-                schema: {
-                  type: "object",
-                  required: ["repo"],
-                  properties: {
-                    repo: {
-                      type: "string",
-                      format: "at-identifier",
-                      description: "The handle or DID of the repo."
-                    },
-                    swapCommit: {
-                      type: "string",
-                      format: "cid",
-                      description: "Compare and swap with the previous commit by cid."
-                    }
-                  }
-                }
-              },
-              errors: [
-                {
-                  name: "InvalidSwap"
-                },
-                {
-                  name: "ConcurrentWrites"
-                }
-              ]
-            }
-          }
-        },
         ComAtprotoRepoStrongRef: {
           lexicon: 1,
           id: "com.atproto.repo.strongRef",
@@ -57023,7 +56841,7 @@ if (cid) {
           defs: {
             main: {
               type: "query",
-              description: "Gets the repo state.",
+              description: "DEPRECATED - please use com.atproto.sync.getRepo instead",
               parameters: {
                 type: "params",
                 required: ["did"],
@@ -57032,63 +56850,11 @@ if (cid) {
                     type: "string",
                     format: "did",
                     description: "The DID of the repo."
-                  },
-                  commit: {
-                    type: "string",
-                    format: "cid",
-                    description: "The commit to get the checkout from. Defaults to current HEAD."
                   }
                 }
               },
               output: {
                 encoding: "application/vnd.ipld.car"
-              }
-            }
-          }
-        },
-        ComAtprotoSyncGetCommitPath: {
-          lexicon: 1,
-          id: "com.atproto.sync.getCommitPath",
-          defs: {
-            main: {
-              type: "query",
-              description: "Gets the path of repo commits",
-              parameters: {
-                type: "params",
-                required: ["did"],
-                properties: {
-                  did: {
-                    type: "string",
-                    format: "did",
-                    description: "The DID of the repo."
-                  },
-                  latest: {
-                    type: "string",
-                    format: "cid",
-                    description: "The most recent commit"
-                  },
-                  earliest: {
-                    type: "string",
-                    format: "cid",
-                    description: "The earliest commit to start from"
-                  }
-                }
-              },
-              output: {
-                encoding: "application/json",
-                schema: {
-                  type: "object",
-                  required: ["commits"],
-                  properties: {
-                    commits: {
-                      type: "array",
-                      items: {
-                        type: "string",
-                        format: "cid"
-                      }
-                    }
-                  }
-                }
               }
             }
           }
@@ -57099,7 +56865,7 @@ if (cid) {
           defs: {
             main: {
               type: "query",
-              description: "Gets the current HEAD CID of a repo.",
+              description: "DEPRECATED - please use com.atproto.sync.getLatestCommit instead",
               parameters: {
                 type: "params",
                 required: ["did"],
@@ -57127,6 +56893,48 @@ if (cid) {
               errors: [
                 {
                   name: "HeadNotFound"
+                }
+              ]
+            }
+          }
+        },
+        ComAtprotoSyncGetLatestCommit: {
+          lexicon: 1,
+          id: "com.atproto.sync.getLatestCommit",
+          defs: {
+            main: {
+              type: "query",
+              description: "Gets the current commit CID & revision of the repo.",
+              parameters: {
+                type: "params",
+                required: ["did"],
+                properties: {
+                  did: {
+                    type: "string",
+                    format: "did",
+                    description: "The DID of the repo."
+                  }
+                }
+              },
+              output: {
+                encoding: "application/json",
+                schema: {
+                  type: "object",
+                  required: ["cid", "rev"],
+                  properties: {
+                    cid: {
+                      type: "string",
+                      format: "cid"
+                    },
+                    rev: {
+                      type: "string"
+                    }
+                  }
+                }
+              },
+              errors: [
+                {
+                  name: "RepoNotFound"
                 }
               ]
             }
@@ -57174,7 +56982,7 @@ if (cid) {
           defs: {
             main: {
               type: "query",
-              description: "Gets the repo state.",
+              description: "Gets the did's repo, optionally catching up from a specific revision.",
               parameters: {
                 type: "params",
                 required: ["did"],
@@ -57184,15 +56992,9 @@ if (cid) {
                     format: "did",
                     description: "The DID of the repo."
                   },
-                  earliest: {
+                  since: {
                     type: "string",
-                    format: "cid",
-                    description: "The earliest commit in the commit range (not inclusive)"
-                  },
-                  latest: {
-                    type: "string",
-                    format: "cid",
-                    description: "The latest commit in the commit range (inclusive)"
+                    description: "The revision of the repo to catch up from."
                   }
                 }
               },
@@ -57208,7 +57010,7 @@ if (cid) {
           defs: {
             main: {
               type: "query",
-              description: "List blob cids for some range of commits",
+              description: "List blob cids since some revision",
               parameters: {
                 type: "params",
                 required: ["did"],
@@ -57218,15 +57020,18 @@ if (cid) {
                     format: "did",
                     description: "The DID of the repo."
                   },
-                  latest: {
+                  since: {
                     type: "string",
-                    format: "cid",
-                    description: "The most recent commit"
+                    description: "Optional revision of the repo to list blobs since"
                   },
-                  earliest: {
-                    type: "string",
-                    format: "cid",
-                    description: "The earliest commit to start from"
+                  limit: {
+                    type: "integer",
+                    minimum: 1,
+                    maximum: 1e3,
+                    default: 500
+                  },
+                  cursor: {
+                    type: "string"
                   }
                 }
               },
@@ -57236,6 +57041,9 @@ if (cid) {
                   type: "object",
                   required: ["cids"],
                   properties: {
+                    cursor: {
+                      type: "string"
+                    },
                     cids: {
                       type: "array",
                       items: {
@@ -57397,13 +57205,14 @@ if (cid) {
                 "tooBig",
                 "repo",
                 "commit",
-                "prev",
+                "rev",
+                "since",
                 "blocks",
                 "ops",
                 "blobs",
                 "time"
               ],
-              nullable: ["prev"],
+              nullable: ["prev", "since"],
               properties: {
                 seq: {
                   type: "integer"
@@ -57423,6 +57232,14 @@ if (cid) {
                 },
                 prev: {
                   type: "cid-link"
+                },
+                rev: {
+                  type: "string",
+                  description: "The rev of the emitted commit"
+                },
+                since: {
+                  type: "string",
+                  description: "The rev of the last emitted commit from this repo"
                 },
                 blocks: {
                   type: "bytes",
@@ -57709,7 +57526,8 @@ if (cid) {
                 refs: [
                   "lex:app.bsky.actor.defs#adultContentPref",
                   "lex:app.bsky.actor.defs#contentLabelPref",
-                  "lex:app.bsky.actor.defs#savedFeedsPref"
+                  "lex:app.bsky.actor.defs#savedFeedsPref",
+                  "lex:app.bsky.actor.defs#personalDetailsPref"
                 ]
               }
             },
@@ -57753,6 +57571,16 @@ if (cid) {
                     type: "string",
                     format: "at-uri"
                   }
+                }
+              }
+            },
+            personalDetailsPref: {
+              type: "object",
+              properties: {
+                birthDate: {
+                  type: "string",
+                  format: "datetime",
+                  description: "The birth date of the owner of the account."
                 }
               }
             }
@@ -58138,6 +57966,25 @@ if (cid) {
                 },
                 alt: {
                   type: "string"
+                },
+                aspectRatio: {
+                  type: "ref",
+                  ref: "lex:app.bsky.embed.images#aspectRatio"
+                }
+              }
+            },
+            aspectRatio: {
+              type: "object",
+              description: "width:height represents an aspect ratio. It may be approximate, and may not correspond to absolute dimensions in any given unit.",
+              required: ["width", "height"],
+              properties: {
+                width: {
+                  type: "integer",
+                  minimum: 1
+                },
+                height: {
+                  type: "integer",
+                  minimum: 1
                 }
               }
             },
@@ -58167,6 +58014,10 @@ if (cid) {
                 },
                 alt: {
                   type: "string"
+                },
+                aspectRatio: {
+                  type: "ref",
+                  ref: "lex:app.bsky.embed.images#aspectRatio"
                 }
               }
             }
@@ -58374,6 +58225,10 @@ if (cid) {
                     type: "ref",
                     ref: "lex:com.atproto.label.defs#label"
                   }
+                },
+                threadgate: {
+                  type: "ref",
+                  ref: "lex:app.bsky.feed.defs#threadgateView"
                 }
               }
             },
@@ -58470,6 +58325,10 @@ if (cid) {
                       "lex:app.bsky.feed.defs#blockedPost"
                     ]
                   }
+                },
+                viewer: {
+                  type: "ref",
+                  ref: "lex:app.bsky.feed.defs#viewerThreadState"
                 }
               }
             },
@@ -58516,6 +58375,14 @@ if (cid) {
                 viewer: {
                   type: "ref",
                   ref: "lex:app.bsky.actor.defs#viewerState"
+                }
+              }
+            },
+            viewerThreadState: {
+              type: "object",
+              properties: {
+                canReply: {
+                  type: "boolean"
                 }
               }
             },
@@ -58601,6 +58468,29 @@ if (cid) {
                 repost: {
                   type: "string",
                   format: "at-uri"
+                }
+              }
+            },
+            threadgateView: {
+              type: "object",
+              properties: {
+                uri: {
+                  type: "string",
+                  format: "at-uri"
+                },
+                cid: {
+                  type: "string",
+                  format: "cid"
+                },
+                record: {
+                  type: "unknown"
+                },
+                lists: {
+                  type: "array",
+                  items: {
+                    type: "ref",
+                    ref: "lex:app.bsky.graph.defs#listViewBasic"
+                  }
                 }
               }
             }
@@ -59142,6 +59032,59 @@ if (cid) {
             }
           }
         },
+        AppBskyFeedGetListFeed: {
+          lexicon: 1,
+          id: "app.bsky.feed.getListFeed",
+          defs: {
+            main: {
+              type: "query",
+              description: "A view of a recent posts from actors in a list",
+              parameters: {
+                type: "params",
+                required: ["list"],
+                properties: {
+                  list: {
+                    type: "string",
+                    format: "at-uri"
+                  },
+                  limit: {
+                    type: "integer",
+                    minimum: 1,
+                    maximum: 100,
+                    default: 50
+                  },
+                  cursor: {
+                    type: "string"
+                  }
+                }
+              },
+              output: {
+                encoding: "application/json",
+                schema: {
+                  type: "object",
+                  required: ["feed"],
+                  properties: {
+                    cursor: {
+                      type: "string"
+                    },
+                    feed: {
+                      type: "array",
+                      items: {
+                        type: "ref",
+                        ref: "lex:app.bsky.feed.defs#feedViewPost"
+                      }
+                    }
+                  }
+                }
+              },
+              errors: [
+                {
+                  name: "UnknownList"
+                }
+              ]
+            }
+          }
+        },
         AppBskyFeedGetPostThread: {
           lexicon: 1,
           id: "app.bsky.feed.getPostThread",
@@ -59286,6 +59229,49 @@ if (cid) {
                       items: {
                         type: "ref",
                         ref: "lex:app.bsky.actor.defs#profileView"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        AppBskyFeedGetSuggestedFeeds: {
+          lexicon: 1,
+          id: "app.bsky.feed.getSuggestedFeeds",
+          defs: {
+            main: {
+              type: "query",
+              description: "Get a list of suggested feeds for the viewer.",
+              parameters: {
+                type: "params",
+                properties: {
+                  limit: {
+                    type: "integer",
+                    minimum: 1,
+                    maximum: 100,
+                    default: 50
+                  },
+                  cursor: {
+                    type: "string"
+                  }
+                }
+              },
+              output: {
+                encoding: "application/json",
+                schema: {
+                  type: "object",
+                  required: ["feeds"],
+                  properties: {
+                    cursor: {
+                      type: "string"
+                    },
+                    feeds: {
+                      type: "array",
+                      items: {
+                        type: "ref",
+                        ref: "lex:app.bsky.feed.defs#generatorView"
                       }
                     }
                   }
@@ -59500,6 +59486,62 @@ if (cid) {
             }
           }
         },
+        AppBskyFeedThreadgate: {
+          lexicon: 1,
+          id: "app.bsky.feed.threadgate",
+          defs: {
+            main: {
+              type: "record",
+              key: "tid",
+              description: "Defines interaction gating rules for a thread. The rkey of the threadgate record should match the rkey of the thread's root post.",
+              record: {
+                type: "object",
+                required: ["post", "createdAt"],
+                properties: {
+                  post: {
+                    type: "string",
+                    format: "at-uri"
+                  },
+                  allow: {
+                    type: "array",
+                    maxLength: 5,
+                    items: {
+                      type: "union",
+                      refs: [
+                        "lex:app.bsky.feed.threadgate#mentionRule",
+                        "lex:app.bsky.feed.threadgate#followingRule",
+                        "lex:app.bsky.feed.threadgate#listRule"
+                      ]
+                    }
+                  },
+                  createdAt: {
+                    type: "string",
+                    format: "datetime"
+                  }
+                }
+              }
+            },
+            mentionRule: {
+              type: "object",
+              description: "Allow replies from actors mentioned in your post."
+            },
+            followingRule: {
+              type: "object",
+              description: "Allow replies from actors you follow."
+            },
+            listRule: {
+              type: "object",
+              description: "Allow replies from actors on a list.",
+              required: ["list"],
+              properties: {
+                list: {
+                  type: "string",
+                  format: "at-uri"
+                }
+              }
+            }
+          }
+        },
         AppBskyGraphBlock: {
           lexicon: 1,
           id: "app.bsky.graph.block",
@@ -59625,17 +59667,28 @@ if (cid) {
             },
             listPurpose: {
               type: "string",
-              knownValues: ["app.bsky.graph.defs#modlist"]
+              knownValues: [
+                "app.bsky.graph.defs#modlist",
+                "app.bsky.graph.defs#curatelist"
+              ]
             },
             modlist: {
               type: "token",
               description: "A list of actors to apply an aggregate moderation action (mute/block) on"
+            },
+            curatelist: {
+              type: "token",
+              description: "A list of actors used for curation purposes such as list feeds or interaction gating"
             },
             listViewerState: {
               type: "object",
               properties: {
                 muted: {
                   type: "boolean"
+                },
+                blocked: {
+                  type: "string",
+                  format: "at-uri"
                 }
               }
             }
@@ -59865,6 +59918,49 @@ if (cid) {
             }
           }
         },
+        AppBskyGraphGetListBlocks: {
+          lexicon: 1,
+          id: "app.bsky.graph.getListBlocks",
+          defs: {
+            main: {
+              type: "query",
+              description: "Which lists is the requester's account blocking?",
+              parameters: {
+                type: "params",
+                properties: {
+                  limit: {
+                    type: "integer",
+                    minimum: 1,
+                    maximum: 100,
+                    default: 50
+                  },
+                  cursor: {
+                    type: "string"
+                  }
+                }
+              },
+              output: {
+                encoding: "application/json",
+                schema: {
+                  type: "object",
+                  required: ["lists"],
+                  properties: {
+                    cursor: {
+                      type: "string"
+                    },
+                    lists: {
+                      type: "array",
+                      items: {
+                        type: "ref",
+                        ref: "lex:app.bsky.graph.defs#listView"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         AppBskyGraphGetListMutes: {
           lexicon: 1,
           id: "app.bsky.graph.getListMutes",
@@ -59999,6 +60095,42 @@ if (cid) {
             }
           }
         },
+        AppBskyGraphGetSuggestedFollowsByActor: {
+          lexicon: 1,
+          id: "app.bsky.graph.getSuggestedFollowsByActor",
+          defs: {
+            main: {
+              type: "query",
+              description: "Get suggested follows related to a given actor.",
+              parameters: {
+                type: "params",
+                required: ["actor"],
+                properties: {
+                  actor: {
+                    type: "string",
+                    format: "at-identifier"
+                  }
+                }
+              },
+              output: {
+                encoding: "application/json",
+                schema: {
+                  type: "object",
+                  required: ["suggestions"],
+                  properties: {
+                    suggestions: {
+                      type: "array",
+                      items: {
+                        type: "ref",
+                        ref: "lex:app.bsky.actor.defs#profileView"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         AppBskyGraphList: {
           lexicon: 1,
           id: "app.bsky.graph.list",
@@ -60040,6 +60172,31 @@ if (cid) {
                   labels: {
                     type: "union",
                     refs: ["lex:com.atproto.label.defs#selfLabels"]
+                  },
+                  createdAt: {
+                    type: "string",
+                    format: "datetime"
+                  }
+                }
+              }
+            }
+          }
+        },
+        AppBskyGraphListblock: {
+          lexicon: 1,
+          id: "app.bsky.graph.listblock",
+          defs: {
+            main: {
+              type: "record",
+              description: "A block of an entire list of actors.",
+              key: "tid",
+              record: {
+                type: "object",
+                required: ["subject", "createdAt"],
+                properties: {
+                  subject: {
+                    type: "string",
+                    format: "at-uri"
                   },
                   createdAt: {
                     type: "string",
@@ -60701,33 +60858,17 @@ if (cid) {
         }
         return e;
       }
-      var rebaseRepo_exports = {};
-      __export2(rebaseRepo_exports, {
-        ConcurrentWritesError: () => ConcurrentWritesError,
-        InvalidSwapError: () => InvalidSwapError,
+      var resolveModerationReports_exports = {};
+      __export2(resolveModerationReports_exports, {
         toKnownErr: () => toKnownErr11
       });
-      var InvalidSwapError = class extends XRPCError {
-        constructor(src22) {
-          super(src22.status, src22.error, src22.message, src22.headers);
-        }
-      };
-      var ConcurrentWritesError = class extends XRPCError {
-        constructor(src22) {
-          super(src22.status, src22.error, src22.message, src22.headers);
-        }
-      };
       function toKnownErr11(e) {
         if (e instanceof XRPCError) {
-          if (e.error === "InvalidSwap")
-            return new InvalidSwapError(e);
-          if (e.error === "ConcurrentWrites")
-            return new ConcurrentWritesError(e);
         }
         return e;
       }
-      var resolveModerationReports_exports = {};
-      __export2(resolveModerationReports_exports, {
+      var reverseModerationAction_exports = {};
+      __export2(reverseModerationAction_exports, {
         toKnownErr: () => toKnownErr12
       });
       function toKnownErr12(e) {
@@ -60735,8 +60876,8 @@ if (cid) {
         }
         return e;
       }
-      var reverseModerationAction_exports = {};
-      __export2(reverseModerationAction_exports, {
+      var searchRepos_exports = {};
+      __export2(searchRepos_exports, {
         toKnownErr: () => toKnownErr13
       });
       function toKnownErr13(e) {
@@ -60744,8 +60885,8 @@ if (cid) {
         }
         return e;
       }
-      var searchRepos_exports = {};
-      __export2(searchRepos_exports, {
+      var sendEmail_exports = {};
+      __export2(sendEmail_exports, {
         toKnownErr: () => toKnownErr14
       });
       function toKnownErr14(e) {
@@ -60753,26 +60894,17 @@ if (cid) {
         }
         return e;
       }
-      var sendEmail_exports = {};
-      __export2(sendEmail_exports, {
-        toKnownErr: () => toKnownErr15
-      });
-      function toKnownErr15(e) {
-        if (e instanceof XRPCError) {
-        }
-        return e;
-      }
       var takeModerationAction_exports = {};
       __export2(takeModerationAction_exports, {
         SubjectHasActionError: () => SubjectHasActionError,
-        toKnownErr: () => toKnownErr16
+        toKnownErr: () => toKnownErr15
       });
       var SubjectHasActionError = class extends XRPCError {
         constructor(src22) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr16(e) {
+      function toKnownErr15(e) {
         if (e instanceof XRPCError) {
           if (e.error === "SubjectHasAction")
             return new SubjectHasActionError(e);
@@ -60781,6 +60913,15 @@ if (cid) {
       }
       var updateAccountEmail_exports = {};
       __export2(updateAccountEmail_exports, {
+        toKnownErr: () => toKnownErr16
+      });
+      function toKnownErr16(e) {
+        if (e instanceof XRPCError) {
+        }
+        return e;
+      }
+      var updateAccountHandle_exports = {};
+      __export2(updateAccountHandle_exports, {
         toKnownErr: () => toKnownErr17
       });
       function toKnownErr17(e) {
@@ -60788,8 +60929,8 @@ if (cid) {
         }
         return e;
       }
-      var updateAccountHandle_exports = {};
-      __export2(updateAccountHandle_exports, {
+      var resolveHandle_exports = {};
+      __export2(resolveHandle_exports, {
         toKnownErr: () => toKnownErr18
       });
       function toKnownErr18(e) {
@@ -60797,8 +60938,8 @@ if (cid) {
         }
         return e;
       }
-      var resolveHandle_exports = {};
-      __export2(resolveHandle_exports, {
+      var updateHandle_exports = {};
+      __export2(updateHandle_exports, {
         toKnownErr: () => toKnownErr19
       });
       function toKnownErr19(e) {
@@ -60806,8 +60947,8 @@ if (cid) {
         }
         return e;
       }
-      var updateHandle_exports = {};
-      __export2(updateHandle_exports, {
+      var queryLabels_exports = {};
+      __export2(queryLabels_exports, {
         toKnownErr: () => toKnownErr20
       });
       function toKnownErr20(e) {
@@ -60815,8 +60956,8 @@ if (cid) {
         }
         return e;
       }
-      var queryLabels_exports = {};
-      __export2(queryLabels_exports, {
+      var createReport_exports = {};
+      __export2(createReport_exports, {
         toKnownErr: () => toKnownErr21
       });
       function toKnownErr21(e) {
@@ -60824,22 +60965,13 @@ if (cid) {
         }
         return e;
       }
-      var createReport_exports = {};
-      __export2(createReport_exports, {
-        toKnownErr: () => toKnownErr22
-      });
-      function toKnownErr22(e) {
-        if (e instanceof XRPCError) {
-        }
-        return e;
-      }
       var applyWrites_exports = {};
       __export2(applyWrites_exports, {
-        InvalidSwapError: () => InvalidSwapError2,
+        InvalidSwapError: () => InvalidSwapError,
         isCreate: () => isCreate,
         isDelete: () => isDelete,
         isUpdate: () => isUpdate,
-        toKnownErr: () => toKnownErr23,
+        toKnownErr: () => toKnownErr22,
         validateCreate: () => validateCreate,
         validateDelete: () => validateDelete,
         validateUpdate: () => validateUpdate
@@ -60850,15 +60982,15 @@ if (cid) {
       function hasProp2(data, prop) {
         return prop in data;
       }
-      var InvalidSwapError2 = class extends XRPCError {
+      var InvalidSwapError = class extends XRPCError {
         constructor(src22) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr23(e) {
+      function toKnownErr22(e) {
         if (e instanceof XRPCError) {
           if (e.error === "InvalidSwap")
-            return new InvalidSwapError2(e);
+            return new InvalidSwapError(e);
         }
         return e;
       }
@@ -60882,6 +61014,23 @@ if (cid) {
       }
       var createRecord_exports = {};
       __export2(createRecord_exports, {
+        InvalidSwapError: () => InvalidSwapError2,
+        toKnownErr: () => toKnownErr23
+      });
+      var InvalidSwapError2 = class extends XRPCError {
+        constructor(src22) {
+          super(src22.status, src22.error, src22.message, src22.headers);
+        }
+      };
+      function toKnownErr23(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "InvalidSwap")
+            return new InvalidSwapError2(e);
+        }
+        return e;
+      }
+      var deleteRecord_exports = {};
+      __export2(deleteRecord_exports, {
         InvalidSwapError: () => InvalidSwapError3,
         toKnownErr: () => toKnownErr24
       });
@@ -60897,25 +61046,17 @@ if (cid) {
         }
         return e;
       }
-      var deleteRecord_exports = {};
-      __export2(deleteRecord_exports, {
-        InvalidSwapError: () => InvalidSwapError4,
+      var describeRepo_exports = {};
+      __export2(describeRepo_exports, {
         toKnownErr: () => toKnownErr25
       });
-      var InvalidSwapError4 = class extends XRPCError {
-        constructor(src22) {
-          super(src22.status, src22.error, src22.message, src22.headers);
-        }
-      };
       function toKnownErr25(e) {
         if (e instanceof XRPCError) {
-          if (e.error === "InvalidSwap")
-            return new InvalidSwapError4(e);
         }
         return e;
       }
-      var describeRepo_exports = {};
-      __export2(describeRepo_exports, {
+      var getRecord_exports2 = {};
+      __export2(getRecord_exports2, {
         toKnownErr: () => toKnownErr26
       });
       function toKnownErr26(e) {
@@ -60923,22 +61064,13 @@ if (cid) {
         }
         return e;
       }
-      var getRecord_exports2 = {};
-      __export2(getRecord_exports2, {
-        toKnownErr: () => toKnownErr27
-      });
-      function toKnownErr27(e) {
-        if (e instanceof XRPCError) {
-        }
-        return e;
-      }
       var listRecords_exports = {};
       __export2(listRecords_exports, {
         isRecord: () => isRecord,
-        toKnownErr: () => toKnownErr28,
+        toKnownErr: () => toKnownErr27,
         validateRecord: () => validateRecord
       });
-      function toKnownErr28(e) {
+      function toKnownErr27(e) {
         if (e instanceof XRPCError) {
         }
         return e;
@@ -60951,51 +61083,26 @@ if (cid) {
       }
       var putRecord_exports = {};
       __export2(putRecord_exports, {
-        InvalidSwapError: () => InvalidSwapError5,
-        toKnownErr: () => toKnownErr29
+        InvalidSwapError: () => InvalidSwapError4,
+        toKnownErr: () => toKnownErr28
       });
-      var InvalidSwapError5 = class extends XRPCError {
+      var InvalidSwapError4 = class extends XRPCError {
         constructor(src22) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr29(e) {
+      function toKnownErr28(e) {
         if (e instanceof XRPCError) {
           if (e.error === "InvalidSwap")
-            return new InvalidSwapError5(e);
-        }
-        return e;
-      }
-      var rebaseRepo_exports2 = {};
-      __export2(rebaseRepo_exports2, {
-        ConcurrentWritesError: () => ConcurrentWritesError2,
-        InvalidSwapError: () => InvalidSwapError6,
-        toKnownErr: () => toKnownErr30
-      });
-      var InvalidSwapError6 = class extends XRPCError {
-        constructor(src22) {
-          super(src22.status, src22.error, src22.message, src22.headers);
-        }
-      };
-      var ConcurrentWritesError2 = class extends XRPCError {
-        constructor(src22) {
-          super(src22.status, src22.error, src22.message, src22.headers);
-        }
-      };
-      function toKnownErr30(e) {
-        if (e instanceof XRPCError) {
-          if (e.error === "InvalidSwap")
-            return new InvalidSwapError6(e);
-          if (e.error === "ConcurrentWrites")
-            return new ConcurrentWritesError2(e);
+            return new InvalidSwapError4(e);
         }
         return e;
       }
       var uploadBlob_exports = {};
       __export2(uploadBlob_exports, {
-        toKnownErr: () => toKnownErr31
+        toKnownErr: () => toKnownErr29
       });
-      function toKnownErr31(e) {
+      function toKnownErr29(e) {
         if (e instanceof XRPCError) {
         }
         return e;
@@ -61009,7 +61116,7 @@ if (cid) {
         InvalidPasswordError: () => InvalidPasswordError,
         UnresolvableDidError: () => UnresolvableDidError,
         UnsupportedDomainError: () => UnsupportedDomainError,
-        toKnownErr: () => toKnownErr32
+        toKnownErr: () => toKnownErr30
       });
       var InvalidHandleError2 = class extends XRPCError {
         constructor(src22) {
@@ -61046,7 +61153,7 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr32(e) {
+      function toKnownErr30(e) {
         if (e instanceof XRPCError) {
           if (e.error === "InvalidHandle")
             return new InvalidHandleError2(e);
@@ -61069,7 +61176,7 @@ if (cid) {
       __export2(createAppPassword_exports, {
         AccountTakedownError: () => AccountTakedownError,
         isAppPassword: () => isAppPassword,
-        toKnownErr: () => toKnownErr33,
+        toKnownErr: () => toKnownErr31,
         validateAppPassword: () => validateAppPassword
       });
       var AccountTakedownError = class extends XRPCError {
@@ -61077,7 +61184,7 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr33(e) {
+      function toKnownErr31(e) {
         if (e instanceof XRPCError) {
           if (e.error === "AccountTakedown")
             return new AccountTakedownError(e);
@@ -61088,16 +61195,13 @@ if (cid) {
         return isObj2(v) && hasProp2(v, "$type") && v.$type === "com.atproto.server.createAppPassword#appPassword";
       }
       function validateAppPassword(v) {
-        return lexicons.validate(
-          "com.atproto.server.createAppPassword#appPassword",
-          v
-        );
+        return lexicons.validate("com.atproto.server.createAppPassword#appPassword", v);
       }
       var createInviteCode_exports = {};
       __export2(createInviteCode_exports, {
-        toKnownErr: () => toKnownErr34
+        toKnownErr: () => toKnownErr32
       });
-      function toKnownErr34(e) {
+      function toKnownErr32(e) {
         if (e instanceof XRPCError) {
         }
         return e;
@@ -61105,10 +61209,10 @@ if (cid) {
       var createInviteCodes_exports = {};
       __export2(createInviteCodes_exports, {
         isAccountCodes: () => isAccountCodes,
-        toKnownErr: () => toKnownErr35,
+        toKnownErr: () => toKnownErr33,
         validateAccountCodes: () => validateAccountCodes
       });
-      function toKnownErr35(e) {
+      function toKnownErr33(e) {
         if (e instanceof XRPCError) {
         }
         return e;
@@ -61117,22 +61221,19 @@ if (cid) {
         return isObj2(v) && hasProp2(v, "$type") && v.$type === "com.atproto.server.createInviteCodes#accountCodes";
       }
       function validateAccountCodes(v) {
-        return lexicons.validate(
-          "com.atproto.server.createInviteCodes#accountCodes",
-          v
-        );
+        return lexicons.validate("com.atproto.server.createInviteCodes#accountCodes", v);
       }
       var createSession_exports = {};
       __export2(createSession_exports, {
         AccountTakedownError: () => AccountTakedownError2,
-        toKnownErr: () => toKnownErr36
+        toKnownErr: () => toKnownErr34
       });
       var AccountTakedownError2 = class extends XRPCError {
         constructor(src22) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr36(e) {
+      function toKnownErr34(e) {
         if (e instanceof XRPCError) {
           if (e.error === "AccountTakedown")
             return new AccountTakedownError2(e);
@@ -61143,7 +61244,7 @@ if (cid) {
       __export2(deleteAccount_exports, {
         ExpiredTokenError: () => ExpiredTokenError,
         InvalidTokenError: () => InvalidTokenError,
-        toKnownErr: () => toKnownErr37
+        toKnownErr: () => toKnownErr35
       });
       var ExpiredTokenError = class extends XRPCError {
         constructor(src22) {
@@ -61155,7 +61256,7 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr37(e) {
+      function toKnownErr35(e) {
         if (e instanceof XRPCError) {
           if (e.error === "ExpiredToken")
             return new ExpiredTokenError(e);
@@ -61166,9 +61267,9 @@ if (cid) {
       }
       var deleteSession_exports = {};
       __export2(deleteSession_exports, {
-        toKnownErr: () => toKnownErr38
+        toKnownErr: () => toKnownErr36
       });
-      function toKnownErr38(e) {
+      function toKnownErr36(e) {
         if (e instanceof XRPCError) {
         }
         return e;
@@ -61176,10 +61277,10 @@ if (cid) {
       var describeServer_exports = {};
       __export2(describeServer_exports, {
         isLinks: () => isLinks,
-        toKnownErr: () => toKnownErr39,
+        toKnownErr: () => toKnownErr37,
         validateLinks: () => validateLinks
       });
-      function toKnownErr39(e) {
+      function toKnownErr37(e) {
         if (e instanceof XRPCError) {
         }
         return e;
@@ -61193,14 +61294,14 @@ if (cid) {
       var getAccountInviteCodes_exports = {};
       __export2(getAccountInviteCodes_exports, {
         DuplicateCreateError: () => DuplicateCreateError,
-        toKnownErr: () => toKnownErr40
+        toKnownErr: () => toKnownErr38
       });
       var DuplicateCreateError = class extends XRPCError {
         constructor(src22) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr40(e) {
+      function toKnownErr38(e) {
         if (e instanceof XRPCError) {
           if (e.error === "DuplicateCreate")
             return new DuplicateCreateError(e);
@@ -61209,9 +61310,9 @@ if (cid) {
       }
       var getSession_exports = {};
       __export2(getSession_exports, {
-        toKnownErr: () => toKnownErr41
+        toKnownErr: () => toKnownErr39
       });
-      function toKnownErr41(e) {
+      function toKnownErr39(e) {
         if (e instanceof XRPCError) {
         }
         return e;
@@ -61220,7 +61321,7 @@ if (cid) {
       __export2(listAppPasswords_exports, {
         AccountTakedownError: () => AccountTakedownError3,
         isAppPassword: () => isAppPassword2,
-        toKnownErr: () => toKnownErr42,
+        toKnownErr: () => toKnownErr40,
         validateAppPassword: () => validateAppPassword2
       });
       var AccountTakedownError3 = class extends XRPCError {
@@ -61228,7 +61329,7 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr42(e) {
+      function toKnownErr40(e) {
         if (e instanceof XRPCError) {
           if (e.error === "AccountTakedown")
             return new AccountTakedownError3(e);
@@ -61244,14 +61345,14 @@ if (cid) {
       var refreshSession_exports = {};
       __export2(refreshSession_exports, {
         AccountTakedownError: () => AccountTakedownError4,
-        toKnownErr: () => toKnownErr43
+        toKnownErr: () => toKnownErr41
       });
       var AccountTakedownError4 = class extends XRPCError {
         constructor(src22) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr43(e) {
+      function toKnownErr41(e) {
         if (e instanceof XRPCError) {
           if (e.error === "AccountTakedown")
             return new AccountTakedownError4(e);
@@ -61260,18 +61361,18 @@ if (cid) {
       }
       var requestAccountDelete_exports = {};
       __export2(requestAccountDelete_exports, {
-        toKnownErr: () => toKnownErr44
+        toKnownErr: () => toKnownErr42
       });
-      function toKnownErr44(e) {
+      function toKnownErr42(e) {
         if (e instanceof XRPCError) {
         }
         return e;
       }
       var requestPasswordReset_exports = {};
       __export2(requestPasswordReset_exports, {
-        toKnownErr: () => toKnownErr45
+        toKnownErr: () => toKnownErr43
       });
-      function toKnownErr45(e) {
+      function toKnownErr43(e) {
         if (e instanceof XRPCError) {
         }
         return e;
@@ -61280,7 +61381,7 @@ if (cid) {
       __export2(resetPassword_exports, {
         ExpiredTokenError: () => ExpiredTokenError2,
         InvalidTokenError: () => InvalidTokenError2,
-        toKnownErr: () => toKnownErr46
+        toKnownErr: () => toKnownErr44
       });
       var ExpiredTokenError2 = class extends XRPCError {
         constructor(src22) {
@@ -61292,7 +61393,7 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr46(e) {
+      function toKnownErr44(e) {
         if (e instanceof XRPCError) {
           if (e.error === "ExpiredToken")
             return new ExpiredTokenError2(e);
@@ -61303,6 +61404,24 @@ if (cid) {
       }
       var revokeAppPassword_exports = {};
       __export2(revokeAppPassword_exports, {
+        toKnownErr: () => toKnownErr45
+      });
+      function toKnownErr45(e) {
+        if (e instanceof XRPCError) {
+        }
+        return e;
+      }
+      var getBlob_exports = {};
+      __export2(getBlob_exports, {
+        toKnownErr: () => toKnownErr46
+      });
+      function toKnownErr46(e) {
+        if (e instanceof XRPCError) {
+        }
+        return e;
+      }
+      var getBlocks_exports = {};
+      __export2(getBlocks_exports, {
         toKnownErr: () => toKnownErr47
       });
       function toKnownErr47(e) {
@@ -61310,8 +61429,8 @@ if (cid) {
         }
         return e;
       }
-      var getBlob_exports = {};
-      __export2(getBlob_exports, {
+      var getCheckout_exports = {};
+      __export2(getCheckout_exports, {
         toKnownErr: () => toKnownErr48
       });
       function toKnownErr48(e) {
@@ -61319,26 +61438,42 @@ if (cid) {
         }
         return e;
       }
-      var getBlocks_exports = {};
-      __export2(getBlocks_exports, {
+      var getHead_exports = {};
+      __export2(getHead_exports, {
+        HeadNotFoundError: () => HeadNotFoundError,
         toKnownErr: () => toKnownErr49
       });
+      var HeadNotFoundError = class extends XRPCError {
+        constructor(src22) {
+          super(src22.status, src22.error, src22.message, src22.headers);
+        }
+      };
       function toKnownErr49(e) {
         if (e instanceof XRPCError) {
+          if (e.error === "HeadNotFound")
+            return new HeadNotFoundError(e);
         }
         return e;
       }
-      var getCheckout_exports = {};
-      __export2(getCheckout_exports, {
+      var getLatestCommit_exports = {};
+      __export2(getLatestCommit_exports, {
+        RepoNotFoundError: () => RepoNotFoundError2,
         toKnownErr: () => toKnownErr50
       });
+      var RepoNotFoundError2 = class extends XRPCError {
+        constructor(src22) {
+          super(src22.status, src22.error, src22.message, src22.headers);
+        }
+      };
       function toKnownErr50(e) {
         if (e instanceof XRPCError) {
+          if (e.error === "RepoNotFound")
+            return new RepoNotFoundError2(e);
         }
         return e;
       }
-      var getCommitPath_exports = {};
-      __export2(getCommitPath_exports, {
+      var getRecord_exports3 = {};
+      __export2(getRecord_exports3, {
         toKnownErr: () => toKnownErr51
       });
       function toKnownErr51(e) {
@@ -61346,25 +61481,17 @@ if (cid) {
         }
         return e;
       }
-      var getHead_exports = {};
-      __export2(getHead_exports, {
-        HeadNotFoundError: () => HeadNotFoundError,
+      var getRepo_exports2 = {};
+      __export2(getRepo_exports2, {
         toKnownErr: () => toKnownErr52
       });
-      var HeadNotFoundError = class extends XRPCError {
-        constructor(src22) {
-          super(src22.status, src22.error, src22.message, src22.headers);
-        }
-      };
       function toKnownErr52(e) {
         if (e instanceof XRPCError) {
-          if (e.error === "HeadNotFound")
-            return new HeadNotFoundError(e);
         }
         return e;
       }
-      var getRecord_exports3 = {};
-      __export2(getRecord_exports3, {
+      var listBlobs_exports = {};
+      __export2(listBlobs_exports, {
         toKnownErr: () => toKnownErr53
       });
       function toKnownErr53(e) {
@@ -61372,31 +61499,13 @@ if (cid) {
         }
         return e;
       }
-      var getRepo_exports2 = {};
-      __export2(getRepo_exports2, {
-        toKnownErr: () => toKnownErr54
-      });
-      function toKnownErr54(e) {
-        if (e instanceof XRPCError) {
-        }
-        return e;
-      }
-      var listBlobs_exports = {};
-      __export2(listBlobs_exports, {
-        toKnownErr: () => toKnownErr55
-      });
-      function toKnownErr55(e) {
-        if (e instanceof XRPCError) {
-        }
-        return e;
-      }
       var listRepos_exports = {};
       __export2(listRepos_exports, {
         isRepo: () => isRepo,
-        toKnownErr: () => toKnownErr56,
+        toKnownErr: () => toKnownErr54,
         validateRepo: () => validateRepo
       });
-      function toKnownErr56(e) {
+      function toKnownErr54(e) {
         if (e instanceof XRPCError) {
         }
         return e;
@@ -61409,6 +61518,24 @@ if (cid) {
       }
       var notifyOfUpdate_exports = {};
       __export2(notifyOfUpdate_exports, {
+        toKnownErr: () => toKnownErr55
+      });
+      function toKnownErr55(e) {
+        if (e instanceof XRPCError) {
+        }
+        return e;
+      }
+      var requestCrawl_exports = {};
+      __export2(requestCrawl_exports, {
+        toKnownErr: () => toKnownErr56
+      });
+      function toKnownErr56(e) {
+        if (e instanceof XRPCError) {
+        }
+        return e;
+      }
+      var getPreferences_exports = {};
+      __export2(getPreferences_exports, {
         toKnownErr: () => toKnownErr57
       });
       function toKnownErr57(e) {
@@ -61416,8 +61543,8 @@ if (cid) {
         }
         return e;
       }
-      var requestCrawl_exports = {};
-      __export2(requestCrawl_exports, {
+      var getProfile_exports = {};
+      __export2(getProfile_exports, {
         toKnownErr: () => toKnownErr58
       });
       function toKnownErr58(e) {
@@ -61425,8 +61552,8 @@ if (cid) {
         }
         return e;
       }
-      var getPreferences_exports = {};
-      __export2(getPreferences_exports, {
+      var getProfiles_exports = {};
+      __export2(getProfiles_exports, {
         toKnownErr: () => toKnownErr59
       });
       function toKnownErr59(e) {
@@ -61434,8 +61561,8 @@ if (cid) {
         }
         return e;
       }
-      var getProfile_exports = {};
-      __export2(getProfile_exports, {
+      var getSuggestions_exports = {};
+      __export2(getSuggestions_exports, {
         toKnownErr: () => toKnownErr60
       });
       function toKnownErr60(e) {
@@ -61443,8 +61570,8 @@ if (cid) {
         }
         return e;
       }
-      var getProfiles_exports = {};
-      __export2(getProfiles_exports, {
+      var putPreferences_exports = {};
+      __export2(putPreferences_exports, {
         toKnownErr: () => toKnownErr61
       });
       function toKnownErr61(e) {
@@ -61452,8 +61579,8 @@ if (cid) {
         }
         return e;
       }
-      var getSuggestions_exports = {};
-      __export2(getSuggestions_exports, {
+      var searchActors_exports = {};
+      __export2(searchActors_exports, {
         toKnownErr: () => toKnownErr62
       });
       function toKnownErr62(e) {
@@ -61461,29 +61588,11 @@ if (cid) {
         }
         return e;
       }
-      var putPreferences_exports = {};
-      __export2(putPreferences_exports, {
+      var searchActorsTypeahead_exports = {};
+      __export2(searchActorsTypeahead_exports, {
         toKnownErr: () => toKnownErr63
       });
       function toKnownErr63(e) {
-        if (e instanceof XRPCError) {
-        }
-        return e;
-      }
-      var searchActors_exports = {};
-      __export2(searchActors_exports, {
-        toKnownErr: () => toKnownErr64
-      });
-      function toKnownErr64(e) {
-        if (e instanceof XRPCError) {
-        }
-        return e;
-      }
-      var searchActorsTypeahead_exports = {};
-      __export2(searchActorsTypeahead_exports, {
-        toKnownErr: () => toKnownErr65
-      });
-      function toKnownErr65(e) {
         if (e instanceof XRPCError) {
         }
         return e;
@@ -61492,11 +61601,11 @@ if (cid) {
       __export2(describeFeedGenerator_exports, {
         isFeed: () => isFeed,
         isLinks: () => isLinks2,
-        toKnownErr: () => toKnownErr66,
+        toKnownErr: () => toKnownErr64,
         validateFeed: () => validateFeed,
         validateLinks: () => validateLinks2
       });
-      function toKnownErr66(e) {
+      function toKnownErr64(e) {
         if (e instanceof XRPCError) {
         }
         return e;
@@ -61515,9 +61624,9 @@ if (cid) {
       }
       var getActorFeeds_exports = {};
       __export2(getActorFeeds_exports, {
-        toKnownErr: () => toKnownErr67
+        toKnownErr: () => toKnownErr65
       });
-      function toKnownErr67(e) {
+      function toKnownErr65(e) {
         if (e instanceof XRPCError) {
         }
         return e;
@@ -61526,7 +61635,7 @@ if (cid) {
       __export2(getActorLikes_exports, {
         BlockedActorError: () => BlockedActorError,
         BlockedByActorError: () => BlockedByActorError,
-        toKnownErr: () => toKnownErr68
+        toKnownErr: () => toKnownErr66
       });
       var BlockedActorError = class extends XRPCError {
         constructor(src22) {
@@ -61538,7 +61647,7 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr68(e) {
+      function toKnownErr66(e) {
         if (e instanceof XRPCError) {
           if (e.error === "BlockedActor")
             return new BlockedActorError(e);
@@ -61551,7 +61660,7 @@ if (cid) {
       __export2(getAuthorFeed_exports, {
         BlockedActorError: () => BlockedActorError2,
         BlockedByActorError: () => BlockedByActorError2,
-        toKnownErr: () => toKnownErr69
+        toKnownErr: () => toKnownErr67
       });
       var BlockedActorError2 = class extends XRPCError {
         constructor(src22) {
@@ -61563,7 +61672,7 @@ if (cid) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr69(e) {
+      function toKnownErr67(e) {
         if (e instanceof XRPCError) {
           if (e.error === "BlockedActor")
             return new BlockedActorError2(e);
@@ -61575,14 +61684,14 @@ if (cid) {
       var getFeed_exports = {};
       __export2(getFeed_exports, {
         UnknownFeedError: () => UnknownFeedError,
-        toKnownErr: () => toKnownErr70
+        toKnownErr: () => toKnownErr68
       });
       var UnknownFeedError = class extends XRPCError {
         constructor(src22) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr70(e) {
+      function toKnownErr68(e) {
         if (e instanceof XRPCError) {
           if (e.error === "UnknownFeed")
             return new UnknownFeedError(e);
@@ -61591,18 +61700,18 @@ if (cid) {
       }
       var getFeedGenerator_exports = {};
       __export2(getFeedGenerator_exports, {
-        toKnownErr: () => toKnownErr71
+        toKnownErr: () => toKnownErr69
       });
-      function toKnownErr71(e) {
+      function toKnownErr69(e) {
         if (e instanceof XRPCError) {
         }
         return e;
       }
       var getFeedGenerators_exports = {};
       __export2(getFeedGenerators_exports, {
-        toKnownErr: () => toKnownErr72
+        toKnownErr: () => toKnownErr70
       });
-      function toKnownErr72(e) {
+      function toKnownErr70(e) {
         if (e instanceof XRPCError) {
         }
         return e;
@@ -61610,14 +61719,14 @@ if (cid) {
       var getFeedSkeleton_exports = {};
       __export2(getFeedSkeleton_exports, {
         UnknownFeedError: () => UnknownFeedError2,
-        toKnownErr: () => toKnownErr73
+        toKnownErr: () => toKnownErr71
       });
       var UnknownFeedError2 = class extends XRPCError {
         constructor(src22) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr73(e) {
+      function toKnownErr71(e) {
         if (e instanceof XRPCError) {
           if (e.error === "UnknownFeed")
             return new UnknownFeedError2(e);
@@ -61627,10 +61736,10 @@ if (cid) {
       var getLikes_exports = {};
       __export2(getLikes_exports, {
         isLike: () => isLike,
-        toKnownErr: () => toKnownErr74,
+        toKnownErr: () => toKnownErr72,
         validateLike: () => validateLike
       });
-      function toKnownErr74(e) {
+      function toKnownErr72(e) {
         if (e instanceof XRPCError) {
         }
         return e;
@@ -61641,17 +61750,34 @@ if (cid) {
       function validateLike(v) {
         return lexicons.validate("app.bsky.feed.getLikes#like", v);
       }
+      var getListFeed_exports = {};
+      __export2(getListFeed_exports, {
+        UnknownListError: () => UnknownListError,
+        toKnownErr: () => toKnownErr73
+      });
+      var UnknownListError = class extends XRPCError {
+        constructor(src22) {
+          super(src22.status, src22.error, src22.message, src22.headers);
+        }
+      };
+      function toKnownErr73(e) {
+        if (e instanceof XRPCError) {
+          if (e.error === "UnknownList")
+            return new UnknownListError(e);
+        }
+        return e;
+      }
       var getPostThread_exports = {};
       __export2(getPostThread_exports, {
         NotFoundError: () => NotFoundError,
-        toKnownErr: () => toKnownErr75
+        toKnownErr: () => toKnownErr74
       });
       var NotFoundError = class extends XRPCError {
         constructor(src22) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr75(e) {
+      function toKnownErr74(e) {
         if (e instanceof XRPCError) {
           if (e.error === "NotFound")
             return new NotFoundError(e);
@@ -61660,6 +61786,15 @@ if (cid) {
       }
       var getPosts_exports = {};
       __export2(getPosts_exports, {
+        toKnownErr: () => toKnownErr75
+      });
+      function toKnownErr75(e) {
+        if (e instanceof XRPCError) {
+        }
+        return e;
+      }
+      var getRepostedBy_exports = {};
+      __export2(getRepostedBy_exports, {
         toKnownErr: () => toKnownErr76
       });
       function toKnownErr76(e) {
@@ -61667,8 +61802,8 @@ if (cid) {
         }
         return e;
       }
-      var getRepostedBy_exports = {};
-      __export2(getRepostedBy_exports, {
+      var getSuggestedFeeds_exports = {};
+      __export2(getSuggestedFeeds_exports, {
         toKnownErr: () => toKnownErr77
       });
       function toKnownErr77(e) {
@@ -61721,8 +61856,8 @@ if (cid) {
         }
         return e;
       }
-      var getListMutes_exports = {};
-      __export2(getListMutes_exports, {
+      var getListBlocks_exports = {};
+      __export2(getListBlocks_exports, {
         toKnownErr: () => toKnownErr83
       });
       function toKnownErr83(e) {
@@ -61730,8 +61865,8 @@ if (cid) {
         }
         return e;
       }
-      var getLists_exports = {};
-      __export2(getLists_exports, {
+      var getListMutes_exports = {};
+      __export2(getListMutes_exports, {
         toKnownErr: () => toKnownErr84
       });
       function toKnownErr84(e) {
@@ -61739,8 +61874,8 @@ if (cid) {
         }
         return e;
       }
-      var getMutes_exports = {};
-      __export2(getMutes_exports, {
+      var getLists_exports = {};
+      __export2(getLists_exports, {
         toKnownErr: () => toKnownErr85
       });
       function toKnownErr85(e) {
@@ -61748,8 +61883,8 @@ if (cid) {
         }
         return e;
       }
-      var muteActor_exports = {};
-      __export2(muteActor_exports, {
+      var getMutes_exports = {};
+      __export2(getMutes_exports, {
         toKnownErr: () => toKnownErr86
       });
       function toKnownErr86(e) {
@@ -61757,8 +61892,8 @@ if (cid) {
         }
         return e;
       }
-      var muteActorList_exports = {};
-      __export2(muteActorList_exports, {
+      var getSuggestedFollowsByActor_exports = {};
+      __export2(getSuggestedFollowsByActor_exports, {
         toKnownErr: () => toKnownErr87
       });
       function toKnownErr87(e) {
@@ -61766,8 +61901,8 @@ if (cid) {
         }
         return e;
       }
-      var unmuteActor_exports = {};
-      __export2(unmuteActor_exports, {
+      var muteActor_exports = {};
+      __export2(muteActor_exports, {
         toKnownErr: () => toKnownErr88
       });
       function toKnownErr88(e) {
@@ -61775,8 +61910,8 @@ if (cid) {
         }
         return e;
       }
-      var unmuteActorList_exports = {};
-      __export2(unmuteActorList_exports, {
+      var muteActorList_exports = {};
+      __export2(muteActorList_exports, {
         toKnownErr: () => toKnownErr89
       });
       function toKnownErr89(e) {
@@ -61784,8 +61919,8 @@ if (cid) {
         }
         return e;
       }
-      var getUnreadCount_exports = {};
-      __export2(getUnreadCount_exports, {
+      var unmuteActor_exports = {};
+      __export2(unmuteActor_exports, {
         toKnownErr: () => toKnownErr90
       });
       function toKnownErr90(e) {
@@ -61793,13 +61928,31 @@ if (cid) {
         }
         return e;
       }
+      var unmuteActorList_exports = {};
+      __export2(unmuteActorList_exports, {
+        toKnownErr: () => toKnownErr91
+      });
+      function toKnownErr91(e) {
+        if (e instanceof XRPCError) {
+        }
+        return e;
+      }
+      var getUnreadCount_exports = {};
+      __export2(getUnreadCount_exports, {
+        toKnownErr: () => toKnownErr92
+      });
+      function toKnownErr92(e) {
+        if (e instanceof XRPCError) {
+        }
+        return e;
+      }
       var listNotifications_exports = {};
       __export2(listNotifications_exports, {
         isNotification: () => isNotification,
-        toKnownErr: () => toKnownErr91,
+        toKnownErr: () => toKnownErr93,
         validateNotification: () => validateNotification
       });
-      function toKnownErr91(e) {
+      function toKnownErr93(e) {
         if (e instanceof XRPCError) {
         }
         return e;
@@ -61808,31 +61961,10 @@ if (cid) {
         return isObj2(v) && hasProp2(v, "$type") && v.$type === "app.bsky.notification.listNotifications#notification";
       }
       function validateNotification(v) {
-        return lexicons.validate(
-          "app.bsky.notification.listNotifications#notification",
-          v
-        );
+        return lexicons.validate("app.bsky.notification.listNotifications#notification", v);
       }
       var registerPush_exports = {};
       __export2(registerPush_exports, {
-        toKnownErr: () => toKnownErr92
-      });
-      function toKnownErr92(e) {
-        if (e instanceof XRPCError) {
-        }
-        return e;
-      }
-      var updateSeen_exports = {};
-      __export2(updateSeen_exports, {
-        toKnownErr: () => toKnownErr93
-      });
-      function toKnownErr93(e) {
-        if (e instanceof XRPCError) {
-        }
-        return e;
-      }
-      var applyLabels_exports = {};
-      __export2(applyLabels_exports, {
         toKnownErr: () => toKnownErr94
       });
       function toKnownErr94(e) {
@@ -61840,8 +61972,8 @@ if (cid) {
         }
         return e;
       }
-      var getPopular_exports = {};
-      __export2(getPopular_exports, {
+      var updateSeen_exports = {};
+      __export2(updateSeen_exports, {
         toKnownErr: () => toKnownErr95
       });
       function toKnownErr95(e) {
@@ -61849,8 +61981,8 @@ if (cid) {
         }
         return e;
       }
-      var getPopularFeedGenerators_exports = {};
-      __export2(getPopularFeedGenerators_exports, {
+      var applyLabels_exports = {};
+      __export2(applyLabels_exports, {
         toKnownErr: () => toKnownErr96
       });
       function toKnownErr96(e) {
@@ -61858,17 +61990,35 @@ if (cid) {
         }
         return e;
       }
+      var getPopular_exports = {};
+      __export2(getPopular_exports, {
+        toKnownErr: () => toKnownErr97
+      });
+      function toKnownErr97(e) {
+        if (e instanceof XRPCError) {
+        }
+        return e;
+      }
+      var getPopularFeedGenerators_exports = {};
+      __export2(getPopularFeedGenerators_exports, {
+        toKnownErr: () => toKnownErr98
+      });
+      function toKnownErr98(e) {
+        if (e instanceof XRPCError) {
+        }
+        return e;
+      }
       var getTimelineSkeleton_exports = {};
       __export2(getTimelineSkeleton_exports, {
         UnknownFeedError: () => UnknownFeedError3,
-        toKnownErr: () => toKnownErr97
+        toKnownErr: () => toKnownErr99
       });
       var UnknownFeedError3 = class extends XRPCError {
         constructor(src22) {
           super(src22.status, src22.error, src22.message, src22.headers);
         }
       };
-      function toKnownErr97(e) {
+      function toKnownErr99(e) {
         if (e instanceof XRPCError) {
           if (e.error === "UnknownFeed")
             return new UnknownFeedError3(e);
@@ -62176,6 +62326,7 @@ if (cid) {
       __export2(defs_exports5, {
         isAdultContentPref: () => isAdultContentPref,
         isContentLabelPref: () => isContentLabelPref,
+        isPersonalDetailsPref: () => isPersonalDetailsPref,
         isProfileView: () => isProfileView,
         isProfileViewBasic: () => isProfileViewBasic,
         isProfileViewDetailed: () => isProfileViewDetailed,
@@ -62183,6 +62334,7 @@ if (cid) {
         isViewerState: () => isViewerState,
         validateAdultContentPref: () => validateAdultContentPref,
         validateContentLabelPref: () => validateContentLabelPref,
+        validatePersonalDetailsPref: () => validatePersonalDetailsPref,
         validateProfileView: () => validateProfileView,
         validateProfileViewBasic: () => validateProfileViewBasic,
         validateProfileViewDetailed: () => validateProfileViewDetailed,
@@ -62230,6 +62382,12 @@ if (cid) {
       }
       function validateSavedFeedsPref(v) {
         return lexicons.validate("app.bsky.actor.defs#savedFeedsPref", v);
+      }
+      function isPersonalDetailsPref(v) {
+        return isObj2(v) && hasProp2(v, "$type") && v.$type === "app.bsky.actor.defs#personalDetailsPref";
+      }
+      function validatePersonalDetailsPref(v) {
+        return lexicons.validate("app.bsky.actor.defs#personalDetailsPref", v);
       }
       var profile_exports = {};
       __export2(profile_exports, {
@@ -62279,10 +62437,12 @@ if (cid) {
       }
       var images_exports = {};
       __export2(images_exports, {
+        isAspectRatio: () => isAspectRatio,
         isImage: () => isImage,
         isMain: () => isMain3,
         isView: () => isView2,
         isViewImage: () => isViewImage,
+        validateAspectRatio: () => validateAspectRatio,
         validateImage: () => validateImage,
         validateMain: () => validateMain3,
         validateView: () => validateView2,
@@ -62299,6 +62459,12 @@ if (cid) {
       }
       function validateImage(v) {
         return lexicons.validate("app.bsky.embed.images#image", v);
+      }
+      function isAspectRatio(v) {
+        return isObj2(v) && hasProp2(v, "$type") && v.$type === "app.bsky.embed.images#aspectRatio";
+      }
+      function validateAspectRatio(v) {
+        return lexicons.validate("app.bsky.embed.images#aspectRatio", v);
       }
       function isView2(v) {
         return isObj2(v) && hasProp2(v, "$type") && v.$type === "app.bsky.embed.images#view";
@@ -62388,7 +62554,9 @@ if (cid) {
         isSkeletonFeedPost: () => isSkeletonFeedPost,
         isSkeletonReasonRepost: () => isSkeletonReasonRepost,
         isThreadViewPost: () => isThreadViewPost,
+        isThreadgateView: () => isThreadgateView,
         isViewerState: () => isViewerState2,
+        isViewerThreadState: () => isViewerThreadState,
         validateBlockedAuthor: () => validateBlockedAuthor,
         validateBlockedPost: () => validateBlockedPost,
         validateFeedViewPost: () => validateFeedViewPost,
@@ -62401,7 +62569,9 @@ if (cid) {
         validateSkeletonFeedPost: () => validateSkeletonFeedPost,
         validateSkeletonReasonRepost: () => validateSkeletonReasonRepost,
         validateThreadViewPost: () => validateThreadViewPost,
-        validateViewerState: () => validateViewerState2
+        validateThreadgateView: () => validateThreadgateView,
+        validateViewerState: () => validateViewerState2,
+        validateViewerThreadState: () => validateViewerThreadState
       });
       function isPostView(v) {
         return isObj2(v) && hasProp2(v, "$type") && v.$type === "app.bsky.feed.defs#postView";
@@ -62457,6 +62627,12 @@ if (cid) {
       function validateBlockedAuthor(v) {
         return lexicons.validate("app.bsky.feed.defs#blockedAuthor", v);
       }
+      function isViewerThreadState(v) {
+        return isObj2(v) && hasProp2(v, "$type") && v.$type === "app.bsky.feed.defs#viewerThreadState";
+      }
+      function validateViewerThreadState(v) {
+        return lexicons.validate("app.bsky.feed.defs#viewerThreadState", v);
+      }
       function isGeneratorView(v) {
         return isObj2(v) && hasProp2(v, "$type") && v.$type === "app.bsky.feed.defs#generatorView";
       }
@@ -62480,6 +62656,12 @@ if (cid) {
       }
       function validateSkeletonReasonRepost(v) {
         return lexicons.validate("app.bsky.feed.defs#skeletonReasonRepost", v);
+      }
+      function isThreadgateView(v) {
+        return isObj2(v) && hasProp2(v, "$type") && v.$type === "app.bsky.feed.defs#threadgateView";
+      }
+      function validateThreadgateView(v) {
+        return lexicons.validate("app.bsky.feed.defs#threadgateView", v);
       }
       var generator_exports = {};
       __export2(generator_exports, {
@@ -62549,19 +62731,55 @@ if (cid) {
       function validateRecord6(v) {
         return lexicons.validate("app.bsky.feed.repost#main", v);
       }
-      var block_exports = {};
-      __export2(block_exports, {
+      var threadgate_exports = {};
+      __export2(threadgate_exports, {
+        isFollowingRule: () => isFollowingRule,
+        isListRule: () => isListRule,
+        isMentionRule: () => isMentionRule,
         isRecord: () => isRecord7,
+        validateFollowingRule: () => validateFollowingRule,
+        validateListRule: () => validateListRule,
+        validateMentionRule: () => validateMentionRule,
         validateRecord: () => validateRecord7
       });
       function isRecord7(v) {
-        return isObj2(v) && hasProp2(v, "$type") && (v.$type === "app.bsky.graph.block#main" || v.$type === "app.bsky.graph.block");
+        return isObj2(v) && hasProp2(v, "$type") && (v.$type === "app.bsky.feed.threadgate#main" || v.$type === "app.bsky.feed.threadgate");
       }
       function validateRecord7(v) {
+        return lexicons.validate("app.bsky.feed.threadgate#main", v);
+      }
+      function isMentionRule(v) {
+        return isObj2(v) && hasProp2(v, "$type") && v.$type === "app.bsky.feed.threadgate#mentionRule";
+      }
+      function validateMentionRule(v) {
+        return lexicons.validate("app.bsky.feed.threadgate#mentionRule", v);
+      }
+      function isFollowingRule(v) {
+        return isObj2(v) && hasProp2(v, "$type") && v.$type === "app.bsky.feed.threadgate#followingRule";
+      }
+      function validateFollowingRule(v) {
+        return lexicons.validate("app.bsky.feed.threadgate#followingRule", v);
+      }
+      function isListRule(v) {
+        return isObj2(v) && hasProp2(v, "$type") && v.$type === "app.bsky.feed.threadgate#listRule";
+      }
+      function validateListRule(v) {
+        return lexicons.validate("app.bsky.feed.threadgate#listRule", v);
+      }
+      var block_exports = {};
+      __export2(block_exports, {
+        isRecord: () => isRecord8,
+        validateRecord: () => validateRecord8
+      });
+      function isRecord8(v) {
+        return isObj2(v) && hasProp2(v, "$type") && (v.$type === "app.bsky.graph.block#main" || v.$type === "app.bsky.graph.block");
+      }
+      function validateRecord8(v) {
         return lexicons.validate("app.bsky.graph.block#main", v);
       }
       var defs_exports7 = {};
       __export2(defs_exports7, {
+        CURATELIST: () => CURATELIST,
         MODLIST: () => MODLIST,
         isListItemView: () => isListItemView,
         isListView: () => isListView,
@@ -62591,6 +62809,7 @@ if (cid) {
         return lexicons.validate("app.bsky.graph.defs#listItemView", v);
       }
       var MODLIST = "app.bsky.graph.defs#modlist";
+      var CURATELIST = "app.bsky.graph.defs#curatelist";
       function isListViewerState(v) {
         return isObj2(v) && hasProp2(v, "$type") && v.$type === "app.bsky.graph.defs#listViewerState";
       }
@@ -62599,35 +62818,46 @@ if (cid) {
       }
       var follow_exports = {};
       __export2(follow_exports, {
-        isRecord: () => isRecord8,
-        validateRecord: () => validateRecord8
-      });
-      function isRecord8(v) {
-        return isObj2(v) && hasProp2(v, "$type") && (v.$type === "app.bsky.graph.follow#main" || v.$type === "app.bsky.graph.follow");
-      }
-      function validateRecord8(v) {
-        return lexicons.validate("app.bsky.graph.follow#main", v);
-      }
-      var list_exports = {};
-      __export2(list_exports, {
         isRecord: () => isRecord9,
         validateRecord: () => validateRecord9
       });
       function isRecord9(v) {
-        return isObj2(v) && hasProp2(v, "$type") && (v.$type === "app.bsky.graph.list#main" || v.$type === "app.bsky.graph.list");
+        return isObj2(v) && hasProp2(v, "$type") && (v.$type === "app.bsky.graph.follow#main" || v.$type === "app.bsky.graph.follow");
       }
       function validateRecord9(v) {
-        return lexicons.validate("app.bsky.graph.list#main", v);
+        return lexicons.validate("app.bsky.graph.follow#main", v);
       }
-      var listitem_exports = {};
-      __export2(listitem_exports, {
+      var list_exports = {};
+      __export2(list_exports, {
         isRecord: () => isRecord10,
         validateRecord: () => validateRecord10
       });
       function isRecord10(v) {
-        return isObj2(v) && hasProp2(v, "$type") && (v.$type === "app.bsky.graph.listitem#main" || v.$type === "app.bsky.graph.listitem");
+        return isObj2(v) && hasProp2(v, "$type") && (v.$type === "app.bsky.graph.list#main" || v.$type === "app.bsky.graph.list");
       }
       function validateRecord10(v) {
+        return lexicons.validate("app.bsky.graph.list#main", v);
+      }
+      var listblock_exports = {};
+      __export2(listblock_exports, {
+        isRecord: () => isRecord11,
+        validateRecord: () => validateRecord11
+      });
+      function isRecord11(v) {
+        return isObj2(v) && hasProp2(v, "$type") && (v.$type === "app.bsky.graph.listblock#main" || v.$type === "app.bsky.graph.listblock");
+      }
+      function validateRecord11(v) {
+        return lexicons.validate("app.bsky.graph.listblock#main", v);
+      }
+      var listitem_exports = {};
+      __export2(listitem_exports, {
+        isRecord: () => isRecord12,
+        validateRecord: () => validateRecord12
+      });
+      function isRecord12(v) {
+        return isObj2(v) && hasProp2(v, "$type") && (v.$type === "app.bsky.graph.listitem#main" || v.$type === "app.bsky.graph.listitem");
+      }
+      function validateRecord12(v) {
         return lexicons.validate("app.bsky.graph.listitem#main", v);
       }
       var facet_exports = {};
@@ -62680,7 +62910,8 @@ if (cid) {
         DefsReasonOther: "com.atproto.moderation.defs#reasonOther"
       };
       var APP_BSKY_GRAPH = {
-        DefsModlist: "app.bsky.graph.defs#modlist"
+        DefsModlist: "app.bsky.graph.defs#modlist",
+        DefsCuratelist: "app.bsky.graph.defs#curatelist"
       };
       var AtpBaseClient = class {
         constructor() {
@@ -62774,44 +63005,39 @@ if (cid) {
             throw toKnownErr10(e);
           });
         }
-        rebaseRepo(data, opts) {
-          return this._service.xrpc.call("com.atproto.admin.rebaseRepo", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr11(e);
-          });
-        }
         resolveModerationReports(data, opts) {
           return this._service.xrpc.call("com.atproto.admin.resolveModerationReports", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr12(e);
+            throw toKnownErr11(e);
           });
         }
         reverseModerationAction(data, opts) {
           return this._service.xrpc.call("com.atproto.admin.reverseModerationAction", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr13(e);
+            throw toKnownErr12(e);
           });
         }
         searchRepos(params2, opts) {
           return this._service.xrpc.call("com.atproto.admin.searchRepos", params2, void 0, opts).catch((e) => {
-            throw toKnownErr14(e);
+            throw toKnownErr13(e);
           });
         }
         sendEmail(data, opts) {
           return this._service.xrpc.call("com.atproto.admin.sendEmail", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr15(e);
+            throw toKnownErr14(e);
           });
         }
         takeModerationAction(data, opts) {
           return this._service.xrpc.call("com.atproto.admin.takeModerationAction", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr16(e);
+            throw toKnownErr15(e);
           });
         }
         updateAccountEmail(data, opts) {
           return this._service.xrpc.call("com.atproto.admin.updateAccountEmail", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr17(e);
+            throw toKnownErr16(e);
           });
         }
         updateAccountHandle(data, opts) {
           return this._service.xrpc.call("com.atproto.admin.updateAccountHandle", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr18(e);
+            throw toKnownErr17(e);
           });
         }
       };
@@ -62821,12 +63047,12 @@ if (cid) {
         }
         resolveHandle(params2, opts) {
           return this._service.xrpc.call("com.atproto.identity.resolveHandle", params2, void 0, opts).catch((e) => {
-            throw toKnownErr19(e);
+            throw toKnownErr18(e);
           });
         }
         updateHandle(data, opts) {
           return this._service.xrpc.call("com.atproto.identity.updateHandle", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr20(e);
+            throw toKnownErr19(e);
           });
         }
       };
@@ -62836,7 +63062,7 @@ if (cid) {
         }
         queryLabels(params2, opts) {
           return this._service.xrpc.call("com.atproto.label.queryLabels", params2, void 0, opts).catch((e) => {
-            throw toKnownErr21(e);
+            throw toKnownErr20(e);
           });
         }
       };
@@ -62846,7 +63072,7 @@ if (cid) {
         }
         createReport(data, opts) {
           return this._service.xrpc.call("com.atproto.moderation.createReport", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr22(e);
+            throw toKnownErr21(e);
           });
         }
       };
@@ -62856,47 +63082,42 @@ if (cid) {
         }
         applyWrites(data, opts) {
           return this._service.xrpc.call("com.atproto.repo.applyWrites", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr23(e);
+            throw toKnownErr22(e);
           });
         }
         createRecord(data, opts) {
           return this._service.xrpc.call("com.atproto.repo.createRecord", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr24(e);
+            throw toKnownErr23(e);
           });
         }
         deleteRecord(data, opts) {
           return this._service.xrpc.call("com.atproto.repo.deleteRecord", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr25(e);
+            throw toKnownErr24(e);
           });
         }
         describeRepo(params2, opts) {
           return this._service.xrpc.call("com.atproto.repo.describeRepo", params2, void 0, opts).catch((e) => {
-            throw toKnownErr26(e);
+            throw toKnownErr25(e);
           });
         }
         getRecord(params2, opts) {
           return this._service.xrpc.call("com.atproto.repo.getRecord", params2, void 0, opts).catch((e) => {
-            throw toKnownErr27(e);
+            throw toKnownErr26(e);
           });
         }
         listRecords(params2, opts) {
           return this._service.xrpc.call("com.atproto.repo.listRecords", params2, void 0, opts).catch((e) => {
-            throw toKnownErr28(e);
+            throw toKnownErr27(e);
           });
         }
         putRecord(data, opts) {
           return this._service.xrpc.call("com.atproto.repo.putRecord", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr29(e);
-          });
-        }
-        rebaseRepo(data, opts) {
-          return this._service.xrpc.call("com.atproto.repo.rebaseRepo", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr30(e);
+            throw toKnownErr28(e);
           });
         }
         uploadBlob(data, opts) {
           return this._service.xrpc.call("com.atproto.repo.uploadBlob", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr31(e);
+            throw toKnownErr29(e);
           });
         }
       };
@@ -62906,82 +63127,82 @@ if (cid) {
         }
         createAccount(data, opts) {
           return this._service.xrpc.call("com.atproto.server.createAccount", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr32(e);
+            throw toKnownErr30(e);
           });
         }
         createAppPassword(data, opts) {
           return this._service.xrpc.call("com.atproto.server.createAppPassword", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr33(e);
+            throw toKnownErr31(e);
           });
         }
         createInviteCode(data, opts) {
           return this._service.xrpc.call("com.atproto.server.createInviteCode", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr34(e);
+            throw toKnownErr32(e);
           });
         }
         createInviteCodes(data, opts) {
           return this._service.xrpc.call("com.atproto.server.createInviteCodes", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr35(e);
+            throw toKnownErr33(e);
           });
         }
         createSession(data, opts) {
           return this._service.xrpc.call("com.atproto.server.createSession", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr36(e);
+            throw toKnownErr34(e);
           });
         }
         deleteAccount(data, opts) {
           return this._service.xrpc.call("com.atproto.server.deleteAccount", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr37(e);
+            throw toKnownErr35(e);
           });
         }
         deleteSession(data, opts) {
           return this._service.xrpc.call("com.atproto.server.deleteSession", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr38(e);
+            throw toKnownErr36(e);
           });
         }
         describeServer(params2, opts) {
           return this._service.xrpc.call("com.atproto.server.describeServer", params2, void 0, opts).catch((e) => {
-            throw toKnownErr39(e);
+            throw toKnownErr37(e);
           });
         }
         getAccountInviteCodes(params2, opts) {
           return this._service.xrpc.call("com.atproto.server.getAccountInviteCodes", params2, void 0, opts).catch((e) => {
-            throw toKnownErr40(e);
+            throw toKnownErr38(e);
           });
         }
         getSession(params2, opts) {
           return this._service.xrpc.call("com.atproto.server.getSession", params2, void 0, opts).catch((e) => {
-            throw toKnownErr41(e);
+            throw toKnownErr39(e);
           });
         }
         listAppPasswords(params2, opts) {
           return this._service.xrpc.call("com.atproto.server.listAppPasswords", params2, void 0, opts).catch((e) => {
-            throw toKnownErr42(e);
+            throw toKnownErr40(e);
           });
         }
         refreshSession(data, opts) {
           return this._service.xrpc.call("com.atproto.server.refreshSession", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr43(e);
+            throw toKnownErr41(e);
           });
         }
         requestAccountDelete(data, opts) {
           return this._service.xrpc.call("com.atproto.server.requestAccountDelete", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr44(e);
+            throw toKnownErr42(e);
           });
         }
         requestPasswordReset(data, opts) {
           return this._service.xrpc.call("com.atproto.server.requestPasswordReset", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr45(e);
+            throw toKnownErr43(e);
           });
         }
         resetPassword(data, opts) {
           return this._service.xrpc.call("com.atproto.server.resetPassword", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr46(e);
+            throw toKnownErr44(e);
           });
         }
         revokeAppPassword(data, opts) {
           return this._service.xrpc.call("com.atproto.server.revokeAppPassword", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr47(e);
+            throw toKnownErr45(e);
           });
         }
       };
@@ -62991,57 +63212,57 @@ if (cid) {
         }
         getBlob(params2, opts) {
           return this._service.xrpc.call("com.atproto.sync.getBlob", params2, void 0, opts).catch((e) => {
-            throw toKnownErr48(e);
+            throw toKnownErr46(e);
           });
         }
         getBlocks(params2, opts) {
           return this._service.xrpc.call("com.atproto.sync.getBlocks", params2, void 0, opts).catch((e) => {
-            throw toKnownErr49(e);
+            throw toKnownErr47(e);
           });
         }
         getCheckout(params2, opts) {
           return this._service.xrpc.call("com.atproto.sync.getCheckout", params2, void 0, opts).catch((e) => {
-            throw toKnownErr50(e);
-          });
-        }
-        getCommitPath(params2, opts) {
-          return this._service.xrpc.call("com.atproto.sync.getCommitPath", params2, void 0, opts).catch((e) => {
-            throw toKnownErr51(e);
+            throw toKnownErr48(e);
           });
         }
         getHead(params2, opts) {
           return this._service.xrpc.call("com.atproto.sync.getHead", params2, void 0, opts).catch((e) => {
-            throw toKnownErr52(e);
+            throw toKnownErr49(e);
+          });
+        }
+        getLatestCommit(params2, opts) {
+          return this._service.xrpc.call("com.atproto.sync.getLatestCommit", params2, void 0, opts).catch((e) => {
+            throw toKnownErr50(e);
           });
         }
         getRecord(params2, opts) {
           return this._service.xrpc.call("com.atproto.sync.getRecord", params2, void 0, opts).catch((e) => {
-            throw toKnownErr53(e);
+            throw toKnownErr51(e);
           });
         }
         getRepo(params2, opts) {
           return this._service.xrpc.call("com.atproto.sync.getRepo", params2, void 0, opts).catch((e) => {
-            throw toKnownErr54(e);
+            throw toKnownErr52(e);
           });
         }
         listBlobs(params2, opts) {
           return this._service.xrpc.call("com.atproto.sync.listBlobs", params2, void 0, opts).catch((e) => {
-            throw toKnownErr55(e);
+            throw toKnownErr53(e);
           });
         }
         listRepos(params2, opts) {
           return this._service.xrpc.call("com.atproto.sync.listRepos", params2, void 0, opts).catch((e) => {
-            throw toKnownErr56(e);
+            throw toKnownErr54(e);
           });
         }
         notifyOfUpdate(data, opts) {
           return this._service.xrpc.call("com.atproto.sync.notifyOfUpdate", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr57(e);
+            throw toKnownErr55(e);
           });
         }
         requestCrawl(data, opts) {
           return this._service.xrpc.call("com.atproto.sync.requestCrawl", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr58(e);
+            throw toKnownErr56(e);
           });
         }
       };
@@ -63070,37 +63291,37 @@ if (cid) {
         }
         getPreferences(params2, opts) {
           return this._service.xrpc.call("app.bsky.actor.getPreferences", params2, void 0, opts).catch((e) => {
-            throw toKnownErr59(e);
+            throw toKnownErr57(e);
           });
         }
         getProfile(params2, opts) {
           return this._service.xrpc.call("app.bsky.actor.getProfile", params2, void 0, opts).catch((e) => {
-            throw toKnownErr60(e);
+            throw toKnownErr58(e);
           });
         }
         getProfiles(params2, opts) {
           return this._service.xrpc.call("app.bsky.actor.getProfiles", params2, void 0, opts).catch((e) => {
-            throw toKnownErr61(e);
+            throw toKnownErr59(e);
           });
         }
         getSuggestions(params2, opts) {
           return this._service.xrpc.call("app.bsky.actor.getSuggestions", params2, void 0, opts).catch((e) => {
-            throw toKnownErr62(e);
+            throw toKnownErr60(e);
           });
         }
         putPreferences(data, opts) {
           return this._service.xrpc.call("app.bsky.actor.putPreferences", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr63(e);
+            throw toKnownErr61(e);
           });
         }
         searchActors(params2, opts) {
           return this._service.xrpc.call("app.bsky.actor.searchActors", params2, void 0, opts).catch((e) => {
-            throw toKnownErr64(e);
+            throw toKnownErr62(e);
           });
         }
         searchActorsTypeahead(params2, opts) {
           return this._service.xrpc.call("app.bsky.actor.searchActorsTypeahead", params2, void 0, opts).catch((e) => {
-            throw toKnownErr65(e);
+            throw toKnownErr63(e);
           });
         }
       };
@@ -63124,21 +63345,11 @@ if (cid) {
         }
         async create(params2, record, headers) {
           record.$type = "app.bsky.actor.profile";
-          const res = await this._service.xrpc.call(
-            "com.atproto.repo.createRecord",
-            void 0,
-            { collection: "app.bsky.actor.profile", rkey: "self", ...params2, record },
-            { encoding: "application/json", headers }
-          );
+          const res = await this._service.xrpc.call("com.atproto.repo.createRecord", void 0, { collection: "app.bsky.actor.profile", rkey: "self", ...params2, record }, { encoding: "application/json", headers });
           return res.data;
         }
         async delete(params2, headers) {
-          await this._service.xrpc.call(
-            "com.atproto.repo.deleteRecord",
-            void 0,
-            { collection: "app.bsky.actor.profile", ...params2 },
-            { headers }
-          );
+          await this._service.xrpc.call("com.atproto.repo.deleteRecord", void 0, { collection: "app.bsky.actor.profile", ...params2 }, { headers });
         }
       };
       var EmbedNS = class {
@@ -63153,64 +63364,75 @@ if (cid) {
           this.like = new LikeRecord(service);
           this.post = new PostRecord(service);
           this.repost = new RepostRecord(service);
+          this.threadgate = new ThreadgateRecord(service);
         }
         describeFeedGenerator(params2, opts) {
           return this._service.xrpc.call("app.bsky.feed.describeFeedGenerator", params2, void 0, opts).catch((e) => {
-            throw toKnownErr66(e);
+            throw toKnownErr64(e);
           });
         }
         getActorFeeds(params2, opts) {
           return this._service.xrpc.call("app.bsky.feed.getActorFeeds", params2, void 0, opts).catch((e) => {
-            throw toKnownErr67(e);
+            throw toKnownErr65(e);
           });
         }
         getActorLikes(params2, opts) {
           return this._service.xrpc.call("app.bsky.feed.getActorLikes", params2, void 0, opts).catch((e) => {
-            throw toKnownErr68(e);
+            throw toKnownErr66(e);
           });
         }
         getAuthorFeed(params2, opts) {
           return this._service.xrpc.call("app.bsky.feed.getAuthorFeed", params2, void 0, opts).catch((e) => {
-            throw toKnownErr69(e);
+            throw toKnownErr67(e);
           });
         }
         getFeed(params2, opts) {
           return this._service.xrpc.call("app.bsky.feed.getFeed", params2, void 0, opts).catch((e) => {
-            throw toKnownErr70(e);
+            throw toKnownErr68(e);
           });
         }
         getFeedGenerator(params2, opts) {
           return this._service.xrpc.call("app.bsky.feed.getFeedGenerator", params2, void 0, opts).catch((e) => {
-            throw toKnownErr71(e);
+            throw toKnownErr69(e);
           });
         }
         getFeedGenerators(params2, opts) {
           return this._service.xrpc.call("app.bsky.feed.getFeedGenerators", params2, void 0, opts).catch((e) => {
-            throw toKnownErr72(e);
+            throw toKnownErr70(e);
           });
         }
         getFeedSkeleton(params2, opts) {
           return this._service.xrpc.call("app.bsky.feed.getFeedSkeleton", params2, void 0, opts).catch((e) => {
-            throw toKnownErr73(e);
+            throw toKnownErr71(e);
           });
         }
         getLikes(params2, opts) {
           return this._service.xrpc.call("app.bsky.feed.getLikes", params2, void 0, opts).catch((e) => {
-            throw toKnownErr74(e);
+            throw toKnownErr72(e);
+          });
+        }
+        getListFeed(params2, opts) {
+          return this._service.xrpc.call("app.bsky.feed.getListFeed", params2, void 0, opts).catch((e) => {
+            throw toKnownErr73(e);
           });
         }
         getPostThread(params2, opts) {
           return this._service.xrpc.call("app.bsky.feed.getPostThread", params2, void 0, opts).catch((e) => {
-            throw toKnownErr75(e);
+            throw toKnownErr74(e);
           });
         }
         getPosts(params2, opts) {
           return this._service.xrpc.call("app.bsky.feed.getPosts", params2, void 0, opts).catch((e) => {
-            throw toKnownErr76(e);
+            throw toKnownErr75(e);
           });
         }
         getRepostedBy(params2, opts) {
           return this._service.xrpc.call("app.bsky.feed.getRepostedBy", params2, void 0, opts).catch((e) => {
+            throw toKnownErr76(e);
+          });
+        }
+        getSuggestedFeeds(params2, opts) {
+          return this._service.xrpc.call("app.bsky.feed.getSuggestedFeeds", params2, void 0, opts).catch((e) => {
             throw toKnownErr77(e);
           });
         }
@@ -63240,21 +63462,11 @@ if (cid) {
         }
         async create(params2, record, headers) {
           record.$type = "app.bsky.feed.generator";
-          const res = await this._service.xrpc.call(
-            "com.atproto.repo.createRecord",
-            void 0,
-            { collection: "app.bsky.feed.generator", ...params2, record },
-            { encoding: "application/json", headers }
-          );
+          const res = await this._service.xrpc.call("com.atproto.repo.createRecord", void 0, { collection: "app.bsky.feed.generator", ...params2, record }, { encoding: "application/json", headers });
           return res.data;
         }
         async delete(params2, headers) {
-          await this._service.xrpc.call(
-            "com.atproto.repo.deleteRecord",
-            void 0,
-            { collection: "app.bsky.feed.generator", ...params2 },
-            { headers }
-          );
+          await this._service.xrpc.call("com.atproto.repo.deleteRecord", void 0, { collection: "app.bsky.feed.generator", ...params2 }, { headers });
         }
       };
       var LikeRecord = class {
@@ -63277,21 +63489,11 @@ if (cid) {
         }
         async create(params2, record, headers) {
           record.$type = "app.bsky.feed.like";
-          const res = await this._service.xrpc.call(
-            "com.atproto.repo.createRecord",
-            void 0,
-            { collection: "app.bsky.feed.like", ...params2, record },
-            { encoding: "application/json", headers }
-          );
+          const res = await this._service.xrpc.call("com.atproto.repo.createRecord", void 0, { collection: "app.bsky.feed.like", ...params2, record }, { encoding: "application/json", headers });
           return res.data;
         }
         async delete(params2, headers) {
-          await this._service.xrpc.call(
-            "com.atproto.repo.deleteRecord",
-            void 0,
-            { collection: "app.bsky.feed.like", ...params2 },
-            { headers }
-          );
+          await this._service.xrpc.call("com.atproto.repo.deleteRecord", void 0, { collection: "app.bsky.feed.like", ...params2 }, { headers });
         }
       };
       var PostRecord = class {
@@ -63314,21 +63516,11 @@ if (cid) {
         }
         async create(params2, record, headers) {
           record.$type = "app.bsky.feed.post";
-          const res = await this._service.xrpc.call(
-            "com.atproto.repo.createRecord",
-            void 0,
-            { collection: "app.bsky.feed.post", ...params2, record },
-            { encoding: "application/json", headers }
-          );
+          const res = await this._service.xrpc.call("com.atproto.repo.createRecord", void 0, { collection: "app.bsky.feed.post", ...params2, record }, { encoding: "application/json", headers });
           return res.data;
         }
         async delete(params2, headers) {
-          await this._service.xrpc.call(
-            "com.atproto.repo.deleteRecord",
-            void 0,
-            { collection: "app.bsky.feed.post", ...params2 },
-            { headers }
-          );
+          await this._service.xrpc.call("com.atproto.repo.deleteRecord", void 0, { collection: "app.bsky.feed.post", ...params2 }, { headers });
         }
       };
       var RepostRecord = class {
@@ -63351,21 +63543,38 @@ if (cid) {
         }
         async create(params2, record, headers) {
           record.$type = "app.bsky.feed.repost";
-          const res = await this._service.xrpc.call(
-            "com.atproto.repo.createRecord",
-            void 0,
-            { collection: "app.bsky.feed.repost", ...params2, record },
-            { encoding: "application/json", headers }
-          );
+          const res = await this._service.xrpc.call("com.atproto.repo.createRecord", void 0, { collection: "app.bsky.feed.repost", ...params2, record }, { encoding: "application/json", headers });
           return res.data;
         }
         async delete(params2, headers) {
-          await this._service.xrpc.call(
-            "com.atproto.repo.deleteRecord",
-            void 0,
-            { collection: "app.bsky.feed.repost", ...params2 },
-            { headers }
-          );
+          await this._service.xrpc.call("com.atproto.repo.deleteRecord", void 0, { collection: "app.bsky.feed.repost", ...params2 }, { headers });
+        }
+      };
+      var ThreadgateRecord = class {
+        constructor(service) {
+          this._service = service;
+        }
+        async list(params2) {
+          const res = await this._service.xrpc.call("com.atproto.repo.listRecords", {
+            collection: "app.bsky.feed.threadgate",
+            ...params2
+          });
+          return res.data;
+        }
+        async get(params2) {
+          const res = await this._service.xrpc.call("com.atproto.repo.getRecord", {
+            collection: "app.bsky.feed.threadgate",
+            ...params2
+          });
+          return res.data;
+        }
+        async create(params2, record, headers) {
+          record.$type = "app.bsky.feed.threadgate";
+          const res = await this._service.xrpc.call("com.atproto.repo.createRecord", void 0, { collection: "app.bsky.feed.threadgate", ...params2, record }, { encoding: "application/json", headers });
+          return res.data;
+        }
+        async delete(params2, headers) {
+          await this._service.xrpc.call("com.atproto.repo.deleteRecord", void 0, { collection: "app.bsky.feed.threadgate", ...params2 }, { headers });
         }
       };
       var GraphNS = class {
@@ -63374,6 +63583,7 @@ if (cid) {
           this.block = new BlockRecord(service);
           this.follow = new FollowRecord(service);
           this.list = new ListRecord(service);
+          this.listblock = new ListblockRecord(service);
           this.listitem = new ListitemRecord(service);
         }
         getBlocks(params2, opts) {
@@ -63396,39 +63606,49 @@ if (cid) {
             throw toKnownErr82(e);
           });
         }
+        getListBlocks(params2, opts) {
+          return this._service.xrpc.call("app.bsky.graph.getListBlocks", params2, void 0, opts).catch((e) => {
+            throw toKnownErr83(e);
+          });
+        }
         getListMutes(params2, opts) {
           return this._service.xrpc.call("app.bsky.graph.getListMutes", params2, void 0, opts).catch((e) => {
-            throw toKnownErr83(e);
+            throw toKnownErr84(e);
           });
         }
         getLists(params2, opts) {
           return this._service.xrpc.call("app.bsky.graph.getLists", params2, void 0, opts).catch((e) => {
-            throw toKnownErr84(e);
+            throw toKnownErr85(e);
           });
         }
         getMutes(params2, opts) {
           return this._service.xrpc.call("app.bsky.graph.getMutes", params2, void 0, opts).catch((e) => {
-            throw toKnownErr85(e);
+            throw toKnownErr86(e);
+          });
+        }
+        getSuggestedFollowsByActor(params2, opts) {
+          return this._service.xrpc.call("app.bsky.graph.getSuggestedFollowsByActor", params2, void 0, opts).catch((e) => {
+            throw toKnownErr87(e);
           });
         }
         muteActor(data, opts) {
           return this._service.xrpc.call("app.bsky.graph.muteActor", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr86(e);
+            throw toKnownErr88(e);
           });
         }
         muteActorList(data, opts) {
           return this._service.xrpc.call("app.bsky.graph.muteActorList", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr87(e);
+            throw toKnownErr89(e);
           });
         }
         unmuteActor(data, opts) {
           return this._service.xrpc.call("app.bsky.graph.unmuteActor", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr88(e);
+            throw toKnownErr90(e);
           });
         }
         unmuteActorList(data, opts) {
           return this._service.xrpc.call("app.bsky.graph.unmuteActorList", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr89(e);
+            throw toKnownErr91(e);
           });
         }
       };
@@ -63452,21 +63672,11 @@ if (cid) {
         }
         async create(params2, record, headers) {
           record.$type = "app.bsky.graph.block";
-          const res = await this._service.xrpc.call(
-            "com.atproto.repo.createRecord",
-            void 0,
-            { collection: "app.bsky.graph.block", ...params2, record },
-            { encoding: "application/json", headers }
-          );
+          const res = await this._service.xrpc.call("com.atproto.repo.createRecord", void 0, { collection: "app.bsky.graph.block", ...params2, record }, { encoding: "application/json", headers });
           return res.data;
         }
         async delete(params2, headers) {
-          await this._service.xrpc.call(
-            "com.atproto.repo.deleteRecord",
-            void 0,
-            { collection: "app.bsky.graph.block", ...params2 },
-            { headers }
-          );
+          await this._service.xrpc.call("com.atproto.repo.deleteRecord", void 0, { collection: "app.bsky.graph.block", ...params2 }, { headers });
         }
       };
       var FollowRecord = class {
@@ -63489,21 +63699,11 @@ if (cid) {
         }
         async create(params2, record, headers) {
           record.$type = "app.bsky.graph.follow";
-          const res = await this._service.xrpc.call(
-            "com.atproto.repo.createRecord",
-            void 0,
-            { collection: "app.bsky.graph.follow", ...params2, record },
-            { encoding: "application/json", headers }
-          );
+          const res = await this._service.xrpc.call("com.atproto.repo.createRecord", void 0, { collection: "app.bsky.graph.follow", ...params2, record }, { encoding: "application/json", headers });
           return res.data;
         }
         async delete(params2, headers) {
-          await this._service.xrpc.call(
-            "com.atproto.repo.deleteRecord",
-            void 0,
-            { collection: "app.bsky.graph.follow", ...params2 },
-            { headers }
-          );
+          await this._service.xrpc.call("com.atproto.repo.deleteRecord", void 0, { collection: "app.bsky.graph.follow", ...params2 }, { headers });
         }
       };
       var ListRecord = class {
@@ -63526,21 +63726,38 @@ if (cid) {
         }
         async create(params2, record, headers) {
           record.$type = "app.bsky.graph.list";
-          const res = await this._service.xrpc.call(
-            "com.atproto.repo.createRecord",
-            void 0,
-            { collection: "app.bsky.graph.list", ...params2, record },
-            { encoding: "application/json", headers }
-          );
+          const res = await this._service.xrpc.call("com.atproto.repo.createRecord", void 0, { collection: "app.bsky.graph.list", ...params2, record }, { encoding: "application/json", headers });
           return res.data;
         }
         async delete(params2, headers) {
-          await this._service.xrpc.call(
-            "com.atproto.repo.deleteRecord",
-            void 0,
-            { collection: "app.bsky.graph.list", ...params2 },
-            { headers }
-          );
+          await this._service.xrpc.call("com.atproto.repo.deleteRecord", void 0, { collection: "app.bsky.graph.list", ...params2 }, { headers });
+        }
+      };
+      var ListblockRecord = class {
+        constructor(service) {
+          this._service = service;
+        }
+        async list(params2) {
+          const res = await this._service.xrpc.call("com.atproto.repo.listRecords", {
+            collection: "app.bsky.graph.listblock",
+            ...params2
+          });
+          return res.data;
+        }
+        async get(params2) {
+          const res = await this._service.xrpc.call("com.atproto.repo.getRecord", {
+            collection: "app.bsky.graph.listblock",
+            ...params2
+          });
+          return res.data;
+        }
+        async create(params2, record, headers) {
+          record.$type = "app.bsky.graph.listblock";
+          const res = await this._service.xrpc.call("com.atproto.repo.createRecord", void 0, { collection: "app.bsky.graph.listblock", ...params2, record }, { encoding: "application/json", headers });
+          return res.data;
+        }
+        async delete(params2, headers) {
+          await this._service.xrpc.call("com.atproto.repo.deleteRecord", void 0, { collection: "app.bsky.graph.listblock", ...params2 }, { headers });
         }
       };
       var ListitemRecord = class {
@@ -63563,21 +63780,11 @@ if (cid) {
         }
         async create(params2, record, headers) {
           record.$type = "app.bsky.graph.listitem";
-          const res = await this._service.xrpc.call(
-            "com.atproto.repo.createRecord",
-            void 0,
-            { collection: "app.bsky.graph.listitem", ...params2, record },
-            { encoding: "application/json", headers }
-          );
+          const res = await this._service.xrpc.call("com.atproto.repo.createRecord", void 0, { collection: "app.bsky.graph.listitem", ...params2, record }, { encoding: "application/json", headers });
           return res.data;
         }
         async delete(params2, headers) {
-          await this._service.xrpc.call(
-            "com.atproto.repo.deleteRecord",
-            void 0,
-            { collection: "app.bsky.graph.listitem", ...params2 },
-            { headers }
-          );
+          await this._service.xrpc.call("com.atproto.repo.deleteRecord", void 0, { collection: "app.bsky.graph.listitem", ...params2 }, { headers });
         }
       };
       var NotificationNS = class {
@@ -63586,22 +63793,22 @@ if (cid) {
         }
         getUnreadCount(params2, opts) {
           return this._service.xrpc.call("app.bsky.notification.getUnreadCount", params2, void 0, opts).catch((e) => {
-            throw toKnownErr90(e);
+            throw toKnownErr92(e);
           });
         }
         listNotifications(params2, opts) {
           return this._service.xrpc.call("app.bsky.notification.listNotifications", params2, void 0, opts).catch((e) => {
-            throw toKnownErr91(e);
+            throw toKnownErr93(e);
           });
         }
         registerPush(data, opts) {
           return this._service.xrpc.call("app.bsky.notification.registerPush", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr92(e);
+            throw toKnownErr94(e);
           });
         }
         updateSeen(data, opts) {
           return this._service.xrpc.call("app.bsky.notification.updateSeen", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr93(e);
+            throw toKnownErr95(e);
           });
         }
       };
@@ -63616,27 +63823,22 @@ if (cid) {
         }
         applyLabels(data, opts) {
           return this._service.xrpc.call("app.bsky.unspecced.applyLabels", opts?.qp, data, opts).catch((e) => {
-            throw toKnownErr94(e);
+            throw toKnownErr96(e);
           });
         }
         getPopular(params2, opts) {
           return this._service.xrpc.call("app.bsky.unspecced.getPopular", params2, void 0, opts).catch((e) => {
-            throw toKnownErr95(e);
+            throw toKnownErr97(e);
           });
         }
         getPopularFeedGenerators(params2, opts) {
-          return this._service.xrpc.call(
-            "app.bsky.unspecced.getPopularFeedGenerators",
-            params2,
-            void 0,
-            opts
-          ).catch((e) => {
-            throw toKnownErr96(e);
+          return this._service.xrpc.call("app.bsky.unspecced.getPopularFeedGenerators", params2, void 0, opts).catch((e) => {
+            throw toKnownErr98(e);
           });
         }
         getTimelineSkeleton(params2, opts) {
           return this._service.xrpc.call("app.bsky.unspecced.getTimelineSkeleton", params2, void 0, opts).catch((e) => {
-            throw toKnownErr97(e);
+            throw toKnownErr99(e);
           });
         }
       };
@@ -63752,20 +63954,10 @@ if (cid) {
             throw new Error("AtpAgent fetch() method not configured");
           }
           await this._refreshSessionPromise;
-          let res = await _AtpAgent.fetch(
-            reqUri,
-            reqMethod,
-            this._addAuthHeader(reqHeaders),
-            reqBody
-          );
+          let res = await _AtpAgent.fetch(reqUri, reqMethod, this._addAuthHeader(reqHeaders), reqBody);
           if (isErrorResponse(res, ["ExpiredToken"]) && this.session?.refreshJwt) {
             await this._refreshSession();
-            res = await _AtpAgent.fetch(
-              reqUri,
-              reqMethod,
-              this._addAuthHeader(reqHeaders),
-              reqBody
-            );
+            res = await _AtpAgent.fetch(reqUri, reqMethod, this._addAuthHeader(reqHeaders), reqBody);
           }
           return res;
         }
@@ -63789,14 +63981,9 @@ if (cid) {
           }
           const url = new URL(this.service.origin);
           url.pathname = `/xrpc/${REFRESH_SESSION}`;
-          const res = await _AtpAgent.fetch(
-            url.toString(),
-            "POST",
-            {
-              authorization: `Bearer ${this.session.refreshJwt}`
-            },
-            void 0
-          );
+          const res = await _AtpAgent.fetch(url.toString(), "POST", {
+            authorization: `Bearer ${this.session.refreshJwt}`
+          }, void 0);
           if (isErrorResponse(res, ["ExpiredToken", "InvalidToken"])) {
             this.session = void 0;
             this._persistSession?.("expired", void 0);
@@ -63827,10 +64014,7 @@ if (cid) {
       }
       function isNewSessionObject(client, v) {
         try {
-          client.xrpc.lex.assertValidXrpcOutput(
-            "com.atproto.server.refreshSession",
-            v
-          );
+          client.xrpc.lex.assertValidXrpcOutput("com.atproto.server.refreshSession", v);
           return true;
         } catch {
           return false;
@@ -63875,9 +64059,7 @@ if (cid) {
         let match = richText.unicodeText.utf16.match(targetRegexp);
         while (match && typeof match.index !== "undefined") {
           const oldText = richText.unicodeText;
-          const removeStartIndex = richText.unicodeText.utf16IndexToUtf8Index(
-            match.index
-          );
+          const removeStartIndex = richText.unicodeText.utf16IndexToUtf8Index(match.index);
           const removeEndIndex = removeStartIndex + new UnicodeString(match[0]).length;
           richText.delete(removeStartIndex, removeEndIndex);
           if (richText.unicodeText.utf16 === oldText.utf16) {
@@ -64598,6 +64780,7 @@ if (cid) {
         "limited",
         "limo",
         "lincoln",
+        "linde",
         "link",
         "lipsy",
         "live",
@@ -64609,6 +64792,7 @@ if (cid) {
         "loans",
         "locker",
         "locus",
+        "loft",
         "lol",
         "london",
         "lotte",
@@ -64628,6 +64812,7 @@ if (cid) {
         "lv",
         "ly",
         "ma",
+        "macys",
         "madrid",
         "maif",
         "maison",
@@ -64944,6 +65129,7 @@ if (cid) {
         "select",
         "sener",
         "services",
+        "ses",
         "seven",
         "sew",
         "sex",
@@ -65354,6 +65540,7 @@ if (cid) {
         "\u7F51\u7AD9",
         "\u7F51\u7EDC",
         "\u8054\u901A",
+        "\u8BFA\u57FA\u4E9A",
         "\u8C37\u6B4C",
         "\u8D2D\u7269",
         "\u901A\u8CA9",
@@ -65510,18 +65697,13 @@ if (cid) {
           do {
             const currFacet = facets[facetCursor];
             if (textCursor < currFacet.index.byteStart) {
-              yield new RichTextSegment(
-                this.unicodeText.slice(textCursor, currFacet.index.byteStart)
-              );
+              yield new RichTextSegment(this.unicodeText.slice(textCursor, currFacet.index.byteStart));
             } else if (textCursor > currFacet.index.byteStart) {
               facetCursor++;
               continue;
             }
             if (currFacet.index.byteStart < currFacet.index.byteEnd) {
-              const subtext = this.unicodeText.slice(
-                currFacet.index.byteStart,
-                currFacet.index.byteEnd
-              );
+              const subtext = this.unicodeText.slice(currFacet.index.byteStart, currFacet.index.byteEnd);
               if (!subtext.trim()) {
                 yield new RichTextSegment(subtext);
               } else {
@@ -65532,15 +65714,11 @@ if (cid) {
             facetCursor++;
           } while (facetCursor < facets.length);
           if (textCursor < this.unicodeText.length) {
-            yield new RichTextSegment(
-              this.unicodeText.slice(textCursor, this.unicodeText.length)
-            );
+            yield new RichTextSegment(this.unicodeText.slice(textCursor, this.unicodeText.length));
           }
         }
         insert(insertIndex, insertText) {
-          this.unicodeText = new UnicodeString(
-            this.unicodeText.slice(0, insertIndex) + insertText + this.unicodeText.slice(insertIndex)
-          );
+          this.unicodeText = new UnicodeString(this.unicodeText.slice(0, insertIndex) + insertText + this.unicodeText.slice(insertIndex));
           if (!this.facets?.length) {
             return this;
           }
@@ -65556,9 +65734,7 @@ if (cid) {
           return this;
         }
         delete(removeStartIndex, removeEndIndex) {
-          this.unicodeText = new UnicodeString(
-            this.unicodeText.slice(0, removeStartIndex) + this.unicodeText.slice(removeEndIndex)
-          );
+          this.unicodeText = new UnicodeString(this.unicodeText.slice(0, removeStartIndex) + this.unicodeText.slice(removeEndIndex));
           if (!this.facets?.length) {
             return this;
           }
@@ -65580,9 +65756,7 @@ if (cid) {
               ent.index.byteEnd -= numCharsRemoved;
             }
           }
-          this.facets = this.facets.filter(
-            (ent) => ent.index.byteStart < ent.index.byteEnd
-          );
+          this.facets = this.facets.filter((ent) => ent.index.byteStart < ent.index.byteEnd);
           return this;
         }
         async detectFacets(agent) {
@@ -66383,6 +66557,34 @@ if (cid) {
               }
             }
           }
+        },
+        misleading: {
+          id: "misleading",
+          preferences: ["ignore", "warn", "hide"],
+          flags: [],
+          onwarn: "alert",
+          groupId: "misinfo",
+          configurable: true,
+          strings: {
+            settings: {
+              en: {
+                name: "Misleading",
+                description: "Accounts which share misleading information."
+              }
+            },
+            account: {
+              en: {
+                name: "Misleading",
+                description: "The moderators believe this account is spreading misleading information."
+              }
+            },
+            content: {
+              en: {
+                name: "Misleading",
+                description: "The moderators believe this account is spreading misleading information."
+              }
+            }
+          }
         }
       };
       var ModerationCauseAccumulator = class {
@@ -66542,9 +66744,7 @@ if (cid) {
         if (!labels) {
           return [];
         }
-        return labels.filter(
-          (label) => !label.uri.endsWith("/app.bsky.actor.profile/self")
-        );
+        return labels.filter((label) => !label.uri.endsWith("/app.bsky.actor.profile/self"));
       }
       function decideProfile(subject, opts) {
         const acc = new ModerationCauseAccumulator();
@@ -66558,9 +66758,7 @@ if (cid) {
         if (!labels) {
           return [];
         }
-        return labels.filter(
-          (label) => label.uri.endsWith("/app.bsky.actor.profile/self")
-        );
+        return labels.filter((label) => label.uri.endsWith("/app.bsky.actor.profile/self"));
       }
       function decidePost(subject, opts) {
         const acc = new ModerationCauseAccumulator();
@@ -66763,12 +66961,7 @@ if (cid) {
         if (quotedAccount && !isModerationDecisionNoop(quotedAccount) && quotedAccount.did === opts.userDid) {
           downgradeDecision(quotedAccount, "noop");
         }
-        const mergedForFeed = takeHighestPriorityDecision(
-          post,
-          account,
-          quote,
-          quotedAccount
-        );
+        const mergedForFeed = takeHighestPriorityDecision(post, account, quote, quotedAccount);
         const mergedForView = takeHighestPriorityDecision(post, account);
         const mergedQuote = takeHighestPriorityDecision(quote, quotedAccount);
         let blurAvatar = false;
@@ -66974,7 +67167,8 @@ if (cid) {
             LABELS["account-security"],
             LABELS["net-abuse"],
             LABELS["impersonation"],
-            LABELS["scam"]
+            LABELS["scam"],
+            LABELS["misleading"]
           ],
           strings: {
             settings: {
@@ -67015,10 +67209,7 @@ if (cid) {
             throw new Error("Not logged in");
           }
           record.createdAt = record.createdAt || (/* @__PURE__ */ new Date()).toISOString();
-          return this.api.app.bsky.feed.post.create(
-            { repo: this.session.did },
-            record
-          );
+          return this.api.app.bsky.feed.post.create({ repo: this.session.did }, record);
         }
         async deletePost(postUri) {
           if (!this.session) {
@@ -67034,13 +67225,10 @@ if (cid) {
           if (!this.session) {
             throw new Error("Not logged in");
           }
-          return await this.api.app.bsky.feed.like.create(
-            { repo: this.session.did },
-            {
-              subject: { uri: uri2, cid: cid2 },
-              createdAt: (/* @__PURE__ */ new Date()).toISOString()
-            }
-          );
+          return await this.api.app.bsky.feed.like.create({ repo: this.session.did }, {
+            subject: { uri: uri2, cid: cid2 },
+            createdAt: (/* @__PURE__ */ new Date()).toISOString()
+          });
         }
         async deleteLike(likeUri) {
           if (!this.session) {
@@ -67056,13 +67244,10 @@ if (cid) {
           if (!this.session) {
             throw new Error("Not logged in");
           }
-          return await this.api.app.bsky.feed.repost.create(
-            { repo: this.session.did },
-            {
-              subject: { uri: uri2, cid: cid2 },
-              createdAt: (/* @__PURE__ */ new Date()).toISOString()
-            }
-          );
+          return await this.api.app.bsky.feed.repost.create({ repo: this.session.did }, {
+            subject: { uri: uri2, cid: cid2 },
+            createdAt: (/* @__PURE__ */ new Date()).toISOString()
+          });
         }
         async deleteRepost(repostUri) {
           if (!this.session) {
@@ -67078,13 +67263,10 @@ if (cid) {
           if (!this.session) {
             throw new Error("Not logged in");
           }
-          return await this.api.app.bsky.graph.follow.create(
-            { repo: this.session.did },
-            {
-              subject: subjectDid,
-              createdAt: (/* @__PURE__ */ new Date()).toISOString()
-            }
-          );
+          return await this.api.app.bsky.graph.follow.create({ repo: this.session.did }, {
+            subject: subjectDid,
+            createdAt: (/* @__PURE__ */ new Date()).toISOString()
+          });
         }
         async deleteFollow(followUri) {
           if (!this.session) {
@@ -67146,1137 +67328,153 @@ if (cid) {
             seenAt
           });
         }
-      };
-    }
-  });
-
-  // node_modules/@ipld/car/node_modules/multiformats/vendor/varint.js
-  function encode3(num, out, offset) {
-    out = out || [];
-    offset = offset || 0;
-    var oldOffset = offset;
-    while (num >= INT2) {
-      out[offset++] = num & 255 | MSB2;
-      num /= 128;
-    }
-    while (num & MSBALL2) {
-      out[offset++] = num & 255 | MSB2;
-      num >>>= 7;
-    }
-    out[offset] = num | 0;
-    encode3.bytes = offset - oldOffset + 1;
-    return out;
-  }
-  function read2(buf3, offset) {
-    var res = 0, offset = offset || 0, shift = 0, counter = offset, b, l = buf3.length;
-    do {
-      if (counter >= l) {
-        read2.bytes = 0;
-        throw new RangeError("Could not decode varint");
-      }
-      b = buf3[counter++];
-      res += shift < 28 ? (b & REST$12) << shift : (b & REST$12) * Math.pow(2, shift);
-      shift += 7;
-    } while (b >= MSB$12);
-    read2.bytes = counter - offset;
-    return res;
-  }
-  var encode_12, MSB2, REST2, MSBALL2, INT2, decode5, MSB$12, REST$12, N12, N22, N32, N42, N52, N62, N72, N82, N92, length2, varint2, _brrp_varint2, varint_default2;
-  var init_varint3 = __esm({
-    "node_modules/@ipld/car/node_modules/multiformats/vendor/varint.js"() {
-      encode_12 = encode3;
-      MSB2 = 128;
-      REST2 = 127;
-      MSBALL2 = ~REST2;
-      INT2 = Math.pow(2, 31);
-      decode5 = read2;
-      MSB$12 = 128;
-      REST$12 = 127;
-      N12 = Math.pow(2, 7);
-      N22 = Math.pow(2, 14);
-      N32 = Math.pow(2, 21);
-      N42 = Math.pow(2, 28);
-      N52 = Math.pow(2, 35);
-      N62 = Math.pow(2, 42);
-      N72 = Math.pow(2, 49);
-      N82 = Math.pow(2, 56);
-      N92 = Math.pow(2, 63);
-      length2 = function(value) {
-        return value < N12 ? 1 : value < N22 ? 2 : value < N32 ? 3 : value < N42 ? 4 : value < N52 ? 5 : value < N62 ? 6 : value < N72 ? 7 : value < N82 ? 8 : value < N92 ? 9 : 10;
-      };
-      varint2 = {
-        encode: encode_12,
-        decode: decode5,
-        encodingLength: length2
-      };
-      _brrp_varint2 = varint2;
-      varint_default2 = _brrp_varint2;
-    }
-  });
-
-  // node_modules/@ipld/car/node_modules/multiformats/src/varint.js
-  var decode6, encodeTo2, encodingLength2;
-  var init_varint4 = __esm({
-    "node_modules/@ipld/car/node_modules/multiformats/src/varint.js"() {
-      init_varint3();
-      decode6 = (data, offset = 0) => {
-        const code = varint_default2.decode(data, offset);
-        return [code, varint_default2.decode.bytes];
-      };
-      encodeTo2 = (int, target2, offset = 0) => {
-        varint_default2.encode(int, target2, offset);
-        return target2;
-      };
-      encodingLength2 = (int) => {
-        return varint_default2.encodingLength(int);
-      };
-    }
-  });
-
-  // node_modules/@ipld/car/node_modules/multiformats/src/bytes.js
-  var empty2, equals4, coerce2;
-  var init_bytes2 = __esm({
-    "node_modules/@ipld/car/node_modules/multiformats/src/bytes.js"() {
-      empty2 = new Uint8Array(0);
-      equals4 = (aa, bb) => {
-        if (aa === bb)
-          return true;
-        if (aa.byteLength !== bb.byteLength) {
-          return false;
-        }
-        for (let ii = 0; ii < aa.byteLength; ii++) {
-          if (aa[ii] !== bb[ii]) {
-            return false;
+        async getPreferences() {
+          const prefs = {
+            feeds: {
+              saved: void 0,
+              pinned: void 0
+            },
+            adultContentEnabled: false,
+            contentLabels: {},
+            birthDate: void 0
+          };
+          const res = await this.app.bsky.actor.getPreferences({});
+          for (const pref of res.data.preferences) {
+            if (defs_exports5.isAdultContentPref(pref) && defs_exports5.validateAdultContentPref(pref).success) {
+              prefs.adultContentEnabled = pref.enabled;
+            } else if (defs_exports5.isContentLabelPref(pref) && defs_exports5.validateAdultContentPref(pref).success) {
+              let value = pref.visibility;
+              if (value === "show") {
+                value = "ignore";
+              }
+              if (value === "ignore" || value === "warn" || value === "hide") {
+                prefs.contentLabels[pref.label] = value;
+              }
+            } else if (defs_exports5.isSavedFeedsPref(pref) && defs_exports5.validateSavedFeedsPref(pref).success) {
+              prefs.feeds.saved = pref.saved;
+              prefs.feeds.pinned = pref.pinned;
+            } else if (defs_exports5.isPersonalDetailsPref(pref) && defs_exports5.validatePersonalDetailsPref(pref).success) {
+              if (pref.birthDate) {
+                prefs.birthDate = new Date(pref.birthDate);
+              }
+            }
           }
+          return prefs;
         }
-        return true;
+        async setSavedFeeds(saved, pinned) {
+          return updateFeedPreferences(this, () => ({
+            saved,
+            pinned
+          }));
+        }
+        async addSavedFeed(v) {
+          return updateFeedPreferences(this, (saved, pinned) => ({
+            saved: [...saved.filter((uri2) => uri2 !== v), v],
+            pinned
+          }));
+        }
+        async removeSavedFeed(v) {
+          return updateFeedPreferences(this, (saved, pinned) => ({
+            saved: saved.filter((uri2) => uri2 !== v),
+            pinned: pinned.filter((uri2) => uri2 !== v)
+          }));
+        }
+        async addPinnedFeed(v) {
+          return updateFeedPreferences(this, (saved, pinned) => ({
+            saved: [...saved.filter((uri2) => uri2 !== v), v],
+            pinned: [...pinned.filter((uri2) => uri2 !== v), v]
+          }));
+        }
+        async removePinnedFeed(v) {
+          return updateFeedPreferences(this, (saved, pinned) => ({
+            saved,
+            pinned: pinned.filter((uri2) => uri2 !== v)
+          }));
+        }
+        async setAdultContentEnabled(v) {
+          await updatePreferences(this, (prefs) => {
+            let adultContentPref = prefs.findLast((pref) => defs_exports5.isAdultContentPref(pref) && defs_exports5.validateAdultContentPref(pref).success);
+            if (adultContentPref) {
+              adultContentPref.enabled = v;
+            } else {
+              adultContentPref = {
+                $type: "app.bsky.actor.defs#adultContentPref",
+                enabled: v
+              };
+            }
+            return prefs.filter((pref) => !defs_exports5.isAdultContentPref(pref)).concat([adultContentPref]);
+          });
+        }
+        async setContentLabelPref(key, value) {
+          if (value === "show") {
+            value = "ignore";
+          }
+          await updatePreferences(this, (prefs) => {
+            let labelPref = prefs.findLast((pref) => defs_exports5.isContentLabelPref(pref) && defs_exports5.validateAdultContentPref(pref).success && pref.label === key);
+            if (labelPref) {
+              labelPref.visibility = value;
+            } else {
+              labelPref = {
+                $type: "app.bsky.actor.defs#contentLabelPref",
+                label: key,
+                visibility: value
+              };
+            }
+            return prefs.filter((pref) => !defs_exports5.isContentLabelPref(pref) || pref.label !== key).concat([labelPref]);
+          });
+        }
+        async setPersonalDetails({
+          birthDate
+        }) {
+          birthDate = birthDate instanceof Date ? birthDate.toISOString() : birthDate;
+          await updatePreferences(this, (prefs) => {
+            let personalDetailsPref = prefs.findLast((pref) => defs_exports5.isPersonalDetailsPref(pref) && defs_exports5.validatePersonalDetailsPref(pref).success);
+            if (personalDetailsPref) {
+              personalDetailsPref.birthDate = birthDate;
+            } else {
+              personalDetailsPref = {
+                $type: "app.bsky.actor.defs#personalDetailsPref",
+                birthDate
+              };
+            }
+            return prefs.filter((pref) => !defs_exports5.isPersonalDetailsPref(pref)).concat([personalDetailsPref]);
+          });
+        }
       };
-      coerce2 = (o) => {
-        if (o instanceof Uint8Array && o.constructor.name === "Uint8Array")
-          return o;
-        if (o instanceof ArrayBuffer)
-          return new Uint8Array(o);
-        if (ArrayBuffer.isView(o)) {
-          return new Uint8Array(o.buffer, o.byteOffset, o.byteLength);
-        }
-        throw new Error("Unknown type, must be binary type");
-      };
-    }
-  });
-
-  // node_modules/@ipld/car/node_modules/multiformats/src/hashes/digest.js
-  var create2, decode7, equals5, Digest2;
-  var init_digest2 = __esm({
-    "node_modules/@ipld/car/node_modules/multiformats/src/hashes/digest.js"() {
-      init_bytes2();
-      init_varint4();
-      create2 = (code, digest) => {
-        const size = digest.byteLength;
-        const sizeOffset = encodingLength2(code);
-        const digestOffset = sizeOffset + encodingLength2(size);
-        const bytes = new Uint8Array(digestOffset + size);
-        encodeTo2(code, bytes, 0);
-        encodeTo2(size, bytes, sizeOffset);
-        bytes.set(digest, digestOffset);
-        return new Digest2(code, size, digest, bytes);
-      };
-      decode7 = (multihash) => {
-        const bytes = coerce2(multihash);
-        const [code, sizeOffset] = decode6(bytes);
-        const [size, digestOffset] = decode6(bytes.subarray(sizeOffset));
-        const digest = bytes.subarray(sizeOffset + digestOffset);
-        if (digest.byteLength !== size) {
-          throw new Error("Incorrect length");
-        }
-        return new Digest2(code, size, digest, bytes);
-      };
-      equals5 = (a, b) => {
-        if (a === b) {
-          return true;
-        } else {
-          const data = (
-            /** @type {{code?:unknown, size?:unknown, bytes?:unknown}} */
-            b
-          );
-          return a.code === data.code && a.size === data.size && data.bytes instanceof Uint8Array && equals4(a.bytes, data.bytes);
-        }
-      };
-      Digest2 = class {
-        /**
-         * Creates a multihash digest.
-         *
-         * @param {Code} code
-         * @param {Size} size
-         * @param {Uint8Array} digest
-         * @param {Uint8Array} bytes
-         */
-        constructor(code, size, digest, bytes) {
-          this.code = code;
-          this.size = size;
-          this.digest = digest;
-          this.bytes = bytes;
-        }
-      };
-    }
-  });
-
-  // node_modules/@ipld/car/node_modules/multiformats/vendor/base-x.js
-  function base2(ALPHABET, name) {
-    if (ALPHABET.length >= 255) {
-      throw new TypeError("Alphabet too long");
-    }
-    var BASE_MAP = new Uint8Array(256);
-    for (var j = 0; j < BASE_MAP.length; j++) {
-      BASE_MAP[j] = 255;
-    }
-    for (var i = 0; i < ALPHABET.length; i++) {
-      var x = ALPHABET.charAt(i);
-      var xc = x.charCodeAt(0);
-      if (BASE_MAP[xc] !== 255) {
-        throw new TypeError(x + " is ambiguous");
-      }
-      BASE_MAP[xc] = i;
-    }
-    var BASE = ALPHABET.length;
-    var LEADER = ALPHABET.charAt(0);
-    var FACTOR = Math.log(BASE) / Math.log(256);
-    var iFACTOR = Math.log(256) / Math.log(BASE);
-    function encode9(source) {
-      if (source instanceof Uint8Array)
-        ;
-      else if (ArrayBuffer.isView(source)) {
-        source = new Uint8Array(source.buffer, source.byteOffset, source.byteLength);
-      } else if (Array.isArray(source)) {
-        source = Uint8Array.from(source);
-      }
-      if (!(source instanceof Uint8Array)) {
-        throw new TypeError("Expected Uint8Array");
-      }
-      if (source.length === 0) {
-        return "";
-      }
-      var zeroes = 0;
-      var length3 = 0;
-      var pbegin = 0;
-      var pend = source.length;
-      while (pbegin !== pend && source[pbegin] === 0) {
-        pbegin++;
-        zeroes++;
-      }
-      var size = (pend - pbegin) * iFACTOR + 1 >>> 0;
-      var b58 = new Uint8Array(size);
-      while (pbegin !== pend) {
-        var carry = source[pbegin];
-        var i2 = 0;
-        for (var it1 = size - 1; (carry !== 0 || i2 < length3) && it1 !== -1; it1--, i2++) {
-          carry += 256 * b58[it1] >>> 0;
-          b58[it1] = carry % BASE >>> 0;
-          carry = carry / BASE >>> 0;
-        }
-        if (carry !== 0) {
-          throw new Error("Non-zero carry");
-        }
-        length3 = i2;
-        pbegin++;
-      }
-      var it2 = size - length3;
-      while (it2 !== size && b58[it2] === 0) {
-        it2++;
-      }
-      var str = LEADER.repeat(zeroes);
-      for (; it2 < size; ++it2) {
-        str += ALPHABET.charAt(b58[it2]);
-      }
-      return str;
-    }
-    function decodeUnsafe(source) {
-      if (typeof source !== "string") {
-        throw new TypeError("Expected String");
-      }
-      if (source.length === 0) {
-        return new Uint8Array();
-      }
-      var psz = 0;
-      if (source[psz] === " ") {
-        return;
-      }
-      var zeroes = 0;
-      var length3 = 0;
-      while (source[psz] === LEADER) {
-        zeroes++;
-        psz++;
-      }
-      var size = (source.length - psz) * FACTOR + 1 >>> 0;
-      var b256 = new Uint8Array(size);
-      while (source[psz]) {
-        var carry = BASE_MAP[source.charCodeAt(psz)];
-        if (carry === 255) {
+      async function updatePreferences(agent, cb) {
+        const res = await agent.app.bsky.actor.getPreferences({});
+        const newPrefs = cb(res.data.preferences);
+        if (newPrefs === false) {
           return;
         }
-        var i2 = 0;
-        for (var it3 = size - 1; (carry !== 0 || i2 < length3) && it3 !== -1; it3--, i2++) {
-          carry += BASE * b256[it3] >>> 0;
-          b256[it3] = carry % 256 >>> 0;
-          carry = carry / 256 >>> 0;
-        }
-        if (carry !== 0) {
-          throw new Error("Non-zero carry");
-        }
-        length3 = i2;
-        psz++;
-      }
-      if (source[psz] === " ") {
-        return;
-      }
-      var it4 = size - length3;
-      while (it4 !== size && b256[it4] === 0) {
-        it4++;
-      }
-      var vch = new Uint8Array(zeroes + (size - it4));
-      var j2 = zeroes;
-      while (it4 !== size) {
-        vch[j2++] = b256[it4++];
-      }
-      return vch;
-    }
-    function decode13(string) {
-      var buffer3 = decodeUnsafe(string);
-      if (buffer3) {
-        return buffer3;
-      }
-      throw new Error(`Non-${name} character`);
-    }
-    return {
-      encode: encode9,
-      decodeUnsafe,
-      decode: decode13
-    };
-  }
-  var src2, _brrp__multiformats_scope_baseX2, base_x_default2;
-  var init_base_x2 = __esm({
-    "node_modules/@ipld/car/node_modules/multiformats/vendor/base-x.js"() {
-      src2 = base2;
-      _brrp__multiformats_scope_baseX2 = src2;
-      base_x_default2 = _brrp__multiformats_scope_baseX2;
-    }
-  });
-
-  // node_modules/@ipld/car/node_modules/multiformats/src/bases/base.js
-  var Encoder2, Decoder2, ComposedDecoder2, or2, Codec2, from2, baseX2, decode8, encode4, rfc46482;
-  var init_base2 = __esm({
-    "node_modules/@ipld/car/node_modules/multiformats/src/bases/base.js"() {
-      init_base_x2();
-      init_bytes2();
-      Encoder2 = class {
-        /**
-         * @param {Base} name
-         * @param {Prefix} prefix
-         * @param {(bytes:Uint8Array) => string} baseEncode
-         */
-        constructor(name, prefix, baseEncode) {
-          this.name = name;
-          this.prefix = prefix;
-          this.baseEncode = baseEncode;
-        }
-        /**
-         * @param {Uint8Array} bytes
-         * @returns {API.Multibase<Prefix>}
-         */
-        encode(bytes) {
-          if (bytes instanceof Uint8Array) {
-            return `${this.prefix}${this.baseEncode(bytes)}`;
-          } else {
-            throw Error("Unknown type, must be binary type");
-          }
-        }
-      };
-      Decoder2 = class {
-        /**
-         * @param {Base} name
-         * @param {Prefix} prefix
-         * @param {(text:string) => Uint8Array} baseDecode
-         */
-        constructor(name, prefix, baseDecode) {
-          this.name = name;
-          this.prefix = prefix;
-          if (prefix.codePointAt(0) === void 0) {
-            throw new Error("Invalid prefix character");
-          }
-          this.prefixCodePoint = /** @type {number} */
-          prefix.codePointAt(0);
-          this.baseDecode = baseDecode;
-        }
-        /**
-         * @param {string} text
-         */
-        decode(text) {
-          if (typeof text === "string") {
-            if (text.codePointAt(0) !== this.prefixCodePoint) {
-              throw Error(`Unable to decode multibase string ${JSON.stringify(text)}, ${this.name} decoder only supports inputs prefixed with ${this.prefix}`);
-            }
-            return this.baseDecode(text.slice(this.prefix.length));
-          } else {
-            throw Error("Can only multibase decode strings");
-          }
-        }
-        /**
-         * @template {string} OtherPrefix
-         * @param {API.UnibaseDecoder<OtherPrefix>|ComposedDecoder<OtherPrefix>} decoder
-         * @returns {ComposedDecoder<Prefix|OtherPrefix>}
-         */
-        or(decoder2) {
-          return or2(this, decoder2);
-        }
-      };
-      ComposedDecoder2 = class {
-        /**
-         * @param {Decoders<Prefix>} decoders
-         */
-        constructor(decoders) {
-          this.decoders = decoders;
-        }
-        /**
-         * @template {string} OtherPrefix
-         * @param {API.UnibaseDecoder<OtherPrefix>|ComposedDecoder<OtherPrefix>} decoder
-         * @returns {ComposedDecoder<Prefix|OtherPrefix>}
-         */
-        or(decoder2) {
-          return or2(this, decoder2);
-        }
-        /**
-         * @param {string} input
-         * @returns {Uint8Array}
-         */
-        decode(input) {
-          const prefix = (
-            /** @type {Prefix} */
-            input[0]
-          );
-          const decoder2 = this.decoders[prefix];
-          if (decoder2) {
-            return decoder2.decode(input);
-          } else {
-            throw RangeError(`Unable to decode multibase string ${JSON.stringify(input)}, only inputs prefixed with ${Object.keys(this.decoders)} are supported`);
-          }
-        }
-      };
-      or2 = (left, right) => new ComposedDecoder2(
-        /** @type {Decoders<L|R>} */
-        {
-          ...left.decoders || { [
-            /** @type API.UnibaseDecoder<L> */
-            left.prefix
-          ]: left },
-          ...right.decoders || { [
-            /** @type API.UnibaseDecoder<R> */
-            right.prefix
-          ]: right }
-        }
-      );
-      Codec2 = class {
-        /**
-         * @param {Base} name
-         * @param {Prefix} prefix
-         * @param {(bytes:Uint8Array) => string} baseEncode
-         * @param {(text:string) => Uint8Array} baseDecode
-         */
-        constructor(name, prefix, baseEncode, baseDecode) {
-          this.name = name;
-          this.prefix = prefix;
-          this.baseEncode = baseEncode;
-          this.baseDecode = baseDecode;
-          this.encoder = new Encoder2(name, prefix, baseEncode);
-          this.decoder = new Decoder2(name, prefix, baseDecode);
-        }
-        /**
-         * @param {Uint8Array} input
-         */
-        encode(input) {
-          return this.encoder.encode(input);
-        }
-        /**
-         * @param {string} input
-         */
-        decode(input) {
-          return this.decoder.decode(input);
-        }
-      };
-      from2 = ({ name, prefix, encode: encode9, decode: decode13 }) => new Codec2(name, prefix, encode9, decode13);
-      baseX2 = ({ prefix, name, alphabet }) => {
-        const { encode: encode9, decode: decode13 } = base_x_default2(alphabet, name);
-        return from2({
-          prefix,
-          name,
-          encode: encode9,
-          /**
-           * @param {string} text
-           */
-          decode: (text) => coerce2(decode13(text))
+        await agent.app.bsky.actor.putPreferences({
+          preferences: newPrefs
         });
-      };
-      decode8 = (string, alphabet, bitsPerChar, name) => {
-        const codes = {};
-        for (let i = 0; i < alphabet.length; ++i) {
-          codes[alphabet[i]] = i;
-        }
-        let end = string.length;
-        while (string[end - 1] === "=") {
-          --end;
-        }
-        const out = new Uint8Array(end * bitsPerChar / 8 | 0);
-        let bits = 0;
-        let buffer3 = 0;
-        let written = 0;
-        for (let i = 0; i < end; ++i) {
-          const value = codes[string[i]];
-          if (value === void 0) {
-            throw new SyntaxError(`Non-${name} character`);
+      }
+      async function updateFeedPreferences(agent, cb) {
+        let res;
+        await updatePreferences(agent, (prefs) => {
+          let feedsPref = prefs.findLast((pref) => defs_exports5.isSavedFeedsPref(pref) && defs_exports5.validateSavedFeedsPref(pref).success);
+          if (feedsPref) {
+            res = cb(feedsPref.saved, feedsPref.pinned);
+            feedsPref.saved = res.saved;
+            feedsPref.pinned = res.pinned;
+          } else {
+            res = cb([], []);
+            feedsPref = {
+              $type: "app.bsky.actor.defs#savedFeedsPref",
+              saved: res.saved,
+              pinned: res.pinned
+            };
           }
-          buffer3 = buffer3 << bitsPerChar | value;
-          bits += bitsPerChar;
-          if (bits >= 8) {
-            bits -= 8;
-            out[written++] = 255 & buffer3 >> bits;
-          }
-        }
-        if (bits >= bitsPerChar || 255 & buffer3 << 8 - bits) {
-          throw new SyntaxError("Unexpected end of data");
-        }
-        return out;
-      };
-      encode4 = (data, alphabet, bitsPerChar) => {
-        const pad = alphabet[alphabet.length - 1] === "=";
-        const mask = (1 << bitsPerChar) - 1;
-        let out = "";
-        let bits = 0;
-        let buffer3 = 0;
-        for (let i = 0; i < data.length; ++i) {
-          buffer3 = buffer3 << 8 | data[i];
-          bits += 8;
-          while (bits > bitsPerChar) {
-            bits -= bitsPerChar;
-            out += alphabet[mask & buffer3 >> bits];
-          }
-        }
-        if (bits) {
-          out += alphabet[mask & buffer3 << bitsPerChar - bits];
-        }
-        if (pad) {
-          while (out.length * bitsPerChar & 7) {
-            out += "=";
-          }
-        }
-        return out;
-      };
-      rfc46482 = ({ name, prefix, bitsPerChar, alphabet }) => {
-        return from2({
-          prefix,
-          name,
-          encode(input) {
-            return encode4(input, alphabet, bitsPerChar);
-          },
-          decode(input) {
-            return decode8(input, alphabet, bitsPerChar, name);
-          }
+          return prefs.filter((pref) => !defs_exports5.isSavedFeedsPref(pref)).concat([feedsPref]);
         });
-      };
+        return res;
+      }
     }
   });
 
-  // node_modules/@ipld/car/node_modules/multiformats/src/bases/base58.js
-  var base58btc2, base58flickr2;
-  var init_base582 = __esm({
-    "node_modules/@ipld/car/node_modules/multiformats/src/bases/base58.js"() {
-      init_base2();
-      base58btc2 = baseX2({
-        name: "base58btc",
-        prefix: "z",
-        alphabet: "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-      });
-      base58flickr2 = baseX2({
-        name: "base58flickr",
-        prefix: "Z",
-        alphabet: "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
-      });
-    }
-  });
-
-  // node_modules/@ipld/car/node_modules/multiformats/src/bases/base32.js
-  var base322, base32upper2, base32pad2, base32padupper2, base32hex2, base32hexupper2, base32hexpad2, base32hexpadupper2, base32z2;
-  var init_base322 = __esm({
-    "node_modules/@ipld/car/node_modules/multiformats/src/bases/base32.js"() {
-      init_base2();
-      base322 = rfc46482({
-        prefix: "b",
-        name: "base32",
-        alphabet: "abcdefghijklmnopqrstuvwxyz234567",
-        bitsPerChar: 5
-      });
-      base32upper2 = rfc46482({
-        prefix: "B",
-        name: "base32upper",
-        alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567",
-        bitsPerChar: 5
-      });
-      base32pad2 = rfc46482({
-        prefix: "c",
-        name: "base32pad",
-        alphabet: "abcdefghijklmnopqrstuvwxyz234567=",
-        bitsPerChar: 5
-      });
-      base32padupper2 = rfc46482({
-        prefix: "C",
-        name: "base32padupper",
-        alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567=",
-        bitsPerChar: 5
-      });
-      base32hex2 = rfc46482({
-        prefix: "v",
-        name: "base32hex",
-        alphabet: "0123456789abcdefghijklmnopqrstuv",
-        bitsPerChar: 5
-      });
-      base32hexupper2 = rfc46482({
-        prefix: "V",
-        name: "base32hexupper",
-        alphabet: "0123456789ABCDEFGHIJKLMNOPQRSTUV",
-        bitsPerChar: 5
-      });
-      base32hexpad2 = rfc46482({
-        prefix: "t",
-        name: "base32hexpad",
-        alphabet: "0123456789abcdefghijklmnopqrstuv=",
-        bitsPerChar: 5
-      });
-      base32hexpadupper2 = rfc46482({
-        prefix: "T",
-        name: "base32hexpadupper",
-        alphabet: "0123456789ABCDEFGHIJKLMNOPQRSTUV=",
-        bitsPerChar: 5
-      });
-      base32z2 = rfc46482({
-        prefix: "h",
-        name: "base32z",
-        alphabet: "ybndrfg8ejkmcpqxot1uwisza345h769",
-        bitsPerChar: 5
-      });
-    }
-  });
-
-  // node_modules/@ipld/car/node_modules/multiformats/src/link/interface.js
-  var init_interface3 = __esm({
-    "node_modules/@ipld/car/node_modules/multiformats/src/link/interface.js"() {
-    }
-  });
-
-  // node_modules/@ipld/car/node_modules/multiformats/src/cid.js
-  var format2, cache2, baseCache2, CID2, parseCIDtoBytes2, toStringV02, toStringV12, DAG_PB_CODE2, SHA_256_CODE2, encodeCID2, cidSymbol2;
-  var init_cid2 = __esm({
-    "node_modules/@ipld/car/node_modules/multiformats/src/cid.js"() {
-      init_varint4();
-      init_digest2();
-      init_base582();
-      init_base322();
-      init_bytes2();
-      init_interface3();
-      format2 = (link, base3) => {
-        const { bytes, version } = link;
-        switch (version) {
-          case 0:
-            return toStringV02(
-              bytes,
-              baseCache2(link),
-              /** @type {API.MultibaseEncoder<"z">} */
-              base3 || base58btc2.encoder
-            );
-          default:
-            return toStringV12(
-              bytes,
-              baseCache2(link),
-              /** @type {API.MultibaseEncoder<Prefix>} */
-              base3 || base322.encoder
-            );
-        }
-      };
-      cache2 = /* @__PURE__ */ new WeakMap();
-      baseCache2 = (cid) => {
-        const baseCache3 = cache2.get(cid);
-        if (baseCache3 == null) {
-          const baseCache4 = /* @__PURE__ */ new Map();
-          cache2.set(cid, baseCache4);
-          return baseCache4;
-        }
-        return baseCache3;
-      };
-      CID2 = class _CID {
-        /**
-         * @param {Version} version - Version of the CID
-         * @param {Format} code - Code of the codec content is encoded in, see https://github.com/multiformats/multicodec/blob/master/table.csv
-         * @param {API.MultihashDigest<Alg>} multihash - (Multi)hash of the of the content.
-         * @param {Uint8Array} bytes
-         *
-         */
-        constructor(version, code, multihash, bytes) {
-          this.code = code;
-          this.version = version;
-          this.multihash = multihash;
-          this.bytes = bytes;
-          this["/"] = bytes;
-        }
-        /**
-         * Signalling `cid.asCID === cid` has been replaced with `cid['/'] === cid.bytes`
-         * please either use `CID.asCID(cid)` or switch to new signalling mechanism
-         *
-         * @deprecated
-         */
-        get asCID() {
-          return this;
-        }
-        // ArrayBufferView
-        get byteOffset() {
-          return this.bytes.byteOffset;
-        }
-        // ArrayBufferView
-        get byteLength() {
-          return this.bytes.byteLength;
-        }
-        /**
-         * @returns {CID<Data, API.DAG_PB, API.SHA_256, 0>}
-         */
-        toV0() {
-          switch (this.version) {
-            case 0: {
-              return (
-                /** @type {CID<Data, API.DAG_PB, API.SHA_256, 0>} */
-                this
-              );
-            }
-            case 1: {
-              const { code, multihash } = this;
-              if (code !== DAG_PB_CODE2) {
-                throw new Error("Cannot convert a non dag-pb CID to CIDv0");
-              }
-              if (multihash.code !== SHA_256_CODE2) {
-                throw new Error("Cannot convert non sha2-256 multihash CID to CIDv0");
-              }
-              return (
-                /** @type {CID<Data, API.DAG_PB, API.SHA_256, 0>} */
-                _CID.createV0(
-                  /** @type {API.MultihashDigest<API.SHA_256>} */
-                  multihash
-                )
-              );
-            }
-            default: {
-              throw Error(
-                `Can not convert CID version ${this.version} to version 0. This is a bug please report`
-              );
-            }
-          }
-        }
-        /**
-         * @returns {CID<Data, Format, Alg, 1>}
-         */
-        toV1() {
-          switch (this.version) {
-            case 0: {
-              const { code, digest } = this.multihash;
-              const multihash = create2(code, digest);
-              return (
-                /** @type {CID<Data, Format, Alg, 1>} */
-                _CID.createV1(this.code, multihash)
-              );
-            }
-            case 1: {
-              return (
-                /** @type {CID<Data, Format, Alg, 1>} */
-                this
-              );
-            }
-            default: {
-              throw Error(
-                `Can not convert CID version ${this.version} to version 1. This is a bug please report`
-              );
-            }
-          }
-        }
-        /**
-         * @param {unknown} other
-         * @returns {other is CID<Data, Format, Alg, Version>}
-         */
-        equals(other) {
-          return _CID.equals(this, other);
-        }
-        /**
-         * @template {unknown} Data
-         * @template {number} Format
-         * @template {number} Alg
-         * @template {API.Version} Version
-         * @param {API.Link<Data, Format, Alg, Version>} self
-         * @param {unknown} other
-         * @returns {other is CID}
-         */
-        static equals(self2, other) {
-          const unknown = (
-            /** @type {{code?:unknown, version?:unknown, multihash?:unknown}} */
-            other
-          );
-          return unknown && self2.code === unknown.code && self2.version === unknown.version && equals5(self2.multihash, unknown.multihash);
-        }
-        /**
-         * @param {API.MultibaseEncoder<string>} [base]
-         * @returns {string}
-         */
-        toString(base3) {
-          return format2(this, base3);
-        }
-        toJSON() {
-          return { "/": format2(this) };
-        }
-        link() {
-          return this;
-        }
-        get [Symbol.toStringTag]() {
-          return "CID";
-        }
-        // Legacy
-        [Symbol.for("nodejs.util.inspect.custom")]() {
-          return `CID(${this.toString()})`;
-        }
-        /**
-         * Takes any input `value` and returns a `CID` instance if it was
-         * a `CID` otherwise returns `null`. If `value` is instanceof `CID`
-         * it will return value back. If `value` is not instance of this CID
-         * class, but is compatible CID it will return new instance of this
-         * `CID` class. Otherwise returns null.
-         *
-         * This allows two different incompatible versions of CID library to
-         * co-exist and interop as long as binary interface is compatible.
-         *
-         * @template {unknown} Data
-         * @template {number} Format
-         * @template {number} Alg
-         * @template {API.Version} Version
-         * @template {unknown} U
-         * @param {API.Link<Data, Format, Alg, Version>|U} input
-         * @returns {CID<Data, Format, Alg, Version>|null}
-         */
-        static asCID(input) {
-          if (input == null) {
-            return null;
-          }
-          const value = (
-            /** @type {any} */
-            input
-          );
-          if (value instanceof _CID) {
-            return value;
-          } else if (value["/"] != null && value["/"] === value.bytes || value.asCID === value) {
-            const { version, code, multihash, bytes } = value;
-            return new _CID(
-              version,
-              code,
-              /** @type {API.MultihashDigest<Alg>} */
-              multihash,
-              bytes || encodeCID2(version, code, multihash.bytes)
-            );
-          } else if (value[cidSymbol2] === true) {
-            const { version, multihash, code } = value;
-            const digest = (
-              /** @type {API.MultihashDigest<Alg>} */
-              decode7(multihash)
-            );
-            return _CID.create(version, code, digest);
-          } else {
-            return null;
-          }
-        }
-        /**
-         *
-         * @template {unknown} Data
-         * @template {number} Format
-         * @template {number} Alg
-         * @template {API.Version} Version
-         * @param {Version} version - Version of the CID
-         * @param {Format} code - Code of the codec content is encoded in, see https://github.com/multiformats/multicodec/blob/master/table.csv
-         * @param {API.MultihashDigest<Alg>} digest - (Multi)hash of the of the content.
-         * @returns {CID<Data, Format, Alg, Version>}
-         */
-        static create(version, code, digest) {
-          if (typeof code !== "number") {
-            throw new Error("String codecs are no longer supported");
-          }
-          if (!(digest.bytes instanceof Uint8Array)) {
-            throw new Error("Invalid digest");
-          }
-          switch (version) {
-            case 0: {
-              if (code !== DAG_PB_CODE2) {
-                throw new Error(
-                  `Version 0 CID must use dag-pb (code: ${DAG_PB_CODE2}) block encoding`
-                );
-              } else {
-                return new _CID(version, code, digest, digest.bytes);
-              }
-            }
-            case 1: {
-              const bytes = encodeCID2(version, code, digest.bytes);
-              return new _CID(version, code, digest, bytes);
-            }
-            default: {
-              throw new Error("Invalid version");
-            }
-          }
-        }
-        /**
-         * Simplified version of `create` for CIDv0.
-         *
-         * @template {unknown} [T=unknown]
-         * @param {API.MultihashDigest<typeof SHA_256_CODE>} digest - Multihash.
-         * @returns {CID<T, typeof DAG_PB_CODE, typeof SHA_256_CODE, 0>}
-         */
-        static createV0(digest) {
-          return _CID.create(0, DAG_PB_CODE2, digest);
-        }
-        /**
-         * Simplified version of `create` for CIDv1.
-         *
-         * @template {unknown} Data
-         * @template {number} Code
-         * @template {number} Alg
-         * @param {Code} code - Content encoding format code.
-         * @param {API.MultihashDigest<Alg>} digest - Miltihash of the content.
-         * @returns {CID<Data, Code, Alg, 1>}
-         */
-        static createV1(code, digest) {
-          return _CID.create(1, code, digest);
-        }
-        /**
-         * Decoded a CID from its binary representation. The byte array must contain
-         * only the CID with no additional bytes.
-         *
-         * An error will be thrown if the bytes provided do not contain a valid
-         * binary representation of a CID.
-         *
-         * @template {unknown} Data
-         * @template {number} Code
-         * @template {number} Alg
-         * @template {API.Version} Ver
-         * @param {API.ByteView<API.Link<Data, Code, Alg, Ver>>} bytes
-         * @returns {CID<Data, Code, Alg, Ver>}
-         */
-        static decode(bytes) {
-          const [cid, remainder] = _CID.decodeFirst(bytes);
-          if (remainder.length) {
-            throw new Error("Incorrect length");
-          }
-          return cid;
-        }
-        /**
-         * Decoded a CID from its binary representation at the beginning of a byte
-         * array.
-         *
-         * Returns an array with the first element containing the CID and the second
-         * element containing the remainder of the original byte array. The remainder
-         * will be a zero-length byte array if the provided bytes only contained a
-         * binary CID representation.
-         *
-         * @template {unknown} T
-         * @template {number} C
-         * @template {number} A
-         * @template {API.Version} V
-         * @param {API.ByteView<API.Link<T, C, A, V>>} bytes
-         * @returns {[CID<T, C, A, V>, Uint8Array]}
-         */
-        static decodeFirst(bytes) {
-          const specs = _CID.inspectBytes(bytes);
-          const prefixSize = specs.size - specs.multihashSize;
-          const multihashBytes = coerce2(
-            bytes.subarray(prefixSize, prefixSize + specs.multihashSize)
-          );
-          if (multihashBytes.byteLength !== specs.multihashSize) {
-            throw new Error("Incorrect length");
-          }
-          const digestBytes = multihashBytes.subarray(
-            specs.multihashSize - specs.digestSize
-          );
-          const digest = new Digest2(
-            specs.multihashCode,
-            specs.digestSize,
-            digestBytes,
-            multihashBytes
-          );
-          const cid = specs.version === 0 ? _CID.createV0(
-            /** @type {API.MultihashDigest<API.SHA_256>} */
-            digest
-          ) : _CID.createV1(specs.codec, digest);
-          return [
-            /** @type {CID<T, C, A, V>} */
-            cid,
-            bytes.subarray(specs.size)
-          ];
-        }
-        /**
-         * Inspect the initial bytes of a CID to determine its properties.
-         *
-         * Involves decoding up to 4 varints. Typically this will require only 4 to 6
-         * bytes but for larger multicodec code values and larger multihash digest
-         * lengths these varints can be quite large. It is recommended that at least
-         * 10 bytes be made available in the `initialBytes` argument for a complete
-         * inspection.
-         *
-         * @template {unknown} T
-         * @template {number} C
-         * @template {number} A
-         * @template {API.Version} V
-         * @param {API.ByteView<API.Link<T, C, A, V>>} initialBytes
-         * @returns {{ version:V, codec:C, multihashCode:A, digestSize:number, multihashSize:number, size:number }}
-         */
-        static inspectBytes(initialBytes) {
-          let offset = 0;
-          const next = () => {
-            const [i, length3] = decode6(initialBytes.subarray(offset));
-            offset += length3;
-            return i;
-          };
-          let version = (
-            /** @type {V} */
-            next()
-          );
-          let codec = (
-            /** @type {C} */
-            DAG_PB_CODE2
-          );
-          if (
-            /** @type {number} */
-            version === 18
-          ) {
-            version = /** @type {V} */
-            0;
-            offset = 0;
-          } else {
-            codec = /** @type {C} */
-            next();
-          }
-          if (version !== 0 && version !== 1) {
-            throw new RangeError(`Invalid CID version ${version}`);
-          }
-          const prefixSize = offset;
-          const multihashCode = (
-            /** @type {A} */
-            next()
-          );
-          const digestSize = next();
-          const size = offset + digestSize;
-          const multihashSize = size - prefixSize;
-          return { version, codec, multihashCode, digestSize, multihashSize, size };
-        }
-        /**
-         * Takes cid in a string representation and creates an instance. If `base`
-         * decoder is not provided will use a default from the configuration. It will
-         * throw an error if encoding of the CID is not compatible with supplied (or
-         * a default decoder).
-         *
-         * @template {string} Prefix
-         * @template {unknown} Data
-         * @template {number} Code
-         * @template {number} Alg
-         * @template {API.Version} Ver
-         * @param {API.ToString<API.Link<Data, Code, Alg, Ver>, Prefix>} source
-         * @param {API.MultibaseDecoder<Prefix>} [base]
-         * @returns {CID<Data, Code, Alg, Ver>}
-         */
-        static parse(source, base3) {
-          const [prefix, bytes] = parseCIDtoBytes2(source, base3);
-          const cid = _CID.decode(bytes);
-          if (cid.version === 0 && source[0] !== "Q") {
-            throw Error("Version 0 CID string must not include multibase prefix");
-          }
-          baseCache2(cid).set(prefix, source);
-          return cid;
-        }
-      };
-      parseCIDtoBytes2 = (source, base3) => {
-        switch (source[0]) {
-          case "Q": {
-            const decoder2 = base3 || base58btc2;
-            return [
-              /** @type {Prefix} */
-              base58btc2.prefix,
-              decoder2.decode(`${base58btc2.prefix}${source}`)
-            ];
-          }
-          case base58btc2.prefix: {
-            const decoder2 = base3 || base58btc2;
-            return [
-              /** @type {Prefix} */
-              base58btc2.prefix,
-              decoder2.decode(source)
-            ];
-          }
-          case base322.prefix: {
-            const decoder2 = base3 || base322;
-            return [
-              /** @type {Prefix} */
-              base322.prefix,
-              decoder2.decode(source)
-            ];
-          }
-          default: {
-            if (base3 == null) {
-              throw Error(
-                "To parse non base32 or base58btc encoded CID multibase decoder must be provided"
-              );
-            }
-            return [
-              /** @type {Prefix} */
-              source[0],
-              base3.decode(source)
-            ];
-          }
-        }
-      };
-      toStringV02 = (bytes, cache3, base3) => {
-        const { prefix } = base3;
-        if (prefix !== base58btc2.prefix) {
-          throw Error(`Cannot string encode V0 in ${base3.name} encoding`);
-        }
-        const cid = cache3.get(prefix);
-        if (cid == null) {
-          const cid2 = base3.encode(bytes).slice(1);
-          cache3.set(prefix, cid2);
-          return cid2;
-        } else {
-          return cid;
-        }
-      };
-      toStringV12 = (bytes, cache3, base3) => {
-        const { prefix } = base3;
-        const cid = cache3.get(prefix);
-        if (cid == null) {
-          const cid2 = base3.encode(bytes);
-          cache3.set(prefix, cid2);
-          return cid2;
-        } else {
-          return cid;
-        }
-      };
-      DAG_PB_CODE2 = 112;
-      SHA_256_CODE2 = 18;
-      encodeCID2 = (version, code, multihash) => {
-        const codeOffset = encodingLength2(version);
-        const hashOffset = codeOffset + encodingLength2(code);
-        const bytes = new Uint8Array(hashOffset + multihash.byteLength);
-        encodeTo2(version, bytes, 0);
-        encodeTo2(code, bytes, codeOffset);
-        bytes.set(multihash, hashOffset);
-        return bytes;
-      };
-      cidSymbol2 = Symbol.for("@ipld/js-cid/CID");
-    }
-  });
-
-  // node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/is.js
+  // node_modules/cborg/lib/is.js
   function is(value) {
     if (value === null) {
       return "null";
@@ -68318,7 +67516,7 @@ if (cid) {
   }
   var typeofs, objectTypeNames;
   var init_is = __esm({
-    "node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/is.js"() {
+    "node_modules/cborg/lib/is.js"() {
       typeofs = [
         "string",
         "number",
@@ -68364,20 +67562,30 @@ if (cid) {
     }
   });
 
-  // node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/token.js
+  // node_modules/cborg/lib/token.js
   var Type, Token;
   var init_token = __esm({
-    "node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/token.js"() {
+    "node_modules/cborg/lib/token.js"() {
       Type = class {
+        /**
+         * @param {number} major
+         * @param {string} name
+         * @param {boolean} terminal
+         */
         constructor(major, name, terminal) {
           this.major = major;
           this.majorEncoded = major << 5;
           this.name = name;
           this.terminal = terminal;
         }
+        /* c8 ignore next 3 */
         toString() {
           return `Type[${this.major}].${this.name}`;
         }
+        /**
+         * @param {Type} typ
+         * @returns {number}
+         */
         compare(typ) {
           return this.major < typ.major ? -1 : this.major > typ.major ? 1 : 0;
         }
@@ -68396,6 +67604,11 @@ if (cid) {
       Type.undefined = new Type(7, "undefined", true);
       Type.break = new Type(7, "break", true);
       Token = class {
+        /**
+         * @param {Type} type
+         * @param {any} [value]
+         * @param {number} [encodedLength]
+         */
         constructor(type, value, encodedLength) {
           this.type = type;
           this.value = value;
@@ -68403,6 +67616,7 @@ if (cid) {
           this.encodedBytes = void 0;
           this.byteValue = void 0;
         }
+        /* c8 ignore next 3 */
         toString() {
           return `Token[${this.type}].${this.value}`;
         }
@@ -68410,15 +67624,15 @@ if (cid) {
     }
   });
 
-  // node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/byte-utils.js
-  function isBuffer2(buf3) {
-    return useBuffer && globalThis.Buffer.isBuffer(buf3);
+  // node_modules/cborg/lib/byte-utils.js
+  function isBuffer2(buf2) {
+    return useBuffer && globalThis.Buffer.isBuffer(buf2);
   }
-  function asU8A(buf3) {
-    if (!(buf3 instanceof Uint8Array)) {
-      return Uint8Array.from(buf3);
+  function asU8A(buf2) {
+    if (!(buf2 instanceof Uint8Array)) {
+      return Uint8Array.from(buf2);
     }
-    return isBuffer2(buf3) ? new Uint8Array(buf3.buffer, buf3.byteOffset, buf3.byteLength) : buf3;
+    return isBuffer2(buf2) ? new Uint8Array(buf2.buffer, buf2.byteOffset, buf2.byteLength) : buf2;
   }
   function compare(b1, b2) {
     if (isBuffer2(b1) && isBuffer2(b2)) {
@@ -68432,65 +67646,34 @@ if (cid) {
     }
     return 0;
   }
-  function utf8ToBytes(string, units = Infinity) {
-    let codePoint;
-    const length3 = string.length;
-    let leadSurrogate = null;
-    const bytes = [];
-    for (let i = 0; i < length3; ++i) {
-      codePoint = string.charCodeAt(i);
-      if (codePoint > 55295 && codePoint < 57344) {
-        if (!leadSurrogate) {
-          if (codePoint > 56319) {
-            if ((units -= 3) > -1)
-              bytes.push(239, 191, 189);
-            continue;
-          } else if (i + 1 === length3) {
-            if ((units -= 3) > -1)
-              bytes.push(239, 191, 189);
-            continue;
-          }
-          leadSurrogate = codePoint;
-          continue;
-        }
-        if (codePoint < 56320) {
-          if ((units -= 3) > -1)
-            bytes.push(239, 191, 189);
-          leadSurrogate = codePoint;
-          continue;
-        }
-        codePoint = (leadSurrogate - 55296 << 10 | codePoint - 56320) + 65536;
-      } else if (leadSurrogate) {
-        if ((units -= 3) > -1)
-          bytes.push(239, 191, 189);
-      }
-      leadSurrogate = null;
-      if (codePoint < 128) {
-        if ((units -= 1) < 0)
-          break;
-        bytes.push(codePoint);
-      } else if (codePoint < 2048) {
-        if ((units -= 2) < 0)
-          break;
-        bytes.push(codePoint >> 6 | 192, codePoint & 63 | 128);
-      } else if (codePoint < 65536) {
-        if ((units -= 3) < 0)
-          break;
-        bytes.push(codePoint >> 12 | 224, codePoint >> 6 & 63 | 128, codePoint & 63 | 128);
-      } else if (codePoint < 1114112) {
-        if ((units -= 4) < 0)
-          break;
-        bytes.push(codePoint >> 18 | 240, codePoint >> 12 & 63 | 128, codePoint >> 6 & 63 | 128, codePoint & 63 | 128);
+  function utf8ToBytes(str) {
+    const out = [];
+    let p = 0;
+    for (let i = 0; i < str.length; i++) {
+      let c = str.charCodeAt(i);
+      if (c < 128) {
+        out[p++] = c;
+      } else if (c < 2048) {
+        out[p++] = c >> 6 | 192;
+        out[p++] = c & 63 | 128;
+      } else if ((c & 64512) === 55296 && i + 1 < str.length && (str.charCodeAt(i + 1) & 64512) === 56320) {
+        c = 65536 + ((c & 1023) << 10) + (str.charCodeAt(++i) & 1023);
+        out[p++] = c >> 18 | 240;
+        out[p++] = c >> 12 & 63 | 128;
+        out[p++] = c >> 6 & 63 | 128;
+        out[p++] = c & 63 | 128;
       } else {
-        throw new Error("Invalid code point");
+        out[p++] = c >> 12 | 224;
+        out[p++] = c >> 6 & 63 | 128;
+        out[p++] = c & 63 | 128;
       }
     }
-    return bytes;
+    return out;
   }
-  function utf8Slice(buf3, offset, end) {
+  function utf8Slice(buf2, offset, end) {
     const res = [];
     while (offset < end) {
-      const firstByte = buf3[offset];
+      const firstByte = buf2[offset];
       let codePoint = null;
       let bytesPerSequence = firstByte > 239 ? 4 : firstByte > 223 ? 3 : firstByte > 191 ? 2 : 1;
       if (offset + bytesPerSequence <= end) {
@@ -68502,7 +67685,7 @@ if (cid) {
             }
             break;
           case 2:
-            secondByte = buf3[offset + 1];
+            secondByte = buf2[offset + 1];
             if ((secondByte & 192) === 128) {
               tempCodePoint = (firstByte & 31) << 6 | secondByte & 63;
               if (tempCodePoint > 127) {
@@ -68511,8 +67694,8 @@ if (cid) {
             }
             break;
           case 3:
-            secondByte = buf3[offset + 1];
-            thirdByte = buf3[offset + 2];
+            secondByte = buf2[offset + 1];
+            thirdByte = buf2[offset + 2];
             if ((secondByte & 192) === 128 && (thirdByte & 192) === 128) {
               tempCodePoint = (firstByte & 15) << 12 | (secondByte & 63) << 6 | thirdByte & 63;
               if (tempCodePoint > 2047 && (tempCodePoint < 55296 || tempCodePoint > 57343)) {
@@ -68521,9 +67704,9 @@ if (cid) {
             }
             break;
           case 4:
-            secondByte = buf3[offset + 1];
-            thirdByte = buf3[offset + 2];
-            fourthByte = buf3[offset + 3];
+            secondByte = buf2[offset + 1];
+            thirdByte = buf2[offset + 2];
+            fourthByte = buf2[offset + 3];
             if ((secondByte & 192) === 128 && (thirdByte & 192) === 128 && (fourthByte & 192) === 128) {
               tempCodePoint = (firstByte & 15) << 18 | (secondByte & 63) << 12 | (thirdByte & 63) << 6 | fourthByte & 63;
               if (tempCodePoint > 65535 && tempCodePoint < 1114112) {
@@ -68553,68 +67736,163 @@ if (cid) {
     let res = "";
     let i = 0;
     while (i < len) {
-      res += String.fromCharCode.apply(String, codePoints.slice(i, i += MAX_ARGUMENTS_LENGTH));
+      res += String.fromCharCode.apply(
+        String,
+        codePoints.slice(i, i += MAX_ARGUMENTS_LENGTH)
+      );
     }
     return res;
   }
   var useBuffer, textDecoder, textEncoder, toString, fromString, fromArray, slice, concat, alloc, MAX_ARGUMENTS_LENGTH;
   var init_byte_utils = __esm({
-    "node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/byte-utils.js"() {
-      useBuffer = globalThis.process && !globalThis.process.browser && globalThis.Buffer && typeof globalThis.Buffer.isBuffer === "function";
+    "node_modules/cborg/lib/byte-utils.js"() {
+      useBuffer = globalThis.process && // @ts-ignore
+      !globalThis.process.browser && // @ts-ignore
+      globalThis.Buffer && // @ts-ignore
+      typeof globalThis.Buffer.isBuffer === "function";
       textDecoder = new TextDecoder();
       textEncoder = new TextEncoder();
-      toString = useBuffer ? (bytes, start, end) => {
-        return end - start > 64 ? globalThis.Buffer.from(bytes.subarray(start, end)).toString("utf8") : utf8Slice(bytes, start, end);
-      } : (bytes, start, end) => {
-        return end - start > 64 ? textDecoder.decode(bytes.subarray(start, end)) : utf8Slice(bytes, start, end);
-      };
-      fromString = useBuffer ? (string) => {
-        return string.length > 64 ? globalThis.Buffer.from(string) : utf8ToBytes(string);
-      } : (string) => {
-        return string.length > 64 ? textEncoder.encode(string) : utf8ToBytes(string);
-      };
+      toString = useBuffer ? (
+        // eslint-disable-line operator-linebreak
+        /**
+         * @param {Uint8Array} bytes
+         * @param {number} start
+         * @param {number} end
+         */
+        (bytes, start, end) => {
+          return end - start > 64 ? (
+            // eslint-disable-line operator-linebreak
+            // @ts-ignore
+            globalThis.Buffer.from(bytes.subarray(start, end)).toString("utf8")
+          ) : utf8Slice(bytes, start, end);
+        }
+      ) : (
+        // eslint-disable-line operator-linebreak
+        /**
+         * @param {Uint8Array} bytes
+         * @param {number} start
+         * @param {number} end
+         */
+        (bytes, start, end) => {
+          return end - start > 64 ? textDecoder.decode(bytes.subarray(start, end)) : utf8Slice(bytes, start, end);
+        }
+      );
+      fromString = useBuffer ? (
+        // eslint-disable-line operator-linebreak
+        /**
+         * @param {string} string
+         */
+        (string) => {
+          return string.length > 64 ? (
+            // eslint-disable-line operator-linebreak
+            // @ts-ignore
+            globalThis.Buffer.from(string)
+          ) : utf8ToBytes(string);
+        }
+      ) : (
+        // eslint-disable-line operator-linebreak
+        /**
+         * @param {string} string
+         */
+        (string) => {
+          return string.length > 64 ? textEncoder.encode(string) : utf8ToBytes(string);
+        }
+      );
       fromArray = (arr) => {
         return Uint8Array.from(arr);
       };
-      slice = useBuffer ? (bytes, start, end) => {
-        if (isBuffer2(bytes)) {
-          return new Uint8Array(bytes.subarray(start, end));
-        }
-        return bytes.slice(start, end);
-      } : (bytes, start, end) => {
-        return bytes.slice(start, end);
-      };
-      concat = useBuffer ? (chunks, length3) => {
-        chunks = chunks.map((c) => c instanceof Uint8Array ? c : globalThis.Buffer.from(c));
-        return asU8A(globalThis.Buffer.concat(chunks, length3));
-      } : (chunks, length3) => {
-        const out = new Uint8Array(length3);
-        let off = 0;
-        for (let b of chunks) {
-          if (off + b.length > out.length) {
-            b = b.subarray(0, out.length - off);
+      slice = useBuffer ? (
+        // eslint-disable-line operator-linebreak
+        /**
+         * @param {Uint8Array} bytes
+         * @param {number} start
+         * @param {number} end
+         */
+        (bytes, start, end) => {
+          if (isBuffer2(bytes)) {
+            return new Uint8Array(bytes.subarray(start, end));
           }
-          out.set(b, off);
-          off += b.length;
+          return bytes.slice(start, end);
         }
-        return out;
-      };
-      alloc = useBuffer ? (size) => {
-        return globalThis.Buffer.allocUnsafe(size);
-      } : (size) => {
-        return new Uint8Array(size);
-      };
+      ) : (
+        // eslint-disable-line operator-linebreak
+        /**
+         * @param {Uint8Array} bytes
+         * @param {number} start
+         * @param {number} end
+         */
+        (bytes, start, end) => {
+          return bytes.slice(start, end);
+        }
+      );
+      concat = useBuffer ? (
+        // eslint-disable-line operator-linebreak
+        /**
+         * @param {Uint8Array[]} chunks
+         * @param {number} length
+         * @returns {Uint8Array}
+         */
+        (chunks, length2) => {
+          chunks = chunks.map((c) => c instanceof Uint8Array ? c : (
+            // eslint-disable-line operator-linebreak
+            // @ts-ignore
+            globalThis.Buffer.from(c)
+          ));
+          return asU8A(globalThis.Buffer.concat(chunks, length2));
+        }
+      ) : (
+        // eslint-disable-line operator-linebreak
+        /**
+         * @param {Uint8Array[]} chunks
+         * @param {number} length
+         * @returns {Uint8Array}
+         */
+        (chunks, length2) => {
+          const out = new Uint8Array(length2);
+          let off = 0;
+          for (let b of chunks) {
+            if (off + b.length > out.length) {
+              b = b.subarray(0, out.length - off);
+            }
+            out.set(b, off);
+            off += b.length;
+          }
+          return out;
+        }
+      );
+      alloc = useBuffer ? (
+        // eslint-disable-line operator-linebreak
+        /**
+         * @param {number} size
+         * @returns {Uint8Array}
+         */
+        (size) => {
+          return globalThis.Buffer.allocUnsafe(size);
+        }
+      ) : (
+        // eslint-disable-line operator-linebreak
+        /**
+         * @param {number} size
+         * @returns {Uint8Array}
+         */
+        (size) => {
+          return new Uint8Array(size);
+        }
+      );
       MAX_ARGUMENTS_LENGTH = 4096;
     }
   });
 
-  // node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/bl.js
+  // node_modules/cborg/lib/bl.js
   var defaultChunkSize, Bl;
   var init_bl = __esm({
-    "node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/bl.js"() {
+    "node_modules/cborg/lib/bl.js"() {
       init_byte_utils();
       defaultChunkSize = 256;
       Bl = class {
+        /**
+         * @param {number} [chunkSize]
+         */
         constructor(chunkSize = defaultChunkSize) {
           this.chunkSize = chunkSize;
           this.cursor = 0;
@@ -68633,6 +67911,9 @@ if (cid) {
             this.maxCursor = this._initReuseChunk.length - 1;
           }
         }
+        /**
+         * @param {Uint8Array|number[]} bytes
+         */
         push(bytes) {
           let topChunk = this.chunks[this.chunks.length - 1];
           const newMax = this.cursor + bytes.length;
@@ -68662,6 +67943,10 @@ if (cid) {
           }
           this.cursor += bytes.length;
         }
+        /**
+         * @param {boolean} [reset]
+         * @returns {Uint8Array}
+         */
         toBytes(reset = false) {
           let byts;
           if (this.chunks.length === 1) {
@@ -68685,7 +67970,7 @@ if (cid) {
     }
   });
 
-  // node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/common.js
+  // node_modules/cborg/lib/common.js
   function assertEnoughData(data, pos, need) {
     if (data.length - pos < need) {
       throw new Error(`${decodeErrPrefix} not enough data for type`);
@@ -68693,7 +67978,7 @@ if (cid) {
   }
   var decodeErrPrefix, encodeErrPrefix, uintMinorPrefixBytes;
   var init_common = __esm({
-    "node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/common.js"() {
+    "node_modules/cborg/lib/common.js"() {
       decodeErrPrefix = "CBOR decode error:";
       encodeErrPrefix = "CBOR encode error:";
       uintMinorPrefixBytes = [];
@@ -68705,7 +67990,7 @@ if (cid) {
     }
   });
 
-  // node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/0uint.js
+  // node_modules/cborg/lib/0uint.js
   function readUint8(data, offset, options) {
     assertEnoughData(data, offset, 1);
     const value = data[offset];
@@ -68758,48 +68043,26 @@ if (cid) {
   function decodeUint64(data, pos, _minor, options) {
     return new Token(Type.uint, readUint64(data, pos + 1, options), 9);
   }
-  function encodeUint(buf3, token) {
-    return encodeUintValue(buf3, 0, token.value);
+  function encodeUint(buf2, token) {
+    return encodeUintValue(buf2, 0, token.value);
   }
-  function encodeUintValue(buf3, major, uint) {
+  function encodeUintValue(buf2, major, uint) {
     if (uint < uintBoundaries[0]) {
       const nuint = Number(uint);
-      buf3.push([major | nuint]);
+      buf2.push([major | nuint]);
     } else if (uint < uintBoundaries[1]) {
       const nuint = Number(uint);
-      buf3.push([
-        major | 24,
-        nuint
-      ]);
+      buf2.push([major | 24, nuint]);
     } else if (uint < uintBoundaries[2]) {
       const nuint = Number(uint);
-      buf3.push([
-        major | 25,
-        nuint >>> 8,
-        nuint & 255
-      ]);
+      buf2.push([major | 25, nuint >>> 8, nuint & 255]);
     } else if (uint < uintBoundaries[3]) {
       const nuint = Number(uint);
-      buf3.push([
-        major | 26,
-        nuint >>> 24 & 255,
-        nuint >>> 16 & 255,
-        nuint >>> 8 & 255,
-        nuint & 255
-      ]);
+      buf2.push([major | 26, nuint >>> 24 & 255, nuint >>> 16 & 255, nuint >>> 8 & 255, nuint & 255]);
     } else {
       const buint = BigInt(uint);
       if (buint < uintBoundaries[4]) {
-        const set = [
-          major | 27,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0
-        ];
+        const set = [major | 27, 0, 0, 0, 0, 0, 0, 0];
         let lo = Number(buint & BigInt(4294967295));
         let hi = Number(buint >> BigInt(32) & BigInt(4294967295));
         set[8] = lo & 255;
@@ -68816,7 +68079,7 @@ if (cid) {
         set[2] = hi & 255;
         hi = hi >> 8;
         set[1] = hi & 255;
-        buf3.push(set);
+        buf2.push(set);
       } else {
         throw new Error(`${decodeErrPrefix} encountered BigInt larger than allowable range`);
       }
@@ -68824,16 +68087,10 @@ if (cid) {
   }
   var uintBoundaries;
   var init_uint = __esm({
-    "node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/0uint.js"() {
+    "node_modules/cborg/lib/0uint.js"() {
       init_token();
       init_common();
-      uintBoundaries = [
-        24,
-        256,
-        65536,
-        4294967296,
-        BigInt("18446744073709551616")
-      ];
+      uintBoundaries = [24, 256, 65536, 4294967296, BigInt("18446744073709551616")];
       encodeUint.encodedSize = function encodedSize(token) {
         return encodeUintValue.encodedSize(token.value);
       };
@@ -68853,12 +68110,15 @@ if (cid) {
         return 9;
       };
       encodeUint.compareTokens = function compareTokens(tok1, tok2) {
-        return tok1.value < tok2.value ? -1 : tok1.value > tok2.value ? 1 : 0;
+        return tok1.value < tok2.value ? -1 : tok1.value > tok2.value ? 1 : (
+          /* c8 ignore next */
+          0
+        );
       };
     }
   });
 
-  // node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/1negint.js
+  // node_modules/cborg/lib/1negint.js
   function decodeNegint8(data, pos, _minor, options) {
     return new Token(Type.negint, -1 - readUint8(data, pos + 1, options), 2);
   }
@@ -68881,14 +68141,14 @@ if (cid) {
     }
     return new Token(Type.negint, neg1b - BigInt(int), 9);
   }
-  function encodeNegint(buf3, token) {
+  function encodeNegint(buf2, token) {
     const negint = token.value;
     const unsigned = typeof negint === "bigint" ? negint * neg1b - pos1b : negint * -1 - 1;
-    encodeUintValue(buf3, token.type.majorEncoded, unsigned);
+    encodeUintValue(buf2, token.type.majorEncoded, unsigned);
   }
   var neg1b, pos1b;
   var init_negint = __esm({
-    "node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/1negint.js"() {
+    "node_modules/cborg/lib/1negint.js"() {
       init_token();
       init_uint();
       init_common();
@@ -68912,16 +68172,19 @@ if (cid) {
         return 9;
       };
       encodeNegint.compareTokens = function compareTokens2(tok1, tok2) {
-        return tok1.value < tok2.value ? 1 : tok1.value > tok2.value ? -1 : 0;
+        return tok1.value < tok2.value ? 1 : tok1.value > tok2.value ? -1 : (
+          /* c8 ignore next */
+          0
+        );
       };
     }
   });
 
-  // node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/2bytes.js
-  function toToken(data, pos, prefix, length3) {
-    assertEnoughData(data, pos, prefix + length3);
-    const buf3 = slice(data, pos + prefix, pos + prefix + length3);
-    return new Token(Type.bytes, buf3, prefix + length3);
+  // node_modules/cborg/lib/2bytes.js
+  function toToken(data, pos, prefix, length2) {
+    assertEnoughData(data, pos, prefix + length2);
+    const buf2 = slice(data, pos + prefix, pos + prefix + length2);
+    return new Token(Type.bytes, buf2, prefix + length2);
   }
   function decodeBytesCompact(data, pos, minor, _options) {
     return toToken(data, pos, 1, minor);
@@ -68948,16 +68211,16 @@ if (cid) {
     }
     return token.encodedBytes;
   }
-  function encodeBytes(buf3, token) {
+  function encodeBytes(buf2, token) {
     const bytes = tokenBytes(token);
-    encodeUintValue(buf3, token.type.majorEncoded, bytes.length);
-    buf3.push(bytes);
+    encodeUintValue(buf2, token.type.majorEncoded, bytes.length);
+    buf2.push(bytes);
   }
   function compareBytes(b1, b2) {
     return b1.length < b2.length ? -1 : b1.length > b2.length ? 1 : compare(b1, b2);
   }
-  var init_bytes3 = __esm({
-    "node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/2bytes.js"() {
+  var init_bytes2 = __esm({
+    "node_modules/cborg/lib/2bytes.js"() {
       init_token();
       init_common();
       init_uint();
@@ -68972,9 +68235,9 @@ if (cid) {
     }
   });
 
-  // node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/3string.js
-  function toToken2(data, pos, prefix, length3, options) {
-    const totLength = prefix + length3;
+  // node_modules/cborg/lib/3string.js
+  function toToken2(data, pos, prefix, length2, options) {
+    const totLength = prefix + length2;
     assertEnoughData(data, pos, totLength);
     const tok = new Token(Type.string, toString(data, pos + prefix, pos + totLength), totLength);
     if (options.retainStringBytes === true) {
@@ -69003,19 +68266,19 @@ if (cid) {
   }
   var encodeString;
   var init_string = __esm({
-    "node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/3string.js"() {
+    "node_modules/cborg/lib/3string.js"() {
       init_token();
       init_common();
       init_uint();
-      init_bytes3();
+      init_bytes2();
       init_byte_utils();
       encodeString = encodeBytes;
     }
   });
 
-  // node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/4array.js
-  function toToken3(_data, _pos, prefix, length3) {
-    return new Token(Type.array, length3, prefix);
+  // node_modules/cborg/lib/4array.js
+  function toToken3(_data, _pos, prefix, length2) {
+    return new Token(Type.array, length2, prefix);
   }
   function decodeArrayCompact(data, pos, minor, _options) {
     return toToken3(data, pos, 1, minor);
@@ -69042,11 +68305,11 @@ if (cid) {
     }
     return toToken3(data, pos, 1, Infinity);
   }
-  function encodeArray(buf3, token) {
-    encodeUintValue(buf3, Type.array.majorEncoded, token.value);
+  function encodeArray(buf2, token) {
+    encodeUintValue(buf2, Type.array.majorEncoded, token.value);
   }
   var init_array = __esm({
-    "node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/4array.js"() {
+    "node_modules/cborg/lib/4array.js"() {
       init_token();
       init_uint();
       init_common();
@@ -69057,9 +68320,9 @@ if (cid) {
     }
   });
 
-  // node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/5map.js
-  function toToken4(_data, _pos, prefix, length3) {
-    return new Token(Type.map, length3, prefix);
+  // node_modules/cborg/lib/5map.js
+  function toToken4(_data, _pos, prefix, length2) {
+    return new Token(Type.map, length2, prefix);
   }
   function decodeMapCompact(data, pos, minor, _options) {
     return toToken4(data, pos, 1, minor);
@@ -69086,11 +68349,11 @@ if (cid) {
     }
     return toToken4(data, pos, 1, Infinity);
   }
-  function encodeMap(buf3, token) {
-    encodeUintValue(buf3, Type.map.majorEncoded, token.value);
+  function encodeMap(buf2, token) {
+    encodeUintValue(buf2, Type.map.majorEncoded, token.value);
   }
   var init_map = __esm({
-    "node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/5map.js"() {
+    "node_modules/cborg/lib/5map.js"() {
       init_token();
       init_uint();
       init_common();
@@ -69101,7 +68364,7 @@ if (cid) {
     }
   });
 
-  // node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/6tag.js
+  // node_modules/cborg/lib/6tag.js
   function decodeTagCompact(_data, _pos, minor, _options) {
     return new Token(Type.tag, minor, 1);
   }
@@ -69117,11 +68380,11 @@ if (cid) {
   function decodeTag64(data, pos, _minor, options) {
     return new Token(Type.tag, readUint64(data, pos + 1, options), 9);
   }
-  function encodeTag(buf3, token) {
-    encodeUintValue(buf3, Type.tag.majorEncoded, token.value);
+  function encodeTag(buf2, token) {
+    encodeUintValue(buf2, Type.tag.majorEncoded, token.value);
   }
   var init_tag = __esm({
-    "node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/6tag.js"() {
+    "node_modules/cborg/lib/6tag.js"() {
       init_token();
       init_uint();
       encodeTag.compareTokens = encodeUint.compareTokens;
@@ -69131,7 +68394,7 @@ if (cid) {
     }
   });
 
-  // node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/7float.js
+  // node_modules/cborg/lib/7float.js
   function decodeUndefined(_data, _pos, _minor, options) {
     if (options.allowUndefined === false) {
       throw new Error(`${decodeErrPrefix} undefined values are not supported`);
@@ -69166,16 +68429,16 @@ if (cid) {
   function decodeFloat64(data, pos, _minor, options) {
     return createToken(readFloat64(data, pos + 1), 9, options);
   }
-  function encodeFloat(buf3, token, options) {
+  function encodeFloat(buf2, token, options) {
     const float = token.value;
     if (float === false) {
-      buf3.push([Type.float.majorEncoded | MINOR_FALSE]);
+      buf2.push([Type.float.majorEncoded | MINOR_FALSE]);
     } else if (float === true) {
-      buf3.push([Type.float.majorEncoded | MINOR_TRUE]);
+      buf2.push([Type.float.majorEncoded | MINOR_TRUE]);
     } else if (float === null) {
-      buf3.push([Type.float.majorEncoded | MINOR_NULL]);
+      buf2.push([Type.float.majorEncoded | MINOR_NULL]);
     } else if (float === void 0) {
-      buf3.push([Type.float.majorEncoded | MINOR_UNDEFINED]);
+      buf2.push([Type.float.majorEncoded | MINOR_UNDEFINED]);
     } else {
       let decoded;
       let success = false;
@@ -69184,14 +68447,14 @@ if (cid) {
         decoded = readFloat16(ui8a, 1);
         if (float === decoded || Number.isNaN(float)) {
           ui8a[0] = 249;
-          buf3.push(ui8a.slice(0, 3));
+          buf2.push(ui8a.slice(0, 3));
           success = true;
         } else {
           encodeFloat32(float);
           decoded = readFloat32(ui8a, 1);
           if (float === decoded) {
             ui8a[0] = 250;
-            buf3.push(ui8a.slice(0, 5));
+            buf2.push(ui8a.slice(0, 5));
             success = true;
           }
         }
@@ -69200,7 +68463,7 @@ if (cid) {
         encodeFloat64(float);
         decoded = readFloat64(ui8a, 1);
         ui8a[0] = 251;
-        buf3.push(ui8a.slice(0, 9));
+        buf2.push(ui8a.slice(0, 9));
       }
     }
   }
@@ -69225,18 +68488,19 @@ if (cid) {
         if (logicalExponent < -24) {
           dataView.setUint16(0, 0);
         } else if (logicalExponent < -14) {
-          dataView.setUint16(0, (valu32 & 2147483648) >> 16 | 1 << 24 + logicalExponent, false);
+          dataView.setUint16(0, (valu32 & 2147483648) >> 16 | /* sign bit */
+          1 << 24 + logicalExponent, false);
         } else {
           dataView.setUint16(0, (valu32 & 2147483648) >> 16 | logicalExponent + 15 << 10 | mantissa >> 13, false);
         }
       }
     }
   }
-  function readFloat16(ui8a3, pos) {
-    if (ui8a3.length - pos < 2) {
+  function readFloat16(ui8a2, pos) {
+    if (ui8a2.length - pos < 2) {
       throw new Error(`${decodeErrPrefix} not enough data for float16`);
     }
-    const half = (ui8a3[pos] << 8) + ui8a3[pos + 1];
+    const half = (ui8a2[pos] << 8) + ui8a2[pos + 1];
     if (half === 31744) {
       return Infinity;
     }
@@ -69261,26 +68525,26 @@ if (cid) {
   function encodeFloat32(inp) {
     dataView.setFloat32(0, inp, false);
   }
-  function readFloat32(ui8a3, pos) {
-    if (ui8a3.length - pos < 4) {
+  function readFloat32(ui8a2, pos) {
+    if (ui8a2.length - pos < 4) {
       throw new Error(`${decodeErrPrefix} not enough data for float32`);
     }
-    const offset = (ui8a3.byteOffset || 0) + pos;
-    return new DataView(ui8a3.buffer, offset, 4).getFloat32(0, false);
+    const offset = (ui8a2.byteOffset || 0) + pos;
+    return new DataView(ui8a2.buffer, offset, 4).getFloat32(0, false);
   }
   function encodeFloat64(inp) {
     dataView.setFloat64(0, inp, false);
   }
-  function readFloat64(ui8a3, pos) {
-    if (ui8a3.length - pos < 8) {
+  function readFloat64(ui8a2, pos) {
+    if (ui8a2.length - pos < 8) {
       throw new Error(`${decodeErrPrefix} not enough data for float64`);
     }
-    const offset = (ui8a3.byteOffset || 0) + pos;
-    return new DataView(ui8a3.buffer, offset, 8).getFloat64(0, false);
+    const offset = (ui8a2.byteOffset || 0) + pos;
+    return new DataView(ui8a2.buffer, offset, 8).getFloat64(0, false);
   }
   var MINOR_FALSE, MINOR_TRUE, MINOR_NULL, MINOR_UNDEFINED, buffer, dataView, ui8a;
   var init_float = __esm({
-    "node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/7float.js"() {
+    "node_modules/cborg/lib/7float.js"() {
       init_token();
       init_common();
       init_uint();
@@ -69314,7 +68578,7 @@ if (cid) {
     }
   });
 
-  // node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/jump.js
+  // node_modules/cborg/lib/jump.js
   function invalidMinor(data, pos, minor) {
     throw new Error(`${decodeErrPrefix} encountered invalid minor (${minor}) for major ${data[pos] >>> 5}`);
   }
@@ -69364,11 +68628,11 @@ if (cid) {
   }
   var jump, quick;
   var init_jump = __esm({
-    "node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/jump.js"() {
+    "node_modules/cborg/lib/jump.js"() {
       init_token();
       init_uint();
       init_negint();
-      init_bytes3();
+      init_bytes2();
       init_string();
       init_array();
       init_map();
@@ -69486,7 +68750,7 @@ if (cid) {
     }
   });
 
-  // node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/encode.js
+  // node_modules/cborg/lib/encode.js
   function makeCborEncoders() {
     const encoders = [];
     encoders[Type.uint.major] = encodeUint;
@@ -69501,7 +68765,8 @@ if (cid) {
   }
   function objectToTokens(obj, options = {}, refStack) {
     const typ = is(obj);
-    const customTypeEncoder = options && options.typeEncoders && options.typeEncoders[typ] || typeEncoders[typ];
+    const customTypeEncoder = options && options.typeEncoders && /** @type {OptionalTypeEncoder} */
+    options.typeEncoders[typ] || typeEncoders[typ];
     if (typeof customTypeEncoder === "function") {
       const tokens = customTypeEncoder(obj, typ, options, refStack);
       if (tokens != null) {
@@ -69532,13 +68797,13 @@ if (cid) {
     }
     return tcmp;
   }
-  function tokensToEncoded(buf3, tokens, encoders, options) {
+  function tokensToEncoded(buf2, tokens, encoders, options) {
     if (Array.isArray(tokens)) {
       for (const token of tokens) {
-        tokensToEncoded(buf3, token, encoders, options);
+        tokensToEncoded(buf2, token, encoders, options);
       }
     } else {
-      encoders[tokens.type.major](buf3, tokens, options);
+      encoders[tokens.type.major](buf2, tokens, options);
     }
   }
   function encodeCustom(data, encoders, options) {
@@ -69551,25 +68816,25 @@ if (cid) {
       const encoder = encoders[tokens.type.major];
       if (encoder.encodedSize) {
         const size = encoder.encodedSize(tokens, options);
-        const buf3 = new Bl(size);
-        encoder(buf3, tokens, options);
-        if (buf3.chunks.length !== 1) {
+        const buf2 = new Bl(size);
+        encoder(buf2, tokens, options);
+        if (buf2.chunks.length !== 1) {
           throw new Error(`Unexpected error: pre-calculated length for ${tokens} was wrong`);
         }
-        return asU8A(buf3.chunks[0]);
+        return asU8A(buf2.chunks[0]);
       }
     }
     buf.reset();
     tokensToEncoded(buf, tokens, encoders, options);
     return buf.toBytes(true);
   }
-  function encode5(data, options) {
+  function encode3(data, options) {
     options = Object.assign({}, defaultEncodeOptions, options);
     return encodeCustom(data, cborEncoders, options);
   }
   var defaultEncodeOptions, cborEncoders, buf, Ref, simpleTokens, typeEncoders;
   var init_encode = __esm({
-    "node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/encode.js"() {
+    "node_modules/cborg/lib/encode.js"() {
       init_is();
       init_token();
       init_bl();
@@ -69578,7 +68843,7 @@ if (cid) {
       init_byte_utils();
       init_uint();
       init_negint();
-      init_bytes3();
+      init_bytes2();
       init_string();
       init_array();
       init_map();
@@ -69592,10 +68857,18 @@ if (cid) {
       cborEncoders = makeCborEncoders();
       buf = new Bl();
       Ref = class _Ref {
+        /**
+         * @param {object|any[]} obj
+         * @param {Reference|undefined} parent
+         */
         constructor(obj, parent) {
           this.obj = obj;
           this.parent = parent;
         }
+        /**
+         * @param {object|any[]} obj
+         * @returns {boolean}
+         */
         includes(obj) {
           let p = this;
           do {
@@ -69605,6 +68878,11 @@ if (cid) {
           } while (p = p.parent);
           return false;
         }
+        /**
+         * @param {Reference|undefined} stack
+         * @param {object|any[]} obj
+         * @returns {Reference}
+         */
         static createCheck(stack, obj) {
           if (stack && stack.includes(obj)) {
             throw new Error(`${encodeErrPrefix} object contains circular references`);
@@ -69621,6 +68899,13 @@ if (cid) {
         emptyMap: new Token(Type.map, 0)
       };
       typeEncoders = {
+        /**
+         * @param {any} obj
+         * @param {string} _typ
+         * @param {EncodeOptions} _options
+         * @param {Reference} [_refStack]
+         * @returns {TokenOrNestedTokens}
+         */
         number(obj, _typ, _options, _refStack) {
           if (!Number.isInteger(obj) || !Number.isSafeInteger(obj)) {
             return new Token(Type.float, obj);
@@ -69630,6 +68915,13 @@ if (cid) {
             return new Token(Type.negint, obj);
           }
         },
+        /**
+         * @param {any} obj
+         * @param {string} _typ
+         * @param {EncodeOptions} _options
+         * @param {Reference} [_refStack]
+         * @returns {TokenOrNestedTokens}
+         */
         bigint(obj, _typ, _options, _refStack) {
           if (obj >= BigInt(0)) {
             return new Token(Type.uint, obj);
@@ -69637,34 +68929,87 @@ if (cid) {
             return new Token(Type.negint, obj);
           }
         },
+        /**
+         * @param {any} obj
+         * @param {string} _typ
+         * @param {EncodeOptions} _options
+         * @param {Reference} [_refStack]
+         * @returns {TokenOrNestedTokens}
+         */
         Uint8Array(obj, _typ, _options, _refStack) {
           return new Token(Type.bytes, obj);
         },
+        /**
+         * @param {any} obj
+         * @param {string} _typ
+         * @param {EncodeOptions} _options
+         * @param {Reference} [_refStack]
+         * @returns {TokenOrNestedTokens}
+         */
         string(obj, _typ, _options, _refStack) {
           return new Token(Type.string, obj);
         },
+        /**
+         * @param {any} obj
+         * @param {string} _typ
+         * @param {EncodeOptions} _options
+         * @param {Reference} [_refStack]
+         * @returns {TokenOrNestedTokens}
+         */
         boolean(obj, _typ, _options, _refStack) {
           return obj ? simpleTokens.true : simpleTokens.false;
         },
+        /**
+         * @param {any} _obj
+         * @param {string} _typ
+         * @param {EncodeOptions} _options
+         * @param {Reference} [_refStack]
+         * @returns {TokenOrNestedTokens}
+         */
         null(_obj2, _typ, _options, _refStack) {
           return simpleTokens.null;
         },
+        /**
+         * @param {any} _obj
+         * @param {string} _typ
+         * @param {EncodeOptions} _options
+         * @param {Reference} [_refStack]
+         * @returns {TokenOrNestedTokens}
+         */
         undefined(_obj2, _typ, _options, _refStack) {
           return simpleTokens.undefined;
         },
+        /**
+         * @param {any} obj
+         * @param {string} _typ
+         * @param {EncodeOptions} _options
+         * @param {Reference} [_refStack]
+         * @returns {TokenOrNestedTokens}
+         */
         ArrayBuffer(obj, _typ, _options, _refStack) {
           return new Token(Type.bytes, new Uint8Array(obj));
         },
+        /**
+         * @param {any} obj
+         * @param {string} _typ
+         * @param {EncodeOptions} _options
+         * @param {Reference} [_refStack]
+         * @returns {TokenOrNestedTokens}
+         */
         DataView(obj, _typ, _options, _refStack) {
           return new Token(Type.bytes, new Uint8Array(obj.buffer, obj.byteOffset, obj.byteLength));
         },
+        /**
+         * @param {any} obj
+         * @param {string} _typ
+         * @param {EncodeOptions} options
+         * @param {Reference} [refStack]
+         * @returns {TokenOrNestedTokens}
+         */
         Array(obj, _typ, options, refStack) {
           if (!obj.length) {
             if (options.addBreakTokens === true) {
-              return [
-                simpleTokens.emptyArray,
-                new Token(Type.break)
-              ];
+              return [simpleTokens.emptyArray, new Token(Type.break)];
             }
             return simpleTokens.emptyArray;
           }
@@ -69675,27 +69020,24 @@ if (cid) {
             entries[i++] = objectToTokens(e, options, refStack);
           }
           if (options.addBreakTokens) {
-            return [
-              new Token(Type.array, obj.length),
-              entries,
-              new Token(Type.break)
-            ];
+            return [new Token(Type.array, obj.length), entries, new Token(Type.break)];
           }
-          return [
-            new Token(Type.array, obj.length),
-            entries
-          ];
+          return [new Token(Type.array, obj.length), entries];
         },
+        /**
+         * @param {any} obj
+         * @param {string} typ
+         * @param {EncodeOptions} options
+         * @param {Reference} [refStack]
+         * @returns {TokenOrNestedTokens}
+         */
         Object(obj, typ, options, refStack) {
           const isMap = typ !== "Object";
           const keys = isMap ? obj.keys() : Object.keys(obj);
-          const length3 = isMap ? obj.size : keys.length;
-          if (!length3) {
+          const length2 = isMap ? obj.size : keys.length;
+          if (!length2) {
             if (options.addBreakTokens === true) {
-              return [
-                simpleTokens.emptyMap,
-                new Token(Type.break)
-              ];
+              return [simpleTokens.emptyMap, new Token(Type.break)];
             }
             return simpleTokens.emptyMap;
           }
@@ -69710,16 +69052,9 @@ if (cid) {
           }
           sortMapEntries(entries, options);
           if (options.addBreakTokens) {
-            return [
-              new Token(Type.map, length3),
-              entries,
-              new Token(Type.break)
-            ];
+            return [new Token(Type.map, length2), entries, new Token(Type.break)];
           }
-          return [
-            new Token(Type.map, length3),
-            entries
-          ];
+          return [new Token(Type.map, length2), entries];
         }
       };
       typeEncoders.Map = typeEncoders.Object;
@@ -69730,7 +69065,7 @@ if (cid) {
     }
   });
 
-  // node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/decode.js
+  // node_modules/cborg/lib/decode.js
   function tokenToArray(token, tokeniser, options) {
     const arr = [];
     for (let i = 0; i < token.value; i++) {
@@ -69809,7 +69144,7 @@ if (cid) {
     }
     throw new Error("unsupported");
   }
-  function decode9(data, options) {
+  function decodeFirst(data, options) {
     if (!(data instanceof Uint8Array)) {
       throw new Error(`${decodeErrPrefix} data to decode must be a Uint8Array`);
     }
@@ -69822,14 +69157,18 @@ if (cid) {
     if (decoded === BREAK) {
       throw new Error(`${decodeErrPrefix} got unexpected break`);
     }
-    if (!tokeniser.done()) {
+    return [decoded, data.subarray(tokeniser.pos())];
+  }
+  function decode5(data, options) {
+    const [decoded, remainder] = decodeFirst(data, options);
+    if (remainder.length > 0) {
       throw new Error(`${decodeErrPrefix} too many terminals, data makes no sense`);
     }
     return decoded;
   }
   var defaultDecodeOptions, Tokeniser, DONE, BREAK;
   var init_decode = __esm({
-    "node_modules/@ipld/dag-cbor/node_modules/cborg/esm/lib/decode.js"() {
+    "node_modules/cborg/lib/decode.js"() {
       init_common();
       init_token();
       init_jump();
@@ -69840,16 +69179,23 @@ if (cid) {
         allowBigInt: true
       };
       Tokeniser = class {
+        /**
+         * @param {Uint8Array} data
+         * @param {DecodeOptions} options
+         */
         constructor(data, options = {}) {
-          this.pos = 0;
+          this._pos = 0;
           this.data = data;
           this.options = options;
         }
+        pos() {
+          return this._pos;
+        }
         done() {
-          return this.pos >= this.data.length;
+          return this._pos >= this.data.length;
         }
         next() {
-          const byt = this.data[this.pos];
+          const byt = this.data[this._pos];
           let token = quick[byt];
           if (token === void 0) {
             const decoder2 = jump[byt];
@@ -69857,9 +69203,9 @@ if (cid) {
               throw new Error(`${decodeErrPrefix} no decoder for major type ${byt >>> 5} (byte 0x${byt.toString(16).padStart(2, "0")})`);
             }
             const minor = byt & 31;
-            token = decoder2(this.data, this.pos, minor, this.options);
+            token = decoder2(this.data, this._pos, minor, this.options);
           }
-          this.pos += token.encodedLength;
+          this._pos += token.encodedLength;
           return token;
         }
       };
@@ -69868,16 +69214,16 @@ if (cid) {
     }
   });
 
-  // node_modules/@ipld/dag-cbor/node_modules/cborg/esm/cborg.js
+  // node_modules/cborg/cborg.js
   var init_cborg = __esm({
-    "node_modules/@ipld/dag-cbor/node_modules/cborg/esm/cborg.js"() {
+    "node_modules/cborg/cborg.js"() {
       init_encode();
       init_decode();
       init_token();
     }
   });
 
-  // node_modules/@ipld/dag-cbor/src/index.js
+  // node_modules/@ipld/car/node_modules/@ipld/dag-cbor/src/index.js
   function cidEncoder(obj) {
     if (obj.asCID !== obj && obj["/"] !== obj.bytes) {
       return null;
@@ -69911,9 +69257,9 @@ if (cid) {
     }
     return CID.decode(bytes.subarray(1));
   }
-  var CID_CBOR_TAG, encodeOptions, decodeOptions, encode6, decode10;
+  var CID_CBOR_TAG, encodeOptions, decodeOptions, encode4, decode6;
   var init_src2 = __esm({
-    "node_modules/@ipld/dag-cbor/src/index.js"() {
+    "node_modules/@ipld/car/node_modules/@ipld/dag-cbor/src/index.js"() {
       init_cborg();
       init_cid();
       CID_CBOR_TAG = 42;
@@ -69940,8 +69286,147 @@ if (cid) {
         tags: []
       };
       decodeOptions.tags[CID_CBOR_TAG] = cidDecoder;
-      encode6 = (node) => encode5(node, encodeOptions);
-      decode10 = (data) => decode9(data, decodeOptions);
+      encode4 = (node) => encode3(node, encodeOptions);
+      decode6 = (data) => decode5(data, decodeOptions);
+    }
+  });
+
+  // node_modules/varint/encode.js
+  var require_encode = __commonJS({
+    "node_modules/varint/encode.js"(exports, module) {
+      module.exports = encode6;
+      var MSB2 = 128;
+      var REST2 = 127;
+      var MSBALL2 = ~REST2;
+      var INT2 = Math.pow(2, 31);
+      function encode6(num, out, offset) {
+        if (Number.MAX_SAFE_INTEGER && num > Number.MAX_SAFE_INTEGER) {
+          encode6.bytes = 0;
+          throw new RangeError("Could not encode varint");
+        }
+        out = out || [];
+        offset = offset || 0;
+        var oldOffset = offset;
+        while (num >= INT2) {
+          out[offset++] = num & 255 | MSB2;
+          num /= 128;
+        }
+        while (num & MSBALL2) {
+          out[offset++] = num & 255 | MSB2;
+          num >>>= 7;
+        }
+        out[offset] = num | 0;
+        encode6.bytes = offset - oldOffset + 1;
+        return out;
+      }
+    }
+  });
+
+  // node_modules/varint/decode.js
+  var require_decode = __commonJS({
+    "node_modules/varint/decode.js"(exports, module) {
+      module.exports = read3;
+      var MSB2 = 128;
+      var REST2 = 127;
+      function read3(buf2, offset) {
+        var res = 0, offset = offset || 0, shift = 0, counter = offset, b, l = buf2.length;
+        do {
+          if (counter >= l || shift > 49) {
+            read3.bytes = 0;
+            throw new RangeError("Could not decode varint");
+          }
+          b = buf2[counter++];
+          res += shift < 28 ? (b & REST2) << shift : (b & REST2) * Math.pow(2, shift);
+          shift += 7;
+        } while (b >= MSB2);
+        read3.bytes = counter - offset;
+        return res;
+      }
+    }
+  });
+
+  // node_modules/varint/length.js
+  var require_length = __commonJS({
+    "node_modules/varint/length.js"(exports, module) {
+      var N12 = Math.pow(2, 7);
+      var N22 = Math.pow(2, 14);
+      var N32 = Math.pow(2, 21);
+      var N42 = Math.pow(2, 28);
+      var N52 = Math.pow(2, 35);
+      var N62 = Math.pow(2, 42);
+      var N72 = Math.pow(2, 49);
+      var N82 = Math.pow(2, 56);
+      var N92 = Math.pow(2, 63);
+      module.exports = function(value) {
+        return value < N12 ? 1 : value < N22 ? 2 : value < N32 ? 3 : value < N42 ? 4 : value < N52 ? 5 : value < N62 ? 6 : value < N72 ? 7 : value < N82 ? 8 : value < N92 ? 9 : 10;
+      };
+    }
+  });
+
+  // node_modules/varint/index.js
+  var require_varint = __commonJS({
+    "node_modules/varint/index.js"(exports, module) {
+      module.exports = {
+        encode: require_encode(),
+        decode: require_decode(),
+        encodingLength: require_length()
+      };
+    }
+  });
+
+  // node_modules/@ipld/car/src/decoder-common.js
+  function decodeVarint(bytes, seeker) {
+    if (!bytes.length) {
+      throw new Error("Unexpected end of data");
+    }
+    const i = import_varint2.default.decode(bytes);
+    seeker.seek(
+      /** @type {number} */
+      import_varint2.default.decode.bytes
+    );
+    return i;
+  }
+  function decodeV2Header(bytes) {
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    let offset = 0;
+    const header = {
+      version: 2,
+      /** @type {[bigint, bigint]} */
+      characteristics: [
+        dv.getBigUint64(offset, true),
+        dv.getBigUint64(offset += 8, true)
+      ],
+      dataOffset: Number(dv.getBigUint64(offset += 8, true)),
+      dataSize: Number(dv.getBigUint64(offset += 8, true)),
+      indexOffset: Number(dv.getBigUint64(offset += 8, true))
+    };
+    return header;
+  }
+  function getMultihashLength(bytes) {
+    import_varint2.default.decode(bytes);
+    const codeLength = (
+      /** @type {number} */
+      import_varint2.default.decode.bytes
+    );
+    const length2 = import_varint2.default.decode(bytes.subarray(import_varint2.default.decode.bytes));
+    const lengthLength = (
+      /** @type {number} */
+      import_varint2.default.decode.bytes
+    );
+    const mhLength = codeLength + lengthLength + length2;
+    return mhLength;
+  }
+  var import_varint2, CIDV0_BYTES, V2_HEADER_LENGTH;
+  var init_decoder_common = __esm({
+    "node_modules/@ipld/car/src/decoder-common.js"() {
+      import_varint2 = __toESM(require_varint(), 1);
+      CIDV0_BYTES = {
+        SHA2_256: 18,
+        LENGTH: 32,
+        DAG_PB: 112
+      };
+      V2_HEADER_LENGTH = /* characteristics */
+      16 + 8 + 8 + 8;
     }
   });
 
@@ -70053,153 +69538,468 @@ if (cid) {
     }
   });
 
-  // node_modules/varint/encode.js
-  var require_encode = __commonJS({
-    "node_modules/varint/encode.js"(exports, module) {
-      module.exports = encode9;
-      var MSB3 = 128;
-      var REST3 = 127;
-      var MSBALL3 = ~REST3;
-      var INT3 = Math.pow(2, 31);
-      function encode9(num, out, offset) {
-        if (Number.MAX_SAFE_INTEGER && num > Number.MAX_SAFE_INTEGER) {
-          encode9.bytes = 0;
-          throw new RangeError("Could not encode varint");
-        }
-        out = out || [];
-        offset = offset || 0;
-        var oldOffset = offset;
-        while (num >= INT3) {
-          out[offset++] = num & 255 | MSB3;
-          num /= 128;
-        }
-        while (num & MSBALL3) {
-          out[offset++] = num & 255 | MSB3;
-          num >>>= 7;
-        }
-        out[offset] = num | 0;
-        encode9.bytes = offset - oldOffset + 1;
-        return out;
-      }
+  // node_modules/@ipld/car/src/buffer-decoder.js
+  function readHeader(reader, strictVersion) {
+    const length2 = decodeVarint(reader.upTo(8), reader);
+    if (length2 === 0) {
+      throw new Error("Invalid CAR header (zero length)");
     }
-  });
-
-  // node_modules/varint/decode.js
-  var require_decode = __commonJS({
-    "node_modules/varint/decode.js"(exports, module) {
-      module.exports = read4;
-      var MSB3 = 128;
-      var REST3 = 127;
-      function read4(buf3, offset) {
-        var res = 0, offset = offset || 0, shift = 0, counter = offset, b, l = buf3.length;
-        do {
-          if (counter >= l || shift > 49) {
-            read4.bytes = 0;
-            throw new RangeError("Could not decode varint");
-          }
-          b = buf3[counter++];
-          res += shift < 28 ? (b & REST3) << shift : (b & REST3) * Math.pow(2, shift);
-          shift += 7;
-        } while (b >= MSB3);
-        read4.bytes = counter - offset;
-        return res;
-      }
+    const header = reader.exactly(length2, true);
+    const block = decode6(header);
+    if (!CarHeader(block)) {
+      throw new Error("Invalid CAR header format");
     }
-  });
-
-  // node_modules/varint/length.js
-  var require_length = __commonJS({
-    "node_modules/varint/length.js"(exports, module) {
-      var N13 = Math.pow(2, 7);
-      var N23 = Math.pow(2, 14);
-      var N33 = Math.pow(2, 21);
-      var N43 = Math.pow(2, 28);
-      var N53 = Math.pow(2, 35);
-      var N63 = Math.pow(2, 42);
-      var N73 = Math.pow(2, 49);
-      var N83 = Math.pow(2, 56);
-      var N93 = Math.pow(2, 63);
-      module.exports = function(value) {
-        return value < N13 ? 1 : value < N23 ? 2 : value < N33 ? 3 : value < N43 ? 4 : value < N53 ? 5 : value < N63 ? 6 : value < N73 ? 7 : value < N83 ? 8 : value < N93 ? 9 : 10;
-      };
+    if (block.version !== 1 && block.version !== 2 || strictVersion !== void 0 && block.version !== strictVersion) {
+      throw new Error(`Invalid CAR version: ${block.version}${strictVersion !== void 0 ? ` (expected ${strictVersion})` : ""}`);
     }
-  });
-
-  // node_modules/varint/index.js
-  var require_varint = __commonJS({
-    "node_modules/varint/index.js"(exports, module) {
-      module.exports = {
-        encode: require_encode(),
-        decode: require_decode(),
-        encodingLength: require_length()
-      };
+    const hasRoots = Array.isArray(block.roots);
+    if (block.version === 1 && !hasRoots || block.version === 2 && hasRoots) {
+      throw new Error("Invalid CAR header format");
     }
-  });
-
-  // node_modules/@ipld/car/src/decoder-common.js
-  function decodeVarint(bytes, seeker) {
-    if (!bytes.length) {
-      throw new Error("Unexpected end of data");
+    if (block.version === 1) {
+      return block;
     }
-    const i = import_varint3.default.decode(bytes);
-    seeker.seek(
-      /** @type {number} */
-      import_varint3.default.decode.bytes
-    );
-    return i;
+    const v2Header = decodeV2Header(reader.exactly(V2_HEADER_LENGTH, true));
+    reader.seek(v2Header.dataOffset - reader.pos);
+    const v1Header = readHeader(reader, 1);
+    return Object.assign(v1Header, v2Header);
   }
-  function decodeV2Header(bytes) {
-    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    let offset = 0;
-    const header = {
-      version: 2,
-      /** @type {[bigint, bigint]} */
-      characteristics: [
-        dv.getBigUint64(offset, true),
-        dv.getBigUint64(offset += 8, true)
-      ],
-      dataOffset: Number(dv.getBigUint64(offset += 8, true)),
-      dataSize: Number(dv.getBigUint64(offset += 8, true)),
-      indexOffset: Number(dv.getBigUint64(offset += 8, true))
+  function readCid(reader) {
+    const first2 = reader.exactly(2, false);
+    if (first2[0] === CIDV0_BYTES.SHA2_256 && first2[1] === CIDV0_BYTES.LENGTH) {
+      const bytes2 = reader.exactly(34, true);
+      const multihash2 = decode4(bytes2);
+      return CID.create(0, CIDV0_BYTES.DAG_PB, multihash2);
+    }
+    const version = decodeVarint(reader.upTo(8), reader);
+    if (version !== 1) {
+      throw new Error(`Unexpected CID version (${version})`);
+    }
+    const codec = decodeVarint(reader.upTo(8), reader);
+    const bytes = reader.exactly(getMultihashLength(reader.upTo(8)), true);
+    const multihash = decode4(bytes);
+    return CID.create(version, codec, multihash);
+  }
+  function readBlockHead(reader) {
+    const start = reader.pos;
+    let length2 = decodeVarint(reader.upTo(8), reader);
+    if (length2 === 0) {
+      throw new Error("Invalid CAR section (zero length)");
+    }
+    length2 += reader.pos - start;
+    const cid = readCid(reader);
+    const blockLength2 = length2 - Number(reader.pos - start);
+    return { cid, length: length2, blockLength: blockLength2 };
+  }
+  function fromBytes(bytes) {
+    let reader = bytesReader(bytes);
+    const header = readHeader(reader);
+    if (header.version === 2) {
+      const v1length = reader.pos - header.dataOffset;
+      reader = limitReader(reader, header.dataSize - v1length);
+    }
+    const blocks = [];
+    while (reader.upTo(8).length > 0) {
+      const { cid, blockLength: blockLength2 } = readBlockHead(reader);
+      blocks.push({ cid, bytes: reader.exactly(blockLength2, true) });
+    }
+    return {
+      header,
+      blocks
     };
-    return header;
   }
-  function getMultihashLength(bytes) {
-    import_varint3.default.decode(bytes);
-    const codeLength = (
-      /** @type {number} */
-      import_varint3.default.decode.bytes
-    );
-    const length3 = import_varint3.default.decode(bytes.subarray(import_varint3.default.decode.bytes));
-    const lengthLength = (
-      /** @type {number} */
-      import_varint3.default.decode.bytes
-    );
-    const mhLength = codeLength + lengthLength + length3;
-    return mhLength;
+  function bytesReader(bytes) {
+    let pos = 0;
+    return {
+      upTo(length2) {
+        return bytes.subarray(pos, pos + Math.min(length2, bytes.length - pos));
+      },
+      exactly(length2, seek = false) {
+        if (length2 > bytes.length - pos) {
+          throw new Error("Unexpected end of data");
+        }
+        const out = bytes.subarray(pos, pos + length2);
+        if (seek) {
+          pos += length2;
+        }
+        return out;
+      },
+      seek(length2) {
+        pos += length2;
+      },
+      get pos() {
+        return pos;
+      }
+    };
   }
-  var import_varint3, CIDV0_BYTES, V2_HEADER_LENGTH;
-  var init_decoder_common = __esm({
-    "node_modules/@ipld/car/src/decoder-common.js"() {
-      import_varint3 = __toESM(require_varint(), 1);
-      CIDV0_BYTES = {
-        SHA2_256: 18,
-        LENGTH: 32,
-        DAG_PB: 112
+  function limitReader(reader, byteLimit) {
+    let bytesRead = 0;
+    return {
+      upTo(length2) {
+        let bytes = reader.upTo(length2);
+        if (bytes.length + bytesRead > byteLimit) {
+          bytes = bytes.subarray(0, byteLimit - bytesRead);
+        }
+        return bytes;
+      },
+      exactly(length2, seek = false) {
+        const bytes = reader.exactly(length2, seek);
+        if (bytes.length + bytesRead > byteLimit) {
+          throw new Error("Unexpected end of data");
+        }
+        if (seek) {
+          bytesRead += length2;
+        }
+        return bytes;
+      },
+      seek(length2) {
+        bytesRead += length2;
+        reader.seek(length2);
+      },
+      get pos() {
+        return reader.pos;
+      }
+    };
+  }
+  var init_buffer_decoder = __esm({
+    "node_modules/@ipld/car/src/buffer-decoder.js"() {
+      init_src2();
+      init_cid();
+      init_digest();
+      init_decoder_common();
+      init_header_validator();
+    }
+  });
+
+  // node_modules/@ipld/car/src/buffer-reader-browser.js
+  var CarBufferReader;
+  var init_buffer_reader_browser = __esm({
+    "node_modules/@ipld/car/src/buffer-reader-browser.js"() {
+      init_buffer_decoder();
+      CarBufferReader = class _CarBufferReader {
+        /**
+         * @constructs CarBufferReader
+         * @param {CarHeader|CarV2Header} header
+         * @param {Block[]} blocks
+         */
+        constructor(header, blocks) {
+          this._header = header;
+          this._blocks = blocks;
+          this._cids = void 0;
+        }
+        /**
+         * @property version
+         * @memberof CarBufferReader
+         * @instance
+         */
+        get version() {
+          return this._header.version;
+        }
+        /**
+         * Get the list of roots defined by the CAR referenced by this reader. May be
+         * zero or more `CID`s.
+         *
+         * @function
+         * @memberof CarBufferReader
+         * @instance
+         * @returns {CID[]}
+         */
+        getRoots() {
+          return this._header.roots;
+        }
+        /**
+         * Check whether a given `CID` exists within the CAR referenced by this
+         * reader.
+         *
+         * @function
+         * @memberof CarBufferReader
+         * @instance
+         * @param {CID} key
+         * @returns {boolean}
+         */
+        has(key) {
+          return this._blocks.some((b) => b.cid.equals(key));
+        }
+        /**
+         * Fetch a `Block` (a `{ cid:CID, bytes:Uint8Array }` pair) from the CAR
+         * referenced by this reader matching the provided `CID`. In the case where
+         * the provided `CID` doesn't exist within the CAR, `undefined` will be
+         * returned.
+         *
+         * @function
+         * @memberof CarBufferReader
+         * @instance
+         * @param {CID} key
+         * @returns {Block | undefined}
+         */
+        get(key) {
+          return this._blocks.find((b) => b.cid.equals(key));
+        }
+        /**
+         * Returns a `Block[]` of the `Block`s (`{ cid:CID, bytes:Uint8Array }` pairs) contained within
+         * the CAR referenced by this reader.
+         *
+         * @function
+         * @memberof CarBufferReader
+         * @instance
+         * @returns {Block[]}
+         */
+        blocks() {
+          return this._blocks;
+        }
+        /**
+         * Returns a `CID[]` of the `CID`s contained within the CAR referenced by this reader.
+         *
+         * @function
+         * @memberof CarBufferReader
+         * @instance
+         * @returns {CID[]}
+         */
+        cids() {
+          if (!this._cids) {
+            this._cids = this._blocks.map((b) => b.cid);
+          }
+          return this._cids;
+        }
+        /**
+         * Instantiate a {@link CarBufferReader} from a `Uint8Array` blob. This performs a
+         * decode fully in memory and maintains the decoded state in memory for full
+         * access to the data via the `CarReader` API.
+         *
+         * @static
+         * @memberof CarBufferReader
+         * @param {Uint8Array} bytes
+         * @returns {CarBufferReader}
+         */
+        static fromBytes(bytes) {
+          if (!(bytes instanceof Uint8Array)) {
+            throw new TypeError("fromBytes() requires a Uint8Array");
+          }
+          const { header, blocks } = fromBytes(bytes);
+          return new _CarBufferReader(header, blocks);
+        }
       };
-      V2_HEADER_LENGTH = /* characteristics */
-      16 + 8 + 8 + 8;
+    }
+  });
+
+  // node_modules/cborg/lib/length.js
+  function tokensToLength(tokens, encoders = cborEncoders2, options = defaultEncodeOptions2) {
+    if (Array.isArray(tokens)) {
+      let len = 0;
+      for (const token of tokens) {
+        len += tokensToLength(token, encoders, options);
+      }
+      return len;
+    } else {
+      const encoder = encoders[tokens.type.major];
+      if (encoder.encodedSize === void 0 || typeof encoder.encodedSize !== "function") {
+        throw new Error(`Encoder for ${tokens.type.name} does not have an encodedSize()`);
+      }
+      return encoder.encodedSize(tokens, options);
+    }
+  }
+  var cborEncoders2, defaultEncodeOptions2;
+  var init_length = __esm({
+    "node_modules/cborg/lib/length.js"() {
+      init_encode();
+      init_jump();
+      cborEncoders2 = makeCborEncoders();
+      defaultEncodeOptions2 = {
+        float64: false,
+        quickEncodeToken
+      };
+    }
+  });
+
+  // node_modules/@ipld/car/src/buffer-writer.js
+  var buffer_writer_exports = {};
+  __export(buffer_writer_exports, {
+    addBlock: () => addBlock,
+    addRoot: () => addRoot,
+    blockLength: () => blockLength,
+    calculateHeaderLength: () => calculateHeaderLength,
+    close: () => close,
+    createWriter: () => createWriter,
+    estimateHeaderLength: () => estimateHeaderLength,
+    headerLength: () => headerLength,
+    resizeHeader: () => resizeHeader
+  });
+  var import_varint3, CarBufferWriter, addRoot, blockLength, addBlock, close, resizeHeader, writeBytes, writeHeader, headerPreludeTokens, CID_TAG, calculateHeaderLength, headerLength, estimateHeaderLength, createWriter;
+  var init_buffer_writer = __esm({
+    "node_modules/@ipld/car/src/buffer-writer.js"() {
+      init_src2();
+      init_cborg();
+      init_length();
+      import_varint3 = __toESM(require_varint(), 1);
+      CarBufferWriter = class {
+        /**
+         * @param {Uint8Array} bytes
+         * @param {number} headerSize
+         */
+        constructor(bytes, headerSize) {
+          this.bytes = bytes;
+          this.byteOffset = headerSize;
+          this.roots = [];
+          this.headerSize = headerSize;
+        }
+        /**
+         * Add a root to this writer, to be used to create a header when the CAR is
+         * finalized with {@link CarBufferWriter.close `close()`}
+         *
+         * @param {CID} root
+         * @param {{resize?:boolean}} [options]
+         * @returns {CarBufferWriter}
+         */
+        addRoot(root, options) {
+          addRoot(this, root, options);
+          return this;
+        }
+        /**
+         * Write a `Block` (a `{ cid:CID, bytes:Uint8Array }` pair) to the archive.
+         * Throws if there is not enough capacity.
+         *
+         * @param {Block} block - A `{ cid:CID, bytes:Uint8Array }` pair.
+         * @returns {CarBufferWriter}
+         */
+        write(block) {
+          addBlock(this, block);
+          return this;
+        }
+        /**
+         * Finalize the CAR and return it as a `Uint8Array`.
+         *
+         * @param {object} [options]
+         * @param {boolean} [options.resize]
+         * @returns {Uint8Array}
+         */
+        close(options) {
+          return close(this, options);
+        }
+      };
+      addRoot = (writer, root, options = {}) => {
+        const { resize = false } = options;
+        const { bytes, headerSize, byteOffset, roots } = writer;
+        writer.roots.push(root);
+        const size = headerLength(writer);
+        if (size > headerSize) {
+          if (size - headerSize + byteOffset < bytes.byteLength) {
+            if (resize) {
+              resizeHeader(writer, size);
+            } else {
+              roots.pop();
+              throw new RangeError(`Header of size ${headerSize} has no capacity for new root ${root}.
+  However there is a space in the buffer and you could call addRoot(root, { resize: root }) to resize header to make a space for this root.`);
+            }
+          } else {
+            roots.pop();
+            throw new RangeError(`Buffer has no capacity for a new root ${root}`);
+          }
+        }
+      };
+      blockLength = ({ cid, bytes }) => {
+        const size = cid.bytes.byteLength + bytes.byteLength;
+        return import_varint3.default.encodingLength(size) + size;
+      };
+      addBlock = (writer, { cid, bytes }) => {
+        const byteLength = cid.bytes.byteLength + bytes.byteLength;
+        const size = import_varint3.default.encode(byteLength);
+        if (writer.byteOffset + size.length + byteLength > writer.bytes.byteLength) {
+          throw new RangeError("Buffer has no capacity for this block");
+        } else {
+          writeBytes(writer, size);
+          writeBytes(writer, cid.bytes);
+          writeBytes(writer, bytes);
+        }
+      };
+      close = (writer, options = {}) => {
+        const { resize = false } = options;
+        const { roots, bytes, byteOffset, headerSize } = writer;
+        const headerBytes = encode4({ version: 1, roots });
+        const varintBytes = import_varint3.default.encode(headerBytes.length);
+        const size = varintBytes.length + headerBytes.byteLength;
+        const offset = headerSize - size;
+        if (offset === 0) {
+          writeHeader(writer, varintBytes, headerBytes);
+          return bytes.subarray(0, byteOffset);
+        } else if (resize) {
+          resizeHeader(writer, size);
+          writeHeader(writer, varintBytes, headerBytes);
+          return bytes.subarray(0, writer.byteOffset);
+        } else {
+          throw new RangeError(`Header size was overestimated.
+You can use close({ resize: true }) to resize header`);
+        }
+      };
+      resizeHeader = (writer, byteLength) => {
+        const { bytes, headerSize } = writer;
+        bytes.set(bytes.subarray(headerSize, writer.byteOffset), byteLength);
+        writer.byteOffset += byteLength - headerSize;
+        writer.headerSize = byteLength;
+      };
+      writeBytes = (writer, bytes) => {
+        writer.bytes.set(bytes, writer.byteOffset);
+        writer.byteOffset += bytes.length;
+      };
+      writeHeader = ({ bytes }, varint5, header) => {
+        bytes.set(varint5);
+        bytes.set(header, varint5.length);
+      };
+      headerPreludeTokens = [
+        new Token(Type.map, 2),
+        new Token(Type.string, "version"),
+        new Token(Type.uint, 1),
+        new Token(Type.string, "roots")
+      ];
+      CID_TAG = new Token(Type.tag, 42);
+      calculateHeaderLength = (rootLengths) => {
+        const tokens = [...headerPreludeTokens];
+        tokens.push(new Token(Type.array, rootLengths.length));
+        for (const rootLength of rootLengths) {
+          tokens.push(CID_TAG);
+          tokens.push(new Token(Type.bytes, { length: rootLength + 1 }));
+        }
+        const length2 = tokensToLength(tokens);
+        return import_varint3.default.encodingLength(length2) + length2;
+      };
+      headerLength = ({ roots }) => calculateHeaderLength(roots.map((cid) => cid.bytes.byteLength));
+      estimateHeaderLength = (rootCount, rootByteLength = 36) => calculateHeaderLength(new Array(rootCount).fill(rootByteLength));
+      createWriter = (buffer2, options = {}) => {
+        const {
+          roots = [],
+          byteOffset = 0,
+          byteLength = buffer2.byteLength,
+          headerSize = headerLength({ roots })
+        } = options;
+        const bytes = new Uint8Array(buffer2, byteOffset, byteLength);
+        const writer = new CarBufferWriter(bytes, headerSize);
+        for (const root of roots) {
+          writer.addRoot(root);
+        }
+        return writer;
+      };
+    }
+  });
+
+  // node_modules/@ipld/car/src/indexed-reader-browser.js
+  var CarIndexedReader;
+  var init_indexed_reader_browser = __esm({
+    "node_modules/@ipld/car/src/indexed-reader-browser.js"() {
+      CarIndexedReader = class {
+        static async fromFile() {
+          throw new Error("Unsupported in this environment");
+        }
+      };
     }
   });
 
   // node_modules/@ipld/car/src/decoder.js
-  async function readHeader(reader, strictVersion) {
-    const length3 = decodeVarint(await reader.upTo(8), reader);
-    if (length3 === 0) {
+  async function readHeader2(reader, strictVersion) {
+    const length2 = decodeVarint(await reader.upTo(8), reader);
+    if (length2 === 0) {
       throw new Error("Invalid CAR header (zero length)");
     }
-    const header = await reader.exactly(length3, true);
-    const block = decode10(header);
+    const header = await reader.exactly(length2, true);
+    const block = decode6(header);
     if (!CarHeader(block)) {
       throw new Error("Invalid CAR header format");
     }
@@ -70215,15 +70015,15 @@ if (cid) {
     }
     const v2Header = decodeV2Header(await reader.exactly(V2_HEADER_LENGTH, true));
     reader.seek(v2Header.dataOffset - reader.pos);
-    const v1Header = await readHeader(reader, 1);
+    const v1Header = await readHeader2(reader, 1);
     return Object.assign(v1Header, v2Header);
   }
-  async function readCid(reader) {
+  async function readCid2(reader) {
     const first2 = await reader.exactly(2, false);
     if (first2[0] === CIDV0_BYTES.SHA2_256 && first2[1] === CIDV0_BYTES.LENGTH) {
       const bytes2 = await reader.exactly(34, true);
-      const multihash2 = decode7(bytes2);
-      return CID2.create(0, CIDV0_BYTES.DAG_PB, multihash2);
+      const multihash2 = decode4(bytes2);
+      return CID.create(0, CIDV0_BYTES.DAG_PB, multihash2);
     }
     const version = decodeVarint(await reader.upTo(8), reader);
     if (version !== 1) {
@@ -70231,38 +70031,38 @@ if (cid) {
     }
     const codec = decodeVarint(await reader.upTo(8), reader);
     const bytes = await reader.exactly(getMultihashLength(await reader.upTo(8)), true);
-    const multihash = decode7(bytes);
-    return CID2.create(version, codec, multihash);
+    const multihash = decode4(bytes);
+    return CID.create(version, codec, multihash);
   }
-  async function readBlockHead(reader) {
+  async function readBlockHead2(reader) {
     const start = reader.pos;
-    let length3 = decodeVarint(await reader.upTo(8), reader);
-    if (length3 === 0) {
+    let length2 = decodeVarint(await reader.upTo(8), reader);
+    if (length2 === 0) {
       throw new Error("Invalid CAR section (zero length)");
     }
-    length3 += reader.pos - start;
-    const cid = await readCid(reader);
-    const blockLength2 = length3 - Number(reader.pos - start);
-    return { cid, length: length3, blockLength: blockLength2 };
+    length2 += reader.pos - start;
+    const cid = await readCid2(reader);
+    const blockLength2 = length2 - Number(reader.pos - start);
+    return { cid, length: length2, blockLength: blockLength2 };
   }
   async function readBlock(reader) {
-    const { cid, blockLength: blockLength2 } = await readBlockHead(reader);
+    const { cid, blockLength: blockLength2 } = await readBlockHead2(reader);
     const bytes = await reader.exactly(blockLength2, true);
     return { bytes, cid };
   }
   async function readBlockIndex(reader) {
     const offset = reader.pos;
-    const { cid, length: length3, blockLength: blockLength2 } = await readBlockHead(reader);
-    const index = { cid, length: length3, blockLength: blockLength2, offset, blockOffset: reader.pos };
+    const { cid, length: length2, blockLength: blockLength2 } = await readBlockHead2(reader);
+    const index = { cid, length: length2, blockLength: blockLength2, offset, blockOffset: reader.pos };
     reader.seek(index.blockLength);
     return index;
   }
   function createDecoder(reader) {
     const headerPromise = (async () => {
-      const header = await readHeader(reader);
+      const header = await readHeader2(reader);
       if (header.version === 2) {
         const v1length = reader.pos - header.dataOffset;
-        reader = limitReader(reader, header.dataSize - v1length);
+        reader = limitReader2(reader, header.dataSize - v1length);
       }
       return header;
     })();
@@ -70282,25 +70082,25 @@ if (cid) {
       }
     };
   }
-  function bytesReader(bytes) {
+  function bytesReader2(bytes) {
     let pos = 0;
     return {
-      async upTo(length3) {
-        const out = bytes.subarray(pos, pos + Math.min(length3, bytes.length - pos));
+      async upTo(length2) {
+        const out = bytes.subarray(pos, pos + Math.min(length2, bytes.length - pos));
         return out;
       },
-      async exactly(length3, seek = false) {
-        if (length3 > bytes.length - pos) {
+      async exactly(length2, seek = false) {
+        if (length2 > bytes.length - pos) {
           throw new Error("Unexpected end of data");
         }
-        const out = bytes.subarray(pos, pos + length3);
+        const out = bytes.subarray(pos, pos + length2);
         if (seek) {
-          pos += length3;
+          pos += length2;
         }
         return out;
       },
-      seek(length3) {
-        pos += length3;
+      seek(length2) {
+        pos += length2;
       },
       get pos() {
         return pos;
@@ -70312,10 +70112,10 @@ if (cid) {
     let have = 0;
     let offset = 0;
     let currentChunk = new Uint8Array(0);
-    const read4 = async (length3) => {
+    const read3 = async (length2) => {
       have = currentChunk.length - offset;
       const bufa = [currentChunk.subarray(offset)];
-      while (have < length3) {
+      while (have < length2) {
         const chunk = await readChunk();
         if (chunk == null) {
           break;
@@ -70338,29 +70138,29 @@ if (cid) {
       offset = 0;
     };
     return {
-      async upTo(length3) {
-        if (currentChunk.length - offset < length3) {
-          await read4(length3);
+      async upTo(length2) {
+        if (currentChunk.length - offset < length2) {
+          await read3(length2);
         }
-        return currentChunk.subarray(offset, offset + Math.min(currentChunk.length - offset, length3));
+        return currentChunk.subarray(offset, offset + Math.min(currentChunk.length - offset, length2));
       },
-      async exactly(length3, seek = false) {
-        if (currentChunk.length - offset < length3) {
-          await read4(length3);
+      async exactly(length2, seek = false) {
+        if (currentChunk.length - offset < length2) {
+          await read3(length2);
         }
-        if (currentChunk.length - offset < length3) {
+        if (currentChunk.length - offset < length2) {
           throw new Error("Unexpected end of data");
         }
-        const out = currentChunk.subarray(offset, offset + length3);
+        const out = currentChunk.subarray(offset, offset + length2);
         if (seek) {
-          pos += length3;
-          offset += length3;
+          pos += length2;
+          offset += length2;
         }
         return out;
       },
-      seek(length3) {
-        pos += length3;
-        offset += length3;
+      seek(length2) {
+        pos += length2;
+        offset += length2;
       },
       get pos() {
         return pos;
@@ -70378,29 +70178,29 @@ if (cid) {
     }
     return chunkReader(readChunk);
   }
-  function limitReader(reader, byteLimit) {
+  function limitReader2(reader, byteLimit) {
     let bytesRead = 0;
     return {
-      async upTo(length3) {
-        let bytes = await reader.upTo(length3);
+      async upTo(length2) {
+        let bytes = await reader.upTo(length2);
         if (bytes.length + bytesRead > byteLimit) {
           bytes = bytes.subarray(0, byteLimit - bytesRead);
         }
         return bytes;
       },
-      async exactly(length3, seek = false) {
-        const bytes = await reader.exactly(length3, seek);
+      async exactly(length2, seek = false) {
+        const bytes = await reader.exactly(length2, seek);
         if (bytes.length + bytesRead > byteLimit) {
           throw new Error("Unexpected end of data");
         }
         if (seek) {
-          bytesRead += length3;
+          bytesRead += length2;
         }
         return bytes;
       },
-      seek(length3) {
-        bytesRead += length3;
-        reader.seek(length3);
+      seek(length2) {
+        bytesRead += length2;
+        reader.seek(length2);
       },
       get pos() {
         return reader.pos;
@@ -70409,11 +70209,266 @@ if (cid) {
   }
   var init_decoder = __esm({
     "node_modules/@ipld/car/src/decoder.js"() {
-      init_cid2();
-      init_digest2();
       init_src2();
-      init_header_validator();
+      init_cid();
+      init_digest();
       init_decoder_common();
+      init_header_validator();
+    }
+  });
+
+  // node_modules/@ipld/car/src/indexer.js
+  async function decodeIndexerComplete(reader) {
+    const decoder2 = createDecoder(reader);
+    const { version, roots } = await decoder2.header();
+    return new CarIndexer(version, roots, decoder2.blocksIndex());
+  }
+  var CarIndexer;
+  var init_indexer = __esm({
+    "node_modules/@ipld/car/src/indexer.js"() {
+      init_decoder();
+      CarIndexer = class {
+        /**
+         * @param {number} version
+         * @param {CID[]} roots
+         * @param {AsyncGenerator<BlockIndex>} iterator
+         */
+        constructor(version, roots, iterator) {
+          this._version = version;
+          this._roots = roots;
+          this._iterator = iterator;
+        }
+        get version() {
+          return this._version;
+        }
+        /**
+         * Get the list of roots defined by the CAR referenced by this indexer. May be
+         * zero or more `CID`s.
+         *
+         * @function
+         * @memberof CarIndexer
+         * @instance
+         * @async
+         * @returns {Promise<CID[]>}
+         */
+        async getRoots() {
+          return this._roots;
+        }
+        /**
+         * @returns {AsyncIterator<BlockIndex>}
+         */
+        [Symbol.asyncIterator]() {
+          return this._iterator;
+        }
+        /**
+         * Instantiate a {@link CarIndexer} from a `Uint8Array` blob. Only the header
+         * is decoded initially, the remainder is processed and emitted via the
+         * iterator as it is consumed.
+         *
+         * @async
+         * @static
+         * @memberof CarIndexer
+         * @param {Uint8Array} bytes
+         * @returns {Promise<CarIndexer>}
+         */
+        static async fromBytes(bytes) {
+          if (!(bytes instanceof Uint8Array)) {
+            throw new TypeError("fromBytes() requires a Uint8Array");
+          }
+          return decodeIndexerComplete(bytesReader2(bytes));
+        }
+        /**
+         * Instantiate a {@link CarIndexer} from a `AsyncIterable<Uint8Array>`,
+         * such as a [modern Node.js stream](https://nodejs.org/api/stream.html#stream_streams_compatibility_with_async_generators_and_async_iterators).
+         * is decoded initially, the remainder is processed and emitted via the
+         * iterator as it is consumed.
+         *
+         * @async
+         * @static
+         * @memberof CarIndexer
+         * @param {AsyncIterable<Uint8Array>} asyncIterable
+         * @returns {Promise<CarIndexer>}
+         */
+        static async fromIterable(asyncIterable) {
+          if (!asyncIterable || !(typeof asyncIterable[Symbol.asyncIterator] === "function")) {
+            throw new TypeError("fromIterable() requires an async iterable");
+          }
+          return decodeIndexerComplete(asyncIterableReader(asyncIterable));
+        }
+      };
+    }
+  });
+
+  // node_modules/@ipld/car/src/iterator.js
+  async function fromBytes2(bytes) {
+    if (!(bytes instanceof Uint8Array)) {
+      throw new TypeError("fromBytes() requires a Uint8Array");
+    }
+    return decodeIterator(bytesReader2(bytes));
+  }
+  async function fromIterable(asyncIterable) {
+    if (!asyncIterable || !(typeof asyncIterable[Symbol.asyncIterator] === "function")) {
+      throw new TypeError("fromIterable() requires an async iterable");
+    }
+    return decodeIterator(asyncIterableReader(asyncIterable));
+  }
+  async function decodeIterator(reader) {
+    const decoder2 = createDecoder(reader);
+    const { version, roots } = await decoder2.header();
+    return { version, roots, iterator: decoder2.blocks() };
+  }
+  var CarIteratorBase, CarBlockIterator, CarCIDIterator;
+  var init_iterator = __esm({
+    "node_modules/@ipld/car/src/iterator.js"() {
+      init_decoder();
+      CarIteratorBase = class {
+        /**
+         * @param {number} version
+         * @param {CID[]} roots
+         * @param {AsyncIterable<Block>|void} iterable
+         */
+        constructor(version, roots, iterable) {
+          this._version = version;
+          this._roots = roots;
+          this._iterable = iterable;
+          this._decoded = false;
+        }
+        get version() {
+          return this._version;
+        }
+        /**
+         * @returns {Promise<CID[]>}
+         */
+        async getRoots() {
+          return this._roots;
+        }
+      };
+      CarBlockIterator = class _CarBlockIterator extends CarIteratorBase {
+        // inherited method
+        /**
+         * Get the list of roots defined by the CAR referenced by this iterator. May be
+         * zero or more `CID`s.
+         *
+         * @function getRoots
+         * @memberof CarBlockIterator
+         * @instance
+         * @async
+         * @returns {Promise<CID[]>}
+         */
+        /**
+         * @returns {AsyncIterator<Block>}
+         */
+        [Symbol.asyncIterator]() {
+          if (this._decoded) {
+            throw new Error("Cannot decode more than once");
+          }
+          if (!this._iterable) {
+            throw new Error("Block iterable not found");
+          }
+          this._decoded = true;
+          return this._iterable[Symbol.asyncIterator]();
+        }
+        /**
+         * Instantiate a {@link CarBlockIterator} from a `Uint8Array` blob. Rather
+         * than decoding the entire byte array prior to returning the iterator, as in
+         * {@link CarReader.fromBytes}, only the header is decoded and the remainder
+         * of the CAR is parsed as the `Block`s as yielded.
+         *
+         * @async
+         * @static
+         * @memberof CarBlockIterator
+         * @param {Uint8Array} bytes
+         * @returns {Promise<CarBlockIterator>}
+         */
+        static async fromBytes(bytes) {
+          const { version, roots, iterator } = await fromBytes2(bytes);
+          return new _CarBlockIterator(version, roots, iterator);
+        }
+        /**
+         * Instantiate a {@link CarBlockIterator} from a `AsyncIterable<Uint8Array>`,
+         * such as a [modern Node.js stream](https://nodejs.org/api/stream.html#stream_streams_compatibility_with_async_generators_and_async_iterators).
+         * Rather than decoding the entire byte array prior to returning the iterator,
+         * as in {@link CarReader.fromIterable}, only the header is decoded and the
+         * remainder of the CAR is parsed as the `Block`s as yielded.
+         *
+         * @async
+         * @static
+         * @param {AsyncIterable<Uint8Array>} asyncIterable
+         * @returns {Promise<CarBlockIterator>}
+         */
+        static async fromIterable(asyncIterable) {
+          const { version, roots, iterator } = await fromIterable(asyncIterable);
+          return new _CarBlockIterator(version, roots, iterator);
+        }
+      };
+      CarCIDIterator = class _CarCIDIterator extends CarIteratorBase {
+        // inherited method
+        /**
+         * Get the list of roots defined by the CAR referenced by this iterator. May be
+         * zero or more `CID`s.
+         *
+         * @function getRoots
+         * @memberof CarCIDIterator
+         * @instance
+         * @async
+         * @returns {Promise<CID[]>}
+         */
+        /**
+         * @returns {AsyncIterator<CID>}
+         */
+        [Symbol.asyncIterator]() {
+          if (this._decoded) {
+            throw new Error("Cannot decode more than once");
+          }
+          if (!this._iterable) {
+            throw new Error("Block iterable not found");
+          }
+          this._decoded = true;
+          const iterable = this._iterable[Symbol.asyncIterator]();
+          return {
+            async next() {
+              const next = await iterable.next();
+              if (next.done) {
+                return next;
+              }
+              return { done: false, value: next.value.cid };
+            }
+          };
+        }
+        /**
+         * Instantiate a {@link CarCIDIterator} from a `Uint8Array` blob. Rather
+         * than decoding the entire byte array prior to returning the iterator, as in
+         * {@link CarReader.fromBytes}, only the header is decoded and the remainder
+         * of the CAR is parsed as the `CID`s as yielded.
+         *
+         * @async
+         * @static
+         * @memberof CarCIDIterator
+         * @param {Uint8Array} bytes
+         * @returns {Promise<CarCIDIterator>}
+         */
+        static async fromBytes(bytes) {
+          const { version, roots, iterator } = await fromBytes2(bytes);
+          return new _CarCIDIterator(version, roots, iterator);
+        }
+        /**
+         * Instantiate a {@link CarCIDIterator} from a `AsyncIterable<Uint8Array>`,
+         * such as a [modern Node.js stream](https://nodejs.org/api/stream.html#stream_streams_compatibility_with_async_generators_and_async_iterators).
+         * Rather than decoding the entire byte array prior to returning the iterator,
+         * as in {@link CarReader.fromIterable}, only the header is decoded and the
+         * remainder of the CAR is parsed as the `CID`s as yielded.
+         *
+         * @async
+         * @static
+         * @memberof CarCIDIterator
+         * @param {AsyncIterable<Uint8Array>} asyncIterable
+         * @returns {Promise<CarCIDIterator>}
+         */
+        static async fromIterable(asyncIterable) {
+          const { version, roots, iterator } = await fromIterable(asyncIterable);
+          return new _CarCIDIterator(version, roots, iterator);
+        }
+      };
     }
   });
 
@@ -70542,7 +70597,7 @@ if (cid) {
           if (!(bytes instanceof Uint8Array)) {
             throw new TypeError("fromBytes() requires a Uint8Array");
           }
-          return decodeReaderComplete(bytesReader(bytes));
+          return decodeReaderComplete(bytesReader2(bytes));
         }
         /**
          * Instantiate a {@link CarReader} from a `AsyncIterable<Uint8Array>`, such as
@@ -70570,264 +70625,9 @@ if (cid) {
     }
   });
 
-  // node_modules/@ipld/car/src/indexer.js
-  async function decodeIndexerComplete(reader) {
-    const decoder2 = createDecoder(reader);
-    const { version, roots } = await decoder2.header();
-    return new CarIndexer(version, roots, decoder2.blocksIndex());
-  }
-  var CarIndexer;
-  var init_indexer = __esm({
-    "node_modules/@ipld/car/src/indexer.js"() {
-      init_decoder();
-      CarIndexer = class {
-        /**
-         * @param {number} version
-         * @param {CID[]} roots
-         * @param {AsyncGenerator<BlockIndex>} iterator
-         */
-        constructor(version, roots, iterator) {
-          this._version = version;
-          this._roots = roots;
-          this._iterator = iterator;
-        }
-        get version() {
-          return this._version;
-        }
-        /**
-         * Get the list of roots defined by the CAR referenced by this indexer. May be
-         * zero or more `CID`s.
-         *
-         * @function
-         * @memberof CarIndexer
-         * @instance
-         * @async
-         * @returns {Promise<CID[]>}
-         */
-        async getRoots() {
-          return this._roots;
-        }
-        /**
-         * @returns {AsyncIterator<BlockIndex>}
-         */
-        [Symbol.asyncIterator]() {
-          return this._iterator;
-        }
-        /**
-         * Instantiate a {@link CarIndexer} from a `Uint8Array` blob. Only the header
-         * is decoded initially, the remainder is processed and emitted via the
-         * iterator as it is consumed.
-         *
-         * @async
-         * @static
-         * @memberof CarIndexer
-         * @param {Uint8Array} bytes
-         * @returns {Promise<CarIndexer>}
-         */
-        static async fromBytes(bytes) {
-          if (!(bytes instanceof Uint8Array)) {
-            throw new TypeError("fromBytes() requires a Uint8Array");
-          }
-          return decodeIndexerComplete(bytesReader(bytes));
-        }
-        /**
-         * Instantiate a {@link CarIndexer} from a `AsyncIterable<Uint8Array>`,
-         * such as a [modern Node.js stream](https://nodejs.org/api/stream.html#stream_streams_compatibility_with_async_generators_and_async_iterators).
-         * is decoded initially, the remainder is processed and emitted via the
-         * iterator as it is consumed.
-         *
-         * @async
-         * @static
-         * @memberof CarIndexer
-         * @param {AsyncIterable<Uint8Array>} asyncIterable
-         * @returns {Promise<CarIndexer>}
-         */
-        static async fromIterable(asyncIterable) {
-          if (!asyncIterable || !(typeof asyncIterable[Symbol.asyncIterator] === "function")) {
-            throw new TypeError("fromIterable() requires an async iterable");
-          }
-          return decodeIndexerComplete(asyncIterableReader(asyncIterable));
-        }
-      };
-    }
-  });
-
-  // node_modules/@ipld/car/src/iterator.js
-  async function fromBytes(bytes) {
-    if (!(bytes instanceof Uint8Array)) {
-      throw new TypeError("fromBytes() requires a Uint8Array");
-    }
-    return decodeIterator(bytesReader(bytes));
-  }
-  async function fromIterable(asyncIterable) {
-    if (!asyncIterable || !(typeof asyncIterable[Symbol.asyncIterator] === "function")) {
-      throw new TypeError("fromIterable() requires an async iterable");
-    }
-    return decodeIterator(asyncIterableReader(asyncIterable));
-  }
-  async function decodeIterator(reader) {
-    const decoder2 = createDecoder(reader);
-    const { version, roots } = await decoder2.header();
-    return { version, roots, iterator: decoder2.blocks() };
-  }
-  var CarIteratorBase, CarBlockIterator, CarCIDIterator;
-  var init_iterator = __esm({
-    "node_modules/@ipld/car/src/iterator.js"() {
-      init_decoder();
-      CarIteratorBase = class {
-        /**
-         * @param {number} version
-         * @param {CID[]} roots
-         * @param {AsyncIterable<Block>|void} iterable
-         */
-        constructor(version, roots, iterable) {
-          this._version = version;
-          this._roots = roots;
-          this._iterable = iterable;
-          this._decoded = false;
-        }
-        get version() {
-          return this._version;
-        }
-        /**
-         * @returns {Promise<CID[]>}
-         */
-        async getRoots() {
-          return this._roots;
-        }
-      };
-      CarBlockIterator = class _CarBlockIterator extends CarIteratorBase {
-        // inherited method
-        /**
-         * Get the list of roots defined by the CAR referenced by this iterator. May be
-         * zero or more `CID`s.
-         *
-         * @function getRoots
-         * @memberof CarBlockIterator
-         * @instance
-         * @async
-         * @returns {Promise<CID[]>}
-         */
-        /**
-         * @returns {AsyncIterator<Block>}
-         */
-        [Symbol.asyncIterator]() {
-          if (this._decoded) {
-            throw new Error("Cannot decode more than once");
-          }
-          if (!this._iterable) {
-            throw new Error("Block iterable not found");
-          }
-          this._decoded = true;
-          return this._iterable[Symbol.asyncIterator]();
-        }
-        /**
-         * Instantiate a {@link CarBlockIterator} from a `Uint8Array` blob. Rather
-         * than decoding the entire byte array prior to returning the iterator, as in
-         * {@link CarReader.fromBytes}, only the header is decoded and the remainder
-         * of the CAR is parsed as the `Block`s as yielded.
-         *
-         * @async
-         * @static
-         * @memberof CarBlockIterator
-         * @param {Uint8Array} bytes
-         * @returns {Promise<CarBlockIterator>}
-         */
-        static async fromBytes(bytes) {
-          const { version, roots, iterator } = await fromBytes(bytes);
-          return new _CarBlockIterator(version, roots, iterator);
-        }
-        /**
-         * Instantiate a {@link CarBlockIterator} from a `AsyncIterable<Uint8Array>`,
-         * such as a [modern Node.js stream](https://nodejs.org/api/stream.html#stream_streams_compatibility_with_async_generators_and_async_iterators).
-         * Rather than decoding the entire byte array prior to returning the iterator,
-         * as in {@link CarReader.fromIterable}, only the header is decoded and the
-         * remainder of the CAR is parsed as the `Block`s as yielded.
-         *
-         * @async
-         * @static
-         * @param {AsyncIterable<Uint8Array>} asyncIterable
-         * @returns {Promise<CarBlockIterator>}
-         */
-        static async fromIterable(asyncIterable) {
-          const { version, roots, iterator } = await fromIterable(asyncIterable);
-          return new _CarBlockIterator(version, roots, iterator);
-        }
-      };
-      CarCIDIterator = class _CarCIDIterator extends CarIteratorBase {
-        // inherited method
-        /**
-         * Get the list of roots defined by the CAR referenced by this iterator. May be
-         * zero or more `CID`s.
-         *
-         * @function getRoots
-         * @memberof CarCIDIterator
-         * @instance
-         * @async
-         * @returns {Promise<CID[]>}
-         */
-        /**
-         * @returns {AsyncIterator<CID>}
-         */
-        [Symbol.asyncIterator]() {
-          if (this._decoded) {
-            throw new Error("Cannot decode more than once");
-          }
-          if (!this._iterable) {
-            throw new Error("Block iterable not found");
-          }
-          this._decoded = true;
-          const iterable = this._iterable[Symbol.asyncIterator]();
-          return {
-            async next() {
-              const next = await iterable.next();
-              if (next.done) {
-                return next;
-              }
-              return { done: false, value: next.value.cid };
-            }
-          };
-        }
-        /**
-         * Instantiate a {@link CarCIDIterator} from a `Uint8Array` blob. Rather
-         * than decoding the entire byte array prior to returning the iterator, as in
-         * {@link CarReader.fromBytes}, only the header is decoded and the remainder
-         * of the CAR is parsed as the `CID`s as yielded.
-         *
-         * @async
-         * @static
-         * @memberof CarCIDIterator
-         * @param {Uint8Array} bytes
-         * @returns {Promise<CarCIDIterator>}
-         */
-        static async fromBytes(bytes) {
-          const { version, roots, iterator } = await fromBytes(bytes);
-          return new _CarCIDIterator(version, roots, iterator);
-        }
-        /**
-         * Instantiate a {@link CarCIDIterator} from a `AsyncIterable<Uint8Array>`,
-         * such as a [modern Node.js stream](https://nodejs.org/api/stream.html#stream_streams_compatibility_with_async_generators_and_async_iterators).
-         * Rather than decoding the entire byte array prior to returning the iterator,
-         * as in {@link CarReader.fromIterable}, only the header is decoded and the
-         * remainder of the CAR is parsed as the `CID`s as yielded.
-         *
-         * @async
-         * @static
-         * @memberof CarCIDIterator
-         * @param {AsyncIterable<Uint8Array>} asyncIterable
-         * @returns {Promise<CarCIDIterator>}
-         */
-        static async fromIterable(asyncIterable) {
-          const { version, roots, iterator } = await fromIterable(asyncIterable);
-          return new _CarCIDIterator(version, roots, iterator);
-        }
-      };
-    }
-  });
-
   // node_modules/@ipld/car/src/encoder.js
   function createHeader(roots) {
-    const headerBytes = encode6({ version: 1, roots });
+    const headerBytes = encode4({ version: 1, roots });
     const varintBytes = import_varint4.default.encode(headerBytes.length);
     const header = new Uint8Array(varintBytes.length + headerBytes.length);
     header.set(varintBytes, 0);
@@ -70867,15 +70667,15 @@ if (cid) {
   var import_varint4;
   var init_encoder = __esm({
     "node_modules/@ipld/car/src/encoder.js"() {
-      import_varint4 = __toESM(require_varint(), 1);
       init_src2();
+      import_varint4 = __toESM(require_varint(), 1);
     }
   });
 
   // node_modules/@ipld/car/src/iterator-channel.js
   function noop() {
   }
-  function create3() {
+  function create2() {
     const chunkQueue = [];
     let drainer = null;
     let drainerResolver = noop;
@@ -70947,7 +70747,7 @@ if (cid) {
 
   // node_modules/@ipld/car/src/writer-browser.js
   function encodeWriter() {
-    const iw = create3();
+    const iw = create2();
     const { writer, iterator } = iw;
     const encoder = createEncoder(writer);
     return { encoder, iterator };
@@ -70957,7 +70757,7 @@ if (cid) {
       return [];
     }
     if (!Array.isArray(roots)) {
-      const cid = CID2.asCID(roots);
+      const cid = CID.asCID(roots);
       if (!cid) {
         throw new TypeError("roots must be a single CID or an array of CIDs");
       }
@@ -70965,7 +70765,7 @@ if (cid) {
     }
     const _roots = [];
     for (const root of roots) {
-      const _root = CID2.asCID(root);
+      const _root = CID.asCID(root);
       if (!_root) {
         throw new TypeError("roots must be a single CID or an array of CIDs");
       }
@@ -70976,10 +70776,10 @@ if (cid) {
   var CarWriter, CarWriterOut;
   var init_writer_browser = __esm({
     "node_modules/@ipld/car/src/writer-browser.js"() {
-      init_cid2();
+      init_cid();
+      init_decoder();
       init_encoder();
       init_iterator_channel();
-      init_decoder();
       CarWriter = class _CarWriter {
         /**
          * @param {CID[]} roots
@@ -71008,7 +70808,7 @@ if (cid) {
           if (this._ended) {
             throw new Error("Already closed");
           }
-          const cid = CID2.asCID(block.cid);
+          const cid = CID.asCID(block.cid);
           if (!cid) {
             throw new TypeError("Can only write {cid, bytes} objects");
           }
@@ -71096,8 +70896,8 @@ if (cid) {
          * @returns {Promise<Uint8Array>}
          */
         static async updateRootsInBytes(bytes, roots) {
-          const reader = bytesReader(bytes);
-          await readHeader(reader);
+          const reader = bytesReader2(bytes);
+          await readHeader2(reader);
           const newHeader = createHeader(roots);
           if (Number(reader.pos) !== newHeader.length) {
             throw new Error(`updateRoots() can only overwrite a header of the same length (old header is ${reader.pos} bytes, new header is ${newHeader.length} bytes)`);
@@ -71124,1882 +70924,6 @@ if (cid) {
     }
   });
 
-  // node_modules/@ipld/car/src/indexed-reader-browser.js
-  var CarIndexedReader;
-  var init_indexed_reader_browser = __esm({
-    "node_modules/@ipld/car/src/indexed-reader-browser.js"() {
-      CarIndexedReader = class {
-        static async fromFile() {
-          throw new Error("Unsupported in this environment");
-        }
-      };
-    }
-  });
-
-  // node_modules/@ipld/car/src/buffer-decoder.js
-  function readHeader2(reader, strictVersion) {
-    const length3 = decodeVarint(reader.upTo(8), reader);
-    if (length3 === 0) {
-      throw new Error("Invalid CAR header (zero length)");
-    }
-    const header = reader.exactly(length3, true);
-    const block = decode10(header);
-    if (!CarHeader(block)) {
-      throw new Error("Invalid CAR header format");
-    }
-    if (block.version !== 1 && block.version !== 2 || strictVersion !== void 0 && block.version !== strictVersion) {
-      throw new Error(`Invalid CAR version: ${block.version}${strictVersion !== void 0 ? ` (expected ${strictVersion})` : ""}`);
-    }
-    const hasRoots = Array.isArray(block.roots);
-    if (block.version === 1 && !hasRoots || block.version === 2 && hasRoots) {
-      throw new Error("Invalid CAR header format");
-    }
-    if (block.version === 1) {
-      return block;
-    }
-    const v2Header = decodeV2Header(reader.exactly(V2_HEADER_LENGTH, true));
-    reader.seek(v2Header.dataOffset - reader.pos);
-    const v1Header = readHeader2(reader, 1);
-    return Object.assign(v1Header, v2Header);
-  }
-  function readCid2(reader) {
-    const first2 = reader.exactly(2, false);
-    if (first2[0] === CIDV0_BYTES.SHA2_256 && first2[1] === CIDV0_BYTES.LENGTH) {
-      const bytes2 = reader.exactly(34, true);
-      const multihash2 = decode7(bytes2);
-      return CID2.create(0, CIDV0_BYTES.DAG_PB, multihash2);
-    }
-    const version = decodeVarint(reader.upTo(8), reader);
-    if (version !== 1) {
-      throw new Error(`Unexpected CID version (${version})`);
-    }
-    const codec = decodeVarint(reader.upTo(8), reader);
-    const bytes = reader.exactly(getMultihashLength(reader.upTo(8)), true);
-    const multihash = decode7(bytes);
-    return CID2.create(version, codec, multihash);
-  }
-  function readBlockHead2(reader) {
-    const start = reader.pos;
-    let length3 = decodeVarint(reader.upTo(8), reader);
-    if (length3 === 0) {
-      throw new Error("Invalid CAR section (zero length)");
-    }
-    length3 += reader.pos - start;
-    const cid = readCid2(reader);
-    const blockLength2 = length3 - Number(reader.pos - start);
-    return { cid, length: length3, blockLength: blockLength2 };
-  }
-  function fromBytes2(bytes) {
-    let reader = bytesReader2(bytes);
-    const header = readHeader2(reader);
-    if (header.version === 2) {
-      const v1length = reader.pos - header.dataOffset;
-      reader = limitReader2(reader, header.dataSize - v1length);
-    }
-    const blocks = [];
-    while (reader.upTo(8).length > 0) {
-      const { cid, blockLength: blockLength2 } = readBlockHead2(reader);
-      blocks.push({ cid, bytes: reader.exactly(blockLength2, true) });
-    }
-    return {
-      header,
-      blocks
-    };
-  }
-  function bytesReader2(bytes) {
-    let pos = 0;
-    return {
-      upTo(length3) {
-        return bytes.subarray(pos, pos + Math.min(length3, bytes.length - pos));
-      },
-      exactly(length3, seek = false) {
-        if (length3 > bytes.length - pos) {
-          throw new Error("Unexpected end of data");
-        }
-        const out = bytes.subarray(pos, pos + length3);
-        if (seek) {
-          pos += length3;
-        }
-        return out;
-      },
-      seek(length3) {
-        pos += length3;
-      },
-      get pos() {
-        return pos;
-      }
-    };
-  }
-  function limitReader2(reader, byteLimit) {
-    let bytesRead = 0;
-    return {
-      upTo(length3) {
-        let bytes = reader.upTo(length3);
-        if (bytes.length + bytesRead > byteLimit) {
-          bytes = bytes.subarray(0, byteLimit - bytesRead);
-        }
-        return bytes;
-      },
-      exactly(length3, seek = false) {
-        const bytes = reader.exactly(length3, seek);
-        if (bytes.length + bytesRead > byteLimit) {
-          throw new Error("Unexpected end of data");
-        }
-        if (seek) {
-          bytesRead += length3;
-        }
-        return bytes;
-      },
-      seek(length3) {
-        bytesRead += length3;
-        reader.seek(length3);
-      },
-      get pos() {
-        return reader.pos;
-      }
-    };
-  }
-  var init_buffer_decoder = __esm({
-    "node_modules/@ipld/car/src/buffer-decoder.js"() {
-      init_cid2();
-      init_digest2();
-      init_src2();
-      init_header_validator();
-      init_decoder_common();
-    }
-  });
-
-  // node_modules/@ipld/car/src/buffer-reader-browser.js
-  var CarBufferReader;
-  var init_buffer_reader_browser = __esm({
-    "node_modules/@ipld/car/src/buffer-reader-browser.js"() {
-      init_buffer_decoder();
-      CarBufferReader = class _CarBufferReader {
-        /**
-         * @constructs CarBufferReader
-         * @param {CarHeader|CarV2Header} header
-         * @param {Block[]} blocks
-         */
-        constructor(header, blocks) {
-          this._header = header;
-          this._blocks = blocks;
-          this._cids = void 0;
-        }
-        /**
-         * @property version
-         * @memberof CarBufferReader
-         * @instance
-         */
-        get version() {
-          return this._header.version;
-        }
-        /**
-         * Get the list of roots defined by the CAR referenced by this reader. May be
-         * zero or more `CID`s.
-         *
-         * @function
-         * @memberof CarBufferReader
-         * @instance
-         * @returns {CID[]}
-         */
-        getRoots() {
-          return this._header.roots;
-        }
-        /**
-         * Check whether a given `CID` exists within the CAR referenced by this
-         * reader.
-         *
-         * @function
-         * @memberof CarBufferReader
-         * @instance
-         * @param {CID} key
-         * @returns {boolean}
-         */
-        has(key) {
-          return this._blocks.some((b) => b.cid.equals(key));
-        }
-        /**
-         * Fetch a `Block` (a `{ cid:CID, bytes:Uint8Array }` pair) from the CAR
-         * referenced by this reader matching the provided `CID`. In the case where
-         * the provided `CID` doesn't exist within the CAR, `undefined` will be
-         * returned.
-         *
-         * @function
-         * @memberof CarBufferReader
-         * @instance
-         * @param {CID} key
-         * @returns {Block | undefined}
-         */
-        get(key) {
-          return this._blocks.find((b) => b.cid.equals(key));
-        }
-        /**
-         * Returns a `Block[]` of the `Block`s (`{ cid:CID, bytes:Uint8Array }` pairs) contained within
-         * the CAR referenced by this reader.
-         *
-         * @function
-         * @memberof CarBufferReader
-         * @instance
-         * @returns {Block[]}
-         */
-        blocks() {
-          return this._blocks;
-        }
-        /**
-         * Returns a `CID[]` of the `CID`s contained within the CAR referenced by this reader.
-         *
-         * @function
-         * @memberof CarBufferReader
-         * @instance
-         * @returns {CID[]}
-         */
-        cids() {
-          if (!this._cids) {
-            this._cids = this._blocks.map((b) => b.cid);
-          }
-          return this._cids;
-        }
-        /**
-         * Instantiate a {@link CarBufferReader} from a `Uint8Array` blob. This performs a
-         * decode fully in memory and maintains the decoded state in memory for full
-         * access to the data via the `CarReader` API.
-         *
-         * @static
-         * @memberof CarBufferReader
-         * @param {Uint8Array} bytes
-         * @returns {CarBufferReader}
-         */
-        static fromBytes(bytes) {
-          if (!(bytes instanceof Uint8Array)) {
-            throw new TypeError("fromBytes() requires a Uint8Array");
-          }
-          const { header, blocks } = fromBytes2(bytes);
-          return new _CarBufferReader(header, blocks);
-        }
-      };
-    }
-  });
-
-  // node_modules/cborg/esm/lib/is.js
-  function is2(value) {
-    if (value === null) {
-      return "null";
-    }
-    if (value === void 0) {
-      return "undefined";
-    }
-    if (value === true || value === false) {
-      return "boolean";
-    }
-    const typeOf = typeof value;
-    if (typeofs2.includes(typeOf)) {
-      return typeOf;
-    }
-    if (typeOf === "function") {
-      return "Function";
-    }
-    if (Array.isArray(value)) {
-      return "Array";
-    }
-    if (isBuffer3(value)) {
-      return "Buffer";
-    }
-    const objectType = getObjectType2(value);
-    if (objectType) {
-      return objectType;
-    }
-    return "Object";
-  }
-  function isBuffer3(value) {
-    return value && value.constructor && value.constructor.isBuffer && value.constructor.isBuffer.call(null, value);
-  }
-  function getObjectType2(value) {
-    const objectTypeName = Object.prototype.toString.call(value).slice(8, -1);
-    if (objectTypeNames2.includes(objectTypeName)) {
-      return objectTypeName;
-    }
-    return void 0;
-  }
-  var typeofs2, objectTypeNames2;
-  var init_is2 = __esm({
-    "node_modules/cborg/esm/lib/is.js"() {
-      typeofs2 = [
-        "string",
-        "number",
-        "bigint",
-        "symbol"
-      ];
-      objectTypeNames2 = [
-        "Function",
-        "Generator",
-        "AsyncGenerator",
-        "GeneratorFunction",
-        "AsyncGeneratorFunction",
-        "AsyncFunction",
-        "Observable",
-        "Array",
-        "Buffer",
-        "Object",
-        "RegExp",
-        "Date",
-        "Error",
-        "Map",
-        "Set",
-        "WeakMap",
-        "WeakSet",
-        "ArrayBuffer",
-        "SharedArrayBuffer",
-        "DataView",
-        "Promise",
-        "URL",
-        "HTMLElement",
-        "Int8Array",
-        "Uint8Array",
-        "Uint8ClampedArray",
-        "Int16Array",
-        "Uint16Array",
-        "Int32Array",
-        "Uint32Array",
-        "Float32Array",
-        "Float64Array",
-        "BigInt64Array",
-        "BigUint64Array"
-      ];
-    }
-  });
-
-  // node_modules/cborg/esm/lib/token.js
-  var Type2, Token2;
-  var init_token2 = __esm({
-    "node_modules/cborg/esm/lib/token.js"() {
-      Type2 = class {
-        constructor(major, name, terminal) {
-          this.major = major;
-          this.majorEncoded = major << 5;
-          this.name = name;
-          this.terminal = terminal;
-        }
-        toString() {
-          return `Type[${this.major}].${this.name}`;
-        }
-        compare(typ) {
-          return this.major < typ.major ? -1 : this.major > typ.major ? 1 : 0;
-        }
-      };
-      Type2.uint = new Type2(0, "uint", true);
-      Type2.negint = new Type2(1, "negint", true);
-      Type2.bytes = new Type2(2, "bytes", true);
-      Type2.string = new Type2(3, "string", true);
-      Type2.array = new Type2(4, "array", false);
-      Type2.map = new Type2(5, "map", false);
-      Type2.tag = new Type2(6, "tag", false);
-      Type2.float = new Type2(7, "float", true);
-      Type2.false = new Type2(7, "false", true);
-      Type2.true = new Type2(7, "true", true);
-      Type2.null = new Type2(7, "null", true);
-      Type2.undefined = new Type2(7, "undefined", true);
-      Type2.break = new Type2(7, "break", true);
-      Token2 = class {
-        constructor(type, value, encodedLength) {
-          this.type = type;
-          this.value = value;
-          this.encodedLength = encodedLength;
-          this.encodedBytes = void 0;
-          this.byteValue = void 0;
-        }
-        toString() {
-          return `Token[${this.type}].${this.value}`;
-        }
-      };
-    }
-  });
-
-  // node_modules/cborg/esm/lib/byte-utils.js
-  function isBuffer4(buf3) {
-    return useBuffer2 && globalThis.Buffer.isBuffer(buf3);
-  }
-  function asU8A2(buf3) {
-    if (!(buf3 instanceof Uint8Array)) {
-      return Uint8Array.from(buf3);
-    }
-    return isBuffer4(buf3) ? new Uint8Array(buf3.buffer, buf3.byteOffset, buf3.byteLength) : buf3;
-  }
-  function compare2(b1, b2) {
-    if (isBuffer4(b1) && isBuffer4(b2)) {
-      return b1.compare(b2);
-    }
-    for (let i = 0; i < b1.length; i++) {
-      if (b1[i] === b2[i]) {
-        continue;
-      }
-      return b1[i] < b2[i] ? -1 : 1;
-    }
-    return 0;
-  }
-  function utf8ToBytes2(string, units = Infinity) {
-    let codePoint;
-    const length3 = string.length;
-    let leadSurrogate = null;
-    const bytes = [];
-    for (let i = 0; i < length3; ++i) {
-      codePoint = string.charCodeAt(i);
-      if (codePoint > 55295 && codePoint < 57344) {
-        if (!leadSurrogate) {
-          if (codePoint > 56319) {
-            if ((units -= 3) > -1)
-              bytes.push(239, 191, 189);
-            continue;
-          } else if (i + 1 === length3) {
-            if ((units -= 3) > -1)
-              bytes.push(239, 191, 189);
-            continue;
-          }
-          leadSurrogate = codePoint;
-          continue;
-        }
-        if (codePoint < 56320) {
-          if ((units -= 3) > -1)
-            bytes.push(239, 191, 189);
-          leadSurrogate = codePoint;
-          continue;
-        }
-        codePoint = (leadSurrogate - 55296 << 10 | codePoint - 56320) + 65536;
-      } else if (leadSurrogate) {
-        if ((units -= 3) > -1)
-          bytes.push(239, 191, 189);
-      }
-      leadSurrogate = null;
-      if (codePoint < 128) {
-        if ((units -= 1) < 0)
-          break;
-        bytes.push(codePoint);
-      } else if (codePoint < 2048) {
-        if ((units -= 2) < 0)
-          break;
-        bytes.push(codePoint >> 6 | 192, codePoint & 63 | 128);
-      } else if (codePoint < 65536) {
-        if ((units -= 3) < 0)
-          break;
-        bytes.push(codePoint >> 12 | 224, codePoint >> 6 & 63 | 128, codePoint & 63 | 128);
-      } else if (codePoint < 1114112) {
-        if ((units -= 4) < 0)
-          break;
-        bytes.push(codePoint >> 18 | 240, codePoint >> 12 & 63 | 128, codePoint >> 6 & 63 | 128, codePoint & 63 | 128);
-      } else {
-        throw new Error("Invalid code point");
-      }
-    }
-    return bytes;
-  }
-  function utf8Slice2(buf3, offset, end) {
-    const res = [];
-    while (offset < end) {
-      const firstByte = buf3[offset];
-      let codePoint = null;
-      let bytesPerSequence = firstByte > 239 ? 4 : firstByte > 223 ? 3 : firstByte > 191 ? 2 : 1;
-      if (offset + bytesPerSequence <= end) {
-        let secondByte, thirdByte, fourthByte, tempCodePoint;
-        switch (bytesPerSequence) {
-          case 1:
-            if (firstByte < 128) {
-              codePoint = firstByte;
-            }
-            break;
-          case 2:
-            secondByte = buf3[offset + 1];
-            if ((secondByte & 192) === 128) {
-              tempCodePoint = (firstByte & 31) << 6 | secondByte & 63;
-              if (tempCodePoint > 127) {
-                codePoint = tempCodePoint;
-              }
-            }
-            break;
-          case 3:
-            secondByte = buf3[offset + 1];
-            thirdByte = buf3[offset + 2];
-            if ((secondByte & 192) === 128 && (thirdByte & 192) === 128) {
-              tempCodePoint = (firstByte & 15) << 12 | (secondByte & 63) << 6 | thirdByte & 63;
-              if (tempCodePoint > 2047 && (tempCodePoint < 55296 || tempCodePoint > 57343)) {
-                codePoint = tempCodePoint;
-              }
-            }
-            break;
-          case 4:
-            secondByte = buf3[offset + 1];
-            thirdByte = buf3[offset + 2];
-            fourthByte = buf3[offset + 3];
-            if ((secondByte & 192) === 128 && (thirdByte & 192) === 128 && (fourthByte & 192) === 128) {
-              tempCodePoint = (firstByte & 15) << 18 | (secondByte & 63) << 12 | (thirdByte & 63) << 6 | fourthByte & 63;
-              if (tempCodePoint > 65535 && tempCodePoint < 1114112) {
-                codePoint = tempCodePoint;
-              }
-            }
-        }
-      }
-      if (codePoint === null) {
-        codePoint = 65533;
-        bytesPerSequence = 1;
-      } else if (codePoint > 65535) {
-        codePoint -= 65536;
-        res.push(codePoint >>> 10 & 1023 | 55296);
-        codePoint = 56320 | codePoint & 1023;
-      }
-      res.push(codePoint);
-      offset += bytesPerSequence;
-    }
-    return decodeCodePointsArray2(res);
-  }
-  function decodeCodePointsArray2(codePoints) {
-    const len = codePoints.length;
-    if (len <= MAX_ARGUMENTS_LENGTH2) {
-      return String.fromCharCode.apply(String, codePoints);
-    }
-    let res = "";
-    let i = 0;
-    while (i < len) {
-      res += String.fromCharCode.apply(String, codePoints.slice(i, i += MAX_ARGUMENTS_LENGTH2));
-    }
-    return res;
-  }
-  var useBuffer2, textDecoder2, textEncoder2, toString2, fromString2, fromArray2, slice2, concat2, alloc2, MAX_ARGUMENTS_LENGTH2;
-  var init_byte_utils2 = __esm({
-    "node_modules/cborg/esm/lib/byte-utils.js"() {
-      useBuffer2 = globalThis.process && !globalThis.process.browser && globalThis.Buffer && typeof globalThis.Buffer.isBuffer === "function";
-      textDecoder2 = new TextDecoder();
-      textEncoder2 = new TextEncoder();
-      toString2 = useBuffer2 ? (bytes, start, end) => {
-        return end - start > 64 ? globalThis.Buffer.from(bytes.subarray(start, end)).toString("utf8") : utf8Slice2(bytes, start, end);
-      } : (bytes, start, end) => {
-        return end - start > 64 ? textDecoder2.decode(bytes.subarray(start, end)) : utf8Slice2(bytes, start, end);
-      };
-      fromString2 = useBuffer2 ? (string) => {
-        return string.length > 64 ? globalThis.Buffer.from(string) : utf8ToBytes2(string);
-      } : (string) => {
-        return string.length > 64 ? textEncoder2.encode(string) : utf8ToBytes2(string);
-      };
-      fromArray2 = (arr) => {
-        return Uint8Array.from(arr);
-      };
-      slice2 = useBuffer2 ? (bytes, start, end) => {
-        if (isBuffer4(bytes)) {
-          return new Uint8Array(bytes.subarray(start, end));
-        }
-        return bytes.slice(start, end);
-      } : (bytes, start, end) => {
-        return bytes.slice(start, end);
-      };
-      concat2 = useBuffer2 ? (chunks, length3) => {
-        chunks = chunks.map((c) => c instanceof Uint8Array ? c : globalThis.Buffer.from(c));
-        return asU8A2(globalThis.Buffer.concat(chunks, length3));
-      } : (chunks, length3) => {
-        const out = new Uint8Array(length3);
-        let off = 0;
-        for (let b of chunks) {
-          if (off + b.length > out.length) {
-            b = b.subarray(0, out.length - off);
-          }
-          out.set(b, off);
-          off += b.length;
-        }
-        return out;
-      };
-      alloc2 = useBuffer2 ? (size) => {
-        return globalThis.Buffer.allocUnsafe(size);
-      } : (size) => {
-        return new Uint8Array(size);
-      };
-      MAX_ARGUMENTS_LENGTH2 = 4096;
-    }
-  });
-
-  // node_modules/cborg/esm/lib/bl.js
-  var defaultChunkSize2, Bl2;
-  var init_bl2 = __esm({
-    "node_modules/cborg/esm/lib/bl.js"() {
-      init_byte_utils2();
-      defaultChunkSize2 = 256;
-      Bl2 = class {
-        constructor(chunkSize = defaultChunkSize2) {
-          this.chunkSize = chunkSize;
-          this.cursor = 0;
-          this.maxCursor = -1;
-          this.chunks = [];
-          this._initReuseChunk = null;
-        }
-        reset() {
-          this.cursor = 0;
-          this.maxCursor = -1;
-          if (this.chunks.length) {
-            this.chunks = [];
-          }
-          if (this._initReuseChunk !== null) {
-            this.chunks.push(this._initReuseChunk);
-            this.maxCursor = this._initReuseChunk.length - 1;
-          }
-        }
-        push(bytes) {
-          let topChunk = this.chunks[this.chunks.length - 1];
-          const newMax = this.cursor + bytes.length;
-          if (newMax <= this.maxCursor + 1) {
-            const chunkPos = topChunk.length - (this.maxCursor - this.cursor) - 1;
-            topChunk.set(bytes, chunkPos);
-          } else {
-            if (topChunk) {
-              const chunkPos = topChunk.length - (this.maxCursor - this.cursor) - 1;
-              if (chunkPos < topChunk.length) {
-                this.chunks[this.chunks.length - 1] = topChunk.subarray(0, chunkPos);
-                this.maxCursor = this.cursor - 1;
-              }
-            }
-            if (bytes.length < 64 && bytes.length < this.chunkSize) {
-              topChunk = alloc2(this.chunkSize);
-              this.chunks.push(topChunk);
-              this.maxCursor += topChunk.length;
-              if (this._initReuseChunk === null) {
-                this._initReuseChunk = topChunk;
-              }
-              topChunk.set(bytes, 0);
-            } else {
-              this.chunks.push(bytes);
-              this.maxCursor += bytes.length;
-            }
-          }
-          this.cursor += bytes.length;
-        }
-        toBytes(reset = false) {
-          let byts;
-          if (this.chunks.length === 1) {
-            const chunk = this.chunks[0];
-            if (reset && this.cursor > chunk.length / 2) {
-              byts = this.cursor === chunk.length ? chunk : chunk.subarray(0, this.cursor);
-              this._initReuseChunk = null;
-              this.chunks = [];
-            } else {
-              byts = slice2(chunk, 0, this.cursor);
-            }
-          } else {
-            byts = concat2(this.chunks, this.cursor);
-          }
-          if (reset) {
-            this.reset();
-          }
-          return byts;
-        }
-      };
-    }
-  });
-
-  // node_modules/cborg/esm/lib/common.js
-  function assertEnoughData2(data, pos, need) {
-    if (data.length - pos < need) {
-      throw new Error(`${decodeErrPrefix2} not enough data for type`);
-    }
-  }
-  var decodeErrPrefix2, encodeErrPrefix2, uintMinorPrefixBytes2;
-  var init_common2 = __esm({
-    "node_modules/cborg/esm/lib/common.js"() {
-      decodeErrPrefix2 = "CBOR decode error:";
-      encodeErrPrefix2 = "CBOR encode error:";
-      uintMinorPrefixBytes2 = [];
-      uintMinorPrefixBytes2[23] = 1;
-      uintMinorPrefixBytes2[24] = 2;
-      uintMinorPrefixBytes2[25] = 3;
-      uintMinorPrefixBytes2[26] = 5;
-      uintMinorPrefixBytes2[27] = 9;
-    }
-  });
-
-  // node_modules/cborg/esm/lib/0uint.js
-  function readUint82(data, offset, options) {
-    assertEnoughData2(data, offset, 1);
-    const value = data[offset];
-    if (options.strict === true && value < uintBoundaries2[0]) {
-      throw new Error(`${decodeErrPrefix2} integer encoded in more bytes than necessary (strict decode)`);
-    }
-    return value;
-  }
-  function readUint162(data, offset, options) {
-    assertEnoughData2(data, offset, 2);
-    const value = data[offset] << 8 | data[offset + 1];
-    if (options.strict === true && value < uintBoundaries2[1]) {
-      throw new Error(`${decodeErrPrefix2} integer encoded in more bytes than necessary (strict decode)`);
-    }
-    return value;
-  }
-  function readUint322(data, offset, options) {
-    assertEnoughData2(data, offset, 4);
-    const value = data[offset] * 16777216 + (data[offset + 1] << 16) + (data[offset + 2] << 8) + data[offset + 3];
-    if (options.strict === true && value < uintBoundaries2[2]) {
-      throw new Error(`${decodeErrPrefix2} integer encoded in more bytes than necessary (strict decode)`);
-    }
-    return value;
-  }
-  function readUint642(data, offset, options) {
-    assertEnoughData2(data, offset, 8);
-    const hi = data[offset] * 16777216 + (data[offset + 1] << 16) + (data[offset + 2] << 8) + data[offset + 3];
-    const lo = data[offset + 4] * 16777216 + (data[offset + 5] << 16) + (data[offset + 6] << 8) + data[offset + 7];
-    const value = (BigInt(hi) << BigInt(32)) + BigInt(lo);
-    if (options.strict === true && value < uintBoundaries2[3]) {
-      throw new Error(`${decodeErrPrefix2} integer encoded in more bytes than necessary (strict decode)`);
-    }
-    if (value <= Number.MAX_SAFE_INTEGER) {
-      return Number(value);
-    }
-    if (options.allowBigInt === true) {
-      return value;
-    }
-    throw new Error(`${decodeErrPrefix2} integers outside of the safe integer range are not supported`);
-  }
-  function decodeUint82(data, pos, _minor, options) {
-    return new Token2(Type2.uint, readUint82(data, pos + 1, options), 2);
-  }
-  function decodeUint162(data, pos, _minor, options) {
-    return new Token2(Type2.uint, readUint162(data, pos + 1, options), 3);
-  }
-  function decodeUint322(data, pos, _minor, options) {
-    return new Token2(Type2.uint, readUint322(data, pos + 1, options), 5);
-  }
-  function decodeUint642(data, pos, _minor, options) {
-    return new Token2(Type2.uint, readUint642(data, pos + 1, options), 9);
-  }
-  function encodeUint2(buf3, token) {
-    return encodeUintValue2(buf3, 0, token.value);
-  }
-  function encodeUintValue2(buf3, major, uint) {
-    if (uint < uintBoundaries2[0]) {
-      const nuint = Number(uint);
-      buf3.push([major | nuint]);
-    } else if (uint < uintBoundaries2[1]) {
-      const nuint = Number(uint);
-      buf3.push([
-        major | 24,
-        nuint
-      ]);
-    } else if (uint < uintBoundaries2[2]) {
-      const nuint = Number(uint);
-      buf3.push([
-        major | 25,
-        nuint >>> 8,
-        nuint & 255
-      ]);
-    } else if (uint < uintBoundaries2[3]) {
-      const nuint = Number(uint);
-      buf3.push([
-        major | 26,
-        nuint >>> 24 & 255,
-        nuint >>> 16 & 255,
-        nuint >>> 8 & 255,
-        nuint & 255
-      ]);
-    } else {
-      const buint = BigInt(uint);
-      if (buint < uintBoundaries2[4]) {
-        const set = [
-          major | 27,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0
-        ];
-        let lo = Number(buint & BigInt(4294967295));
-        let hi = Number(buint >> BigInt(32) & BigInt(4294967295));
-        set[8] = lo & 255;
-        lo = lo >> 8;
-        set[7] = lo & 255;
-        lo = lo >> 8;
-        set[6] = lo & 255;
-        lo = lo >> 8;
-        set[5] = lo & 255;
-        set[4] = hi & 255;
-        hi = hi >> 8;
-        set[3] = hi & 255;
-        hi = hi >> 8;
-        set[2] = hi & 255;
-        hi = hi >> 8;
-        set[1] = hi & 255;
-        buf3.push(set);
-      } else {
-        throw new Error(`${decodeErrPrefix2} encountered BigInt larger than allowable range`);
-      }
-    }
-  }
-  var uintBoundaries2;
-  var init_uint2 = __esm({
-    "node_modules/cborg/esm/lib/0uint.js"() {
-      init_token2();
-      init_common2();
-      uintBoundaries2 = [
-        24,
-        256,
-        65536,
-        4294967296,
-        BigInt("18446744073709551616")
-      ];
-      encodeUint2.encodedSize = function encodedSize9(token) {
-        return encodeUintValue2.encodedSize(token.value);
-      };
-      encodeUintValue2.encodedSize = function encodedSize10(uint) {
-        if (uint < uintBoundaries2[0]) {
-          return 1;
-        }
-        if (uint < uintBoundaries2[1]) {
-          return 2;
-        }
-        if (uint < uintBoundaries2[2]) {
-          return 3;
-        }
-        if (uint < uintBoundaries2[3]) {
-          return 5;
-        }
-        return 9;
-      };
-      encodeUint2.compareTokens = function compareTokens4(tok1, tok2) {
-        return tok1.value < tok2.value ? -1 : tok1.value > tok2.value ? 1 : 0;
-      };
-    }
-  });
-
-  // node_modules/cborg/esm/lib/1negint.js
-  function decodeNegint82(data, pos, _minor, options) {
-    return new Token2(Type2.negint, -1 - readUint82(data, pos + 1, options), 2);
-  }
-  function decodeNegint162(data, pos, _minor, options) {
-    return new Token2(Type2.negint, -1 - readUint162(data, pos + 1, options), 3);
-  }
-  function decodeNegint322(data, pos, _minor, options) {
-    return new Token2(Type2.negint, -1 - readUint322(data, pos + 1, options), 5);
-  }
-  function decodeNegint642(data, pos, _minor, options) {
-    const int = readUint642(data, pos + 1, options);
-    if (typeof int !== "bigint") {
-      const value = -1 - int;
-      if (value >= Number.MIN_SAFE_INTEGER) {
-        return new Token2(Type2.negint, value, 9);
-      }
-    }
-    if (options.allowBigInt !== true) {
-      throw new Error(`${decodeErrPrefix2} integers outside of the safe integer range are not supported`);
-    }
-    return new Token2(Type2.negint, neg1b2 - BigInt(int), 9);
-  }
-  function encodeNegint2(buf3, token) {
-    const negint = token.value;
-    const unsigned = typeof negint === "bigint" ? negint * neg1b2 - pos1b2 : negint * -1 - 1;
-    encodeUintValue2(buf3, token.type.majorEncoded, unsigned);
-  }
-  var neg1b2, pos1b2;
-  var init_negint2 = __esm({
-    "node_modules/cborg/esm/lib/1negint.js"() {
-      init_token2();
-      init_uint2();
-      init_common2();
-      neg1b2 = BigInt(-1);
-      pos1b2 = BigInt(1);
-      encodeNegint2.encodedSize = function encodedSize11(token) {
-        const negint = token.value;
-        const unsigned = typeof negint === "bigint" ? negint * neg1b2 - pos1b2 : negint * -1 - 1;
-        if (unsigned < uintBoundaries2[0]) {
-          return 1;
-        }
-        if (unsigned < uintBoundaries2[1]) {
-          return 2;
-        }
-        if (unsigned < uintBoundaries2[2]) {
-          return 3;
-        }
-        if (unsigned < uintBoundaries2[3]) {
-          return 5;
-        }
-        return 9;
-      };
-      encodeNegint2.compareTokens = function compareTokens5(tok1, tok2) {
-        return tok1.value < tok2.value ? 1 : tok1.value > tok2.value ? -1 : 0;
-      };
-    }
-  });
-
-  // node_modules/cborg/esm/lib/2bytes.js
-  function toToken5(data, pos, prefix, length3) {
-    assertEnoughData2(data, pos, prefix + length3);
-    const buf3 = slice2(data, pos + prefix, pos + prefix + length3);
-    return new Token2(Type2.bytes, buf3, prefix + length3);
-  }
-  function decodeBytesCompact2(data, pos, minor, _options) {
-    return toToken5(data, pos, 1, minor);
-  }
-  function decodeBytes82(data, pos, _minor, options) {
-    return toToken5(data, pos, 2, readUint82(data, pos + 1, options));
-  }
-  function decodeBytes162(data, pos, _minor, options) {
-    return toToken5(data, pos, 3, readUint162(data, pos + 1, options));
-  }
-  function decodeBytes322(data, pos, _minor, options) {
-    return toToken5(data, pos, 5, readUint322(data, pos + 1, options));
-  }
-  function decodeBytes642(data, pos, _minor, options) {
-    const l = readUint642(data, pos + 1, options);
-    if (typeof l === "bigint") {
-      throw new Error(`${decodeErrPrefix2} 64-bit integer bytes lengths not supported`);
-    }
-    return toToken5(data, pos, 9, l);
-  }
-  function tokenBytes2(token) {
-    if (token.encodedBytes === void 0) {
-      token.encodedBytes = token.type === Type2.string ? fromString2(token.value) : token.value;
-    }
-    return token.encodedBytes;
-  }
-  function encodeBytes2(buf3, token) {
-    const bytes = tokenBytes2(token);
-    encodeUintValue2(buf3, token.type.majorEncoded, bytes.length);
-    buf3.push(bytes);
-  }
-  function compareBytes2(b1, b2) {
-    return b1.length < b2.length ? -1 : b1.length > b2.length ? 1 : compare2(b1, b2);
-  }
-  var init_bytes4 = __esm({
-    "node_modules/cborg/esm/lib/2bytes.js"() {
-      init_token2();
-      init_common2();
-      init_uint2();
-      init_byte_utils2();
-      encodeBytes2.encodedSize = function encodedSize12(token) {
-        const bytes = tokenBytes2(token);
-        return encodeUintValue2.encodedSize(bytes.length) + bytes.length;
-      };
-      encodeBytes2.compareTokens = function compareTokens6(tok1, tok2) {
-        return compareBytes2(tokenBytes2(tok1), tokenBytes2(tok2));
-      };
-    }
-  });
-
-  // node_modules/cborg/esm/lib/3string.js
-  function toToken6(data, pos, prefix, length3, options) {
-    const totLength = prefix + length3;
-    assertEnoughData2(data, pos, totLength);
-    const tok = new Token2(Type2.string, toString2(data, pos + prefix, pos + totLength), totLength);
-    if (options.retainStringBytes === true) {
-      tok.byteValue = slice2(data, pos + prefix, pos + totLength);
-    }
-    return tok;
-  }
-  function decodeStringCompact2(data, pos, minor, options) {
-    return toToken6(data, pos, 1, minor, options);
-  }
-  function decodeString82(data, pos, _minor, options) {
-    return toToken6(data, pos, 2, readUint82(data, pos + 1, options), options);
-  }
-  function decodeString162(data, pos, _minor, options) {
-    return toToken6(data, pos, 3, readUint162(data, pos + 1, options), options);
-  }
-  function decodeString322(data, pos, _minor, options) {
-    return toToken6(data, pos, 5, readUint322(data, pos + 1, options), options);
-  }
-  function decodeString642(data, pos, _minor, options) {
-    const l = readUint642(data, pos + 1, options);
-    if (typeof l === "bigint") {
-      throw new Error(`${decodeErrPrefix2} 64-bit integer string lengths not supported`);
-    }
-    return toToken6(data, pos, 9, l, options);
-  }
-  var encodeString2;
-  var init_string2 = __esm({
-    "node_modules/cborg/esm/lib/3string.js"() {
-      init_token2();
-      init_common2();
-      init_uint2();
-      init_bytes4();
-      init_byte_utils2();
-      encodeString2 = encodeBytes2;
-    }
-  });
-
-  // node_modules/cborg/esm/lib/4array.js
-  function toToken7(_data, _pos, prefix, length3) {
-    return new Token2(Type2.array, length3, prefix);
-  }
-  function decodeArrayCompact2(data, pos, minor, _options) {
-    return toToken7(data, pos, 1, minor);
-  }
-  function decodeArray82(data, pos, _minor, options) {
-    return toToken7(data, pos, 2, readUint82(data, pos + 1, options));
-  }
-  function decodeArray162(data, pos, _minor, options) {
-    return toToken7(data, pos, 3, readUint162(data, pos + 1, options));
-  }
-  function decodeArray322(data, pos, _minor, options) {
-    return toToken7(data, pos, 5, readUint322(data, pos + 1, options));
-  }
-  function decodeArray642(data, pos, _minor, options) {
-    const l = readUint642(data, pos + 1, options);
-    if (typeof l === "bigint") {
-      throw new Error(`${decodeErrPrefix2} 64-bit integer array lengths not supported`);
-    }
-    return toToken7(data, pos, 9, l);
-  }
-  function decodeArrayIndefinite2(data, pos, _minor, options) {
-    if (options.allowIndefinite === false) {
-      throw new Error(`${decodeErrPrefix2} indefinite length items not allowed`);
-    }
-    return toToken7(data, pos, 1, Infinity);
-  }
-  function encodeArray2(buf3, token) {
-    encodeUintValue2(buf3, Type2.array.majorEncoded, token.value);
-  }
-  var init_array2 = __esm({
-    "node_modules/cborg/esm/lib/4array.js"() {
-      init_token2();
-      init_uint2();
-      init_common2();
-      encodeArray2.compareTokens = encodeUint2.compareTokens;
-      encodeArray2.encodedSize = function encodedSize13(token) {
-        return encodeUintValue2.encodedSize(token.value);
-      };
-    }
-  });
-
-  // node_modules/cborg/esm/lib/5map.js
-  function toToken8(_data, _pos, prefix, length3) {
-    return new Token2(Type2.map, length3, prefix);
-  }
-  function decodeMapCompact2(data, pos, minor, _options) {
-    return toToken8(data, pos, 1, minor);
-  }
-  function decodeMap82(data, pos, _minor, options) {
-    return toToken8(data, pos, 2, readUint82(data, pos + 1, options));
-  }
-  function decodeMap162(data, pos, _minor, options) {
-    return toToken8(data, pos, 3, readUint162(data, pos + 1, options));
-  }
-  function decodeMap322(data, pos, _minor, options) {
-    return toToken8(data, pos, 5, readUint322(data, pos + 1, options));
-  }
-  function decodeMap642(data, pos, _minor, options) {
-    const l = readUint642(data, pos + 1, options);
-    if (typeof l === "bigint") {
-      throw new Error(`${decodeErrPrefix2} 64-bit integer map lengths not supported`);
-    }
-    return toToken8(data, pos, 9, l);
-  }
-  function decodeMapIndefinite2(data, pos, _minor, options) {
-    if (options.allowIndefinite === false) {
-      throw new Error(`${decodeErrPrefix2} indefinite length items not allowed`);
-    }
-    return toToken8(data, pos, 1, Infinity);
-  }
-  function encodeMap2(buf3, token) {
-    encodeUintValue2(buf3, Type2.map.majorEncoded, token.value);
-  }
-  var init_map2 = __esm({
-    "node_modules/cborg/esm/lib/5map.js"() {
-      init_token2();
-      init_uint2();
-      init_common2();
-      encodeMap2.compareTokens = encodeUint2.compareTokens;
-      encodeMap2.encodedSize = function encodedSize14(token) {
-        return encodeUintValue2.encodedSize(token.value);
-      };
-    }
-  });
-
-  // node_modules/cborg/esm/lib/6tag.js
-  function decodeTagCompact2(_data, _pos, minor, _options) {
-    return new Token2(Type2.tag, minor, 1);
-  }
-  function decodeTag82(data, pos, _minor, options) {
-    return new Token2(Type2.tag, readUint82(data, pos + 1, options), 2);
-  }
-  function decodeTag162(data, pos, _minor, options) {
-    return new Token2(Type2.tag, readUint162(data, pos + 1, options), 3);
-  }
-  function decodeTag322(data, pos, _minor, options) {
-    return new Token2(Type2.tag, readUint322(data, pos + 1, options), 5);
-  }
-  function decodeTag642(data, pos, _minor, options) {
-    return new Token2(Type2.tag, readUint642(data, pos + 1, options), 9);
-  }
-  function encodeTag2(buf3, token) {
-    encodeUintValue2(buf3, Type2.tag.majorEncoded, token.value);
-  }
-  var init_tag2 = __esm({
-    "node_modules/cborg/esm/lib/6tag.js"() {
-      init_token2();
-      init_uint2();
-      encodeTag2.compareTokens = encodeUint2.compareTokens;
-      encodeTag2.encodedSize = function encodedSize15(token) {
-        return encodeUintValue2.encodedSize(token.value);
-      };
-    }
-  });
-
-  // node_modules/cborg/esm/lib/7float.js
-  function decodeUndefined2(_data, _pos, _minor, options) {
-    if (options.allowUndefined === false) {
-      throw new Error(`${decodeErrPrefix2} undefined values are not supported`);
-    } else if (options.coerceUndefinedToNull === true) {
-      return new Token2(Type2.null, null, 1);
-    }
-    return new Token2(Type2.undefined, void 0, 1);
-  }
-  function decodeBreak2(_data, _pos, _minor, options) {
-    if (options.allowIndefinite === false) {
-      throw new Error(`${decodeErrPrefix2} indefinite length items not allowed`);
-    }
-    return new Token2(Type2.break, void 0, 1);
-  }
-  function createToken2(value, bytes, options) {
-    if (options) {
-      if (options.allowNaN === false && Number.isNaN(value)) {
-        throw new Error(`${decodeErrPrefix2} NaN values are not supported`);
-      }
-      if (options.allowInfinity === false && (value === Infinity || value === -Infinity)) {
-        throw new Error(`${decodeErrPrefix2} Infinity values are not supported`);
-      }
-    }
-    return new Token2(Type2.float, value, bytes);
-  }
-  function decodeFloat162(data, pos, _minor, options) {
-    return createToken2(readFloat162(data, pos + 1), 3, options);
-  }
-  function decodeFloat322(data, pos, _minor, options) {
-    return createToken2(readFloat322(data, pos + 1), 5, options);
-  }
-  function decodeFloat642(data, pos, _minor, options) {
-    return createToken2(readFloat642(data, pos + 1), 9, options);
-  }
-  function encodeFloat2(buf3, token, options) {
-    const float = token.value;
-    if (float === false) {
-      buf3.push([Type2.float.majorEncoded | MINOR_FALSE2]);
-    } else if (float === true) {
-      buf3.push([Type2.float.majorEncoded | MINOR_TRUE2]);
-    } else if (float === null) {
-      buf3.push([Type2.float.majorEncoded | MINOR_NULL2]);
-    } else if (float === void 0) {
-      buf3.push([Type2.float.majorEncoded | MINOR_UNDEFINED2]);
-    } else {
-      let decoded;
-      let success = false;
-      if (!options || options.float64 !== true) {
-        encodeFloat162(float);
-        decoded = readFloat162(ui8a2, 1);
-        if (float === decoded || Number.isNaN(float)) {
-          ui8a2[0] = 249;
-          buf3.push(ui8a2.slice(0, 3));
-          success = true;
-        } else {
-          encodeFloat322(float);
-          decoded = readFloat322(ui8a2, 1);
-          if (float === decoded) {
-            ui8a2[0] = 250;
-            buf3.push(ui8a2.slice(0, 5));
-            success = true;
-          }
-        }
-      }
-      if (!success) {
-        encodeFloat642(float);
-        decoded = readFloat642(ui8a2, 1);
-        ui8a2[0] = 251;
-        buf3.push(ui8a2.slice(0, 9));
-      }
-    }
-  }
-  function encodeFloat162(inp) {
-    if (inp === Infinity) {
-      dataView2.setUint16(0, 31744, false);
-    } else if (inp === -Infinity) {
-      dataView2.setUint16(0, 64512, false);
-    } else if (Number.isNaN(inp)) {
-      dataView2.setUint16(0, 32256, false);
-    } else {
-      dataView2.setFloat32(0, inp);
-      const valu32 = dataView2.getUint32(0);
-      const exponent = (valu32 & 2139095040) >> 23;
-      const mantissa = valu32 & 8388607;
-      if (exponent === 255) {
-        dataView2.setUint16(0, 31744, false);
-      } else if (exponent === 0) {
-        dataView2.setUint16(0, (inp & 2147483648) >> 16 | mantissa >> 13, false);
-      } else {
-        const logicalExponent = exponent - 127;
-        if (logicalExponent < -24) {
-          dataView2.setUint16(0, 0);
-        } else if (logicalExponent < -14) {
-          dataView2.setUint16(0, (valu32 & 2147483648) >> 16 | 1 << 24 + logicalExponent, false);
-        } else {
-          dataView2.setUint16(0, (valu32 & 2147483648) >> 16 | logicalExponent + 15 << 10 | mantissa >> 13, false);
-        }
-      }
-    }
-  }
-  function readFloat162(ui8a3, pos) {
-    if (ui8a3.length - pos < 2) {
-      throw new Error(`${decodeErrPrefix2} not enough data for float16`);
-    }
-    const half = (ui8a3[pos] << 8) + ui8a3[pos + 1];
-    if (half === 31744) {
-      return Infinity;
-    }
-    if (half === 64512) {
-      return -Infinity;
-    }
-    if (half === 32256) {
-      return NaN;
-    }
-    const exp = half >> 10 & 31;
-    const mant = half & 1023;
-    let val;
-    if (exp === 0) {
-      val = mant * 2 ** -24;
-    } else if (exp !== 31) {
-      val = (mant + 1024) * 2 ** (exp - 25);
-    } else {
-      val = mant === 0 ? Infinity : NaN;
-    }
-    return half & 32768 ? -val : val;
-  }
-  function encodeFloat322(inp) {
-    dataView2.setFloat32(0, inp, false);
-  }
-  function readFloat322(ui8a3, pos) {
-    if (ui8a3.length - pos < 4) {
-      throw new Error(`${decodeErrPrefix2} not enough data for float32`);
-    }
-    const offset = (ui8a3.byteOffset || 0) + pos;
-    return new DataView(ui8a3.buffer, offset, 4).getFloat32(0, false);
-  }
-  function encodeFloat642(inp) {
-    dataView2.setFloat64(0, inp, false);
-  }
-  function readFloat642(ui8a3, pos) {
-    if (ui8a3.length - pos < 8) {
-      throw new Error(`${decodeErrPrefix2} not enough data for float64`);
-    }
-    const offset = (ui8a3.byteOffset || 0) + pos;
-    return new DataView(ui8a3.buffer, offset, 8).getFloat64(0, false);
-  }
-  var MINOR_FALSE2, MINOR_TRUE2, MINOR_NULL2, MINOR_UNDEFINED2, buffer2, dataView2, ui8a2;
-  var init_float2 = __esm({
-    "node_modules/cborg/esm/lib/7float.js"() {
-      init_token2();
-      init_common2();
-      init_uint2();
-      MINOR_FALSE2 = 20;
-      MINOR_TRUE2 = 21;
-      MINOR_NULL2 = 22;
-      MINOR_UNDEFINED2 = 23;
-      encodeFloat2.encodedSize = function encodedSize16(token, options) {
-        const float = token.value;
-        if (float === false || float === true || float === null || float === void 0) {
-          return 1;
-        }
-        if (!options || options.float64 !== true) {
-          encodeFloat162(float);
-          let decoded = readFloat162(ui8a2, 1);
-          if (float === decoded || Number.isNaN(float)) {
-            return 3;
-          }
-          encodeFloat322(float);
-          decoded = readFloat322(ui8a2, 1);
-          if (float === decoded) {
-            return 5;
-          }
-        }
-        return 9;
-      };
-      buffer2 = new ArrayBuffer(9);
-      dataView2 = new DataView(buffer2, 1);
-      ui8a2 = new Uint8Array(buffer2, 0);
-      encodeFloat2.compareTokens = encodeUint2.compareTokens;
-    }
-  });
-
-  // node_modules/cborg/esm/lib/jump.js
-  function invalidMinor2(data, pos, minor) {
-    throw new Error(`${decodeErrPrefix2} encountered invalid minor (${minor}) for major ${data[pos] >>> 5}`);
-  }
-  function errorer2(msg) {
-    return () => {
-      throw new Error(`${decodeErrPrefix2} ${msg}`);
-    };
-  }
-  function quickEncodeToken2(token) {
-    switch (token.type) {
-      case Type2.false:
-        return fromArray2([244]);
-      case Type2.true:
-        return fromArray2([245]);
-      case Type2.null:
-        return fromArray2([246]);
-      case Type2.bytes:
-        if (!token.value.length) {
-          return fromArray2([64]);
-        }
-        return;
-      case Type2.string:
-        if (token.value === "") {
-          return fromArray2([96]);
-        }
-        return;
-      case Type2.array:
-        if (token.value === 0) {
-          return fromArray2([128]);
-        }
-        return;
-      case Type2.map:
-        if (token.value === 0) {
-          return fromArray2([160]);
-        }
-        return;
-      case Type2.uint:
-        if (token.value < 24) {
-          return fromArray2([Number(token.value)]);
-        }
-        return;
-      case Type2.negint:
-        if (token.value >= -24) {
-          return fromArray2([31 - Number(token.value)]);
-        }
-    }
-  }
-  var jump2, quick2;
-  var init_jump2 = __esm({
-    "node_modules/cborg/esm/lib/jump.js"() {
-      init_token2();
-      init_uint2();
-      init_negint2();
-      init_bytes4();
-      init_string2();
-      init_array2();
-      init_map2();
-      init_tag2();
-      init_float2();
-      init_common2();
-      init_byte_utils2();
-      jump2 = [];
-      for (let i = 0; i <= 23; i++) {
-        jump2[i] = invalidMinor2;
-      }
-      jump2[24] = decodeUint82;
-      jump2[25] = decodeUint162;
-      jump2[26] = decodeUint322;
-      jump2[27] = decodeUint642;
-      jump2[28] = invalidMinor2;
-      jump2[29] = invalidMinor2;
-      jump2[30] = invalidMinor2;
-      jump2[31] = invalidMinor2;
-      for (let i = 32; i <= 55; i++) {
-        jump2[i] = invalidMinor2;
-      }
-      jump2[56] = decodeNegint82;
-      jump2[57] = decodeNegint162;
-      jump2[58] = decodeNegint322;
-      jump2[59] = decodeNegint642;
-      jump2[60] = invalidMinor2;
-      jump2[61] = invalidMinor2;
-      jump2[62] = invalidMinor2;
-      jump2[63] = invalidMinor2;
-      for (let i = 64; i <= 87; i++) {
-        jump2[i] = decodeBytesCompact2;
-      }
-      jump2[88] = decodeBytes82;
-      jump2[89] = decodeBytes162;
-      jump2[90] = decodeBytes322;
-      jump2[91] = decodeBytes642;
-      jump2[92] = invalidMinor2;
-      jump2[93] = invalidMinor2;
-      jump2[94] = invalidMinor2;
-      jump2[95] = errorer2("indefinite length bytes/strings are not supported");
-      for (let i = 96; i <= 119; i++) {
-        jump2[i] = decodeStringCompact2;
-      }
-      jump2[120] = decodeString82;
-      jump2[121] = decodeString162;
-      jump2[122] = decodeString322;
-      jump2[123] = decodeString642;
-      jump2[124] = invalidMinor2;
-      jump2[125] = invalidMinor2;
-      jump2[126] = invalidMinor2;
-      jump2[127] = errorer2("indefinite length bytes/strings are not supported");
-      for (let i = 128; i <= 151; i++) {
-        jump2[i] = decodeArrayCompact2;
-      }
-      jump2[152] = decodeArray82;
-      jump2[153] = decodeArray162;
-      jump2[154] = decodeArray322;
-      jump2[155] = decodeArray642;
-      jump2[156] = invalidMinor2;
-      jump2[157] = invalidMinor2;
-      jump2[158] = invalidMinor2;
-      jump2[159] = decodeArrayIndefinite2;
-      for (let i = 160; i <= 183; i++) {
-        jump2[i] = decodeMapCompact2;
-      }
-      jump2[184] = decodeMap82;
-      jump2[185] = decodeMap162;
-      jump2[186] = decodeMap322;
-      jump2[187] = decodeMap642;
-      jump2[188] = invalidMinor2;
-      jump2[189] = invalidMinor2;
-      jump2[190] = invalidMinor2;
-      jump2[191] = decodeMapIndefinite2;
-      for (let i = 192; i <= 215; i++) {
-        jump2[i] = decodeTagCompact2;
-      }
-      jump2[216] = decodeTag82;
-      jump2[217] = decodeTag162;
-      jump2[218] = decodeTag322;
-      jump2[219] = decodeTag642;
-      jump2[220] = invalidMinor2;
-      jump2[221] = invalidMinor2;
-      jump2[222] = invalidMinor2;
-      jump2[223] = invalidMinor2;
-      for (let i = 224; i <= 243; i++) {
-        jump2[i] = errorer2("simple values are not supported");
-      }
-      jump2[244] = invalidMinor2;
-      jump2[245] = invalidMinor2;
-      jump2[246] = invalidMinor2;
-      jump2[247] = decodeUndefined2;
-      jump2[248] = errorer2("simple values are not supported");
-      jump2[249] = decodeFloat162;
-      jump2[250] = decodeFloat322;
-      jump2[251] = decodeFloat642;
-      jump2[252] = invalidMinor2;
-      jump2[253] = invalidMinor2;
-      jump2[254] = invalidMinor2;
-      jump2[255] = decodeBreak2;
-      quick2 = [];
-      for (let i = 0; i < 24; i++) {
-        quick2[i] = new Token2(Type2.uint, i, 1);
-      }
-      for (let i = -1; i >= -24; i--) {
-        quick2[31 - i] = new Token2(Type2.negint, i, 1);
-      }
-      quick2[64] = new Token2(Type2.bytes, new Uint8Array(0), 1);
-      quick2[96] = new Token2(Type2.string, "", 1);
-      quick2[128] = new Token2(Type2.array, 0, 1);
-      quick2[160] = new Token2(Type2.map, 0, 1);
-      quick2[244] = new Token2(Type2.false, false, 1);
-      quick2[245] = new Token2(Type2.true, true, 1);
-      quick2[246] = new Token2(Type2.null, null, 1);
-    }
-  });
-
-  // node_modules/cborg/esm/lib/encode.js
-  function makeCborEncoders2() {
-    const encoders = [];
-    encoders[Type2.uint.major] = encodeUint2;
-    encoders[Type2.negint.major] = encodeNegint2;
-    encoders[Type2.bytes.major] = encodeBytes2;
-    encoders[Type2.string.major] = encodeString2;
-    encoders[Type2.array.major] = encodeArray2;
-    encoders[Type2.map.major] = encodeMap2;
-    encoders[Type2.tag.major] = encodeTag2;
-    encoders[Type2.float.major] = encodeFloat2;
-    return encoders;
-  }
-  function objectToTokens2(obj, options = {}, refStack) {
-    const typ = is2(obj);
-    const customTypeEncoder = options && options.typeEncoders && options.typeEncoders[typ] || typeEncoders2[typ];
-    if (typeof customTypeEncoder === "function") {
-      const tokens = customTypeEncoder(obj, typ, options, refStack);
-      if (tokens != null) {
-        return tokens;
-      }
-    }
-    const typeEncoder = typeEncoders2[typ];
-    if (!typeEncoder) {
-      throw new Error(`${encodeErrPrefix2} unsupported type: ${typ}`);
-    }
-    return typeEncoder(obj, typ, options, refStack);
-  }
-  function sortMapEntries2(entries, options) {
-    if (options.mapSorter) {
-      entries.sort(options.mapSorter);
-    }
-  }
-  var cborEncoders2, buf2, Ref2, simpleTokens2, typeEncoders2;
-  var init_encode2 = __esm({
-    "node_modules/cborg/esm/lib/encode.js"() {
-      init_is2();
-      init_token2();
-      init_bl2();
-      init_common2();
-      init_jump2();
-      init_byte_utils2();
-      init_uint2();
-      init_negint2();
-      init_bytes4();
-      init_string2();
-      init_array2();
-      init_map2();
-      init_tag2();
-      init_float2();
-      cborEncoders2 = makeCborEncoders2();
-      buf2 = new Bl2();
-      Ref2 = class _Ref {
-        constructor(obj, parent) {
-          this.obj = obj;
-          this.parent = parent;
-        }
-        includes(obj) {
-          let p = this;
-          do {
-            if (p.obj === obj) {
-              return true;
-            }
-          } while (p = p.parent);
-          return false;
-        }
-        static createCheck(stack, obj) {
-          if (stack && stack.includes(obj)) {
-            throw new Error(`${encodeErrPrefix2} object contains circular references`);
-          }
-          return new _Ref(obj, stack);
-        }
-      };
-      simpleTokens2 = {
-        null: new Token2(Type2.null, null),
-        undefined: new Token2(Type2.undefined, void 0),
-        true: new Token2(Type2.true, true),
-        false: new Token2(Type2.false, false),
-        emptyArray: new Token2(Type2.array, 0),
-        emptyMap: new Token2(Type2.map, 0)
-      };
-      typeEncoders2 = {
-        number(obj, _typ, _options, _refStack) {
-          if (!Number.isInteger(obj) || !Number.isSafeInteger(obj)) {
-            return new Token2(Type2.float, obj);
-          } else if (obj >= 0) {
-            return new Token2(Type2.uint, obj);
-          } else {
-            return new Token2(Type2.negint, obj);
-          }
-        },
-        bigint(obj, _typ, _options, _refStack) {
-          if (obj >= BigInt(0)) {
-            return new Token2(Type2.uint, obj);
-          } else {
-            return new Token2(Type2.negint, obj);
-          }
-        },
-        Uint8Array(obj, _typ, _options, _refStack) {
-          return new Token2(Type2.bytes, obj);
-        },
-        string(obj, _typ, _options, _refStack) {
-          return new Token2(Type2.string, obj);
-        },
-        boolean(obj, _typ, _options, _refStack) {
-          return obj ? simpleTokens2.true : simpleTokens2.false;
-        },
-        null(_obj2, _typ, _options, _refStack) {
-          return simpleTokens2.null;
-        },
-        undefined(_obj2, _typ, _options, _refStack) {
-          return simpleTokens2.undefined;
-        },
-        ArrayBuffer(obj, _typ, _options, _refStack) {
-          return new Token2(Type2.bytes, new Uint8Array(obj));
-        },
-        DataView(obj, _typ, _options, _refStack) {
-          return new Token2(Type2.bytes, new Uint8Array(obj.buffer, obj.byteOffset, obj.byteLength));
-        },
-        Array(obj, _typ, options, refStack) {
-          if (!obj.length) {
-            if (options.addBreakTokens === true) {
-              return [
-                simpleTokens2.emptyArray,
-                new Token2(Type2.break)
-              ];
-            }
-            return simpleTokens2.emptyArray;
-          }
-          refStack = Ref2.createCheck(refStack, obj);
-          const entries = [];
-          let i = 0;
-          for (const e of obj) {
-            entries[i++] = objectToTokens2(e, options, refStack);
-          }
-          if (options.addBreakTokens) {
-            return [
-              new Token2(Type2.array, obj.length),
-              entries,
-              new Token2(Type2.break)
-            ];
-          }
-          return [
-            new Token2(Type2.array, obj.length),
-            entries
-          ];
-        },
-        Object(obj, typ, options, refStack) {
-          const isMap = typ !== "Object";
-          const keys = isMap ? obj.keys() : Object.keys(obj);
-          const length3 = isMap ? obj.size : keys.length;
-          if (!length3) {
-            if (options.addBreakTokens === true) {
-              return [
-                simpleTokens2.emptyMap,
-                new Token2(Type2.break)
-              ];
-            }
-            return simpleTokens2.emptyMap;
-          }
-          refStack = Ref2.createCheck(refStack, obj);
-          const entries = [];
-          let i = 0;
-          for (const key of keys) {
-            entries[i++] = [
-              objectToTokens2(key, options, refStack),
-              objectToTokens2(isMap ? obj.get(key) : obj[key], options, refStack)
-            ];
-          }
-          sortMapEntries2(entries, options);
-          if (options.addBreakTokens) {
-            return [
-              new Token2(Type2.map, length3),
-              entries,
-              new Token2(Type2.break)
-            ];
-          }
-          return [
-            new Token2(Type2.map, length3),
-            entries
-          ];
-        }
-      };
-      typeEncoders2.Map = typeEncoders2.Object;
-      typeEncoders2.Buffer = typeEncoders2.Uint8Array;
-      for (const typ of "Uint8Clamped Uint16 Uint32 Int8 Int16 Int32 BigUint64 BigInt64 Float32 Float64".split(" ")) {
-        typeEncoders2[`${typ}Array`] = typeEncoders2.DataView;
-      }
-    }
-  });
-
-  // node_modules/cborg/esm/lib/decode.js
-  var DONE2, BREAK2;
-  var init_decode2 = __esm({
-    "node_modules/cborg/esm/lib/decode.js"() {
-      init_common2();
-      init_token2();
-      init_jump2();
-      DONE2 = Symbol.for("DONE");
-      BREAK2 = Symbol.for("BREAK");
-    }
-  });
-
-  // node_modules/cborg/esm/cborg.js
-  var init_cborg2 = __esm({
-    "node_modules/cborg/esm/cborg.js"() {
-      init_encode2();
-      init_decode2();
-      init_token2();
-    }
-  });
-
-  // node_modules/cborg/esm/lib/length.js
-  function tokensToLength(tokens, encoders = cborEncoders3, options = defaultEncodeOptions2) {
-    if (Array.isArray(tokens)) {
-      let len = 0;
-      for (const token of tokens) {
-        len += tokensToLength(token, encoders, options);
-      }
-      return len;
-    } else {
-      const encoder = encoders[tokens.type.major];
-      if (encoder.encodedSize === void 0 || typeof encoder.encodedSize !== "function") {
-        throw new Error(`Encoder for ${tokens.type.name} does not have an encodedSize()`);
-      }
-      return encoder.encodedSize(tokens, options);
-    }
-  }
-  var cborEncoders3, defaultEncodeOptions2;
-  var init_length = __esm({
-    "node_modules/cborg/esm/lib/length.js"() {
-      init_encode2();
-      init_jump2();
-      cborEncoders3 = makeCborEncoders2();
-      defaultEncodeOptions2 = {
-        float64: false,
-        quickEncodeToken: quickEncodeToken2
-      };
-    }
-  });
-
-  // node_modules/@ipld/car/src/buffer-writer.js
-  var buffer_writer_exports = {};
-  __export(buffer_writer_exports, {
-    addBlock: () => addBlock,
-    addRoot: () => addRoot,
-    blockLength: () => blockLength,
-    calculateHeaderLength: () => calculateHeaderLength,
-    close: () => close,
-    createWriter: () => createWriter,
-    estimateHeaderLength: () => estimateHeaderLength,
-    headerLength: () => headerLength,
-    resizeHeader: () => resizeHeader
-  });
-  var import_varint5, CarBufferWriter, addRoot, blockLength, addBlock, close, resizeHeader, writeBytes, writeHeader, headerPreludeTokens, CID_TAG, calculateHeaderLength, headerLength, estimateHeaderLength, createWriter;
-  var init_buffer_writer = __esm({
-    "node_modules/@ipld/car/src/buffer-writer.js"() {
-      import_varint5 = __toESM(require_varint(), 1);
-      init_cborg2();
-      init_length();
-      init_src2();
-      CarBufferWriter = class {
-        /**
-         * @param {Uint8Array} bytes
-         * @param {number} headerSize
-         */
-        constructor(bytes, headerSize) {
-          this.bytes = bytes;
-          this.byteOffset = headerSize;
-          this.roots = [];
-          this.headerSize = headerSize;
-        }
-        /**
-         * Add a root to this writer, to be used to create a header when the CAR is
-         * finalized with {@link CarBufferWriter.close `close()`}
-         *
-         * @param {CID} root
-         * @param {{resize?:boolean}} [options]
-         * @returns {CarBufferWriter}
-         */
-        addRoot(root, options) {
-          addRoot(this, root, options);
-          return this;
-        }
-        /**
-         * Write a `Block` (a `{ cid:CID, bytes:Uint8Array }` pair) to the archive.
-         * Throws if there is not enough capacity.
-         *
-         * @param {Block} block - A `{ cid:CID, bytes:Uint8Array }` pair.
-         * @returns {CarBufferWriter}
-         */
-        write(block) {
-          addBlock(this, block);
-          return this;
-        }
-        /**
-         * Finalize the CAR and return it as a `Uint8Array`.
-         *
-         * @param {object} [options]
-         * @param {boolean} [options.resize]
-         * @returns {Uint8Array}
-         */
-        close(options) {
-          return close(this, options);
-        }
-      };
-      addRoot = (writer, root, options = {}) => {
-        const { resize = false } = options;
-        const { bytes, headerSize, byteOffset, roots } = writer;
-        writer.roots.push(root);
-        const size = headerLength(writer);
-        if (size > headerSize) {
-          if (size - headerSize + byteOffset < bytes.byteLength) {
-            if (resize) {
-              resizeHeader(writer, size);
-            } else {
-              roots.pop();
-              throw new RangeError(`Header of size ${headerSize} has no capacity for new root ${root}.
-  However there is a space in the buffer and you could call addRoot(root, { resize: root }) to resize header to make a space for this root.`);
-            }
-          } else {
-            roots.pop();
-            throw new RangeError(`Buffer has no capacity for a new root ${root}`);
-          }
-        }
-      };
-      blockLength = ({ cid, bytes }) => {
-        const size = cid.bytes.byteLength + bytes.byteLength;
-        return import_varint5.default.encodingLength(size) + size;
-      };
-      addBlock = (writer, { cid, bytes }) => {
-        const byteLength = cid.bytes.byteLength + bytes.byteLength;
-        const size = import_varint5.default.encode(byteLength);
-        if (writer.byteOffset + size.length + byteLength > writer.bytes.byteLength) {
-          throw new RangeError("Buffer has no capacity for this block");
-        } else {
-          writeBytes(writer, size);
-          writeBytes(writer, cid.bytes);
-          writeBytes(writer, bytes);
-        }
-      };
-      close = (writer, options = {}) => {
-        const { resize = false } = options;
-        const { roots, bytes, byteOffset, headerSize } = writer;
-        const headerBytes = encode6({ version: 1, roots });
-        const varintBytes = import_varint5.default.encode(headerBytes.length);
-        const size = varintBytes.length + headerBytes.byteLength;
-        const offset = headerSize - size;
-        if (offset === 0) {
-          writeHeader(writer, varintBytes, headerBytes);
-          return bytes.subarray(0, byteOffset);
-        } else if (resize) {
-          resizeHeader(writer, size);
-          writeHeader(writer, varintBytes, headerBytes);
-          return bytes.subarray(0, writer.byteOffset);
-        } else {
-          throw new RangeError(`Header size was overestimated.
-You can use close({ resize: true }) to resize header`);
-        }
-      };
-      resizeHeader = (writer, byteLength) => {
-        const { bytes, headerSize } = writer;
-        bytes.set(bytes.subarray(headerSize, writer.byteOffset), byteLength);
-        writer.byteOffset += byteLength - headerSize;
-        writer.headerSize = byteLength;
-      };
-      writeBytes = (writer, bytes) => {
-        writer.bytes.set(bytes, writer.byteOffset);
-        writer.byteOffset += bytes.length;
-      };
-      writeHeader = ({ bytes }, varint6, header) => {
-        bytes.set(varint6);
-        bytes.set(header, varint6.length);
-      };
-      headerPreludeTokens = [
-        new Token2(Type2.map, 2),
-        new Token2(Type2.string, "version"),
-        new Token2(Type2.uint, 1),
-        new Token2(Type2.string, "roots")
-      ];
-      CID_TAG = new Token2(Type2.tag, 42);
-      calculateHeaderLength = (rootLengths) => {
-        const tokens = [...headerPreludeTokens];
-        tokens.push(new Token2(Type2.array, rootLengths.length));
-        for (const rootLength of rootLengths) {
-          tokens.push(CID_TAG);
-          tokens.push(new Token2(Type2.bytes, { length: rootLength + 1 }));
-        }
-        const length3 = tokensToLength(tokens);
-        return import_varint5.default.encodingLength(length3) + length3;
-      };
-      headerLength = ({ roots }) => calculateHeaderLength(roots.map((cid) => cid.bytes.byteLength));
-      estimateHeaderLength = (rootCount, rootByteLength = 36) => calculateHeaderLength(new Array(rootCount).fill(rootByteLength));
-      createWriter = (buffer3, options = {}) => {
-        const {
-          roots = [],
-          byteOffset = 0,
-          byteLength = buffer3.byteLength,
-          headerSize = headerLength({ roots })
-        } = options;
-        const bytes = new Uint8Array(buffer3, byteOffset, byteLength);
-        const writer = new CarBufferWriter(bytes, headerSize);
-        for (const root of roots) {
-          writer.addRoot(root);
-        }
-        return writer;
-      };
-    }
-  });
-
   // node_modules/@ipld/car/src/index-browser.js
   var index_browser_exports = {};
   __export(index_browser_exports, {
@@ -73014,20 +70938,20 @@ You can use close({ resize: true }) to resize header`);
   });
   var init_index_browser = __esm({
     "node_modules/@ipld/car/src/index-browser.js"() {
-      init_reader_browser();
-      init_indexer();
-      init_iterator();
-      init_writer_browser();
-      init_indexed_reader_browser();
       init_buffer_reader_browser();
       init_buffer_writer();
+      init_indexed_reader_browser();
+      init_indexer();
+      init_iterator();
+      init_reader_browser();
+      init_writer_browser();
     }
   });
 
   // node_modules/cbor-x/decode.js
   function checkedRead() {
     try {
-      let result = read3();
+      let result = read2();
       if (bundledStrings) {
         if (position >= bundledStrings.postBundlePosition) {
           let error = new Error("Unexpected bundle position");
@@ -73039,7 +70963,7 @@ You can use close({ resize: true }) to resize header`);
       }
       if (position == srcEnd) {
         currentStructures = null;
-        src3 = null;
+        src2 = null;
         if (referenceMap)
           referenceMap = null;
       } else if (position > srcEnd) {
@@ -73058,51 +70982,51 @@ You can use close({ resize: true }) to resize header`);
       throw error;
     }
   }
-  function read3() {
-    let token = src3[position++];
+  function read2() {
+    let token = src2[position++];
     let majorType = token >> 5;
     token = token & 31;
     if (token > 23) {
       switch (token) {
         case 24:
-          token = src3[position++];
+          token = src2[position++];
           break;
         case 25:
           if (majorType == 7) {
             return getFloat16();
           }
-          token = dataView3.getUint16(position);
+          token = dataView2.getUint16(position);
           position += 2;
           break;
         case 26:
           if (majorType == 7) {
-            let value = dataView3.getFloat32(position);
+            let value = dataView2.getFloat32(position);
             if (currentDecoder.useFloat32 > 2) {
-              let multiplier = mult10[(src3[position] & 127) << 1 | src3[position + 1] >> 7];
+              let multiplier = mult10[(src2[position] & 127) << 1 | src2[position + 1] >> 7];
               position += 4;
               return (multiplier * value + (value > 0 ? 0.5 : -0.5) >> 0) / multiplier;
             }
             position += 4;
             return value;
           }
-          token = dataView3.getUint32(position);
+          token = dataView2.getUint32(position);
           position += 4;
           break;
         case 27:
           if (majorType == 7) {
-            let value = dataView3.getFloat64(position);
+            let value = dataView2.getFloat64(position);
             position += 8;
             return value;
           }
           if (majorType > 1) {
-            if (dataView3.getUint32(position) > 0)
+            if (dataView2.getUint32(position) > 0)
               throw new Error("JavaScript does not support arrays, maps, or strings with length over 4294967295");
-            token = dataView3.getUint32(position + 4);
+            token = dataView2.getUint32(position + 4);
           } else if (currentDecoder.int64AsNumber) {
-            token = dataView3.getUint32(position) * 4294967296;
-            token += dataView3.getUint32(position + 4);
+            token = dataView2.getUint32(position) * 4294967296;
+            token += dataView2.getUint32(position + 4);
           } else
-            token = dataView3.getBigUint64(position);
+            token = dataView2.getBigUint64(position);
           position += 8;
           break;
         case 31:
@@ -73113,7 +71037,7 @@ You can use close({ resize: true }) to resize header`);
             case 4:
               let array = [];
               let value, i = 0;
-              while ((value = read3()) != STOP_CODE) {
+              while ((value = read2()) != STOP_CODE) {
                 array[i++] = value;
               }
               return majorType == 4 ? array : majorType == 3 ? array.join("") : Buffer.concat(array);
@@ -73122,11 +71046,11 @@ You can use close({ resize: true }) to resize header`);
               if (currentDecoder.mapsAsObjects) {
                 let object = {};
                 if (currentDecoder.keyMap)
-                  while ((key = read3()) != STOP_CODE)
-                    object[safeKey(currentDecoder.decodeKey(key))] = read3();
+                  while ((key = read2()) != STOP_CODE)
+                    object[safeKey(currentDecoder.decodeKey(key))] = read2();
                 else
-                  while ((key = read3()) != STOP_CODE)
-                    object[safeKey(key)] = read3();
+                  while ((key = read2()) != STOP_CODE)
+                    object[safeKey(key)] = read2();
                 return object;
               } else {
                 if (restoreMapsAsObject) {
@@ -73135,11 +71059,11 @@ You can use close({ resize: true }) to resize header`);
                 }
                 let map = /* @__PURE__ */ new Map();
                 if (currentDecoder.keyMap)
-                  while ((key = read3()) != STOP_CODE)
-                    map.set(currentDecoder.decodeKey(key), read3());
+                  while ((key = read2()) != STOP_CODE)
+                    map.set(currentDecoder.decodeKey(key), read2());
                 else
-                  while ((key = read3()) != STOP_CODE)
-                    map.set(key, read3());
+                  while ((key = read2()) != STOP_CODE)
+                    map.set(key, read2());
                 return map;
               }
             case 7:
@@ -73171,17 +71095,17 @@ You can use close({ resize: true }) to resize header`);
       case 4:
         let array = new Array(token);
         for (let i = 0; i < token; i++)
-          array[i] = read3();
+          array[i] = read2();
         return array;
       case 5:
         if (currentDecoder.mapsAsObjects) {
           let object = {};
           if (currentDecoder.keyMap)
             for (let i = 0; i < token; i++)
-              object[safeKey(currentDecoder.decodeKey(read3()))] = read3();
+              object[safeKey(currentDecoder.decodeKey(read2()))] = read2();
           else
             for (let i = 0; i < token; i++)
-              object[safeKey(read3())] = read3();
+              object[safeKey(read2())] = read2();
           return object;
         } else {
           if (restoreMapsAsObject) {
@@ -73191,10 +71115,10 @@ You can use close({ resize: true }) to resize header`);
           let map = /* @__PURE__ */ new Map();
           if (currentDecoder.keyMap)
             for (let i = 0; i < token; i++)
-              map.set(currentDecoder.decodeKey(read3()), read3());
+              map.set(currentDecoder.decodeKey(read2()), read2());
           else
             for (let i = 0; i < token; i++)
-              map.set(read3(), read3());
+              map.set(read2(), read2());
           return map;
         }
       case 6:
@@ -73207,29 +71131,29 @@ You can use close({ resize: true }) to resize header`);
           }
           if (token < 65536) {
             if (token == RECORD_INLINE_ID) {
-              let length3 = readJustLength();
-              let id = read3();
-              let structure2 = read3();
+              let length2 = readJustLength();
+              let id = read2();
+              let structure2 = read2();
               recordDefinition(id, structure2);
               let object = {};
               if (currentDecoder.keyMap)
-                for (let i = 2; i < length3; i++) {
+                for (let i = 2; i < length2; i++) {
                   let key = currentDecoder.decodeKey(structure2[i - 2]);
-                  object[safeKey(key)] = read3();
+                  object[safeKey(key)] = read2();
                 }
               else
-                for (let i = 2; i < length3; i++) {
+                for (let i = 2; i < length2; i++) {
                   let key = structure2[i - 2];
-                  object[safeKey(key)] = read3();
+                  object[safeKey(key)] = read2();
                 }
               return object;
             } else if (token == RECORD_DEFINITIONS_ID) {
-              let length3 = readJustLength();
-              let id = read3();
-              for (let i = 2; i < length3; i++) {
-                recordDefinition(id++, read3());
+              let length2 = readJustLength();
+              let id = read2();
+              for (let i = 2; i < length2; i++) {
+                recordDefinition(id++, read2());
               }
-              return read3();
+              return read2();
             } else if (token == BUNDLED_STRINGS_ID) {
               return readBundleExt();
             }
@@ -73247,11 +71171,11 @@ You can use close({ resize: true }) to resize header`);
         let extension = currentExtensions[token];
         if (extension) {
           if (extension.handlesRead)
-            return extension(read3);
+            return extension(read2);
           else
-            return extension(read3());
+            return extension(read2());
         } else {
-          let input = read3();
+          let input = read2();
           for (let i = 0; i < currentExtensionRanges.length; i++) {
             let value = currentExtensionRanges[i](token, input);
             if (value !== void 0)
@@ -73287,47 +71211,47 @@ You can use close({ resize: true }) to resize header`);
   }
   function createStructureReader(structure) {
     function readObject() {
-      let length3 = src3[position++];
-      length3 = length3 & 31;
-      if (length3 > 23) {
-        switch (length3) {
+      let length2 = src2[position++];
+      length2 = length2 & 31;
+      if (length2 > 23) {
+        switch (length2) {
           case 24:
-            length3 = src3[position++];
+            length2 = src2[position++];
             break;
           case 25:
-            length3 = dataView3.getUint16(position);
+            length2 = dataView2.getUint16(position);
             position += 2;
             break;
           case 26:
-            length3 = dataView3.getUint32(position);
+            length2 = dataView2.getUint32(position);
             position += 4;
             break;
           default:
-            throw new Error("Expected array header, but got " + src3[position - 1]);
+            throw new Error("Expected array header, but got " + src2[position - 1]);
         }
       }
       let compiledReader = this.compiledReader;
       while (compiledReader) {
-        if (compiledReader.propertyCount === length3)
-          return compiledReader(read3);
+        if (compiledReader.propertyCount === length2)
+          return compiledReader(read2);
         compiledReader = compiledReader.next;
       }
       if (this.slowReads++ >= inlineObjectReadThreshold) {
-        let array = this.length == length3 ? this : this.slice(0, length3);
+        let array = this.length == length2 ? this : this.slice(0, length2);
         compiledReader = currentDecoder.keyMap ? new Function("r", "return {" + array.map((k) => currentDecoder.decodeKey(k)).map((k) => validName.test(k) ? safeKey(k) + ":r()" : "[" + JSON.stringify(k) + "]:r()").join(",") + "}") : new Function("r", "return {" + array.map((key) => validName.test(key) ? safeKey(key) + ":r()" : "[" + JSON.stringify(key) + "]:r()").join(",") + "}");
         if (this.compiledReader)
           compiledReader.next = this.compiledReader;
-        compiledReader.propertyCount = length3;
+        compiledReader.propertyCount = length2;
         this.compiledReader = compiledReader;
-        return compiledReader(read3);
+        return compiledReader(read2);
       }
       let object = {};
       if (currentDecoder.keyMap)
-        for (let i = 0; i < length3; i++)
-          object[safeKey(currentDecoder.decodeKey(this[i]))] = read3();
+        for (let i = 0; i < length2; i++)
+          object[safeKey(currentDecoder.decodeKey(this[i]))] = read2();
       else
-        for (let i = 0; i < length3; i++) {
-          object[safeKey(this[i])] = read3();
+        for (let i = 0; i < length2; i++) {
+          object[safeKey(this[i])] = read2();
         }
       return object;
     }
@@ -73337,32 +71261,32 @@ You can use close({ resize: true }) to resize header`);
   function safeKey(key) {
     return key === "__proto__" ? "__proto_" : key;
   }
-  function readStringJS(length3) {
+  function readStringJS(length2) {
     let result;
-    if (length3 < 16) {
-      if (result = shortStringInJS(length3))
+    if (length2 < 16) {
+      if (result = shortStringInJS(length2))
         return result;
     }
-    if (length3 > 64 && decoder)
-      return decoder.decode(src3.subarray(position, position += length3));
-    const end = position + length3;
+    if (length2 > 64 && decoder)
+      return decoder.decode(src2.subarray(position, position += length2));
+    const end = position + length2;
     const units = [];
     result = "";
     while (position < end) {
-      const byte1 = src3[position++];
+      const byte1 = src2[position++];
       if ((byte1 & 128) === 0) {
         units.push(byte1);
       } else if ((byte1 & 224) === 192) {
-        const byte2 = src3[position++] & 63;
+        const byte2 = src2[position++] & 63;
         units.push((byte1 & 31) << 6 | byte2);
       } else if ((byte1 & 240) === 224) {
-        const byte2 = src3[position++] & 63;
-        const byte3 = src3[position++] & 63;
+        const byte2 = src2[position++] & 63;
+        const byte3 = src2[position++] & 63;
         units.push((byte1 & 31) << 12 | byte2 << 6 | byte3);
       } else if ((byte1 & 248) === 240) {
-        const byte2 = src3[position++] & 63;
-        const byte3 = src3[position++] & 63;
-        const byte4 = src3[position++] & 63;
+        const byte2 = src2[position++] & 63;
+        const byte3 = src2[position++] & 63;
+        const byte4 = src2[position++] & 63;
         let unit = (byte1 & 7) << 18 | byte2 << 12 | byte3 << 6 | byte4;
         if (unit > 65535) {
           unit -= 65536;
@@ -73383,11 +71307,11 @@ You can use close({ resize: true }) to resize header`);
     }
     return result;
   }
-  function longStringInJS(length3) {
+  function longStringInJS(length2) {
     let start = position;
-    let bytes = new Array(length3);
-    for (let i = 0; i < length3; i++) {
-      const byte = src3[position++];
+    let bytes = new Array(length2);
+    for (let i = 0; i < length2; i++) {
+      const byte = src2[position++];
       if ((byte & 128) > 0) {
         position = start;
         return;
@@ -73396,13 +71320,13 @@ You can use close({ resize: true }) to resize header`);
     }
     return fromCharCode.apply(String, bytes);
   }
-  function shortStringInJS(length3) {
-    if (length3 < 4) {
-      if (length3 < 2) {
-        if (length3 === 0)
+  function shortStringInJS(length2) {
+    if (length2 < 4) {
+      if (length2 < 2) {
+        if (length2 === 0)
           return "";
         else {
-          let a = src3[position++];
+          let a = src2[position++];
           if ((a & 128) > 1) {
             position -= 1;
             return;
@@ -73410,15 +71334,15 @@ You can use close({ resize: true }) to resize header`);
           return fromCharCode(a);
         }
       } else {
-        let a = src3[position++];
-        let b = src3[position++];
+        let a = src2[position++];
+        let b = src2[position++];
         if ((a & 128) > 0 || (b & 128) > 0) {
           position -= 2;
           return;
         }
-        if (length3 < 3)
+        if (length2 < 3)
           return fromCharCode(a, b);
-        let c = src3[position++];
+        let c = src2[position++];
         if ((c & 128) > 0) {
           position -= 3;
           return;
@@ -73426,89 +71350,89 @@ You can use close({ resize: true }) to resize header`);
         return fromCharCode(a, b, c);
       }
     } else {
-      let a = src3[position++];
-      let b = src3[position++];
-      let c = src3[position++];
-      let d = src3[position++];
+      let a = src2[position++];
+      let b = src2[position++];
+      let c = src2[position++];
+      let d = src2[position++];
       if ((a & 128) > 0 || (b & 128) > 0 || (c & 128) > 0 || (d & 128) > 0) {
         position -= 4;
         return;
       }
-      if (length3 < 6) {
-        if (length3 === 4)
+      if (length2 < 6) {
+        if (length2 === 4)
           return fromCharCode(a, b, c, d);
         else {
-          let e = src3[position++];
+          let e = src2[position++];
           if ((e & 128) > 0) {
             position -= 5;
             return;
           }
           return fromCharCode(a, b, c, d, e);
         }
-      } else if (length3 < 8) {
-        let e = src3[position++];
-        let f = src3[position++];
+      } else if (length2 < 8) {
+        let e = src2[position++];
+        let f = src2[position++];
         if ((e & 128) > 0 || (f & 128) > 0) {
           position -= 6;
           return;
         }
-        if (length3 < 7)
+        if (length2 < 7)
           return fromCharCode(a, b, c, d, e, f);
-        let g = src3[position++];
+        let g = src2[position++];
         if ((g & 128) > 0) {
           position -= 7;
           return;
         }
         return fromCharCode(a, b, c, d, e, f, g);
       } else {
-        let e = src3[position++];
-        let f = src3[position++];
-        let g = src3[position++];
-        let h = src3[position++];
+        let e = src2[position++];
+        let f = src2[position++];
+        let g = src2[position++];
+        let h = src2[position++];
         if ((e & 128) > 0 || (f & 128) > 0 || (g & 128) > 0 || (h & 128) > 0) {
           position -= 8;
           return;
         }
-        if (length3 < 10) {
-          if (length3 === 8)
+        if (length2 < 10) {
+          if (length2 === 8)
             return fromCharCode(a, b, c, d, e, f, g, h);
           else {
-            let i = src3[position++];
+            let i = src2[position++];
             if ((i & 128) > 0) {
               position -= 9;
               return;
             }
             return fromCharCode(a, b, c, d, e, f, g, h, i);
           }
-        } else if (length3 < 12) {
-          let i = src3[position++];
-          let j = src3[position++];
+        } else if (length2 < 12) {
+          let i = src2[position++];
+          let j = src2[position++];
           if ((i & 128) > 0 || (j & 128) > 0) {
             position -= 10;
             return;
           }
-          if (length3 < 11)
+          if (length2 < 11)
             return fromCharCode(a, b, c, d, e, f, g, h, i, j);
-          let k = src3[position++];
+          let k = src2[position++];
           if ((k & 128) > 0) {
             position -= 11;
             return;
           }
           return fromCharCode(a, b, c, d, e, f, g, h, i, j, k);
         } else {
-          let i = src3[position++];
-          let j = src3[position++];
-          let k = src3[position++];
-          let l = src3[position++];
+          let i = src2[position++];
+          let j = src2[position++];
+          let k = src2[position++];
+          let l = src2[position++];
           if ((i & 128) > 0 || (j & 128) > 0 || (k & 128) > 0 || (l & 128) > 0) {
             position -= 12;
             return;
           }
-          if (length3 < 14) {
-            if (length3 === 12)
+          if (length2 < 14) {
+            if (length2 === 12)
               return fromCharCode(a, b, c, d, e, f, g, h, i, j, k, l);
             else {
-              let m = src3[position++];
+              let m = src2[position++];
               if ((m & 128) > 0) {
                 position -= 13;
                 return;
@@ -73516,15 +71440,15 @@ You can use close({ resize: true }) to resize header`);
               return fromCharCode(a, b, c, d, e, f, g, h, i, j, k, l, m);
             }
           } else {
-            let m = src3[position++];
-            let n = src3[position++];
+            let m = src2[position++];
+            let n = src2[position++];
             if ((m & 128) > 0 || (n & 128) > 0) {
               position -= 14;
               return;
             }
-            if (length3 < 15)
+            if (length2 < 15)
               return fromCharCode(a, b, c, d, e, f, g, h, i, j, k, l, m, n);
-            let o = src3[position++];
+            let o = src2[position++];
             if ((o & 128) > 0) {
               position -= 15;
               return;
@@ -73535,15 +71459,15 @@ You can use close({ resize: true }) to resize header`);
       }
     }
   }
-  function readBin(length3) {
+  function readBin(length2) {
     return currentDecoder.copyBuffers ? (
       // specifically use the copying slice (not the node one)
-      Uint8Array.prototype.slice.call(src3, position, position += length3)
-    ) : src3.subarray(position, position += length3);
+      Uint8Array.prototype.slice.call(src2, position, position += length2)
+    ) : src2.subarray(position, position += length2);
   }
   function getFloat16() {
-    let byte0 = src3[position++];
-    let byte1 = src3[position++];
+    let byte0 = src2[position++];
+    let byte1 = src2[position++];
     let exponent = (byte0 & 127) >> 2;
     if (exponent === 31) {
       if (byte1 || byte0 & 3)
@@ -73589,15 +71513,15 @@ You can use close({ resize: true }) to resize header`);
       if (!littleEndian && bytesPerElement == 1)
         continue;
       let sizeShift = bytesPerElement == 2 ? 1 : bytesPerElement == 4 ? 2 : 3;
-      currentExtensions[littleEndian ? tag : tag - 4] = bytesPerElement == 1 || littleEndian == isLittleEndianMachine ? (buffer3) => {
+      currentExtensions[littleEndian ? tag : tag - 4] = bytesPerElement == 1 || littleEndian == isLittleEndianMachine ? (buffer2) => {
         if (!TypedArray)
           throw new Error("Could not find typed array for code " + tag);
-        return new TypedArray(Uint8Array.prototype.slice.call(buffer3, 0).buffer);
-      } : (buffer3) => {
+        return new TypedArray(Uint8Array.prototype.slice.call(buffer2, 0).buffer);
+      } : (buffer2) => {
         if (!TypedArray)
           throw new Error("Could not find typed array for code " + tag);
-        let dv = new DataView(buffer3.buffer, buffer3.byteOffset, buffer3.byteLength);
-        let elements = buffer3.length >> sizeShift;
+        let dv = new DataView(buffer2.buffer, buffer2.byteOffset, buffer2.byteLength);
+        let elements = buffer2.length >> sizeShift;
         let ta = new TypedArray(elements);
         let method = dv[dvMethod];
         for (let i = 0; i < elements; i++) {
@@ -73608,9 +71532,9 @@ You can use close({ resize: true }) to resize header`);
     }
   }
   function readBundleExt() {
-    let length3 = readJustLength();
-    let bundlePosition = position + read3();
-    for (let i = 2; i < length3; i++) {
+    let length2 = readJustLength();
+    let bundlePosition = position + read2();
+    for (let i = 2; i < length2; i++) {
       let bundleLength = readJustLength();
       position += bundleLength;
     }
@@ -73621,21 +71545,21 @@ You can use close({ resize: true }) to resize header`);
     bundledStrings.position1 = 0;
     bundledStrings.postBundlePosition = position;
     position = dataPosition;
-    return read3();
+    return read2();
   }
   function readJustLength() {
-    let token = src3[position++] & 31;
+    let token = src2[position++] & 31;
     if (token > 23) {
       switch (token) {
         case 24:
-          token = src3[position++];
+          token = src2[position++];
           break;
         case 25:
-          token = dataView3.getUint16(position);
+          token = dataView2.getUint16(position);
           position += 2;
           break;
         case 26:
-          token = dataView3.getUint32(position);
+          token = dataView2.getUint32(position);
           position += 4;
           break;
       }
@@ -73645,7 +71569,7 @@ You can use close({ resize: true }) to resize header`);
   function loadShared() {
     if (currentDecoder.getShared) {
       let sharedData = saveState(() => {
-        src3 = null;
+        src2 = null;
         return currentDecoder.getShared();
       }) || {};
       let updatedStructures = sharedData.structures || [];
@@ -73667,7 +71591,7 @@ You can use close({ resize: true }) to resize header`);
     let savedStrings = strings;
     let savedReferenceMap = referenceMap;
     let savedBundledStrings = bundledStrings;
-    let savedSrc = new Uint8Array(src3.slice(0, srcEnd));
+    let savedSrc = new Uint8Array(src2.slice(0, srcEnd));
     let savedStructures = currentStructures;
     let savedDecoder = currentDecoder;
     let savedSequentialMode = sequentialMode;
@@ -73681,15 +71605,15 @@ You can use close({ resize: true }) to resize header`);
     strings = savedStrings;
     referenceMap = savedReferenceMap;
     bundledStrings = savedBundledStrings;
-    src3 = savedSrc;
+    src2 = savedSrc;
     sequentialMode = savedSequentialMode;
     currentStructures = savedStructures;
     currentDecoder = savedDecoder;
-    dataView3 = new DataView(src3.buffer, src3.byteOffset, src3.byteLength);
+    dataView2 = new DataView(src2.buffer, src2.byteOffset, src2.byteLength);
     return value;
   }
   function clearSource() {
-    src3 = null;
+    src2 = null;
     referenceMap = null;
     currentStructures = null;
   }
@@ -73701,8 +71625,8 @@ You can use close({ resize: true }) to resize header`);
     let multiplier = mult10[(u8Array[3] & 127) << 1 | u8Array[2] >> 7];
     return (multiplier * float32Number + (float32Number > 0 ? 0.5 : -0.5) >> 0) / multiplier;
   }
-  var decoder, src3, srcEnd, position, EMPTY_ARRAY, LEGACY_RECORD_INLINE_ID, RECORD_DEFINITIONS_ID, RECORD_INLINE_ID, BUNDLED_STRINGS_ID, PACKED_REFERENCE_TAG_ID, STOP_CODE, strings, stringPosition, currentDecoder, currentStructures, srcString, srcStringStart, srcStringEnd, bundledStrings, referenceMap, currentExtensions, currentExtensionRanges, packedValues, dataView3, restoreMapsAsObject, defaultOptions, sequentialMode, inlineObjectReadThreshold, Decoder3, validName, readFixedString, isNativeAccelerationEnabled, fromCharCode, f32Array, u8Array, keyCache, Tag, recordDefinition, glbl, packedTable, SHARED_DATA_TAG_ID, isLittleEndianMachine, typedArrays, typedArrayTags, mult10, defaultDecoder, decode12, decodeMultiple, FLOAT32_OPTIONS;
-  var init_decode3 = __esm({
+  var decoder, src2, srcEnd, position, EMPTY_ARRAY, LEGACY_RECORD_INLINE_ID, RECORD_DEFINITIONS_ID, RECORD_INLINE_ID, BUNDLED_STRINGS_ID, PACKED_REFERENCE_TAG_ID, STOP_CODE, strings, stringPosition, currentDecoder, currentStructures, srcString, srcStringStart, srcStringEnd, bundledStrings, referenceMap, currentExtensions, currentExtensionRanges, packedValues, dataView2, restoreMapsAsObject, defaultOptions, sequentialMode, inlineObjectReadThreshold, Decoder2, validName, readFixedString, isNativeAccelerationEnabled, fromCharCode, f32Array, u8Array, keyCache, Tag, recordDefinition, glbl, packedTable, SHARED_DATA_TAG_ID, isLittleEndianMachine, typedArrays, typedArrayTags, mult10, defaultDecoder, decode7, decodeMultiple, FLOAT32_OPTIONS;
+  var init_decode2 = __esm({
     "node_modules/cbor-x/decode.js"() {
       try {
         decoder = new TextDecoder();
@@ -73734,7 +71658,7 @@ You can use close({ resize: true }) to resize header`);
       } catch (error) {
         inlineObjectReadThreshold = Infinity;
       }
-      Decoder3 = class _Decoder {
+      Decoder2 = class _Decoder {
         constructor(options) {
           if (options) {
             if ((options.keyMap || options._keyMap) && !options.useRecords) {
@@ -73799,7 +71723,7 @@ You can use close({ resize: true }) to resize header`);
           return res;
         }
         decode(source, end) {
-          if (src3) {
+          if (src2) {
             return saveState(() => {
               clearSource();
               return this ? this.decode(source, end) : _Decoder.prototype.decode.call(defaultOptions, source, end);
@@ -73812,11 +71736,11 @@ You can use close({ resize: true }) to resize header`);
           srcString = null;
           strings = EMPTY_ARRAY;
           bundledStrings = null;
-          src3 = source;
+          src2 = source;
           try {
-            dataView3 = source.dataView || (source.dataView = new DataView(source.buffer, source.byteOffset, source.byteLength));
+            dataView2 = source.dataView || (source.dataView = new DataView(source.buffer, source.byteOffset, source.byteLength));
           } catch (error) {
-            src3 = null;
+            src2 = null;
             if (source instanceof Uint8Array)
               throw error;
             throw new Error("Source must be a Uint8Array or Buffer but was a " + (source && typeof source == "object" ? source.constructor.name : typeof source));
@@ -73891,15 +71815,15 @@ You can use close({ resize: true }) to resize header`);
       currentExtensions[1] = (epochSec) => {
         return new Date(Math.round(epochSec * 1e3));
       };
-      currentExtensions[2] = (buffer3) => {
+      currentExtensions[2] = (buffer2) => {
         let value = BigInt(0);
-        for (let i = 0, l = buffer3.byteLength; i < l; i++) {
-          value = BigInt(buffer3[i]) + value << BigInt(8);
+        for (let i = 0, l = buffer2.byteLength; i < l; i++) {
+          value = BigInt(buffer2[i]) + value << BigInt(8);
         }
         return value;
       };
-      currentExtensions[3] = (buffer3) => {
-        return BigInt(-1) - currentExtensions[2](buffer3);
+      currentExtensions[3] = (buffer2) => {
+        return BigInt(-1) - currentExtensions[2](buffer2);
       };
       currentExtensions[4] = (fraction) => {
         return +(fraction[1] + "e" + fraction[0]);
@@ -73917,11 +71841,11 @@ You can use close({ resize: true }) to resize header`);
         structure.read = createStructureReader(structure);
       };
       currentExtensions[LEGACY_RECORD_INLINE_ID] = (data) => {
-        let length3 = data.length;
+        let length2 = data.length;
         let structure = data[1];
         recordDefinition(data[0], structure);
         let object = {};
-        for (let i = 2; i < length3; i++) {
+        for (let i = 2; i < length2; i++) {
           let key = structure[i - 2];
           object[safeKey(key)] = data[i];
         }
@@ -73941,14 +71865,14 @@ You can use close({ resize: true }) to resize header`);
       currentExtensions[27] = (data) => {
         return (glbl[data[0]] || Error)(data[1], data[2]);
       };
-      packedTable = (read4) => {
-        if (src3[position++] != 132)
+      packedTable = (read3) => {
+        if (src2[position++] != 132)
           throw new Error("Packed values structure must be followed by a 4 element array");
-        let newPackedValues = read4();
+        let newPackedValues = read3();
         packedValues = packedValues ? newPackedValues.concat(packedValues.slice(newPackedValues.length)) : newPackedValues;
-        packedValues.prefixes = read4();
-        packedValues.suffixes = read4();
-        return read4();
+        packedValues.prefixes = read3();
+        packedValues.suffixes = read3();
+        return read3();
       };
       packedTable.handlesRead = true;
       currentExtensions[51] = packedTable;
@@ -73963,13 +71887,13 @@ You can use close({ resize: true }) to resize header`);
           return packedValues[16 + (data >= 0 ? 2 * data : -2 * data - 1)];
         throw new Error("No support for non-integer packed references yet");
       };
-      currentExtensions[28] = (read4) => {
+      currentExtensions[28] = (read3) => {
         if (!referenceMap) {
           referenceMap = /* @__PURE__ */ new Map();
           referenceMap.id = 0;
         }
         let id = referenceMap.id++;
-        let token = src3[position];
+        let token = src2[position];
         let target2;
         if (token >> 5 == 4)
           target2 = [];
@@ -73977,7 +71901,7 @@ You can use close({ resize: true }) to resize header`);
           target2 = {};
         let refEntry = { target: target2 };
         referenceMap.set(id, refEntry);
-        let targetProperties = read4();
+        let targetProperties = read3();
         if (refEntry.used)
           return Object.assign(target2, targetProperties);
         refEntry.target = targetProperties;
@@ -73990,12 +71914,12 @@ You can use close({ resize: true }) to resize header`);
         return refEntry.target;
       };
       currentExtensions[258] = (array) => new Set(array);
-      (currentExtensions[259] = (read4) => {
+      (currentExtensions[259] = (read3) => {
         if (currentDecoder.mapsAsObjects) {
           currentDecoder.mapsAsObjects = false;
           restoreMapsAsObject = true;
         }
-        return read4();
+        return read3();
       }).handlesRead = true;
       SHARED_DATA_TAG_ID = 1399353956;
       currentExtensionRanges.push((tag, input) => {
@@ -74043,8 +71967,8 @@ You can use close({ resize: true }) to resize header`);
       for (let i = 0; i < 256; i++) {
         mult10[i] = +("1e" + Math.floor(45.15 - i * 0.30103));
       }
-      defaultDecoder = new Decoder3({ useRecords: false });
-      decode12 = defaultDecoder.decode;
+      defaultDecoder = new Decoder2({ useRecords: false });
+      decode7 = defaultDecoder.decode;
       decodeMultiple = defaultDecoder.decodeMultiple;
       FLOAT32_OPTIONS = {
         NEVER: 0,
@@ -74056,35 +71980,35 @@ You can use close({ resize: true }) to resize header`);
   });
 
   // node_modules/cbor-x/encode.js
-  function writeEntityLength(length3, majorValue) {
-    if (length3 < 24)
-      target[position2++] = majorValue | length3;
-    else if (length3 < 256) {
+  function writeEntityLength(length2, majorValue) {
+    if (length2 < 24)
+      target[position2++] = majorValue | length2;
+    else if (length2 < 256) {
       target[position2++] = majorValue | 24;
-      target[position2++] = length3;
-    } else if (length3 < 65536) {
+      target[position2++] = length2;
+    } else if (length2 < 65536) {
       target[position2++] = majorValue | 25;
-      target[position2++] = length3 >> 8;
-      target[position2++] = length3 & 255;
+      target[position2++] = length2 >> 8;
+      target[position2++] = length2 & 255;
     } else {
       target[position2++] = majorValue | 26;
-      targetView.setUint32(position2, length3);
+      targetView.setUint32(position2, length2);
       position2 += 4;
     }
   }
-  function writeArrayHeader(length3) {
-    if (length3 < 24)
-      target[position2++] = 128 | length3;
-    else if (length3 < 256) {
+  function writeArrayHeader(length2) {
+    if (length2 < 24)
+      target[position2++] = 128 | length2;
+    else if (length2 < 256) {
       target[position2++] = 152;
-      target[position2++] = length3;
-    } else if (length3 < 65536) {
+      target[position2++] = length2;
+    } else if (length2 < 65536) {
       target[position2++] = 153;
-      target[position2++] = length3 >> 8;
-      target[position2++] = length3 & 255;
+      target[position2++] = length2 >> 8;
+      target[position2++] = length2 & 255;
     } else {
       target[position2++] = 154;
-      targetView.setUint32(position2, length3);
+      targetView.setUint32(position2, length2);
       position2 += 4;
     }
   }
@@ -74148,35 +72072,35 @@ You can use close({ resize: true }) to resize header`);
       tag -= 4;
     return {
       tag,
-      encode: function writeExtBuffer(typedArray, encode9) {
-        let length3 = typedArray.byteLength;
+      encode: function writeExtBuffer(typedArray, encode6) {
+        let length2 = typedArray.byteLength;
         let offset = typedArray.byteOffset || 0;
-        let buffer3 = typedArray.buffer || typedArray;
-        encode9(hasNodeBuffer ? Buffer2.from(buffer3, offset, length3) : new Uint8Array(buffer3, offset, length3));
+        let buffer2 = typedArray.buffer || typedArray;
+        encode6(hasNodeBuffer ? Buffer2.from(buffer2, offset, length2) : new Uint8Array(buffer2, offset, length2));
       }
     };
   }
-  function writeBuffer(buffer3, makeRoom) {
-    let length3 = buffer3.byteLength;
-    if (length3 < 24) {
-      target[position2++] = 64 + length3;
-    } else if (length3 < 256) {
+  function writeBuffer(buffer2, makeRoom) {
+    let length2 = buffer2.byteLength;
+    if (length2 < 24) {
+      target[position2++] = 64 + length2;
+    } else if (length2 < 256) {
       target[position2++] = 88;
-      target[position2++] = length3;
-    } else if (length3 < 65536) {
+      target[position2++] = length2;
+    } else if (length2 < 65536) {
       target[position2++] = 89;
-      target[position2++] = length3 >> 8;
-      target[position2++] = length3 & 255;
+      target[position2++] = length2 >> 8;
+      target[position2++] = length2 & 255;
     } else {
       target[position2++] = 90;
-      targetView.setUint32(position2, length3);
+      targetView.setUint32(position2, length2);
       position2 += 4;
     }
-    if (position2 + length3 >= target.length) {
-      makeRoom(position2 + length3);
+    if (position2 + length2 >= target.length) {
+      makeRoom(position2 + length2);
     }
-    target.set(buffer3.buffer ? buffer3 : new Uint8Array(buffer3), position2);
-    position2 += length3;
+    target.set(buffer2.buffer ? buffer2 : new Uint8Array(buffer2), position2);
+    position2 += length2;
   }
   function insertIds(serialized, idsToInsert) {
     let nextId;
@@ -74202,12 +72126,12 @@ You can use close({ resize: true }) to resize header`);
     }
     return serialized;
   }
-  function writeBundles(start, encode9) {
+  function writeBundles(start, encode6) {
     targetView.setUint32(bundledStrings2.position + start, position2 - bundledStrings2.position - start + 1);
     let writeStrings = bundledStrings2;
     bundledStrings2 = null;
-    encode9(writeStrings[0]);
-    encode9(writeStrings[1]);
+    encode6(writeStrings[0]);
+    encode6(writeStrings[1]);
   }
   function addExtension2(extension) {
     if (extension.Class) {
@@ -74218,14 +72142,14 @@ You can use close({ resize: true }) to resize header`);
     }
     addExtension(extension);
   }
-  var textEncoder3, extensions, extensionClasses, Buffer2, hasNodeBuffer, ByteArrayAllocate, ByteArray, MAX_STRUCTURES, MAX_BUFFER_SIZE, throwOnIterable, target, targetView, position2, safeEnd, bundledStrings2, MAX_BUNDLE_SIZE, hasNonLatin, RECORD_SYMBOL, Encoder3, SharedData, BlobConstructor, isLittleEndianMachine2, defaultEncoder, encode8, encodeAsIterable, encodeAsAsyncIterable, NEVER, ALWAYS, DECIMAL_ROUND, DECIMAL_FIT, REUSE_BUFFER_MODE, RESET_BUFFER_MODE, THROW_ON_ITERABLE;
-  var init_encode3 = __esm({
+  var textEncoder2, extensions, extensionClasses, Buffer2, hasNodeBuffer, ByteArrayAllocate, ByteArray, MAX_STRUCTURES, MAX_BUFFER_SIZE, throwOnIterable, target, targetView, position2, safeEnd, bundledStrings2, MAX_BUNDLE_SIZE, hasNonLatin, RECORD_SYMBOL, Encoder2, SharedData, BlobConstructor, isLittleEndianMachine2, defaultEncoder, encode5, encodeAsIterable, encodeAsAsyncIterable, NEVER, ALWAYS, DECIMAL_ROUND, DECIMAL_FIT, REUSE_BUFFER_MODE, RESET_BUFFER_MODE, THROW_ON_ITERABLE;
+  var init_encode2 = __esm({
     "node_modules/cbor-x/encode.js"() {
-      init_decode3();
-      init_decode3();
-      init_decode3();
+      init_decode2();
+      init_decode2();
+      init_decode2();
       try {
-        textEncoder3 = new TextEncoder();
+        textEncoder2 = new TextEncoder();
       } catch (error) {
       }
       Buffer2 = typeof globalThis === "object" && globalThis.Buffer;
@@ -74239,7 +72163,7 @@ You can use close({ resize: true }) to resize header`);
       MAX_BUNDLE_SIZE = 61440;
       hasNonLatin = /[\u0080-\uFFFF]/;
       RECORD_SYMBOL = Symbol("record-id");
-      Encoder3 = class extends Decoder3 {
+      Encoder2 = class extends Decoder2 {
         constructor(options) {
           super(options);
           this.offset = 0;
@@ -74252,8 +72176,8 @@ You can use close({ resize: true }) to resize header`);
           options = options || {};
           let encodeUtf8 = ByteArray.prototype.utf8Write ? function(string, position3, maxBytes) {
             return target.utf8Write(string, position3, maxBytes);
-          } : textEncoder3 && textEncoder3.encodeInto ? function(string, position3) {
-            return textEncoder3.encodeInto(string, target.subarray(position3)).written;
+          } : textEncoder2 && textEncoder2.encodeInto ? function(string, position3) {
+            return textEncoder2.encodeInto(string, target.subarray(position3)).written;
           } : false;
           let encoder = this;
           let hasSharedStructures = options.structures || options.saveStructures;
@@ -74372,7 +72296,7 @@ You can use close({ resize: true }) to resize header`);
                 target[position2++] = 51;
                 writeArrayHeader(4);
                 let valuesArray = packedValues2.values;
-                encode9(valuesArray);
+                encode6(valuesArray);
                 writeArrayHeader(0);
                 writeArrayHeader(0);
                 packedObjectMap2 = Object.create(sharedPackedObjectMap2 || null);
@@ -74385,9 +72309,9 @@ You can use close({ resize: true }) to resize header`);
             try {
               if (throwOnIterable)
                 return;
-              encode9(value);
+              encode6(value);
               if (bundledStrings2) {
-                writeBundles(start, encode9);
+                writeBundles(start, encode6);
               }
               encoder.offset = position2;
               if (referenceMap2 && referenceMap2.idsToInsert) {
@@ -74458,11 +72382,11 @@ You can use close({ resize: true }) to resize header`);
               samplingPackedValues = null;
             };
           };
-          const encode9 = (value) => {
+          const encode6 = (value) => {
             if (position2 > safeEnd)
               target = makeRoom(position2);
             var type = typeof value;
-            var length3;
+            var length2;
             if (type === "string") {
               if (packedObjectMap2) {
                 let packedPosition = packedObjectMap2[value];
@@ -74472,9 +72396,9 @@ You can use close({ resize: true }) to resize header`);
                   else {
                     target[position2++] = 198;
                     if (packedPosition & 1)
-                      encode9(15 - packedPosition >> 1);
+                      encode6(15 - packedPosition >> 1);
                     else
-                      encode9(packedPosition - 16 >> 1);
+                      encode6(packedPosition - 16 >> 1);
                   }
                   return;
                 } else if (samplingPackedValues && !options.pack) {
@@ -74502,7 +72426,7 @@ You can use close({ resize: true }) to resize header`);
                   extStart = position2 - start;
                   position2 += 4;
                   if (bundledStrings2.position) {
-                    writeBundles(start, encode9);
+                    writeBundles(start, encode6);
                   }
                   bundledStrings2 = ["", ""];
                   bundledStrings2.size = 0;
@@ -74511,7 +72435,7 @@ You can use close({ resize: true }) to resize header`);
                 let twoByte = hasNonLatin.test(value);
                 bundledStrings2[twoByte ? 0 : 1] += value;
                 target[position2++] = twoByte ? 206 : 207;
-                encode9(strLength);
+                encode6(strLength);
                 return;
               }
               let headerSize;
@@ -74549,34 +72473,34 @@ You can use close({ resize: true }) to resize header`);
                     target[strPosition++] = c1 & 63 | 128;
                   }
                 }
-                length3 = strPosition - position2 - headerSize;
+                length2 = strPosition - position2 - headerSize;
               } else {
-                length3 = encodeUtf8(value, position2 + headerSize, maxBytes);
+                length2 = encodeUtf8(value, position2 + headerSize, maxBytes);
               }
-              if (length3 < 24) {
-                target[position2++] = 96 | length3;
-              } else if (length3 < 256) {
+              if (length2 < 24) {
+                target[position2++] = 96 | length2;
+              } else if (length2 < 256) {
                 if (headerSize < 2) {
-                  target.copyWithin(position2 + 2, position2 + 1, position2 + 1 + length3);
+                  target.copyWithin(position2 + 2, position2 + 1, position2 + 1 + length2);
                 }
                 target[position2++] = 120;
-                target[position2++] = length3;
-              } else if (length3 < 65536) {
+                target[position2++] = length2;
+              } else if (length2 < 65536) {
                 if (headerSize < 3) {
-                  target.copyWithin(position2 + 3, position2 + 2, position2 + 2 + length3);
+                  target.copyWithin(position2 + 3, position2 + 2, position2 + 2 + length2);
                 }
                 target[position2++] = 121;
-                target[position2++] = length3 >> 8;
-                target[position2++] = length3 & 255;
+                target[position2++] = length2 >> 8;
+                target[position2++] = length2 & 255;
               } else {
                 if (headerSize < 5) {
-                  target.copyWithin(position2 + 5, position2 + 3, position2 + 3 + length3);
+                  target.copyWithin(position2 + 5, position2 + 3, position2 + 3 + length2);
                 }
                 target[position2++] = 122;
-                targetView.setUint32(position2, length3);
+                targetView.setUint32(position2, length2);
                 position2 += 4;
               }
-              position2 += length3;
+              position2 += length2;
             } else if (type === "number") {
               if (!this.alwaysUseFloat && value >>> 0 === value) {
                 if (value < 24) {
@@ -74650,14 +72574,14 @@ You can use close({ resize: true }) to resize header`);
                 if (constructor === Object) {
                   writeObject(value, true);
                 } else if (constructor === Array) {
-                  length3 = value.length;
-                  if (length3 < 24) {
-                    target[position2++] = 128 | length3;
+                  length2 = value.length;
+                  if (length2 < 24) {
+                    target[position2++] = 128 | length2;
                   } else {
-                    writeArrayHeader(length3);
+                    writeArrayHeader(length2);
                   }
-                  for (let i = 0; i < length3; i++) {
-                    encode9(value[i]);
+                  for (let i = 0; i < length2; i++) {
+                    encode6(value[i]);
                   }
                 } else if (constructor === Map) {
                   if (this.mapsAsObjects ? this.useTag259ForMaps !== false : this.useTag259ForMaps) {
@@ -74665,30 +72589,30 @@ You can use close({ resize: true }) to resize header`);
                     target[position2++] = 1;
                     target[position2++] = 3;
                   }
-                  length3 = value.size;
-                  if (length3 < 24) {
-                    target[position2++] = 160 | length3;
-                  } else if (length3 < 256) {
+                  length2 = value.size;
+                  if (length2 < 24) {
+                    target[position2++] = 160 | length2;
+                  } else if (length2 < 256) {
                     target[position2++] = 184;
-                    target[position2++] = length3;
-                  } else if (length3 < 65536) {
+                    target[position2++] = length2;
+                  } else if (length2 < 65536) {
                     target[position2++] = 185;
-                    target[position2++] = length3 >> 8;
-                    target[position2++] = length3 & 255;
+                    target[position2++] = length2 >> 8;
+                    target[position2++] = length2 & 255;
                   } else {
                     target[position2++] = 186;
-                    targetView.setUint32(position2, length3);
+                    targetView.setUint32(position2, length2);
                     position2 += 4;
                   }
                   if (encoder.keyMap) {
                     for (let [key, entryValue] of value) {
-                      encode9(encoder.encodeKey(key));
-                      encode9(entryValue);
+                      encode6(encoder.encodeKey(key));
+                      encode6(entryValue);
                     }
                   } else {
                     for (let [key, entryValue] of value) {
-                      encode9(key);
-                      encode9(entryValue);
+                      encode6(key);
+                      encode6(entryValue);
                     }
                   }
                 } else {
@@ -74713,7 +72637,7 @@ You can use close({ resize: true }) to resize header`);
                         targetView.setUint32(position2, tag);
                         position2 += 4;
                       }
-                      extension.encode.call(this, value, encode9, makeRoom);
+                      extension.encode.call(this, value, encode6, makeRoom);
                       return;
                     }
                   }
@@ -74725,7 +72649,7 @@ You can use close({ resize: true }) to resize header`);
                     }
                     target[position2++] = 159;
                     for (let entry of value) {
-                      encode9(entry);
+                      encode6(entry);
                     }
                     target[position2++] = 255;
                     return;
@@ -74738,7 +72662,7 @@ You can use close({ resize: true }) to resize header`);
                   if (this.useToJSON && value.toJSON) {
                     const json = value.toJSON();
                     if (json !== value)
-                      return encode9(json);
+                      return encode6(json);
                   }
                   writeObject(value, !value.hasOwnProperty);
                 }
@@ -74770,31 +72694,31 @@ You can use close({ resize: true }) to resize header`);
           const writeObject = this.useRecords === false ? this.variableMapSize ? (object) => {
             let keys = Object.keys(object);
             let vals = Object.values(object);
-            let length3 = keys.length;
-            if (length3 < 24) {
-              target[position2++] = 160 | length3;
-            } else if (length3 < 256) {
+            let length2 = keys.length;
+            if (length2 < 24) {
+              target[position2++] = 160 | length2;
+            } else if (length2 < 256) {
               target[position2++] = 184;
-              target[position2++] = length3;
-            } else if (length3 < 65536) {
+              target[position2++] = length2;
+            } else if (length2 < 65536) {
               target[position2++] = 185;
-              target[position2++] = length3 >> 8;
-              target[position2++] = length3 & 255;
+              target[position2++] = length2 >> 8;
+              target[position2++] = length2 & 255;
             } else {
               target[position2++] = 186;
-              targetView.setUint32(position2, length3);
+              targetView.setUint32(position2, length2);
               position2 += 4;
             }
             let key;
             if (encoder.keyMap) {
-              for (let i = 0; i < length3; i++) {
-                encode9(encoder.encodeKey(keys[i]));
-                encode9(vals[i]);
+              for (let i = 0; i < length2; i++) {
+                encode6(encoder.encodeKey(keys[i]));
+                encode6(vals[i]);
               }
             } else {
-              for (let i = 0; i < length3; i++) {
-                encode9(keys[i]);
-                encode9(vals[i]);
+              for (let i = 0; i < length2; i++) {
+                encode6(keys[i]);
+                encode6(vals[i]);
               }
             }
           } : (object, safePrototype) => {
@@ -74805,15 +72729,15 @@ You can use close({ resize: true }) to resize header`);
             if (encoder.keyMap) {
               for (let key in object)
                 if (safePrototype || object.hasOwnProperty(key)) {
-                  encode9(encoder.encodeKey(key));
-                  encode9(object[key]);
+                  encode6(encoder.encodeKey(key));
+                  encode6(object[key]);
                   size++;
                 }
             } else {
               for (let key in object)
                 if (safePrototype || object.hasOwnProperty(key)) {
-                  encode9(key);
-                  encode9(object[key]);
+                  encode6(key);
+                  encode6(object[key]);
                   size++;
                 }
             }
@@ -74822,13 +72746,13 @@ You can use close({ resize: true }) to resize header`);
           } : (object, safePrototype) => {
             let nextTransition, transition = structures.transitions || (structures.transitions = /* @__PURE__ */ Object.create(null));
             let newTransitions = 0;
-            let length3 = 0;
+            let length2 = 0;
             let parentRecordId;
             let keys;
             if (this.keyMap) {
               keys = Object.keys(object).map((k) => this.encodeKey(k));
-              length3 = keys.length;
-              for (let i = 0; i < length3; i++) {
+              length2 = keys.length;
+              for (let i = 0; i < length2; i++) {
                 let key = keys[i];
                 nextTransition = transition[key];
                 if (!nextTransition) {
@@ -74849,7 +72773,7 @@ You can use close({ resize: true }) to resize header`);
                     newTransitions++;
                   }
                   transition = nextTransition;
-                  length3++;
+                  length2++;
                 }
             }
             let recordId = transition[RECORD_SYMBOL];
@@ -74879,7 +72803,7 @@ You can use close({ resize: true }) to resize header`);
                 target[position2++] = recordId >> 8 | 224;
                 target[position2++] = recordId & 255;
                 transition = structures.transitions;
-                for (let i = 0; i < length3; i++) {
+                for (let i = 0; i < length2; i++) {
                   if (transition[RECORD_SYMBOL] === void 0 || transition[RECORD_SYMBOL] & 1048576)
                     transition[RECORD_SYMBOL] = recordId;
                   transition = transition[keys[i]];
@@ -74895,27 +72819,27 @@ You can use close({ resize: true }) to resize header`);
                 if (recordIdsToRemove.length >= MAX_STRUCTURES - maxSharedStructures)
                   recordIdsToRemove.shift()[RECORD_SYMBOL] = void 0;
                 recordIdsToRemove.push(transition);
-                writeArrayHeader(length3 + 2);
-                encode9(57344 + recordId);
-                encode9(keys);
+                writeArrayHeader(length2 + 2);
+                encode6(57344 + recordId);
+                encode6(keys);
                 if (safePrototype === null)
                   return;
                 for (let key in object)
                   if (safePrototype || object.hasOwnProperty(key))
-                    encode9(object[key]);
+                    encode6(object[key]);
                 return;
               }
             }
-            if (length3 < 24) {
-              target[position2++] = 128 | length3;
+            if (length2 < 24) {
+              target[position2++] = 128 | length2;
             } else {
-              writeArrayHeader(length3);
+              writeArrayHeader(length2);
             }
             if (safePrototype === null)
               return;
             for (let key in object)
               if (safePrototype || object.hasOwnProperty(key))
-                encode9(object[key]);
+                encode6(object[key]);
           };
           const makeRoom = (end) => {
             let newSize;
@@ -74958,19 +72882,19 @@ You can use close({ resize: true }) to resize header`);
               for (let key in object) {
                 let value = object[key];
                 if (!useRecords)
-                  encode9(key);
+                  encode6(key);
                 if (value && typeof value === "object") {
                   if (iterateProperties[key])
                     yield* encodeObjectAsIterable(value, iterateProperties[key]);
                   else
                     yield* tryEncode(value, iterateProperties, key);
                 } else
-                  encode9(value);
+                  encode6(value);
               }
             } else if (constructor === Array) {
-              let length3 = object.length;
-              writeArrayHeader(length3);
-              for (let i = 0; i < length3; i++) {
+              let length2 = object.length;
+              writeArrayHeader(length2);
+              for (let i = 0; i < length2; i++) {
                 let value = object[i];
                 if (value && (typeof value === "object" || position2 - start > chunkThreshold)) {
                   if (iterateProperties.element)
@@ -74978,7 +72902,7 @@ You can use close({ resize: true }) to resize header`);
                   else
                     yield* tryEncode(value, iterateProperties, "element");
                 } else
-                  encode9(value);
+                  encode6(value);
               }
             } else if (object[Symbol.iterator]) {
               target[position2++] = 159;
@@ -74989,7 +72913,7 @@ You can use close({ resize: true }) to resize header`);
                   else
                     yield* tryEncode(value, iterateProperties, "element");
                 } else
-                  encode9(value);
+                  encode6(value);
               }
               target[position2++] = 255;
             } else if (isBlob(object)) {
@@ -75004,7 +72928,7 @@ You can use close({ resize: true }) to resize header`);
               restartEncoding();
               target[position2++] = 255;
             } else {
-              encode9(object);
+              encode6(object);
             }
             if (finalIterable && position2 > start)
               yield target.subarray(start, position2);
@@ -75016,7 +72940,7 @@ You can use close({ resize: true }) to resize header`);
           function* tryEncode(value, iterateProperties, key) {
             let restart = position2 - start;
             try {
-              encode9(value);
+              encode6(value);
               if (position2 - start > chunkThreshold) {
                 yield target.subarray(start, position2);
                 restartEncoding();
@@ -75070,8 +72994,8 @@ You can use close({ resize: true }) to resize header`);
             }
           }
         }
-        useBuffer(buffer3) {
-          target = buffer3;
+        useBuffer(buffer2) {
+          target = buffer2;
           targetView = new DataView(target.buffer, target.byteOffset, target.byteLength);
           position2 = 0;
         }
@@ -75138,7 +73062,7 @@ You can use close({ resize: true }) to resize header`);
         {
           // Date
           tag: 1,
-          encode(date, encode9) {
+          encode(date, encode6) {
             let seconds = date.getTime() / 1e3;
             if ((this.useTimestamp32 || date.getMilliseconds() === 0) && seconds >= 0 && seconds < 4294967296) {
               target[position2++] = 26;
@@ -75155,25 +73079,25 @@ You can use close({ resize: true }) to resize header`);
           // Set
           tag: 258,
           // https://github.com/input-output-hk/cbor-sets-spec/blob/master/CBOR_SETS.md
-          encode(set, encode9) {
+          encode(set, encode6) {
             let array = Array.from(set);
-            encode9(array);
+            encode6(array);
           }
         },
         {
           // Error
           tag: 27,
           // http://cbor.schmorp.de/generic-object
-          encode(error, encode9) {
-            encode9([error.name, error.message]);
+          encode(error, encode6) {
+            encode6([error.name, error.message]);
           }
         },
         {
           // RegExp
           tag: 27,
           // http://cbor.schmorp.de/generic-object
-          encode(regex, encode9) {
-            encode9(["RegExp", regex.source, regex.flags]);
+          encode(regex, encode6) {
+            encode6(["RegExp", regex.source, regex.flags]);
           }
         },
         {
@@ -75181,13 +73105,13 @@ You can use close({ resize: true }) to resize header`);
           getTag(tag) {
             return tag.tag;
           },
-          encode(tag, encode9) {
-            encode9(tag.value);
+          encode(tag, encode6) {
+            encode6(tag.value);
           }
         },
         {
           // ArrayBuffer
-          encode(arrayBuffer, encode9, makeRoom) {
+          encode(arrayBuffer, encode6, makeRoom) {
             writeBuffer(arrayBuffer, makeRoom);
           }
         },
@@ -75199,7 +73123,7 @@ You can use close({ resize: true }) to resize header`);
                 return 64;
             }
           },
-          encode(typedArray, encode9, makeRoom) {
+          encode(typedArray, encode6, makeRoom) {
             writeBuffer(typedArray, makeRoom);
           }
         },
@@ -75214,7 +73138,7 @@ You can use close({ resize: true }) to resize header`);
         typedArrayEncoder(85, 4),
         typedArrayEncoder(86, 8),
         {
-          encode(sharedData, encode9) {
+          encode(sharedData, encode6) {
             let packedValues2 = sharedData.packedValues || [];
             let sharedStructures = sharedData.structures || [];
             if (packedValues2.values.length > 0) {
@@ -75222,7 +73146,7 @@ You can use close({ resize: true }) to resize header`);
               target[position2++] = 51;
               writeArrayHeader(4);
               let valuesArray = packedValues2.values;
-              encode9(valuesArray);
+              encode6(valuesArray);
               writeArrayHeader(0);
               writeArrayHeader(0);
               packedObjectMap = Object.create(sharedPackedObjectMap || null);
@@ -75236,14 +73160,14 @@ You can use close({ resize: true }) to resize header`);
               let definitions = sharedStructures.slice(0);
               definitions.unshift(57344);
               definitions.push(new Tag(sharedData.version, 1399353956));
-              encode9(definitions);
+              encode6(definitions);
             } else
-              encode9(new Tag(sharedData.version, 1399353956));
+              encode6(new Tag(sharedData.version, 1399353956));
           }
         }
       ];
-      defaultEncoder = new Encoder3({ useRecords: false });
-      encode8 = defaultEncoder.encode;
+      defaultEncoder = new Encoder2({ useRecords: false });
+      encode5 = defaultEncoder.encode;
       encodeAsIterable = defaultEncoder.encodeAsIterable;
       encodeAsAsyncIterable = defaultEncoder.encodeAsAsyncIterable;
       ({ NEVER, ALWAYS, DECIMAL_ROUND, DECIMAL_FIT } = FLOAT32_OPTIONS);
@@ -75266,13 +73190,13 @@ You can use close({ resize: true }) to resize header`);
     }
   }
   function* encodeIterSync(objectIterator, options) {
-    const encoder = new Encoder3(options);
+    const encoder = new Encoder2(options);
     for (const value of objectIterator) {
       yield encoder.encode(value);
     }
   }
   async function* encodeIterAsync(objectIterator, options) {
-    const encoder = new Encoder3(options);
+    const encoder = new Encoder2(options);
     for await (const value of objectIterator) {
       yield encoder.encode(value);
     }
@@ -75281,7 +73205,7 @@ You can use close({ resize: true }) to resize header`);
     if (!bufferIterator || typeof bufferIterator !== "object") {
       throw new Error("first argument must be an Iterable, Async Iterable, Iterator, Async Iterator, or a promise");
     }
-    const decoder2 = new Decoder3(options);
+    const decoder2 = new Decoder2(options);
     let incomplete;
     const parser = (chunk) => {
       let yields;
@@ -75317,8 +73241,8 @@ You can use close({ resize: true }) to resize header`);
   }
   var init_iterators = __esm({
     "node_modules/cbor-x/iterators.js"() {
-      init_encode3();
-      init_decode3();
+      init_encode2();
+      init_decode2();
     }
   });
 
@@ -75328,18 +73252,18 @@ You can use close({ resize: true }) to resize header`);
     ALWAYS: () => ALWAYS,
     DECIMAL_FIT: () => DECIMAL_FIT,
     DECIMAL_ROUND: () => DECIMAL_ROUND,
-    Decoder: () => Decoder3,
-    Encoder: () => Encoder3,
+    Decoder: () => Decoder2,
+    Encoder: () => Encoder2,
     FLOAT32_OPTIONS: () => FLOAT32_OPTIONS,
     NEVER: () => NEVER,
     REUSE_BUFFER_MODE: () => REUSE_BUFFER_MODE,
     Tag: () => Tag,
     addExtension: () => addExtension2,
     clearSource: () => clearSource,
-    decode: () => decode12,
+    decode: () => decode7,
     decodeIter: () => decodeIter,
     decodeMultiple: () => decodeMultiple,
-    encode: () => encode8,
+    encode: () => encode5,
     encodeAsAsyncIterable: () => encodeAsAsyncIterable,
     encodeAsIterable: () => encodeAsIterable,
     encodeIter: () => encodeIter,
@@ -75348,8 +73272,8 @@ You can use close({ resize: true }) to resize header`);
   });
   var init_cbor_x = __esm({
     "node_modules/cbor-x/index.js"() {
-      init_encode3();
-      init_decode3();
+      init_encode2();
+      init_decode2();
       init_iterators();
     }
   });
