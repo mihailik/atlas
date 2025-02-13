@@ -1141,6 +1141,9 @@ function atlas(invokeType) {
             return;
           }
 
+          const mushMatch = new RegExp([...searchText.replace(/[^a-z0-9]/gi, '')].join('.*'), 'i');
+          const mushMatchLead = new RegExp('^' + [...searchText.replace(/[^a-z0-9]/gi, '')].join('.*'), 'i');
+
           const searchWordRegExp = new RegExp(
             searchText.split(/\s+/)
               // sort longer words match first
@@ -1149,9 +1152,6 @@ function atlas(invokeType) {
               .map(word => '(' + word.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&') + ')')
               .join('|'),
             'gi');
-
-          const searchLetters = [...new Set([...searchText.toLowerCase()].map(l => /[a-z]/i.test(l) ? l : ''))];
-          const searchLettersRegExp = searchLetters?.length ? new RegExp(searchLetters.join('|'), 'gi') : undefined;
 
           /** @type {[shortDID: string, rank: number][]} */
           const matches = [];
@@ -1168,8 +1168,11 @@ function atlas(invokeType) {
                 const match = searchWordRegExp.exec(displayName);
                 if (!match) break;
                 matchRank += match[0].length * 2;
-                if (match.index === 0) matchRank += 10;
+                if (match.index === 0) matchRank += 30;
               }
+
+              if (mushMatch.test(displayName)) matchRank += 3;
+              if (mushMatchLead.test(displayName)) matchRank += 5;
             }
 
             searchWordRegExp.lastIndex = 0;
@@ -1177,8 +1180,11 @@ function atlas(invokeType) {
               const match = searchWordRegExp.exec(shortHandle);
               if (!match) break;
               matchRank += match[0].length * 4;
-              if (match.index === 0) matchRank += 20;
+              if (match.index === 0) matchRank += 40;
             }
+
+            if (mushMatch.test(shortHandle)) matchRank += 3;
+            if (mushMatchLead.test(shortHandle)) matchRank += 5;
 
             if (matchRank) matches.push([shortDID, matchRank]);
           }
@@ -1189,6 +1195,7 @@ function atlas(invokeType) {
           } else {
             reportMatches(matches);
           }
+
         }
 
         function reportNoMatches() {
