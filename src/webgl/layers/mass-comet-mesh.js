@@ -201,10 +201,10 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
   };
 
   const meshWithUpdates =
-    /** @type {typeof mesh & { updateSpots: typeof updateSpots }} */(
+    /** @type {typeof mesh & { updateComets: typeof updateComets }} */(
       mesh
     );
-  meshWithUpdates.updateSpots = updateSpots;
+  meshWithUpdates.updateComets = updateComets;
 
   return meshWithUpdates;
 
@@ -296,7 +296,7 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
   /**
 * @param {TParticle[]} newSpots
 */
-  function updateSpots(newSpots) {
+  function updateComets(newSpots) {
     comets = newSpots;
     if (newSpots.length > geometry.instanceCount || newSpots.length < Math.max(320, geometry.instanceCount / 2)) {
       const newAllocateCount = Math.max(

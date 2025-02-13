@@ -57,7 +57,7 @@ export function trackFirehose({ users, clock }) {
       stop.color = start.color;
 
       control.x = (start.x + stop.x) / 2;
-      control.y = (start.y + stop.y) * 0.8;
+      control.y = (start.y + stop.y) * 0.8 + 0.4;
       control.z = (start.z + stop.z) / 2;
     }
   });
@@ -253,7 +253,7 @@ export function trackFirehose({ users, clock }) {
       activeComets.push({ from: fromUser, to: toUser, start, stop, weight: normWeight });
     }
 
-    // flash.updateFlashes(activeFlashes);
+    cometMesh.updateComets(activeComets);
   }
 
 }

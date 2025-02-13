@@ -20483,7 +20483,7 @@ void main() {
   }
 
   // package.json
-  var version = "1.1.10";
+  var version = "1.1.11";
 
   // src/webgl/create-dom-layout.js
   function createDOMLayout({ canvas3D, statsElem, userCount }) {
@@ -29114,10 +29114,10 @@ if (edgeAlpha == 0.0) {
       material.uniforms["time"].value = clock.now() / 1e3;
     };
     const meshWithUpdates = (
-      /** @type {typeof mesh & { updateSpots: typeof updateSpots }} */
+      /** @type {typeof mesh & { updateComets: typeof updateComets }} */
       mesh
     );
-    meshWithUpdates.updateSpots = updateSpots;
+    meshWithUpdates.updateComets = updateComets;
     return meshWithUpdates;
     function createGeometryAndAttributes() {
       const geometry2 = new InstancedBufferGeometry();
@@ -29183,7 +29183,7 @@ if (edgeAlpha == 0.0) {
         timeStartStopBuf[i * 2 + 1] = stop.time;
       }
     }
-    function updateSpots(newSpots) {
+    function updateComets(newSpots) {
       comets = newSpots;
       if (newSpots.length > geometry.instanceCount || newSpots.length < Math.max(320, geometry.instanceCount / 2)) {
         const newAllocateCount = Math.max(
@@ -29486,7 +29486,7 @@ if (edgeAlpha == 0.0) {
         stop.mass = comet.weight;
         stop.color = start.color;
         control.x = (start.x + stop.x) / 2;
-        control.y = (start.y + stop.y) * 0.8;
+        control.y = (start.y + stop.y) * 0.8 + 0.4;
         control.z = (start.z + stop.z) / 2;
       }
     });
@@ -29643,6 +29643,7 @@ if (edgeAlpha == 0.0) {
       } else {
         activeComets.push({ from: fromUser, to: toUser, start, stop, weight: normWeight });
       }
+      cometMesh.updateComets(activeComets);
     }
   }
 
