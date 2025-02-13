@@ -227,6 +227,31 @@ function atlas(invokeType) {
     return calcCRC32;
   })();
 
+  /**
+   * https://stackoverflow.com/a/29018745/140739
+   * @param {T[]} arr
+   * @param {T} el
+   * @param {(el1: T, el2: T) => number | null | undefined} compare_fn 
+   * @returns {number}
+   * @template T
+   */
+  function binarySearch(arr, el, compare_fn) {
+    let m = 0;
+    let n = arr.length - 1;
+    while (m <= n) {
+      let k = (n + m) >> 1;
+      let cmp = /** @type {number} */(compare_fn(el, arr[k]));
+      if (cmp > 0) {
+        m = k + 1;
+      } else if (cmp < 0) {
+        n = k - 1;
+      } else {
+        return k;
+      }
+    }
+    return ~m;
+  }
+
   /** @param {{ [shortDID: string ]: UserTuple }} */
   function getUserCoordBounds(users) {
     const bounds = { x: { min: NaN, max: NaN }, y: { min: NaN, max: NaN } };
@@ -238,6 +263,54 @@ function atlas(invokeType) {
       if (!Number.isFinite(bounds.y.max) || y > bounds.y.max) bounds.y.max = y;
     }
     return bounds;
+  }
+
+  /**
+   * @param {{ [shortDID: string]: UserTuple}} users
+   * @param {number} tileAxisCount
+   */
+  function makeProximityTiles(users, tileAxisCount) {
+    // break users into tileAxisCount x tileAxisCount tiles
+    const bounds = getUserCoordBounds(users);
+    /** @type {string[][]} */
+    const tiles = [];
+    for (const shortDID in users) {
+      const [, x, y] = users[shortDID];
+      const xTileIndex = Math.floor((x - bounds.x.min) / (bounds.x.max - bounds.x.min) * tileAxisCount);
+      const yTileIndex = Math.floor((y - bounds.y.min) / (bounds.y.max - bounds.y.min) * tileAxisCount);
+      const tileIndex = xTileIndex + yTileIndex * tileAxisCount;
+      const tile = tiles[tileIndex];
+      if (!tile) tiles[tileIndex] = [shortDID];
+      else tile.push(shortDID);
+    }
+
+    return { tiles, findTiles };
+
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {(shortDID: string, usrTuple: UserTuple) => any} check
+     * @returns {[xLowIndex: number, xHighIndex: number, yLowIndex: number, yHighIndex: number]}
+     */
+    function findTiles(x, y, check) {
+      const xCenterIndex = Math.floor((x - bounds.x.min) / (bounds.x.max - bounds.x.min) * tileAxisCount);
+      const yCenterIndex = Math.floor((y - bounds.y.min) / (bounds.y.max - bounds.y.min) * tileAxisCount);
+      const tileIndex = xCenterIndex + yCenterIndex * tileAxisCount;
+
+      /** @type {string} */
+      let shortDID;
+
+      let xLowIndex = Math.max(0, xCenterIndex - 1);
+      while ((xLowIndex - 1) > 0 && check(shortDID = tiles[xLowIndex][0], users[shortDID])) xLowIndex--;
+      let xHighIndex = Math.min(tileAxisCount - 1, xCenterIndex + 1);
+      while ((xHighIndex + 1) < tileAxisCount && check(shortDID = tiles[xHighIndex][0], users[shortDID])) xHighIndex++;
+      let yLowIndex = Math.max(0, yCenterIndex - 1);
+      while ((yLowIndex - 1) > 0 && check(shortDID = tiles[yLowIndex * tileAxisCount][0], users[shortDID])) yLowIndex--;
+      let yHighIndex = Math.min(tileAxisCount - 1, yCenterIndex + 1);
+      while ((yHighIndex + 1) < tileAxisCount && check(shortDID = tiles[yHighIndex * tileAxisCount][0], users[shortDID])) yHighIndex++;
+
+      return [xLowIndex, xHighIndex, yLowIndex, yHighIndex];
+    }
   }
 
   async function runBrowser(invokeType) {
@@ -419,6 +492,29 @@ function atlas(invokeType) {
           ]
         });
 
+        elem(
+          'button',
+          {
+            textContent: '⬆',
+            parent: rightStatus,
+            pointerEvents: 'all'
+          }
+        ).onclick = () => {
+          const mult = 0.9;
+          camera.position.set(camera.position.x * mult, camera.position.y * mult, camera.position.z * mult);
+        };
+        elem(
+          'button',
+          {
+            textContent: '⬇',
+            parent: rightStatus,
+            pointerEvents: 'all'
+          }
+        ).onclick = () => {
+          const mult = 1 / 0.9;
+          camera.position.set(camera.position.x * mult, camera.position.y * mult, camera.position.z * mult);
+        };
+
         return { root, titleBar, title, rightStatus };
       }
 
@@ -444,47 +540,36 @@ function atlas(invokeType) {
         let cameraStatus;
         let lastCameraUpdate;
         function renderFrame() {
+          const now = clock.getElapsedTime() * 1000;
+          let rareMoved = false;
+          if (!cameraStatus || !(now < lastCameraUpdate + 200)) {
+            lastCameraUpdate = now;
+            if (!cameraStatus) cameraStatus = {
+              elem: elem('div', { parent: domElements.rightStatus, fontSize: '80%', opacity: '0.7' }),
+              lastPos: { x: NaN, y: NaN, z: NaN }
+            };
+
+            const dist = Math.sqrt(
+              (camera.position.x - cameraStatus.lastPos.x) * (camera.position.x - cameraStatus.lastPos.x) +
+              (camera.position.y - cameraStatus.lastPos.y) * (camera.position.y - cameraStatus.lastPos.y) +
+              (camera.position.z - cameraStatus.lastPos.z) * (camera.position.z - cameraStatus.lastPos.z));
+            
+            if (!(dist < 0.0001)) rareMoved = true;
+          }
+
           stats.begin();
           const delta = clock.getDelta();
           controls.update(delta);
-          // camera.updateProjectionMatrix();
-          // camera.updateMatrix();
-          shaderState.material.uniforms['time'].value = clock.elapsedTime;
-          shaderState.material.uniforms['camera'].value = camera.position;
-          // const cameraDistanceXZ = Math.sqrt(
-          //   camera.position.x * camera.position.x +
-          //   camera.position.z * camera.position.z);
-
-          // const cameraAngle = Math.atan2(camera.position.x, camera.position.z) + 0.1;
-          // camera.position.x = Math.cos(cameraAngle) * cameraDistanceXZ;
-          // camera.position.z = Math.sin(cameraAngle) * cameraDistanceXZ;
-
-          // camera.lookAt(0, 0, 0);
-          // camera.updateMatrixWorld(true);
+          shaderState.updateOnFrame(rareMoved);
 
           renderer.render(scene, camera);
           stats.end();
 
-          const now = clock.getElapsedTime() / 1000;
-          if (!cameraStatus && !(now < lastCameraUpdate + 200)) {
-            lastCameraUpdate = now;
-            cameraStatus = {
-              elem: elem('div', { parent: domElements.rightStatus, fontSize: '80%', opacity: '0.7' }),
-              lastPos: { x: NaN, y: NaN, z: NaN }
-            };
-          }
-
-          const dist = Math.sqrt(
-            (camera.position.x - cameraStatus.lastPos.x) * (camera.position.x - cameraStatus.lastPos.x) +
-            (camera.position.y - cameraStatus.lastPos.y) * (camera.position.y - cameraStatus.lastPos.y) +
-            (camera.position.z - cameraStatus.lastPos.z) * (camera.position.z - cameraStatus.lastPos.z));
-
-          if (!(dist < 0.0001)) {
+          if (rareMoved) {
             cameraStatus.lastPos.x = camera.position.x;
             cameraStatus.lastPos.y = camera.position.y;
             cameraStatus.lastPos.z = camera.position.z;
-            cameraStatus.elem.textContent = camera.position.x.toFixed(2) + ', ' + camera.position.y.toFixed(2) + ', ' + camera.position.z.toFixed(2) +
-              ' [' + shaderState.instanceCount + ']';
+            cameraStatus.elem.textContent = camera.position.x.toFixed(2) + ', ' + camera.position.y.toFixed(2) + ', ' + camera.position.z.toFixed(2);
               // Math.sqrt(
               //   camera.position.x * camera.position.x +
               //   camera.position.y * camera.position.y +
@@ -521,6 +606,16 @@ function atlas(invokeType) {
       }
 
       function webgl_buffergeometry_instancing_demo() {
+        const proximityThreshold = 0.2;
+
+        const boxWire = new THREE.BoxGeometry(1, 1, 1);
+        const wireframe = new THREE.WireframeGeometry(boxWire);
+
+        const line = new THREE.LineSegments(wireframe);
+        // @ts-ignore
+        line.material.depthTest = false; line.material.opacity = 1; line.material.transparent = true;
+
+        scene.add(line);
 
         const b = 0.02;
         let positions =
@@ -547,10 +642,7 @@ function atlas(invokeType) {
           const [shortHandle, x, y] = users[shortDID];
 
           // offsets
-          const xRatiod = (x - bounds.x.min) / (bounds.x.max - bounds.x.min) - 0.5;
-          const yRatiod = (y - bounds.y.min) / (bounds.y.max - bounds.y.min) - 0.5;
-          const r = Math.sqrt(xRatiod * xRatiod + yRatiod * yRatiod);
-          let h = (1 - r * r) * 0.3 - 0.2;
+          var { xRatiod, h, yRatiod } = mapUserCoordsToAtlas(x, y);
           //if (r > 0.7 && h < 0.9) h = 1;
 
           offsets.push(xRatiod, h, yRatiod);
@@ -590,7 +682,13 @@ function atlas(invokeType) {
 
 			vColor = color;
       vec4 targetPosition = projectionMatrix * modelViewMatrix * vec4( position * 0.01 + offset, 1.0 );
-			gl_Position = targetPosition;
+      float proximityThreshold = ${proximityThreshold};
+			gl_Position =
+        // // hide near entries
+        // abs(targetPosition.x - camera.x) < proximityThreshold &&
+        // abs(targetPosition.z - camera.z) < proximityThreshold
+        // ? targetPosition * (0.0 / 0.0) :
+        targetPosition;
 
 		}
           `,
@@ -607,7 +705,7 @@ function atlas(invokeType) {
 			vec4 color = vec4( vColor );
 			color.r += sin( vPosition.x * 10.0 + time ) * 0.5;
 
-			gl_FragColor = color;
+			gl_FragColor = vec4(1,1,1,1);
     }
           `,
           side: THREE.DoubleSide,
@@ -621,10 +719,82 @@ function atlas(invokeType) {
 
         return {
           mesh,
+          bounds,
           geometry,
           material,
-          instanceCount
+          instanceCount,
+          updateOnFrame
         };
+
+        /** @type {ReturnType<typeof makeProximityTiles>} */
+        var tileProximityIndex;
+
+        /** @type {THREE.Mesh[]} */
+        var proximityBalls;
+
+        /**
+         * @param {number} x
+         * @param {number} y
+         */
+        function mapUserCoordsToAtlas(x, y) {
+          const xRatiod = (x - bounds.x.min) / (bounds.x.max - bounds.x.min) - 0.5;
+          const yRatiod = (y - bounds.y.min) / (bounds.y.max - bounds.y.min) - 0.5;
+          const r = Math.sqrt(xRatiod * xRatiod + yRatiod * yRatiod);
+          let h = (1 - r * r) * 0.3 - 0.2;
+          return { xRatiod, h, yRatiod };
+        }
+
+        function updateOnFrame(rareMoved) {
+          material.uniforms['time'].value = clock.elapsedTime;
+          material.uniforms['camera'].value = camera.position;
+
+          if (rareMoved) {
+            const tileDimension = 16;
+            if (!tileProximityIndex) tileProximityIndex = makeProximityTiles(users, tileDimension);
+
+            const startSearchForNearUsers = Date.now();
+            const [xLowIndex, xHighIndex, yLowIndex, yHighIndex] = tileProximityIndex.findTiles(camera.position.x, camera.position.z, (shortDID, usrTuple) => false);
+            let nextProximityBallIndex = 0;
+            for (let xIndex = xLowIndex; xIndex <= xHighIndex; xIndex++) {
+              for (let yIndex = yLowIndex; yIndex <= yHighIndex; yIndex++) {
+                const tile = tileProximityIndex.tiles[xIndex + yIndex * tileDimension];
+                if (!tile) continue;
+                for (const shortDID of tile) {
+                  const [, x, y] = users[shortDID];
+                  const {xRatiod, yRatiod, h} = mapUserCoordsToAtlas(x, y);
+                  const xDist = Math.abs(xRatiod - camera.position.x);
+                  const yDist = Math.abs(yRatiod - camera.position.z);
+                  const dist = Math.sqrt(xDist * xDist + yDist * yDist);
+
+                  if (dist < proximityThreshold) {
+                    if (!proximityBalls) proximityBalls = [];
+
+                    let ball = proximityBalls[nextProximityBallIndex];
+                    if (!ball) {
+                      ball = new THREE.Mesh(
+                        proximityBalls[0]?.geometry || new THREE.SphereGeometry(0.0004, 16, 12),
+                        proximityBalls[0]?.material || new THREE.MeshLambertMaterial({ color: 0xffffff }));
+
+                      ball.position.set(xRatiod, h, yRatiod);
+                      proximityBalls[nextProximityBallIndex] = ball;
+                      scene.add(ball);
+                    } else {
+                      ball.position.set(xRatiod, h, yRatiod);
+                      ball.visible = true;
+                    }
+                    nextProximityBallIndex++;
+                  }
+                }
+              }
+            }
+
+            console.log(nextProximityBallIndex + ' near users in ' + (Date.now() - startSearchForNearUsers) + 'ms ', proximityBalls);
+
+            for (let i = nextProximityBallIndex; i < proximityBalls?.length; i++) {
+              proximityBalls[i].visible = false;
+            }
+          }
+        }
       }
     }
 
