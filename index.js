@@ -1367,15 +1367,21 @@ function atlas(invokeType) {
           fragmentShader: /* glsl */`
             gl_FragColor = tintColor;
 
+            float PI = 3.1415926535897932384626433832795;
+
             float startTime = min(extra.x, extra.y);
             float endTime = max(extra.x, extra.y);
             float timeRatio = (time - startTime) / (endTime - startTime);
-            float step = 0.1;
-            float timeFunction = timeRatio < step ? timeRatio / step : 1.0 - (timeRatio - step) * (1.0 - step);
+            float step = 0.05;
+            float timeFunction =
+              timeRatio < step ? timeRatio / step :
+              timeRatio < step * 2.0 ?
+                (cos((step * 2.0 - timeRatio) * step * PI) + 1.0) / 4.5 + 0.7 :
+                (1.0 - (timeRatio - step * 2.0)) / 2.5 + 0.2;
 
             gl_FragColor = tintColor;
 
-            gl_FragColor.a *= timeFunction * timeFunction * timeFunction;
+            gl_FragColor.a *= timeFunction;
 
             // gl_FragColor =
             //   timeRatio > 1000.0 ? vec4(1.0, 0.7, 1.0, tintColor.a) :
@@ -1387,14 +1393,14 @@ function atlas(invokeType) {
 
             float diagBias = 1.0 - max(abs(vPosition.x), abs(vPosition.z));
             float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
-            gl_FragColor.a *= diagBiasUltra;
+            gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra;
 
             `,
           userKeys: Object.keys(users).slice(0, 10 * 1000),
           userMapper: (shortDID, pos, extra) => {
             const usr = activeUsers[shortDID];
             if (!usr) return;
-            pos.set(usr.x, usr.h, usr.y, usr.weight / 3);
+            pos.set(usr.x, usr.h, usr.y, usr.weight / 3 + 0.04);
             extra.x = usr.startAtMsec / 1000;
             extra.y = usr.fadeAtMsec / 1000;
           },
