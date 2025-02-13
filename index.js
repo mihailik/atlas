@@ -2594,7 +2594,7 @@ function atlas(invokeType) {
          */
         function labelsDistanceTo(toLabel, testLabel) {
           return distance2D(
-            toLabel.screenX + (toLabel.textWidth || 0),
+            toLabel.screenX + (toLabel.textWidth || 0) * 0.8,
             toLabel.screenY + (toLabel.textHeight || 0) * 3,
             testLabel.screenX,
             testLabel.screenY);
