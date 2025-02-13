@@ -90,6 +90,9 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
 
             vOffset = quadraticBezier(vTimeRatio, offsetStart, offsetControl, offsetStop);
 
+            // DEBUG
+            // vOffset = offsetStart;
+
             uint rIntStart = (colorStartStop.x / uint(256 * 256 * 256)) % uint(256);
             uint gIntStart = (colorStartStop.x / uint(256 * 256)) % uint(256);
             uint bIntStart = (colorStartStop.x / uint(256)) % uint(256);
@@ -157,7 +160,6 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
               gl_FragColor.a = bodyRatio;
 
               vec3 position = vPosition;
-              float diameter = vDiameter;
 
               gl_FragColor = tintColor;
 
@@ -177,6 +179,9 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
               float diagBias = 1.0 - max(abs(vPosition.x), abs(vPosition.z));
               float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
               gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra;
+
+              // DEBUG
+              // gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
 
             }
           `,

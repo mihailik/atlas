@@ -20483,7 +20483,7 @@ void main() {
   }
 
   // package.json
-  var version = "1.1.9";
+  var version = "1.1.10";
 
   // src/webgl/create-dom-layout.js
   function createDOMLayout({ canvas3D, statsElem, userCount }) {
@@ -20601,7 +20601,7 @@ void main() {
       }
     }
     function createBottomStatusLine() {
-      let flashesSection, labelsElem, hitTestElem, avatarImagesElem, avatarRequestsElem, avatarCachedAvatars, flashesElem, likesElem, postsElem, repostsElem, followsElem, unknownsPerSecElem, unknownsTotalElem;
+      let flashesSection, labelsElem, hitTestElem, avatarImagesElem, avatarRequestsElem, avatarCachedAvatars, flashesElem, cometsElem, likesElem, postsElem, repostsElem, followsElem, unknownsPerSecElem, unknownsTotalElem;
       let flashStatsHidden = true;
       const bottomStatusLine2 = (
         /** @type {HTMLDivElement & { update: typeof update }} */
@@ -20708,6 +20708,20 @@ void main() {
                     }),
                     elem("span", { textContent: " \u26ED", color: "transparent", textShadow: "0 0 0 cornflowerblue" }),
                     flashesElem = elem("span", "0"),
+                    elem("span", { textContent: " \u2604\uFE0F", style: `
+                  font-size: 80%;
+                  position: relative;
+                  top: -0.1em;
+                  color: transparent;
+                  opacity: 0.7;
+                  text-shadow:
+                    0 0 black,
+                    cornflowerblue -1px -1px 0px,
+                    cornflowerblue 1px 1px 0px,
+                    cornflowerblue -1px 1px 0px,
+                    cornflowerblue 1px -1px 0px;
+                  ` }),
+                    cometsElem = elem("span", "0"),
                     " "
                   ],
                   display: flashStatsHidden ? "none" : "inline",
@@ -20749,6 +20763,7 @@ void main() {
         avatarRequestsElem.textContent = labelsOutcome.avatarRequestCount.toLocaleString();
         avatarCachedAvatars.textContent = labelsOutcome.allCachedAvatars.toLocaleString();
         flashesElem.textContent = outcome.flashes.toLocaleString();
+        cometsElem.textContent = outcome.comets.toLocaleString();
         likesElem.textContent = outcome.likes.toLocaleString();
         postsElem.textContent = outcome.posts.toLocaleString();
         repostsElem.textContent = outcome.reposts.toLocaleString();
@@ -28990,6 +29005,9 @@ if (edgeAlpha == 0.0) {
 
             vOffset = quadraticBezier(vTimeRatio, offsetStart, offsetControl, offsetStop);
 
+            // DEBUG
+            // vOffset = offsetStart;
+
             uint rIntStart = (colorStartStop.x / uint(256 * 256 * 256)) % uint(256);
             uint gIntStart = (colorStartStop.x / uint(256 * 256)) % uint(256);
             uint bIntStart = (colorStartStop.x / uint(256)) % uint(256);
@@ -29060,7 +29078,6 @@ if (edgeAlpha == 0.0) {
               gl_FragColor.a = bodyRatio;
 
               vec3 position = vPosition;
-              float diameter = vDiameter;
 
               gl_FragColor = tintColor;
 
@@ -29080,6 +29097,9 @@ if (edgeAlpha == 0.0) {
               float diagBias = 1.0 - max(abs(vPosition.x), abs(vPosition.z));
               float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
               gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra;
+
+              // DEBUG
+              // gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
 
             }
           `
@@ -29432,7 +29452,7 @@ if (edgeAlpha == 0.0) {
   function trackFirehose({ users, clock }) {
     const MAX_WEIGHT = 0.1;
     const FADE_TIME_MSEC = 4e3;
-    const COMET_TIME_MSEC = 500;
+    const COMET_TIME_MSEC = 1e3;
     const activeFlashes = [];
     const activeComets = [];
     const flashMesh = massFlashMesh({
@@ -29471,7 +29491,10 @@ if (edgeAlpha == 0.0) {
       }
     });
     const group = new Group();
-    group.add(flashMesh, cometMesh);
+    group.add(
+      flashMesh,
+      cometMesh
+    );
     const unknownsLastSet = /* @__PURE__ */ new Set();
     const unknownsTotalSet = /* @__PURE__ */ new Set();
     const outcome = {
@@ -29480,6 +29503,7 @@ if (edgeAlpha == 0.0) {
       likes: 0,
       follows: 0,
       flashes: 0,
+      comets: 0,
       unknowns: 0,
       unknownsTotal: 0,
       mesh: group,
@@ -29535,6 +29559,7 @@ if (edgeAlpha == 0.0) {
         clock.nowSeconds + COMET_TIME_MSEC / 1e3,
         weight
       );
+      updateComets();
     }
     function flashShortID(shortDID, weight) {
       const user = users[shortDID];
@@ -29554,8 +29579,16 @@ if (edgeAlpha == 0.0) {
     function updateFlashes() {
       outcome.flashes = 0;
       for (const flash of activeFlashes) {
-        if (flash.start <= clock.nowSeconds && clock.nowSeconds <= flash.stop) {
+        if (flash.start <= clock.nowSeconds && flash.stop >= clock.nowSeconds) {
           outcome.flashes++;
+        }
+      }
+    }
+    function updateComets() {
+      outcome.comets = 0;
+      for (const comet of activeComets) {
+        if (comet.start <= clock.nowSeconds && comet.stop >= clock.nowSeconds) {
+          outcome.comets++;
         }
       }
     }

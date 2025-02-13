@@ -147,7 +147,7 @@ export function createDOMLayout({ canvas3D, statsElem, userCount }) {
   function createBottomStatusLine() {
     let flashesSection,
       labelsElem, hitTestElem, avatarImagesElem, avatarRequestsElem, avatarCachedAvatars,
-      flashesElem,
+      flashesElem, cometsElem,
       likesElem, postsElem, repostsElem, followsElem,
       unknownsPerSecElem, unknownsTotalElem;
 
@@ -243,6 +243,20 @@ export function createDOMLayout({ canvas3D, statsElem, userCount }) {
                 }),
                 elem('span', { textContent: ' \u26ED', color: 'transparent', textShadow: '0 0 0 cornflowerblue' }),
                 flashesElem = elem('span', '0'),
+                elem('span', { textContent: ' \u2604\ufe0f', style: `
+                  font-size: 80%;
+                  position: relative;
+                  top: -0.1em;
+                  color: transparent;
+                  opacity: 0.7;
+                  text-shadow:
+                    0 0 black,
+                    cornflowerblue -1px -1px 0px,
+                    cornflowerblue 1px 1px 0px,
+                    cornflowerblue -1px 1px 0px,
+                    cornflowerblue 1px -1px 0px;
+                  ` }),
+                cometsElem = elem('span', '0'),
                 ' '],
               display: flashStatsHidden ? 'none' : 'inline',
               color: 'cornflowerblue',
@@ -279,6 +293,7 @@ export function createDOMLayout({ canvas3D, statsElem, userCount }) {
     /**
      * @param {{
      *  flashes: number,
+     *  comets: number,
      *  likes: number,
      *  posts: number,
      *  reposts: number,
@@ -301,6 +316,7 @@ export function createDOMLayout({ canvas3D, statsElem, userCount }) {
       avatarRequestsElem.textContent = labelsOutcome.avatarRequestCount.toLocaleString();
       avatarCachedAvatars.textContent = labelsOutcome.allCachedAvatars.toLocaleString();
       flashesElem.textContent = outcome.flashes.toLocaleString();
+      cometsElem.textContent = outcome.comets.toLocaleString();
       likesElem.textContent = outcome.likes.toLocaleString();
       postsElem.textContent = outcome.posts.toLocaleString();
       repostsElem.textContent = outcome.reposts.toLocaleString();

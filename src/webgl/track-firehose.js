@@ -15,7 +15,7 @@ export function trackFirehose({ users, clock }) {
 
   const MAX_WEIGHT = 0.1;
   const FADE_TIME_MSEC = 4000;
-  const COMET_TIME_MSEC = 500;
+  const COMET_TIME_MSEC = 1000;
 
   /** @type {{ user: import('..').UserEntry, start: number, stop: number, weight: number }[]} */
   const activeFlashes = [];
@@ -63,7 +63,9 @@ export function trackFirehose({ users, clock }) {
   });
 
   const group = new Group();
-  group.add(flashMesh, cometMesh);
+  group.add(
+    flashMesh,
+    cometMesh);
 
   const unknownsLastSet = new Set();
   const unknownsTotalSet = new Set();
@@ -74,6 +76,7 @@ export function trackFirehose({ users, clock }) {
     likes: 0,
     follows: 0,
     flashes: 0,
+    comets: 0,
     unknowns: 0,
     unknownsTotal: 0,
     mesh: group,
@@ -137,6 +140,8 @@ export function trackFirehose({ users, clock }) {
       clock.nowSeconds,
       clock.nowSeconds + COMET_TIME_MSEC / 1000,
       weight);
+    
+    updateComets();
   }
 
   /** @param {string} shortDID */
@@ -161,8 +166,17 @@ export function trackFirehose({ users, clock }) {
   function updateFlashes() {
     outcome.flashes = 0;
     for (const flash of activeFlashes) {
-      if (flash.start <= clock.nowSeconds && clock.nowSeconds <= flash.stop) {
+      if (flash.start <= clock.nowSeconds && flash.stop >= clock.nowSeconds) {
         outcome.flashes++;
+      }
+    }
+  }
+
+  function updateComets() {
+    outcome.comets = 0;
+    for (const comet of activeComets) {
+      if (comet.start <= clock.nowSeconds && comet.stop >= clock.nowSeconds) {
+        outcome.comets++;
       }
     }
   }
