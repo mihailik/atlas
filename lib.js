@@ -53125,7 +53125,7 @@ if (cid) {
         description: z.string().optional(),
         required: z.string().array().optional(),
         nullable: z.string().array().optional(),
-        properties: z.record(z.union([lexRefVariant, lexIpldType, lexArray, lexBlob, lexPrimitive])).optional()
+        properties: z.record(z.union([lexRefVariant, lexIpldType, lexArray, lexBlob, lexPrimitive]))
       }).strict().superRefine(requiredPropertiesRefinement);
       var lexXrpcParameters = z.object({
         type: z.literal("params"),
@@ -57544,7 +57544,9 @@ if (cid) {
                   "lex:app.bsky.actor.defs#adultContentPref",
                   "lex:app.bsky.actor.defs#contentLabelPref",
                   "lex:app.bsky.actor.defs#savedFeedsPref",
-                  "lex:app.bsky.actor.defs#personalDetailsPref"
+                  "lex:app.bsky.actor.defs#personalDetailsPref",
+                  "lex:app.bsky.actor.defs#feedViewPref",
+                  "lex:app.bsky.actor.defs#threadViewPref"
                 ]
               }
             },
@@ -57598,6 +57600,50 @@ if (cid) {
                   type: "string",
                   format: "datetime",
                   description: "The birth date of the owner of the account."
+                }
+              }
+            },
+            feedViewPref: {
+              type: "object",
+              required: ["feed"],
+              properties: {
+                feed: {
+                  type: "string",
+                  description: "The URI of the feed, or an identifier which describes the feed."
+                },
+                hideReplies: {
+                  type: "boolean",
+                  description: "Hide replies in the feed."
+                },
+                hideRepliesByUnfollowed: {
+                  type: "boolean",
+                  description: "Hide replies in the feed if they are not by followed users."
+                },
+                hideRepliesByLikeCount: {
+                  type: "integer",
+                  description: "Hide replies in the feed if they do not have this number of likes."
+                },
+                hideReposts: {
+                  type: "boolean",
+                  description: "Hide reposts in the feed."
+                },
+                hideQuotePosts: {
+                  type: "boolean",
+                  description: "Hide quote posts in the feed."
+                }
+              }
+            },
+            threadViewPref: {
+              type: "object",
+              properties: {
+                sort: {
+                  type: "string",
+                  description: "Sorting mode.",
+                  knownValues: ["oldest", "newest", "most-likes", "random"]
+                },
+                prioritizeFollowedUsers: {
+                  type: "boolean",
+                  description: "Show followed users at the top of all replies."
                 }
               }
             }
@@ -59540,11 +59586,13 @@ if (cid) {
             },
             mentionRule: {
               type: "object",
-              description: "Allow replies from actors mentioned in your post."
+              description: "Allow replies from actors mentioned in your post.",
+              properties: {}
             },
             followingRule: {
               type: "object",
-              description: "Allow replies from actors you follow."
+              description: "Allow replies from actors you follow.",
+              properties: {}
             },
             listRule: {
               type: "object",
@@ -62343,19 +62391,23 @@ if (cid) {
       __export2(defs_exports5, {
         isAdultContentPref: () => isAdultContentPref,
         isContentLabelPref: () => isContentLabelPref,
+        isFeedViewPref: () => isFeedViewPref,
         isPersonalDetailsPref: () => isPersonalDetailsPref,
         isProfileView: () => isProfileView,
         isProfileViewBasic: () => isProfileViewBasic,
         isProfileViewDetailed: () => isProfileViewDetailed,
         isSavedFeedsPref: () => isSavedFeedsPref,
+        isThreadViewPref: () => isThreadViewPref,
         isViewerState: () => isViewerState,
         validateAdultContentPref: () => validateAdultContentPref,
         validateContentLabelPref: () => validateContentLabelPref,
+        validateFeedViewPref: () => validateFeedViewPref,
         validatePersonalDetailsPref: () => validatePersonalDetailsPref,
         validateProfileView: () => validateProfileView,
         validateProfileViewBasic: () => validateProfileViewBasic,
         validateProfileViewDetailed: () => validateProfileViewDetailed,
         validateSavedFeedsPref: () => validateSavedFeedsPref,
+        validateThreadViewPref: () => validateThreadViewPref,
         validateViewerState: () => validateViewerState
       });
       function isProfileViewBasic(v) {
@@ -62405,6 +62457,18 @@ if (cid) {
       }
       function validatePersonalDetailsPref(v) {
         return lexicons.validate("app.bsky.actor.defs#personalDetailsPref", v);
+      }
+      function isFeedViewPref(v) {
+        return isObj2(v) && hasProp2(v, "$type") && v.$type === "app.bsky.actor.defs#feedViewPref";
+      }
+      function validateFeedViewPref(v) {
+        return lexicons.validate("app.bsky.actor.defs#feedViewPref", v);
+      }
+      function isThreadViewPref(v) {
+        return isObj2(v) && hasProp2(v, "$type") && v.$type === "app.bsky.actor.defs#threadViewPref";
+      }
+      function validateThreadViewPref(v) {
+        return lexicons.validate("app.bsky.actor.defs#threadViewPref", v);
       }
       var profile_exports = {};
       __export2(profile_exports, {
@@ -67197,6 +67261,17 @@ if (cid) {
           }
         }
       };
+      var FEED_VIEW_PREF_DEFAULTS = {
+        hideReplies: false,
+        hideRepliesByUnfollowed: false,
+        hideRepliesByLikeCount: 0,
+        hideReposts: false,
+        hideQuotePosts: false
+      };
+      var THREAD_VIEW_PREF_DEFAULTS = {
+        sort: "oldest",
+        prioritizeFollowedUsers: true
+      };
       var BskyAgent = class extends AtpAgent {
         constructor() {
           super(...arguments);
@@ -67351,6 +67426,12 @@ if (cid) {
               saved: void 0,
               pinned: void 0
             },
+            feedViewPrefs: {
+              home: {
+                ...FEED_VIEW_PREF_DEFAULTS
+              }
+            },
+            threadViewPrefs: { ...THREAD_VIEW_PREF_DEFAULTS },
             adultContentEnabled: false,
             contentLabels: {},
             birthDate: void 0
@@ -67374,6 +67455,12 @@ if (cid) {
               if (pref.birthDate) {
                 prefs.birthDate = new Date(pref.birthDate);
               }
+            } else if (defs_exports5.isFeedViewPref(pref) && defs_exports5.validateFeedViewPref(pref).success) {
+              const { $type, feed, ...v } = pref;
+              prefs.feedViewPrefs[pref.feed] = { ...FEED_VIEW_PREF_DEFAULTS, ...v };
+            } else if (defs_exports5.isThreadViewPref(pref) && defs_exports5.validateThreadViewPref(pref).success) {
+              const { $type, ...v } = pref;
+              prefs.threadViewPrefs = { ...prefs.threadViewPrefs, ...v };
             }
           }
           return prefs;
@@ -67455,6 +67542,24 @@ if (cid) {
               };
             }
             return prefs.filter((pref) => !defs_exports5.isPersonalDetailsPref(pref)).concat([personalDetailsPref]);
+          });
+        }
+        async setFeedViewPrefs(feed, pref) {
+          await updatePreferences(this, (prefs) => {
+            const existing = prefs.findLast((pref2) => defs_exports5.isFeedViewPref(pref2) && defs_exports5.validateFeedViewPref(pref2).success && pref2.feed === feed);
+            if (existing) {
+              pref = { ...existing, ...pref };
+            }
+            return prefs.filter((p) => !defs_exports5.isFeedViewPref(pref) || p.feed !== feed).concat([{ ...pref, $type: "app.bsky.actor.defs#feedViewPref", feed }]);
+          });
+        }
+        async setThreadViewPrefs(pref) {
+          await updatePreferences(this, (prefs) => {
+            const existing = prefs.findLast((pref2) => defs_exports5.isThreadViewPref(pref2) && defs_exports5.validateThreadViewPref(pref2).success);
+            if (existing) {
+              pref = { ...existing, ...pref };
+            }
+            return prefs.filter((p) => !defs_exports5.isThreadViewPref(p)).concat([{ ...pref, $type: "app.bsky.actor.defs#threadViewPref" }]);
           });
         }
       };
