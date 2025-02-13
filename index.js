@@ -714,9 +714,9 @@ function atlas(invokeType) {
             `,
             userKeys: Object.keys(users),
             userMapper: (shortDID, pos) => {
-              const [, xSpace, ySpace] = users[shortDID];
+              const [, xSpace, ySpace, weight] = users[shortDID];
               const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, userBounds);
-              pos.set(x, h, y, 0.001);
+              pos.set(x, h, y, weight ? 0.001 : -0.001);
             },
             userColorer: defaultUserColorer
           })
@@ -1216,7 +1216,7 @@ function atlas(invokeType) {
             overflow: auto;
             white-space: nowrap;
             width: 100%;
-            height: 3.3em;
+            height: 4em;
             padding-top: 0.2em;
             `
             })
@@ -1253,7 +1253,14 @@ function atlas(invokeType) {
                     !displayName ? undefined : elem('span', {
                       textContent: ' ' + displayName,
                       style: `
-                      opacity: 0.6;
+                        opacity: 0.6;
+                        display: inline-block;
+                        zoom: 0.7;
+                        transform: scaleY(1.3) translateY(0.05em);
+                        max-width: 6em;
+                        overflow: hidden;
+                        white-space: nowrap;
+                        padding-left: 0.25em;
                       `
                     })
                   ]
@@ -1496,7 +1503,7 @@ function atlas(invokeType) {
               vDiameter = diameter;
               vExtra = extra;
 
-              gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1) + vec4(position.xz * diameter, 0, 0));
+              gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1) + vec4(position.xz * abs(diameter), 0, 0));
 
               // https://stackoverflow.com/a/22899161/140739
               uint rInt = (color / uint(256 * 256 * 256)) % uint(256);
@@ -1541,7 +1548,8 @@ function atlas(invokeType) {
 
               vec4 tintColor = vColor;
               tintColor.a = radiusRatio;
-              gl_FragColor = mix(gl_FragColor, vec4(1,1,1,0.7), fogRatio);
+              gl_FragColor = mix(gl_FragColor, vec4(1.0,1.0,1.0,0.7), fogRatio);
+              gl_FragColor = vDiameter < 0.0 ? vec4(1.0,0.0,0.0,1.0) : gl_FragColor;
               gl_FragColor.a = bodyRatio;
 
               vec3 position = vPosition;
