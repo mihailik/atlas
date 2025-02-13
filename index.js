@@ -65,13 +65,15 @@ function atlas(invokeType) {
 
       tiles[iBucket] = tileBucket.map(entry => {
         mapUserCoordsToAtlas(entry.usrTuple[1], entry.usrTuple[2], usersBounds, xyhBuf);
+        const weightRatio = entry.usrTuple[3] && (entry.usrTuple[3] - usersBounds.weight.min) / (usersBounds.weight.max - usersBounds.weight.min);
+        const weight = weightRatio ? Math.max(0.0007, 0.01 * weightRatio * Math.sqrt(weightRatio)) : 0.0005;
         const userEntry = {
           shortDID: entry.shortDID,
           shortHandle: entry.usrTuple[0],
           x: xyhBuf.x,
           y: xyhBuf.y,
           h: xyhBuf.h,
-          weight: entry.usrTuple[3] && (entry.usrTuple[3] - usersBounds.weight.min) / (usersBounds.weight.max - usersBounds.weight.min),
+          weight,
           displayName: entry.usrTuple[4],
           colorRGB: rndUserColorer(entry.shortDID)
         };
@@ -363,10 +365,58 @@ function atlas(invokeType) {
   /** @param {string} shortDID */
   function rndUserColorer(shortDID) {
     const crc32 = calcCRC32(shortDID);
-    const color = (crc32 | 0x808080) & 0xFFFFFF;
-    return color;
+    let hue = (Math.abs(crc32) % 2000) / 2000;
+    // warmer (bend the curve down a little near zero)
+    const warmerHue = hue * hue;
+    // mix original with warmer hue in proportion
+    hue = hue * 0.7 + warmerHue * 0.3;
+    const hexColor = hslToRgb(hue, 1, 0.7);
+    return hexColor;
   }
 
+
+  var hslToRgb = (function () {
+
+    /**
+     * https://stackoverflow.com/a/9493060/140739
+     * 
+     * Converts an HSL color value to RGB. Conversion formula
+     * adapted from https://en.wikipedia.org/wiki/HSL_color_space.
+     * Assumes h, s, and l are contained in the set [0, 1] and
+     * returns r, g, and b in the set [0, 255].
+     *
+     * @param   {number}  h       The hue
+     * @param   {number}  s       The saturation
+     * @param   {number}  l       The lightness
+     * @return  {number}           The RGB representation
+     */
+    function hslToRgb(h, s, l) {
+      let r, g, b;
+
+      if (s === 0) {
+        r = g = b = l; // achromatic
+      } else {
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hueToRgb(p, q, h + 1 / 3);
+        g = hueToRgb(p, q, h);
+        b = hueToRgb(p, q, h - 1 / 3);
+      }
+
+      return Math.round(r * 255) * 256 * 256 + Math.round(g * 255) * 256 + Math.round(b * 255);
+    }
+
+    function hueToRgb(p, q, t) {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    }
+
+    return hslToRgb;
+  })();
 
   /**
    * @param {string} relativePath
@@ -901,9 +951,9 @@ function atlas(invokeType) {
 
         const orbit = setupOrbitControls({ camera, host: renderer.domElement, clock });
 
-        domElements.rightStatus.addEventListener('click', () => {
-          orbit.flipControlType();
-        });
+        // domElements.rightStatus.addEventListener('click', () => {
+        //   orbit.flipControlType();
+        // });
 
         const searchUI = searchUIController({
           titleBarElem: domElements.title,
@@ -940,20 +990,20 @@ function atlas(invokeType) {
 
         handleWindowResizes(camera, renderer);
 
-        // trackTouchWithCallback({
-        //   touchElement: document.body,
-        //   uxElements: [domElements.titleBar, domElements.subtitleArea, domElements.bottomStatusLine],
-        //   renderElements: [renderer.domElement, domElements.root],
-        //   touchCallback: (xy) => {
-        //     console.log('touch ', xy);
-        //   }
-        // });
+        trackTouchWithCallback({
+          touchElement: document.body,
+          uxElements: [domElements.titleBar, domElements.subtitleArea, domElements.bottomStatusLine],
+          renderElements: [renderer.domElement, domElements.root],
+          touchCallback: (xy) => {
+            console.log('touch ', xy);
+          }
+        });
 
         const firehoseTrackingRenderer = trackFirehose({ users, usersBounds, clock });
         scene.add(firehoseTrackingRenderer.mesh);
 
-        // const geoLayer = renderGeoLabels({ users, usersBounds, clock });
-        // scene.add(geoLayer.layerGroup);
+        const geoLayer = renderGeoLabels({ users, usersBounds, clock });
+        scene.add(geoLayer.layerGroup);
 
         startAnimation();
 
@@ -976,7 +1026,7 @@ function atlas(invokeType) {
           function renderFrame() {
             clock.update();
 
-            // geoLayer.updateWithCamera(camera);
+            geoLayer.updateWithCamera(camera);
 
             let rareMoved = false;
             if (!lastCameraPos || !(clock.nowMSec < lastCameraUpdate + 200)) {
@@ -1074,7 +1124,7 @@ function atlas(invokeType) {
 
         const usersBounds = getUserCoordBounds(rawUsers);
 
-        const farUsersMesh = massShaderRenderer({ clock, users: users.slice(0, 1000) });
+        const farUsersMesh = massShaderRenderer({ clock, users: users });
         scene.add(farUsersMesh);
         // const farUsersMesh = createFarUsersMesh({ clock, users: rawUsers, usersBounds });
         // scene.add(farUsersMesh);
@@ -1109,7 +1159,7 @@ function atlas(invokeType) {
             const weightRatio = weight / usersBounds.weight.max;
             pos.set(xyhBuf.x, xyhBuf.h, xyhBuf.y, weight ? Math.max(0.0007, 0.01 * weightRatio * Math.sqrt(weightRatio)) : 0.0005);
           },
-          userColorer: rndUserColorer
+          userColorer: usr => rndUserColorer(usr) * 256 | 0xFF
         })
         return mesh;
       }
@@ -1625,40 +1675,47 @@ function atlas(invokeType) {
                 padding: 0.25em;
                 padding-right: 0.5em;
                 text-align: right;
-                line-height: 1.5;`,
+                line-height: 1.5;
+                pointer-events: none;
+            `,
             children: [
               elem('div', {
                 children: [elem('a', {
                   href: 'https://bsky.app/profile/oyin.bo', innerHTML: 'created by <b>@oyin.bo</b>',
-                  style: 'color: gray; text-decoration: none; font-weight: 100;'
+                  style: 'color: gray; text-decoration: none; font-weight: 100; pointer-events: all;'
                 })]
               }),
               elem('div', {
                 children: [elem('a', {
                   href: 'https://bsky.jazco.dev/', innerHTML: 'exploiting geo-spatial data from <b>@jaz.bsky.social</b>',
-                  style: 'color: gray; text-decoration: none; font-weight: 100;'
+                  style: 'color: gray; text-decoration: none; font-weight: 100; pointer-events: all;'
                 })]
               }),
               elem('div', { height: '0.5em' }),
-              flashesSection = elem('span', {
-                children: ['*', flashesElem = elem('span', '0'), ' '],
-                display: flashStatsHidden ? 'none' : 'inline',
-                color: 'cornflowerblue'
+              elem('div', {
+                pointerEvents: 'all',
+                children: [
+                  flashesSection = elem('span', {
+                    children: ['*', flashesElem = elem('span', '0'), ' '],
+                    display: flashStatsHidden ? 'none' : 'inline',
+                    color: 'cornflowerblue'
+                  }),
+                  'posts+',
+                  postsElem = elem('span', { color: 'gold' }),
+                  ' ♡+',
+                  likesElem = elem('span', { color: 'gold' }),
+                  ' RT+',
+                  repostsElem = elem('span', { color: 'gold' }),
+                  ' follows+',
+                  followsElem = elem('span', { color: 'gold' }),
+                  ' ',
+                  elem('span', { textContent: '+', color: '#1ca1a1' }),
+                  unknownsPerSecElem = elem('span', { color: 'cyan' }),
+                  elem('span', { textContent: '?/', color: '#1ca1a1' }),
+                  unknownsTotalElem = elem('span', { color: 'cyan' }),
+                  elem('span', { textContent: '?', color: '#1ca1a1' })
+                ]
               }),
-              'posts+',
-              postsElem = elem('span', { color: 'gold' }),
-              ' ♡+',
-              likesElem = elem('span', { color: 'gold' }),
-              ' RT+',
-              repostsElem = elem('span', { color: 'gold' }),
-              ' follows+',
-              followsElem = elem('span', { color: 'gold' }),
-              ' ',
-              elem('span', { textContent: '+', color: '#1ca1a1' }),
-              unknownsPerSecElem = elem('span', { color: 'cyan' }),
-              elem('span', { textContent: '?/', color: '#1ca1a1' }),
-              unknownsTotalElem = elem('span', { color: 'cyan' }),
-              elem('span', { textContent: '?', color: '#1ca1a1' })
             ]
           }));
           bottomStatusLine.addEventListener('click', () => {
@@ -1932,7 +1989,7 @@ function atlas(invokeType) {
         const yPlus = (r + 0.09) * Math.sin(angle);
         const hPlus = xyhBuf.h + 0.04;
 
-        const userColor = rndUserColorer(shortDID) >> 8;
+        const userColor = rndUserColorer(shortDID);
 
         const material = new THREE.MeshLambertMaterial({
           color: userColor,
@@ -2238,7 +2295,7 @@ function atlas(invokeType) {
           const xyhBuf = { x: 0, y: 0, h: 0 };
           mapUserCoordsToAtlas(xSpace, ySpace, usersBounds, xyhBuf);
 
-          const userColor = rndUserColorer(shortDID) >> 8;
+          const userColor = rndUserColorer(shortDID);
 
           const text = new troika_three_text.Text();
           text.text = '@' + shortHandle;
@@ -2680,7 +2737,7 @@ function atlas(invokeType) {
           offsetBuf[i * 3 + 0] = user.x;
           offsetBuf[i * 3 + 1] = user.h;
           offsetBuf[i * 3 + 2] = user.y;
-          diameterBuf[i] = Number.isFinite(user.weight) ? user.weight / 1000 : 0.001;
+          diameterBuf[i] = user.weight;
           colorBuf[i] = user.colorRGB * 256 | 0xFF;
         }
 
