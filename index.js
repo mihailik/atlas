@@ -51,8 +51,11 @@ function atlas(invokeType) {
 
     const xyhBuf = { x: 0, y: 0, h: 0 };
 
+    /** @type {{ [shortDID: string]: UserEntry }} */
     const byShortDID = {};
+    /** @type {{ [shortHandle: string]: UserEntry }} */
     const byShortHandle = {};
+    /** @type {UserEntry[]} */
     const all = [];
 
     /** @type {UserEntry[][]} */
@@ -928,6 +931,7 @@ function atlas(invokeType) {
       constructStateAndRun();
 
       async function constructStateAndRun() {
+        /** @type {{ [shortDID: string]: UserTuple }} */
         const users = await loadUsersPromise;
         const startProcessToTiles = Date.now();
         const usersAndTiles = await processUsersToTiles({ users, dimensionCount: 32, sleep: () => new Promise(resolve => setTimeout(resolve, 1)) });
@@ -946,7 +950,7 @@ function atlas(invokeType) {
         const domElements = createDOMLayout({
           canvas3D: renderer.domElement,
           statsElem: stats.domElement,
-          users
+          userCount: usersAndTiles.all.length
         });
 
         const orbit = setupOrbitControls({ camera, host: renderer.domElement, clock });
@@ -999,7 +1003,7 @@ function atlas(invokeType) {
           }
         });
 
-        const firehoseTrackingRenderer = trackFirehose({ users, usersBounds, clock });
+        const firehoseTrackingRenderer = trackFirehose({ users: usersAndTiles.byShortDID, clock });
         scene.add(firehoseTrackingRenderer.mesh);
 
         const geoLayer = renderGeoLabels({ users, usersBounds, clock });
@@ -1138,33 +1142,6 @@ function atlas(invokeType) {
           usersBounds,
         };
       }
-
-      /**
-       * @param {{
-       *  clock: ReturnType<typeof makeClock>,
-       *  users: { [shortDID: string]: UserTuple },
-       *  usersBounds: ReturnType<typeof getUserCoordBounds>
-       * }} _
-       */
-      function createFarUsersMesh({ clock, users, usersBounds }) {
-        const xyhBuf = { x: 0, y: 0, h: 0 };
-        const { mesh } = billboardShaderRenderer({
-          clock,
-          fragmentShader: `
-            `,
-          userKeys: Object.keys(users),
-          userMapper: (shortDID, pos) => {
-            const [, xSpace, ySpace, weight] = users[shortDID];
-            mapUserCoordsToAtlas(xSpace, ySpace, usersBounds, xyhBuf);
-            const weightRatio = weight / usersBounds.weight.max;
-            pos.set(xyhBuf.x, xyhBuf.h, xyhBuf.y, weight ? Math.max(0.0007, 0.01 * weightRatio * Math.sqrt(weightRatio)) : 0.0005);
-          },
-          userColorer: usr => rndUserColorer(usr) * 256 | 0xFF
-        })
-        return mesh;
-      }
-
-
 
 
       /**
@@ -1344,18 +1321,63 @@ function atlas(invokeType) {
 
       /**
        * @param {{
-       *  users: { [shortDID: string]: UserTuple},
-       *  usersBounds: {x: { min: number, max: number}, y: { min: number, max: number }},
+       *  users: { [shortDID: string]: UserEntry },
        *  clock: ReturnType<typeof makeClock>
        * }} _
        */
-      function trackFirehose({ users, usersBounds, clock }) {
+      function trackFirehose({ users, clock }) {
 
         const MAX_WEIGHT = 0.1;
         const FADE_TIME_MSEC = 4000;
-        /** @type {{ [shortDID: string]: { x: number, y: number, h: number, weight: number, color: number, startAtMsec: number, fadeAtMsec: number } }} */
+        /** @type {{ [shortDID: string]: { user: UserEntry, weight: number, start: number, stop: number } }} */
         const activeUsers = {};
-        const rend = flashesRenderer({ clock, users, activeUsers });
+
+        const rend = dynamicShaderRenderer({
+          clock,
+          vertexShader: /* glsl */`
+            float startTime = min(extra.x, extra.y);
+            float endTime = max(extra.x, extra.y);
+            float timeRatio = (time - startTime) / (endTime - startTime);
+            float step = 0.1;
+            float timeFunction = timeRatio < step ? timeRatio / step : 1.0 - (timeRatio - step) * (1.0 - step);
+
+            //gl_Position.y += timeFunction * timeFunction * timeFunction * 0.001;
+            `,
+          fragmentShader: /* glsl */`
+            gl_FragColor = tintColor;
+
+            float PI = 3.1415926535897932384626433832795;
+
+            float startTime = min(extra.x, extra.y);
+            float endTime = max(extra.x, extra.y);
+            float timeRatio = (time - startTime) / (endTime - startTime);
+            float step = 0.05;
+            float timeFunction =
+              timeRatio < step ? timeRatio / step :
+              timeRatio < step * 2.0 ?
+                (cos((step * 2.0 - timeRatio) * step * PI) + 1.0) / 4.5 + 0.7 :
+                (1.0 - (timeRatio - step * 2.0)) / 2.5 + 0.2;
+
+            gl_FragColor = tintColor;
+
+            gl_FragColor.a *= timeFunction;
+
+            // gl_FragColor =
+            //   timeRatio > 1000.0 ? vec4(1.0, 0.7, 1.0, tintColor.a) :
+            //   timeRatio > 1.0 ? vec4(1.0, 0.0, 1.0, tintColor.a) :
+            //   timeRatio > 0.0 ? vec4(0.0, 0.5, 0.5, tintColor.a) :
+            //   timeRatio == 0.0 ? vec4(0.0, 0.0, 1.0, tintColor.a) :
+            //   timeRatio < 0.0 ? vec4(1.0, 0.0, 0.0, tintColor.a) :
+            //   vec4(1.0, 1.0, 0.0, tintColor.a);
+
+            float diagBias = 1.0 - max(abs(vPosition.x), abs(vPosition.z));
+            float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
+            gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra;
+
+            `,
+          userCount: 2000
+        });
+
         let updateUsers = false;
 
         const unknownsLastSet = new Set();
@@ -1408,10 +1430,10 @@ function atlas(invokeType) {
 
         /** @param {number} timePassedSec */
         function tickAll(timePassedSec) {
-          const current = clock.nowMSec;
+          const currentSec = clock.nowSeconds;
           for (const shortDID in activeUsers) {
             const ball = activeUsers[shortDID];
-            if (ball.fadeAtMsec < current) {
+            if (currentSec > ball.stop) {
               delete activeUsers[shortDID];
               outcome.flashes--;
               updateUsers = true;
@@ -1419,7 +1441,7 @@ function atlas(invokeType) {
           }
 
           if (updateUsers) {
-            rend.updateUserSet(Object.keys(activeUsers));
+            rend.updateUserSet(Object.values(activeUsers));
             updateUsers = false;
           }
         }
@@ -1430,17 +1452,17 @@ function atlas(invokeType) {
          * @param {number} _unused
          */
         function addActiveUser(shortDID, weight, _unused) {
-          const now = clock.nowMSec;
+          const nowSec = clock.nowSeconds;
           let existingUser = activeUsers[shortDID];
           if (existingUser) {
             updateUsers = true;
-            existingUser.weight = Math.min(MAX_WEIGHT, weight * 0.2 + existingUser.weight);
-            existingUser.fadeAtMsec = now + FADE_TIME_MSEC;
+            existingUser.weight = Math.min(MAX_WEIGHT, weight * 0.15 + existingUser.weight);
+            existingUser.stop = nowSec + FADE_TIME_MSEC / 1000;
             return 2;
           }
 
-          const usrTuple = users[shortDID];
-          if (!usrTuple) {
+          const user = users[shortDID];
+          if (!user) {
             if (!outcome.unknowns && unknownsLastSet.size)
               unknownsLastSet.clear();
             unknownsLastSet.add(shortDID);
@@ -1450,15 +1472,11 @@ function atlas(invokeType) {
             return;
           }
 
-          const xyhBuf = { x: 0, y: 0, h: 0 };
-          mapUserCoordsToAtlas(usrTuple[1], usrTuple[2], usersBounds, xyhBuf);
-          const color = rndUserColorer(shortDID);
-
           activeUsers[shortDID] = {
-            x: xyhBuf.x, y: xyhBuf.y, h: xyhBuf.h,
-            weight: weight * 0.2,
-            color,
-            startAtMsec: now, fadeAtMsec: now + FADE_TIME_MSEC
+            user,
+            weight: weight * 0.15,
+            start: nowSec,
+            stop: nowSec + FADE_TIME_MSEC / 1000
           };
           outcome.flashes++;
           updateUsers = true;
@@ -1468,76 +1486,12 @@ function atlas(invokeType) {
 
       /**
        * @param {{
-       *  clock: ReturnType<typeof makeClock>,
-       *  users: { [shortDID: string]: UserTuple },
-       *  activeUsers: { [shortDID: string]: { x: number, y: number, h: number, weight: number, color: number, startAtMsec: number, fadeAtMsec: number } }
-       * }} _
-       */
-      function flashesRenderer({ clock, users, activeUsers }) {
-        const rend = billboardShaderRenderer({
-          clock,
-          vertexShader: /* glsl */`
-            float startTime = min(extra.x, extra.y);
-            float endTime = max(extra.x, extra.y);
-            float timeRatio = (time - startTime) / (endTime - startTime);
-            float step = 0.1;
-            float timeFunction = timeRatio < step ? timeRatio / step : 1.0 - (timeRatio - step) * (1.0 - step);
-
-            //gl_Position.y += timeFunction * timeFunction * timeFunction * 0.001;
-            `,
-          fragmentShader: /* glsl */`
-            gl_FragColor = tintColor;
-
-            float PI = 3.1415926535897932384626433832795;
-
-            float startTime = min(extra.x, extra.y);
-            float endTime = max(extra.x, extra.y);
-            float timeRatio = (time - startTime) / (endTime - startTime);
-            float step = 0.05;
-            float timeFunction =
-              timeRatio < step ? timeRatio / step :
-              timeRatio < step * 2.0 ?
-                (cos((step * 2.0 - timeRatio) * step * PI) + 1.0) / 4.5 + 0.7 :
-                (1.0 - (timeRatio - step * 2.0)) / 2.5 + 0.2;
-
-            gl_FragColor = tintColor;
-
-            gl_FragColor.a *= timeFunction;
-
-            // gl_FragColor =
-            //   timeRatio > 1000.0 ? vec4(1.0, 0.7, 1.0, tintColor.a) :
-            //   timeRatio > 1.0 ? vec4(1.0, 0.0, 1.0, tintColor.a) :
-            //   timeRatio > 0.0 ? vec4(0.0, 0.5, 0.5, tintColor.a) :
-            //   timeRatio == 0.0 ? vec4(0.0, 0.0, 1.0, tintColor.a) :
-            //   timeRatio < 0.0 ? vec4(1.0, 0.0, 0.0, tintColor.a) :
-            //   vec4(1.0, 1.0, 0.0, tintColor.a);
-
-            float diagBias = 1.0 - max(abs(vPosition.x), abs(vPosition.z));
-            float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
-            gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra;
-
-            `,
-          userKeys: Object.keys(users).slice(0, 10 * 1000),
-          userMapper: (shortDID, pos, extra) => {
-            const usr = activeUsers[shortDID];
-            if (!usr) return;
-            pos.set(usr.x, usr.h, usr.y, usr.weight / 3 + 0.04);
-            extra.x = usr.startAtMsec / 1000;
-            extra.y = usr.fadeAtMsec / 1000;
-          },
-          userColorer: (shortDID) => activeUsers[shortDID]?.color * 256 | 0xFF
-        });
-        return rend;
-      }
-
-      /**
-       * @param {{
        *  canvas3D: HTMLElement,
        *  statsElem: HTMLElement,
-       *  users: { [shortDID: string]: UserTuple },
+       *  userCount: number,
        * }} _
        */
-      function createDOMLayout({ canvas3D, statsElem, users }) {
+      function createDOMLayout({ canvas3D, statsElem, userCount }) {
         let title, titleBar, subtitleArea, rightStatus, searchMode, bottomStatusLine;
         const root = elem('div', {
           parent: document.body,
@@ -1620,7 +1574,7 @@ function atlas(invokeType) {
         function createStatusRenderer(rightStatus) {
           let cameraPos, cameraMovementIcon;
 
-          const usersCountStr = Object.keys(users).length.toString();
+          const usersCountStr = userCount.toString();
           elem('div', {
             parent: rightStatus,
             children: [
@@ -2163,7 +2117,6 @@ function atlas(invokeType) {
          */
 
         const TILE_DIMENSION_COUNT = 32;
-        const sizedTiles = createSizedTiles(TILE_DIMENSION_COUNT);
 
         const layerGroup = new THREE.Group();
 
@@ -2193,33 +2146,7 @@ function atlas(invokeType) {
 
         /** @typedef {{ shortDID: string, x: number, y: number, h: number, weight: number }} TileUserEntry */
 
-        /** @param {number} dimensionCount */
-        function createSizedTiles(dimensionCount) {
-          /** @type {{ shortDID: string, usrTuple: UserTuple }[][]} */
-          const tilePrototypes = [];
-          const xyhBuf = { x: 0, y: 0, h: 0 };
-          for (const shortDID in users) {
-            const usrTuple = users[shortDID];
-            mapUserCoordsToAtlas(usrTuple[1], usrTuple[2], usersBounds, xyhBuf);
-            const tileX = Math.floor((xyhBuf.x + 1) / 2 * dimensionCount);
-            const tileY = Math.floor((xyhBuf.y + 1) / 2 * dimensionCount);
-            const tileIndex = tileX + tileY * dimensionCount;
-            const tileBucket = tilePrototypes[tileIndex] || (tilePrototypes[tileIndex] = []);
-            tileBucket.push({ shortDID, usrTuple });
-          }
 
-          /** @type {TileUserEntry[][]} */
-          const tiles = tilePrototypes.map(tileBucket =>
-            tileBucket.map(entry => ({
-              shortDID: entry.shortDID,
-              x: entry.usrTuple[1],
-              y: entry.usrTuple[2],
-              weight: entry.usrTuple[3]
-            })).sort((a, b) => b.weight - a.weight)
-          );
-
-          return tiles;
-        }
 
         function getFixedUsers() {
           const include = [
@@ -2370,7 +2297,6 @@ function atlas(invokeType) {
           if (!lastUpdateTextLabelsMsec || clock.nowMSec - lastUpdateTextLabelsMsec > UPDATE_TEXT_LABELS_INTERVAL_MSEC) {
             lastUpdateTextLabelsMsec = clock.nowMSec;
 
-            updateDynamicLabels(camera, sizedTiles);
           }
 
         }
@@ -2478,39 +2404,31 @@ function atlas(invokeType) {
       /**
        * @param {{
        *  clock: ReturnType<typeof makeClock>;
-       *  userKeys: K[];
-       *  userMapper(i: K, pos: THREE.Vector4, extra: THREE.Vector4): void;
-       *  userColorer(i: K): number;
+       *  userCount: number;
        *  fragmentShader?: string;
        *  vertexShader?: string;
        * }} _ 
-       * @template K
        */
-      function billboardShaderRenderer({ clock, userKeys, userMapper, userColorer, fragmentShader, vertexShader }) {
+      function dynamicShaderRenderer({ clock, userCount, fragmentShader, vertexShader }) {
         const baseHalf = 1.5 * Math.tan(Math.PI / 6);
         let positions = new Float32Array([
           -baseHalf, 0, -0.5,
           0, 0, 1,
           baseHalf, 0, -0.5
         ]);
-        let offsetBuf = new Float32Array(userKeys.length * 4);
-        let diameterBuf = new Float32Array(userKeys.length);
-        let extraBuf = new Float32Array(userKeys.length * 4);
-        let colorBuf = new Uint32Array(userKeys.length);
-        let offsetsChanged = false;
-        let diametersChanged = false;
-        let colorsChanged = false;
-        let extrasChanged = false;
+        let offsetBuf = new Float32Array(userCount * 4);
+        let diameterBuf = new Float32Array(userCount);
+        let extraBuf = new Float32Array(userCount * 2);
+        let colorBuf = new Uint32Array(userCount);
 
-        populateAttributes(userKeys);
 
         const geometry = new THREE.InstancedBufferGeometry();
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
         geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(offsetBuf, 3));
         geometry.setAttribute('diameter', new THREE.InstancedBufferAttribute(diameterBuf, 1));
-        geometry.setAttribute('extra', new THREE.InstancedBufferAttribute(extraBuf, 4));
+        geometry.setAttribute('extra', new THREE.InstancedBufferAttribute(extraBuf, 2));
         geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colorBuf, 1));
-        geometry.instanceCount = userKeys.length;
+        geometry.instanceCount = userCount;
 
         const material = new THREE.ShaderMaterial({
           uniforms: {
@@ -2521,7 +2439,7 @@ function atlas(invokeType) {
 
             attribute vec3 offset;
             attribute float diameter;
-            attribute vec4 extra;
+            attribute vec2 extra;
             attribute uint color;
 
             uniform float time;
@@ -2529,7 +2447,7 @@ function atlas(invokeType) {
             varying vec3 vPosition;
             varying vec3 vOffset;
             varying float vDiameter;
-            varying vec4 vExtra;
+            varying vec2 vExtra;
 
             varying float vFogDist;
             varying vec4 vColor;
@@ -2565,7 +2483,7 @@ function atlas(invokeType) {
             varying vec3 vPosition;
             varying vec3 vOffset;
             varying float vDiameter;
-            varying vec4 vExtra;
+            varying vec2 vExtra;
 
             void main() {
               gl_FragColor = vColor;
@@ -2593,7 +2511,7 @@ function atlas(invokeType) {
               vec3 position = vPosition;
               vec3 offset = vOffset;
               float diameter = vDiameter;
-              vec4 extra = vExtra;
+              vec2 extra = vExtra;
 
               ${fragmentShader || ''}
             }
@@ -2612,106 +2530,26 @@ function atlas(invokeType) {
         return { mesh, updateUserSet };
 
         /**
-         * @param {Parameters<typeof userColorer>[0][]} userKeys
+         * @param {{ user: UserEntry, weight: number, start: number, stop: number }[]} users
          */
-        function populateAttributes(userKeys) {
-          const userPos = new THREE.Vector4();
-          const userExtra = new THREE.Vector4();
-          const oldUserPos = new THREE.Vector4();
-          const oldUserExtra = new THREE.Vector4();
-
-          for (let i = 0; i < userKeys.length; i++) {
-            const user = userKeys[i];
-            userExtra.copy(userPos.set(NaN, NaN, NaN, NaN));
-            userMapper(user, userPos, userExtra);
-            oldUserPos.set(
-              offsetBuf[i * 3 + 0],
-              offsetBuf[i * 3 + 1],
-              offsetBuf[i * 3 + 2],
-              diameterBuf[i]);
-            oldUserExtra.set(
-              extraBuf[i * 4 + 0],
-              extraBuf[i * 4 + 1],
-              extraBuf[i * 4 + 2],
-              extraBuf[i * 4 + 3]);
-            const oldColor = colorBuf[i];
-
-            offsetBuf[i * 3 + 0] = userPos.x;
-            offsetBuf[i * 3 + 1] = userPos.y;
-            offsetBuf[i * 3 + 2] = userPos.z;
-            diameterBuf[i] = userPos.w;
-            colorBuf[i] = userColorer(user);
-            extraBuf[i * 4 + 0] = userExtra.x;
-            extraBuf[i * 4 + 1] = userExtra.y;
-            extraBuf[i * 4 + 2] = userExtra.z;
-            extraBuf[i * 4 + 3] = userExtra.w;
-
-            if (offsetBuf[i * 3 + 0] !== oldUserPos.x
-              || offsetBuf[i * 3 + 1] !== oldUserPos.y
-              || offsetBuf[i * 3 + 2] !== oldUserPos.z)
-              offsetsChanged = true;
-            if (diameterBuf[i] !== oldUserPos.w)
-              diametersChanged = true;
-            if (extraBuf[i * 4 + 0] !== oldUserExtra.x ||
-              extraBuf[i * 4 + 1] !== oldUserExtra.y ||
-              extraBuf[i * 4 + 2] !== oldUserExtra.z ||
-              extraBuf[i * 4 + 3] !== oldUserExtra.w)
-              extrasChanged = true;
-            if (colorBuf[i] !== oldColor)
-              colorsChanged = true;
-          }
-        }
-
-        /**
-         * @param {Parameters<typeof userColorer>[0][]} userKeys
-         */
-        function updateUserSet(userKeys) {
-          if (userKeys.length > colorBuf.length) {
-            const newSize = Math.max(colorBuf.length * 2, userKeys.length);
-            offsetBuf = new Float32Array(newSize * 3);
-            diameterBuf = new Float32Array(newSize);
-            colorBuf = new Uint32Array(newSize);
-            extraBuf = new Float32Array(newSize * 4);
-
-            geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(offsetBuf, 3));
-            geometry.attributes['offset'].needsUpdate = true;
-            geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colorBuf, 1));
-            geometry.attributes['color'].needsUpdate = true;
-            geometry.setAttribute('diameter', new THREE.InstancedBufferAttribute(diameterBuf, 1));
-            geometry.attributes['diameter'].needsUpdate = true;
-            geometry.setAttribute('extra', new THREE.InstancedBufferAttribute(extraBuf, 4));
-            geometry.attributes['extra'].needsUpdate = true;
+        function updateUserSet(users) {
+          for (let i = 0; i < users.length; i++) {
+            const { user, weight, start, stop } = users[i];
+            offsetBuf[i * 3 + 0] = user.x;
+            offsetBuf[i * 3 + 1] = user.h;
+            offsetBuf[i * 3 + 2] = user.y;
+            diameterBuf[i] = weight, user.weight;
+            colorBuf[i] = user.colorRGB * 256 | 0xFF;
+            extraBuf[i * 2 + 0] = start;
+            extraBuf[i * 2 + 1] = stop;
           }
 
-          populateAttributes(userKeys);
-          if (offsetsChanged) geometry.attributes['offset'].needsUpdate = true;
-          if (diametersChanged) geometry.attributes['diameter'].needsUpdate = true;
-          if (colorsChanged) geometry.attributes['color'].needsUpdate = true;
-          if (extrasChanged) geometry.attributes['extra'].needsUpdate = true;
+          geometry.attributes['offset'].needsUpdate = true;
+          geometry.attributes['diameter'].needsUpdate = true;
+          geometry.attributes['color'].needsUpdate = true;
+          geometry.attributes['extra'].needsUpdate = true;
 
-          const LOG_BUFFER_UPDATES = false;
-          if (LOG_BUFFER_UPDATES && (
-            offsetsChanged ||
-            diametersChanged ||
-            colorsChanged ||
-            extrasChanged)) {
-            console.log('changed: ' +
-              (offsetsChanged ? 'o' : ' ') +
-              (diametersChanged ? 'd' : ' ') +
-              (colorsChanged ? 'c' : ' ') +
-              (extrasChanged ? 'x' : ' '),
-              ' ',
-              userKeys.length
-            );
-          }
-
-          offsetsChanged =
-            diametersChanged =
-            colorsChanged =
-            extrasChanged =
-            false;
-
-          geometry.instanceCount = userKeys.length;
+          geometry.instanceCount = users.length;
         }
       }
 
