@@ -1045,8 +1045,8 @@ function atlas(invokeType) {
               const usr = activeUsers[shortDID];
               if (!usr) return;
               pos.set(usr.x, usr.h, usr.y, usr.weight);
-              extra.x = (usr.startAtMsec - clock.worldStartTime) / 1000;
-              extra.y = (usr.fadeAtMsec - clock.worldStartTime) / 1000;
+              extra.x = usr.startAtMsec / 1000;
+              extra.y = usr.fadeAtMsec / 1000;
             },
             userColorer: (shortDID) => activeUsers[shortDID]?.color
           });
@@ -1055,7 +1055,7 @@ function atlas(invokeType) {
 
         /** @param {number} timePassedSec */
         function tickAll(timePassedSec) {
-          const current = Date.now();
+          const current = clock.nowMSec;
           for (const shortDID in activeUsers) {
             const ball = activeUsers[shortDID];
             if (ball.fadeAtMsec < current) {
@@ -1076,7 +1076,7 @@ function atlas(invokeType) {
          * @param {number} _unused
          */
         function addActiveUser(shortDID, weight, _unused) {
-          const now = Date.now();
+          const now = clock.nowMSec;
           let existingUser = activeUsers[shortDID];
           if (existingUser) {
             updateUsers = true;
@@ -1823,7 +1823,7 @@ function atlas(invokeType) {
 
       const material = new THREE.ShaderMaterial({
         uniforms: {
-          time: { value: Date.now() / 1000.0 }
+          time: { value: clock.nowSeconds }
         },
         vertexShader: /* glsl */`
             precision highp float;
@@ -1916,7 +1916,7 @@ function atlas(invokeType) {
       const mesh = new THREE.Mesh(geometry, material);
       mesh.frustumCulled = false;
       mesh.onBeforeRender = () => {
-        material.uniforms['time'].value = (Date.now() - clock.worldStartTime) / 1000;
+        material.uniforms['time'].value = clock.nowSeconds;
       };
       return { mesh, updateUserSet };
 
