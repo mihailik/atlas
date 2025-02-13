@@ -10,11 +10,11 @@ import {
 } from 'three';
 
 /**
- * @template {{ x?: number, y?: number, z?: number, mass?: number, color?: number }} T
+ * @template {{ x?: number, y?: number, z?: number, mass?: number, color?: number }} TParticle
  * @param {{
  *  clock?: { now(): number },
- *  spots: T[],
- *  get?: (spot: T, coords: { x: number, y: number, z: number, mass: number, color: number }) => void
+ *  spots: TParticle[],
+ *  get?: (spot: TParticle, coords: { x: number, y: number, z: number, mass: number, color: number }) => void
  * }} _ 
  */
 export function massSpotMesh({ clock: clockArg, spots, get }) {
@@ -38,26 +38,9 @@ export function massSpotMesh({ clock: clockArg, spots, get }) {
   let diameterBuf = new Float32Array(spots.length);
   let colorBuf = new Uint32Array(spots.length);
 
-  for (let i = 0; i < spots.length; i++) {
-    const user = spots[i];
+  populateBuffers();
 
-    // reset the dummy object
-    dummy.x = user.x || 0;
-    dummy.y = user.z || 0;
-    dummy.z = user.y || 0;
-    dummy.mass = user.mass || 0;
-    dummy.color = user.color || 0;
-
-    if (typeof get === 'function') get(user, dummy);
-
-    offsetBuf[i * 3 + 0] = dummy.x;
-    offsetBuf[i * 3 + 1] = dummy.y;
-    offsetBuf[i * 3 + 2] = dummy.z;
-    diameterBuf[i] = dummy.mass;
-    colorBuf[i] = dummy.color;
-  }
-
-  const geometry = new InstancedBufferGeometry();
+  let geometry = new InstancedBufferGeometry();
   geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
   geometry.setAttribute('offset', new InstancedBufferAttribute(offsetBuf, 3));
   geometry.setAttribute('diameter', new InstancedBufferAttribute(diameterBuf, 1));
@@ -145,5 +128,70 @@ export function massSpotMesh({ clock: clockArg, spots, get }) {
   mesh.onBeforeRender = () => {
     material.uniforms['time'].value = clock.now() / 1000;
   };
-  return mesh;
+
+  const meshWithUpdates =
+    /** @type {typeof mesh & { updateNodes: typeof updateNodes }} */(
+      mesh
+    );
+  meshWithUpdates.updateNodes = updateNodes;
+
+  return meshWithUpdates;
+
+  function populateBuffers() {
+    for (let i = 0; i < spots.length; i++) {
+      const spot = spots[i];
+
+      // reset the dummy object
+      dummy.x = spot.x || 0;
+      dummy.y = spot.z || 0;
+      dummy.z = spot.y || 0;
+      dummy.mass = spot.mass || 0;
+      dummy.color = spot.color || 0;
+
+      if (typeof get === 'function') get(spot, dummy);
+
+      offsetBuf[i * 3 + 0] = dummy.x;
+      offsetBuf[i * 3 + 1] = dummy.y;
+      offsetBuf[i * 3 + 2] = dummy.z;
+      diameterBuf[i] = dummy.mass;
+      colorBuf[i] = dummy.color;
+    }
+  }
+
+  /**
+ * @param {TParticle[]} newSpots
+ */
+  function updateNodes(newSpots) {
+    newSpots = newSpots;
+    if (newSpots.length > geometry.instanceCount || newSpots.length < geometry.instanceCount / 2) {
+      const newAllocateCount = Math.max(
+        Math.floor(newSpots.length * 1.5),
+        newSpots.length + 300);
+
+      offsetBuf = new Float32Array(newAllocateCount * 4);
+      diameterBuf = new Float32Array(newAllocateCount);
+      colorBuf = new Uint32Array(newAllocateCount);
+
+      populateBuffers();
+
+      const oldGeometry = geometry;
+
+      geometry = new InstancedBufferGeometry();
+      geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
+      geometry.setAttribute('offset', new InstancedBufferAttribute(offsetBuf, 3));
+      geometry.setAttribute('diameter', new InstancedBufferAttribute(diameterBuf, 1));
+      geometry.setAttribute('color', new InstancedBufferAttribute(colorBuf, 1));
+      geometry.instanceCount = newAllocateCount;
+
+      mesh.geometry = geometry;
+
+      oldGeometry.dispose();
+    } else {
+      populateBuffers();
+
+      geometry.attributes['offset'].needsUpdate = true;
+      geometry.attributes['diameter'].needsUpdate = true;
+      geometry.attributes['color'].needsUpdate = true;
+    }
+  }
 }

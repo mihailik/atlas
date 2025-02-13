@@ -18,7 +18,7 @@ export function createDOMLayout({ canvas3D, statsElem, userCount }) {
           position: fixed; left: 0; top: 0; width: 100%; height: 100%;
           display: grid; grid-template-rows: auto auto 1fr auto; grid-template-columns: 1fr;
           opacity: 0.01; pointer-events: none;
-          transition: opacity 5s;
+          transition: opacity 8s;
           `,
     children: [
       canvas3D,

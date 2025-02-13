@@ -15,6 +15,8 @@ import { handleWindowResizes } from './handle-window-resizes';
 import { trackTouchWithCallback } from './track-touch-with-callback';
 import { trackFirehose } from './track-firehose';
 import { renderGeoLabels } from './render-geo-labels';
+import { rndUserColorer } from '../colors/rnd-user-colorer';
+import { shortenDID } from '../coldsky-borrow/shorten';
 
 export async function constructStateAndRun(rawUsers) {
   const startProcessToTiles = Date.now();
@@ -27,12 +29,39 @@ export async function constructStateAndRun(rawUsers) {
     camera,
     renderer,
     stats,
+    updateUsers
   } = setupScene(usersAndTiles.all, clock);
 
   const domElements = createDOMLayout({
     canvas3D: renderer.domElement,
     statsElem: stats.dom,
     userCount: usersAndTiles.all.length
+  });
+
+  var addedCount = 0;
+  var templateIndex;
+  var template;
+
+  domElements.root.addEventListener('click', e => {
+    if (e.shiftKey) {
+      addedCount++;
+      if (!template) {
+        templateIndex = usersAndTiles.all.findIndex(u => u.shortHandle === 'oyin.bo');
+        template = usersAndTiles.all[templateIndex];
+      }
+      
+      const newUser = { ...template };
+      newUser.shortDID += '.' + addedCount;
+      newUser.shortHandle += '.' + addedCount;
+      newUser.displayName += '.' + addedCount;
+      newUser.h += 0.01 * addedCount;
+      newUser.weight *= 1.5 + 0.1 * addedCount;
+
+      const updated = usersAndTiles.all.slice();
+      updated[templateIndex] = newUser;
+
+      updateUsers([template]);
+    }
   });
 
   const orbit =

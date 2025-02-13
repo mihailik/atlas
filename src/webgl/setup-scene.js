@@ -3,8 +3,7 @@
 import { AmbientLight, DirectionalLight, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
 import Stats from 'three/examples/jsm/libs/stats.module';
 
-import { massShaderRenderer } from './mass-shader-renderer';
-import { massSpotMesh } from './mass-spot-mesh';
+import { massSpotMesh } from './layers/mass-spot-mesh';
 
 /**
  * @param {import('..').UserEntry[]} users
@@ -47,7 +46,6 @@ export function setupScene(users, clock) {
         dummy.color = user.colorRGB * 256 | 0xFF;
       }
     });
-    // massShaderRenderer({ clock, users });
 
   scene.add(farUsersMesh);
 
@@ -56,6 +54,17 @@ export function setupScene(users, clock) {
     camera,
     lights: { dirLight1, dirLight2, ambientLight },
     renderer,
-    stats
+    stats,
+    updateUsers
   };
+
+  /** @type {typeof users | undefined} */
+  var addedUsers;
+
+  /**
+   * @param {typeof users} users
+   */
+  function updateUsers(users) {
+    farUsersMesh.updateNodes(users);
+  }
 }
