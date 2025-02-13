@@ -95,34 +95,26 @@ function atlas(invokeType) {
   /**
  * @param {{
  *  testLabel: { screenX: number, screenY: number },
- *  tileLabels: Iterable<{ screenX: number, screenY: number, visible: boolean }>,
- *  considerLeftUp?: Iterable<{ screenX: number, screenY: number, visible: boolean }>,
- *  considerLeft?: Iterable<{ screenX: number, screenY: number, visible: boolean }>,
- *  considerUp?: Iterable<{ screenX: number, screenY: number, visible: boolean }>,
+ *  tiles: Iterable<{ screenX: number, screenY: number, visible: boolean }>[],
+ *  tileX: number, tileY: number,
+ *  tileDimensionCount: number,
  *  minScreenDistance: number
  * }} _ 
  */
   function proximityTest({
     testLabel,
-    tileLabels,
-    considerLeftUp, considerLeft, considerUp,
+    tiles,
+    tileX, tileY,
+    tileDimensionCount,
     minScreenDistance }) {
+    
+    const tileLabels = tiles[tileX + tileY * tileDimensionCount];
 
-    for (const otherLabel of tileLabels) {
-      if (otherLabel === testLabel) break;
-      if (!otherLabel.visible) continue;
-
-      const dist = distance2D(
-        testLabel.screenX, testLabel.screenY,
-        otherLabel.screenX, otherLabel.screenY);
-
-      if (dist < minScreenDistance)
-        return true;
-    }
-
-    if (considerLeftUp) {
-      for (const otherLabel of considerLeftUp) {
+    if (tileLabels) {
+      for (const otherLabel of tileLabels) {
+        if (otherLabel === testLabel) break;
         if (!otherLabel.visible) continue;
+
         const dist = distance2D(
           testLabel.screenX, testLabel.screenY,
           otherLabel.screenX, otherLabel.screenY);
@@ -132,29 +124,54 @@ function atlas(invokeType) {
       }
     }
 
-    if (considerLeft) {
-      for (const otherLabel of considerLeft) {
-        if (!otherLabel.visible) continue;
-        const dist = distance2D(
-          testLabel.screenX, testLabel.screenY,
-          otherLabel.screenX, otherLabel.screenY);
+    for (let xIndex = tileX - 1; xIndex >= 0; xIndex--) {
+      const testTile = tiles[xIndex + tileY * tileDimensionCount];
+      if (testTile) {
+        let anyLabelsInTile = false;
+        for (const otherLabel of testTile) {
+          if (!otherLabel.visible) continue;
+          anyLabelsInTile = true;
+          const dist = distance2D(
+            testLabel.screenX, testLabel.screenY,
+            otherLabel.screenX, otherLabel.screenY);
 
-        if (dist < minScreenDistance)
-          return true;
+          if (dist < minScreenDistance)
+            return true;
+        }
+
+        // if there are no labels in the tile, we must keep looking left
+        if (anyLabelsInTile) break;
       }
     }
 
-    if (considerUp) {
-      for (const otherLabel of considerUp) {
-        if (!otherLabel.visible) continue;
-        const dist = distance2D(
-          testLabel.screenX, testLabel.screenY,
-          otherLabel.screenX, otherLabel.screenY);
+    let stopLeftAt = 0;
+    for (let yIndex = tileY - 1; yIndex >=0; yIndex--) {
+      for (let xIndex = tileX; xIndex > stopLeftAt; xIndex--) {
+        const testTile = tiles[xIndex + yIndex * tileDimensionCount];
+        if (testTile) {
+          let anyLabelsInTile = false;
+          for (const otherLabel of testTile) {
+            if (!otherLabel.visible) continue;
+            anyLabelsInTile = true;
+            const dist = distance2D(
+              testLabel.screenX, testLabel.screenY,
+              otherLabel.screenX, otherLabel.screenY);
 
-        if (dist < minScreenDistance)
-          return true;
+            if (dist < minScreenDistance)
+              return true;
+          }
+
+          // if there are no labels in the tile, we must keep looking left
+          if (anyLabelsInTile) {
+            stopLeftAt = xIndex;
+            break;
+          }
+        }
       }
+
+      if (stopLeftAt === tileX) break;
     }
+
   }
 
   /** @param {{
@@ -2491,7 +2508,10 @@ function atlas(invokeType) {
         /** @param {THREE.PerspectiveCamera} camera */
         function refreshDynamicLabels(camera) {
           const testArgs = /** @type {Parameters<typeof proximityTest>[0]} */({
-            minScreenDistance: MIN_SCREEN_DISTANCE
+            minScreenDistance: MIN_SCREEN_DISTANCE,
+            tileDimensionCount,
+            tileX: 0, tileY: 0, testLabel: { screenX: NaN, screenY: NaN },
+            tiles: labelsByTiles
           });
 
           for (let xIndex = 0; xIndex < tileDimensionCount; xIndex++) {
@@ -2502,14 +2522,8 @@ function atlas(invokeType) {
               if (!allTileUsers) continue; // some tiles are empty (rectangular world, round galaxy)
 
               const tileLabels = labelsByTiles[tileIndex] || (labelsByTiles[tileIndex] = new Set());
-              testArgs.tileLabels = tileLabels;
-
-              testArgs.considerLeftUp = xIndex > 0 && yIndex > 0 ?
-                labelsByTiles[xIndex - 1 + (yIndex - 1) * tileDimensionCount] : undefined;
-              testArgs.considerLeft = xIndex > 0 ?
-                labelsByTiles[xIndex - 1 + yIndex * tileDimensionCount] : undefined;
-              testArgs.considerUp = yIndex > 0 ?
-                labelsByTiles[xIndex + (yIndex - 1) * tileDimensionCount] : undefined;
+              testArgs.tileX = xIndex;
+              testArgs.tileY = yIndex;
 
               for (const existingLabel of tileLabels) {
                 pBuf.set(existingLabel.user.x, existingLabel.user.h, existingLabel.user.y);
