@@ -203,6 +203,7 @@ function atlas(invokeType) {
 
       async function loadAndStartFirehose() {
         if (!firehoseJsonObj) {
+          console.log('Fallback firehose JSONP loading...');
           firehoseJsonObj = loadRelativeScriptJsonp('../atlas-db-jsonp/firehose.js');
         }
 
@@ -210,6 +211,10 @@ function atlas(invokeType) {
           firehoseJsonObj = await firehoseJsonObj;
         }
         let now = Date.now();
+        console.log(
+          'Fallback firehose: ',
+          typeof firehoseJsonObj?.length === 'number' ?
+            '[' + firehoseJsonObj.length + ']' : typeof firehoseJsonObj);
 
         while (true) {
           let lastTimestamp = 0;
@@ -278,26 +283,57 @@ function atlas(invokeType) {
       return fn();
     } else {
       return new Promise((resolve, reject) => {
+        let completed = false;
         /** @type {*} */(window)[funcName] = (data) => {
-          delete window[funcName];
-          if (script.parentElement) script.parentElement.removeChild(script);
+          queueCleanupGlobal();
+          if (completed) {
+            console.log('JSONP data arrived after promise completed ', funcName, ': ', data);
+            return;
+          }
+          completed = true;
           resolve(data);
         };
         const script = document.createElement('script');
         script.onerror = (error) => {
-          delete window[funcName];
-          if (script.parentElement) script.parentElement.removeChild(script);
+          if (completed) {
+            console.log('JSONP script error fired after promise completed ', funcName, ': ', error);
+            return;
+          }
+          completed = true;
+          queueCleanupGlobal();
           reject(error);
         };
         script.onload = function () {
           setTimeout(() => {
-            delete window[funcName];
-            if (script.parentElement) script.parentElement.removeChild(script);
-            reject(new Error('jsonp script loaded but no data received'));
+            if (!completed) {
+              let errorText =
+                'JSONP script onload fired, but promise never completed: potentially bad JSONP response ' + funcName;
+              try {
+                errorText += ': ' + script.outerHTML;
+              } catch (errorGettingScriptElement) {
+                errorText += ', <' + 'script' + '> element not accessible';
+              }
+              console.log(errorText);
+              completed = true;
+              reject(new Error(errorText));
+            }
+            queueCleanupGlobal();
           }, 300);
         };
         script.src = relativePath;
         document.body.appendChild(script);
+
+        var cleanupGlobalTimeout;
+        var cleaned;
+        function queueCleanupGlobal() {
+          if (cleaned) return;
+          clearTimeout(cleanupGlobalTimeout);
+          cleanupGlobalTimeout = setTimeout(() => {
+            delete window[funcName];
+            if (script.parentElement) script.parentElement.removeChild(script);
+            cleaned = true;
+          }, 500);
+        }
       });
     }
   }
@@ -640,16 +676,25 @@ function atlas(invokeType) {
         const stats = new Stats();
 
         const controls = new OrbitControls(camera, document.body);
-        let autorotateTimeout;
+        let autorotateTimeout1, autorotateTimeout2, autorotateTimeout3;
         controls.addEventListener('start', function () {
-          clearTimeout(autorotateTimeout);
+          clearTimeout(autorotateTimeout1);
+          clearTimeout(autorotateTimeout2);
+          clearTimeout(autorotateTimeout3);
           controls.autoRotate = false;
         });
 
         // restart autorotate after the last interaction & an idle time has passed
         controls.addEventListener('end', function () {
-          autorotateTimeout = setTimeout(function () {
+          autorotateTimeout1 = setTimeout(function () {
+            controls.autoRotateSpeed = 0.01;
             controls.autoRotate = true;
+            autorotateTimeout2 = setTimeout(function () {
+              controls.autoRotateSpeed = 0.05;
+              autorotateTimeout3 = setTimeout(function () {
+                controls.autoRotateSpeed = 0.2;
+              }, 2000);
+            }, 3000);
           }, 5000);
         });
 
@@ -686,10 +731,7 @@ function atlas(invokeType) {
             userMapper: (shortDID, pos) => {
               const [, xSpace, ySpace] = users[shortDID];
               const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, userBounds);
-              pos[0] = x;
-              pos[1] = h;
-              pos[2] = y;
-              pos[3] = 0.001;
+              pos.set(x, h, y, 0.001);
             },
             userColorer: defaultUserColorer
           })
@@ -702,7 +744,7 @@ function atlas(invokeType) {
       function trackFirehose(bounds) {
 
         const MAX_WEIGHT = 0.1;
-        const FADE_TIME_MSEC = 2000;
+        const FADE_TIME_MSEC = 1000;
         /** @type {{ [shortDID: string]: { x: number, y: number, h: number, weight: number, color: number, startAtMsec: number, fadeAtMsec: number } }} */
         const activeUsers = {};
         const rend = flashesRenderer();
@@ -735,20 +777,29 @@ function atlas(invokeType) {
           const rend = billboardShaderRenderer({
             fragmentShader: `
             gl_FragColor = tintColor;
+
+            float timeRatio = (timeSec - extra.x) / (extra.y - extra.x);
+
+            gl_FragColor = tintColor;
+
+              // timeRatio > 1.0 ? vec4(1.0, 0.0, 1.0, tintColor.a) :
+              // timeRatio > 0.0 ? vec4(0.0, 0.5, 0.5, tintColor.a) :
+              // timeRatio == 0.0 ? vec4(0.0, 0.0, 1.0, tintColor.a) :
+              // timeRatio < 0.0 ? vec4(1.0, 0.0, 0.0, tintColor.a) :
+              // vec4(1.0, 1.0, 0.0, tintColor.a);
+
             gl_FragColor.a = gl_FragColor.a * gl_FragColor.a; //(timeRatio < 0.2 ? timeRatio * 5.0 : 1.0);
             gl_FragColor.a = gl_FragColor.a * gl_FragColor.a;
             gl_FragColor.a = gl_FragColor.a * gl_FragColor.a;
+
             `,
             userKeys: Object.keys(users).slice(0, 10* 1000),
-            userMapper: (shortDID, pos) => {
+            userMapper: (shortDID, pos, extra) => {
               const usr = activeUsers[shortDID];
               if (!usr) return;
-              pos[0] = usr.x;
-              pos[1] = usr.h;
-              pos[2] = usr.y;
-              pos[3] = usr.weight;
-              pos[4] = usr.startAtMsec;
-              pos[5] = usr.fadeAtMsec;
+              pos.set(usr.x, usr.h, usr.y, usr.weight);
+              extra.x = usr.startAtMsec / 1000;
+              extra.y = usr.fadeAtMsec / 1000;
             },
             userColorer: (shortDID) => activeUsers[shortDID]?.color
           });
@@ -781,7 +832,7 @@ function atlas(invokeType) {
           let existingUser = activeUsers[shortDID];
           if (existingUser) {
             updateUsers = true;
-            existingUser.weight = Math.min(MAX_WEIGHT, weight * 0.1 + existingUser.weight);
+            existingUser.weight = Math.min(MAX_WEIGHT, weight * 0.2 + existingUser.weight);
             existingUser.fadeAtMsec = timestampMsec + FADE_TIME_MSEC;
             return;
           }
@@ -791,7 +842,7 @@ function atlas(invokeType) {
           const { x, y, h } = mapUserCoordsToAtlas(usrTuple[1], usrTuple[2], userBounds);
           const color = defaultUserColorer(shortDID);
 
-          activeUsers[shortDID] = { x, y, h, weight: weight * 0.1, color, startAtMsec: timestampMsec, fadeAtMsec: timestampMsec + FADE_TIME_MSEC };
+          activeUsers[shortDID] = { x, y, h, weight: weight * 0.2, color, startAtMsec: timestampMsec, fadeAtMsec: timestampMsec + FADE_TIME_MSEC };
           updateUsers = true;
         }
       }
@@ -911,84 +962,76 @@ function atlas(invokeType) {
       /**
        * @param {{
        *  userKeys: K[];
-       *  userMapper(i: K, pos: [x: number, y: number, z: number, diameter: number, startMsec: number, stopMsec: number]): void;
+       *  userMapper(i: K, pos: THREE.Vector4, extra: THREE.Vector4): void;
        *  userColorer(i: K): number;
        *  fragmentShader: string;
        * }} _ 
        * @template K
        */
       function billboardShaderRenderer({ userKeys, userMapper, userColorer, fragmentShader }) {
-        const startTime = Date.now();
         const baseHalf = 1.5 * Math.tan(Math.PI / 6);
         let positions = new Float32Array([
           -baseHalf, 0, -0.5,
           0, 0, 1,
           baseHalf, 0, -0.5
         ]);
-        let userOffsets = new Float32Array(userKeys.length * 3);
-        let userSizes = new Float32Array(userKeys.length);
-        let userStartMsec = new Float32Array(userKeys.length);
-        let userStopMsec = new Float32Array(userKeys.length);
+        let userOffsets = new Float32Array(userKeys.length * 4);
+        let userDiameters = new Float32Array(userKeys.length);
+        let userExtras = new Float32Array(userKeys.length * 4);
         let userColors = new Uint32Array(userKeys.length);
         let offsetsChanged = false;
-        let sizesChanged = false;
+        let diametersChanged = false;
         let colorsChanged = false;
-        let startMsecChanged = false;
-        let stopMsecChanged = false;
+        let extrasChanged = false;
 
         populateAttributes(userKeys);
 
         const geometry = new THREE.InstancedBufferGeometry();
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-        geometry.setAttribute('size', new THREE.InstancedBufferAttribute(userSizes, 1));
-        geometry.setAttribute('userStartMsec', new THREE.InstancedBufferAttribute(userStartMsec, 1));
-        geometry.setAttribute('userStopMsec', new THREE.InstancedBufferAttribute(userStopMsec, 1));
         geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(userOffsets, 3));
+        geometry.setAttribute('diameter', new THREE.InstancedBufferAttribute(userDiameters, 1));
+        geometry.setAttribute('extra', new THREE.InstancedBufferAttribute(userExtras, 4));
         geometry.setAttribute('color', new THREE.InstancedBufferAttribute(userColors, 1));
+        geometry.instanceCount = userKeys.length;
 
         const material = new THREE.ShaderMaterial({
           uniforms: {
-            timeMsec: { value: Date.now() }
+            timeSec: { value: Date.now() }
           },
           vertexShader: `
             precision highp float;
 
             attribute vec3 offset;
-            attribute float size;
-            attribute float userStartMsec;
-            attribute float userStopMsec;
+            attribute float diameter;
+            attribute vec4 extra;
             attribute uint color;
-            attribute float timeMsec;
+
+            uniform float timeSec;
 
             varying vec3 vPosition;
+            varying vec3 vOffset;
+            varying float vDiameter;
+            varying vec4 vExtra;
+            varying float vTimeSec;
+
             varying float vFogDist;
             varying vec4 vColor;
-            varying float vSize;
-            varying float vUserStartMsec;
-            varying float vUserStopMsec;
-            varying float vTimeMsec;
 
             void main(){
-              // multiply position.xy by size to scale the billboard
-              gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1) + vec4(position.xz * size, 0, 0));
-
               vPosition = position;
-              vSize = size;
-              vUserStartMsec = userStartMsec;
-              vUserStopMsec = userStopMsec;
-              vTimeMsec = timeMsec;
+              vOffset = offset;
+              vDiameter = diameter;
+              vExtra = extra;
+              vTimeSec = timeSec;
 
+              gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1) + vec4(position.xz * diameter, 0, 0));
+
+              // https://stackoverflow.com/a/22899161/140739
               uint rInt = (color / uint(256 * 256 * 256)) % uint(256);
               uint gInt = (color / uint(256 * 256)) % uint(256);
               uint bInt = (color / uint(256)) % uint(256);
               uint aInt = (color) % uint(256);
-
-              // https://stackoverflow.com/a/22899161/140739
-              vColor = vec4(0);
-              vColor.r = float(rInt) / 255.0f;
-              vColor.g = float(gInt) / 255.0f;
-              vColor.b = float(bInt) / 255.0f;
-              vColor.a = float(aInt) / 255.0f;
+              vColor = vec4(float(rInt) / 255.0f, float(gInt) / 255.0f, float(bInt) / 255.0f, float(aInt) / 255.0f);
 
               vFogDist = distance(cameraPosition, offset);
             }
@@ -996,13 +1039,14 @@ function atlas(invokeType) {
           fragmentShader: `
             precision highp float;
 
-            varying vec3 vPosition;
             varying vec4 vColor;
             varying float vFogDist;
-            varying float vSize;
-            varying float vUserStartMsec;
-            varying float vUserStopMsec;
-            varying float vTimeMsec;
+
+            varying vec3 vPosition;
+            varying vec3 vOffset;
+            varying float vDiameter;
+            varying vec4 vExtra;
+            varying float vTimeSec;
 
             void main() {
               gl_FragColor = vColor;
@@ -1025,13 +1069,17 @@ function atlas(invokeType) {
               gl_FragColor = mix(gl_FragColor, vec4(1,1,1,0.7), fogRatio);
               gl_FragColor.a = bodyRatio;
 
-              float timeRatio = (vTimeMsec - vUserStartMsec) / (vUserStopMsec - vUserStartMsec);
+              vec3 position = vPosition;
+              vec3 offset = vOffset;
+              float diameter = vDiameter;
+              vec4 extra = vExtra;
+              float timeSec = vTimeSec;
 
               ${fragmentShader}
             }
           `,
           side: THREE.BackSide,
-          // forceSinglePass: true,
+          forceSinglePass: true,
           transparent: true,
           depthWrite: false
         });
@@ -1039,7 +1087,7 @@ function atlas(invokeType) {
         const mesh = new THREE.Mesh(geometry, material);
         mesh.frustumCulled = false;
         mesh.onBeforeRender = () => {
-          material.uniforms['timeMsec'].value = Date.now() - startTime;
+          material.uniforms['timeSec'].value = Date.now() / 1000;
         };
         return { mesh, updateUserSet };
 
@@ -1047,37 +1095,48 @@ function atlas(invokeType) {
          * @param {Parameters<typeof userColorer>[0][]} userKeys
          */
         function populateAttributes(userKeys) {
-          /** @type {[x: number, y: number, z: number, size: number, startMsec: number, stopMsec: number]} */
-          const userPos = [NaN, NaN, NaN, NaN, NaN, NaN];
+          const userPos = new THREE.Vector4();
+          const userExtra = new THREE.Vector4();
+          const oldUserPos = new THREE.Vector4();
+          const oldUserExtra = new THREE.Vector4();
 
           for (let i = 0; i < userKeys.length; i++) {
             const user = userKeys[i];
-            userPos[0] = userPos[1] = userPos[2] = userPos[3] = userPos[4] = userPos[5] = NaN;
-            userMapper(user, userPos);
-            const oldX = userOffsets[i * 3 + 0];
-            const oldY = userOffsets[i * 3 + 1];
-            const oldZ = userOffsets[i * 3 + 2];
-            const oldSize = userSizes[i];
-            const oldStartMsec = userStartMsec[i];
-            const oldStopMsec = userStopMsec[i];
+            userExtra.copy(userPos.set(NaN, NaN, NaN, NaN));
+            userMapper(user, userPos, userExtra);
+            oldUserPos.set(
+              userOffsets[i * 3 + 0],
+              userOffsets[i * 3 + 1],
+              userOffsets[i * 3 + 2],
+              userDiameters[i]);
+            oldUserExtra.set(
+              userExtra[i * 4 + 0],
+              userExtra[i * 4 + 1],
+              userExtra[i * 4 + 2],
+              userExtra[i * 4 + 3]);
             const oldColor = userColors[i];
 
-            userOffsets[i * 3 + 0] = userPos[0];
-            userOffsets[i * 3 + 1] = userPos[1];
-            userOffsets[i * 3 + 2] = userPos[2];
-            userSizes[i] = userPos[3];
+            userOffsets[i * 3 + 0] = userPos.x;
+            userOffsets[i * 3 + 1] = userPos.y;
+            userOffsets[i * 3 + 2] = userPos.z;
+            userDiameters[i] = userPos.w;
             userColors[i] = userColorer(user);
-            userStartMsec[i] = userPos[4] - startTime;
-            userStopMsec[i] = userPos[5] - startTime;
+            userExtra[i * 4 + 0] = userExtra.x;
+            userExtra[i * 4 + 1] = userExtra.y;
+            userExtra[i * 4 + 2] = userExtra.z;
+            userExtra[i * 4 + 3] = userExtra.w;
 
-            if (userOffsets[i * 3 + 0] !== oldX || userOffsets[i * 3 + 1] !== oldY || userOffsets[i * 3 + 2] !== oldZ)
+            if (userOffsets[i * 3 + 0] !== oldUserPos.x
+              || userOffsets[i * 3 + 1] !== oldUserPos.y
+              || userOffsets[i * 3 + 2] !== oldUserPos.z)
               offsetsChanged = true;
-            if (userSizes[i] !== oldSize)
-              sizesChanged = true;
-            if (userStartMsec[i] != oldStartMsec)
-              startMsecChanged = true;
-            if (userStopMsec[i] != oldStopMsec)
-              stopMsecChanged = true;
+            if (userDiameters[i] !== oldUserPos.w)
+              diametersChanged = true;
+            if (userExtra[i * 4 + 0] !== oldUserExtra.x ||
+              userExtra[i * 4 + 1] !== oldUserExtra.y ||
+              userExtra[i * 4 + 2] !== oldUserExtra.z ||
+              userExtra[i * 4 + 3] !== oldUserExtra.w)
+              extrasChanged = true;
             if (userColors[i] !== oldColor)
               colorsChanged = true;
           }
@@ -1090,51 +1149,46 @@ function atlas(invokeType) {
           if (userKeys.length > userColors.length) {
             const newSize = Math.max(userColors.length * 2, userKeys.length);
             userOffsets = new Float32Array(newSize * 3);
-            userSizes = new Float32Array(newSize);
+            userDiameters = new Float32Array(newSize);
             userColors = new Uint32Array(newSize);
-            userStartMsec = new Float32Array(newSize);
-            userStopMsec = new Float32Array(newSize);
+            userExtras = new Float32Array(newSize * 4);
 
             geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(userOffsets, 3));
             geometry.attributes['offset'].needsUpdate = true;
             geometry.setAttribute('color', new THREE.InstancedBufferAttribute(userColors, 1));
             geometry.attributes['color'].needsUpdate = true;
-            geometry.setAttribute('size', new THREE.InstancedBufferAttribute(userSizes, 1));
-            geometry.attributes['size'].needsUpdate = true;
-            geometry.setAttribute('userStartMsec', new THREE.InstancedBufferAttribute(userStartMsec, 1));
-            geometry.attributes['userStartMsec'].needsUpdate = true;
-            geometry.setAttribute('userStopMsec', new THREE.InstancedBufferAttribute(userStopMsec, 1));
-            geometry.attributes['userStopMsec'].needsUpdate = true;
+            geometry.setAttribute('diameter', new THREE.InstancedBufferAttribute(userDiameters, 1));
+            geometry.attributes['diameter'].needsUpdate = true;
+            geometry.setAttribute('extra', new THREE.InstancedBufferAttribute(userExtras, 4));
+            geometry.attributes['extra'].needsUpdate = true;
           }
 
           populateAttributes(userKeys);
           if (offsetsChanged) geometry.attributes['offset'].needsUpdate = true;
-          if (sizesChanged) geometry.attributes['size'].needsUpdate = true;
+          if (diametersChanged) geometry.attributes['diameter'].needsUpdate = true;
           if (colorsChanged) geometry.attributes['color'].needsUpdate = true;
-          if (startMsecChanged) geometry.attributes['userStartMsec'].needsUpdate = true;
-          if (stopMsecChanged) geometry.attributes['userStopMsec'].needsUpdate = true;
-
-          if (offsetsChanged ||
-            sizesChanged ||
+          if (extrasChanged) geometry.attributes['extra'].needsUpdate = true;
+          
+          const LOG_BUFFER_UPDATES = false;
+          if (LOG_BUFFER_UPDATES && (
+            offsetsChanged ||
+            diametersChanged ||
             colorsChanged ||
-            startMsecChanged ||
-            stopMsecChanged) {
+            extrasChanged)) {
             console.log('changed: ' +
               (offsetsChanged ? 'o' : ' ') +
-              (sizesChanged ? 's' : ' ') +
+              (diametersChanged ? 'd' : ' ') +
               (colorsChanged ? 'c' : ' ') +
-              (startMsecChanged ? '<' : ' ') +
-              (stopMsecChanged ? '>' : ' '),
+              (extrasChanged ? 'x' : ' '),
               ' ',
               userKeys.length
             );
           }
 
           offsetsChanged =
-            sizesChanged =
+            diametersChanged =
             colorsChanged =
-            startMsecChanged =
-            stopMsecChanged =
+            extrasChanged =
             false;
 
           geometry.instanceCount = userKeys.length;
