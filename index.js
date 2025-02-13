@@ -854,7 +854,7 @@ function atlas(invokeType) {
         /** @type {{ [shortDID: string]: UserTuple }} */
         const rawUsers = await loadUsersPromise;
         const startProcessToTiles = Date.now();
-        const usersAndTiles = await processUsersToTiles({ users: rawUsers, dimensionCount: 32, sleep: () => new Promise(resolve => setTimeout(resolve, 1)) });
+        const usersAndTiles = await processUsersToTiles({ users: rawUsers, dimensionCount: 16, sleep: () => new Promise(resolve => setTimeout(resolve, 1)) });
         console.log('Processed users to tiles in ', Date.now() - startProcessToTiles, ' msec');
         const clock = makeClock();
 
@@ -915,7 +915,7 @@ function atlas(invokeType) {
           uxElements: [domElements.titleBar, domElements.subtitleArea, domElements.bottomStatusLine],
           renderElements: [renderer.domElement, domElements.root],
           touchCallback: (xy) => {
-            console.log('touch ', xy);
+            // console.log('touch ', xy);
           }
         });
 
@@ -2054,6 +2054,8 @@ function atlas(invokeType) {
        * }} _
        */
       function renderGeoLabels({ users, tiles, tileDimensionCount, clock }) {
+        const ANIMATE_LENGTH_SEC = 0.7;
+        const MIN_SCREEN_DISTANCE = 0.2;
         /**
          * @typedef {ReturnType<typeof createLabel>} LabelInfo
          */
@@ -2162,6 +2164,7 @@ function atlas(invokeType) {
             group,
             fixed: false,
             searchResult: false,
+            animationEndsAtSec: clock.nowSeconds + ANIMATE_LENGTH_SEC,
             visible: true,
             screenX: NaN,
             screenY: NaN,
@@ -2178,11 +2181,27 @@ function atlas(invokeType) {
 
           /** @param {THREE.Vector3} cameraPos */
           function updateWithCamera(cameraPos) {
-            if (label.visible) {
+            const trueVisible = label.visible ||
+              label.animationEndsAtSec >= clock.nowSeconds;
+
+            if (trueVisible) {
               group.visible = true;
               group.rotation.y = Math.atan2(
                 (cameraPos.x - group.position.x),
                 (cameraPos.z - group.position.z));
+
+              // 0 to 1 when animation ends
+              const animationPhase = (clock.nowSeconds - (label.animationEndsAtSec - ANIMATE_LENGTH_SEC)) / ANIMATE_LENGTH_SEC;
+
+              const opacity =
+                // after animation finished, steady state
+                animationPhase > 1 ? (label.visible ? 1 : 0) :
+                  // fade in
+                  label.visible ? animationPhase :
+                    // fade out
+                    1 - animationPhase;
+
+              text.strokeOpacity = text.outlineOpacity = text.fillOpacity = opacity;
               text.sync();
             } else {
               group.visible = false;
@@ -2194,15 +2213,28 @@ function atlas(invokeType) {
 
         /** @param {THREE.PerspectiveCamera} camera */
         function updateWithCamera(camera) {
-          const UPDATE_TEXT_LABELS_INTERVAL_MSEC = 500;
+          const UPDATE_TEXT_LABELS_INTERVAL_MSEC = 1000;
 
           const cameraPos = camera.position;
           camera.updateMatrixWorld();
 
           for (const tileBucket of labelsByTiles) {
             if (!tileBucket) continue;
+            let removeLabels;
             for (const label of tileBucket) {
               label.updateWithCamera(cameraPos);
+              if (!label.visible && !label.fixed && label.animationEndsAtSec < clock.nowSeconds) {
+                if (!removeLabels) removeLabels = [label];
+                else removeLabels.push(label);
+              }
+            }
+
+            if (removeLabels) {
+              for (const label of removeLabels) {
+                tileBucket.delete(label);
+                layerGroup.remove(label.group);
+                label.dispose();
+              }
             }
           }
 
@@ -2216,8 +2248,6 @@ function atlas(invokeType) {
 
         /** @param {THREE.PerspectiveCamera} camera */
         function refreshDynamicLabels(camera) {
-          const MIN_SCREEN_DISTANCE = 0.5;
-
           const testArgs = /** @type {Parameters<typeof proximityTest>[0]} */({
             minScreenDistance: MIN_SCREEN_DISTANCE
           });
@@ -2239,7 +2269,6 @@ function atlas(invokeType) {
               testArgs.considerUp = yIndex > 0 ?
                 labelsByTiles[xIndex + (yIndex - 1) * tileDimensionCount] : undefined;
 
-              const removeLabels = [];
               for (const existingLabel of tileLabels) {
                 pBuf.set(existingLabel.user.x, existingLabel.user.h, existingLabel.user.y);
                 pBuf.project(camera);
@@ -2252,15 +2281,22 @@ function atlas(invokeType) {
 
                 let shouldBeRemoved = proximityTest(testArgs);
                 if (shouldBeRemoved) {
-                  removeLabels.push(existingLabel);
-                  break;
+                  if (existingLabel.visible) {
+                    existingLabel.visible = false;
+                    const remainingFadeTime = existingLabel.animationEndsAtSec > clock.nowSeconds ?
+                      ANIMATE_LENGTH_SEC - (existingLabel.animationEndsAtSec - clock.nowSeconds) :
+                      ANIMATE_LENGTH_SEC;
+                    existingLabel.animationEndsAtSec = clock.nowSeconds + remainingFadeTime;
+                  }
+                } else {
+                  if (!existingLabel.visible) {
+                    existingLabel.visible = true;
+                    const remainingFadeTime = existingLabel.animationEndsAtSec > clock.nowSeconds ?
+                      ANIMATE_LENGTH_SEC - (existingLabel.animationEndsAtSec - clock.nowSeconds) :
+                      ANIMATE_LENGTH_SEC;
+                    existingLabel.animationEndsAtSec = clock.nowSeconds + remainingFadeTime;
+                  }
                 }
-              }
-
-              for (const removeLabel of removeLabels) {
-                tileLabels.delete(removeLabel);
-                layerGroup.remove(removeLabel.group);
-                removeLabel.dispose();
               }
 
               testArgs.testLabel = {screenX: NaN, screenY: NaN };
@@ -2288,10 +2324,10 @@ function atlas(invokeType) {
         /**
          * @param {{
          *  testLabel: { screenX: number, screenY: number },
-         *  tileLabels: Set<{ screenX: number, screenY: number }>,
-         *  considerLeftUp?: Set<{ screenX: number, screenY: number }>,
-         *  considerLeft?: Set<{ screenX: number, screenY: number }>,
-         *  considerUp?: Set<{ screenX: number, screenY: number }>,
+         *  tileLabels: Set<{ screenX: number, screenY: number, visible: boolean }>,
+         *  considerLeftUp?: Set<{ screenX: number, screenY: number, visible: boolean }>,
+         *  considerLeft?: Set<{ screenX: number, screenY: number, visible: boolean }>,
+         *  considerUp?: Set<{ screenX: number, screenY: number, visible: boolean }>,
          *  minScreenDistance: number
          * }} _ 
          */
@@ -2303,6 +2339,7 @@ function atlas(invokeType) {
 
           for (const otherLabel of tileLabels) {
             if (otherLabel === testLabel) break;
+            if (!otherLabel.visible) continue;
 
             const dist = distance2D(
               testLabel.screenX, testLabel.screenY,
@@ -2314,6 +2351,7 @@ function atlas(invokeType) {
 
           if (considerLeftUp) {
             for (const otherLabel of considerLeftUp) {
+              if (!otherLabel.visible) continue;
               const dist = distance2D(
                 testLabel.screenX, testLabel.screenY,
                 otherLabel.screenX, otherLabel.screenY);
@@ -2325,6 +2363,7 @@ function atlas(invokeType) {
 
           if (considerLeft) {
             for (const otherLabel of considerLeft) {
+              if (!otherLabel.visible) continue;
               const dist = distance2D(
                 testLabel.screenX, testLabel.screenY,
                 otherLabel.screenX, otherLabel.screenY);
@@ -2336,6 +2375,7 @@ function atlas(invokeType) {
 
           if (considerUp) {
             for (const otherLabel of considerUp) {
+              if (!otherLabel.visible) continue;
               const dist = distance2D(
                 testLabel.screenX, testLabel.screenY,
                 otherLabel.screenX, otherLabel.screenY);
@@ -2344,67 +2384,6 @@ function atlas(invokeType) {
                 return true;
             }
           }
-        }
-
-        /**
-         * @param {THREE.PerspectiveCamera} camera
-         * @param {TileUserEntry[][]} sizedTiles
-         */
-        function updateDynamicLabels(camera, sizedTiles) {
-          for (let xIndex = 0; xIndex < TILE_DIMENSION_COUNT; xIndex++) {
-            for (let yIndex = 0; yIndex < TILE_DIMENSION_COUNT; yIndex++) {
-              const tileIndex = xIndex + yIndex * TILE_DIMENSION_COUNT;
-              const tileDiameter = getTileDiameter(camera, xIndex, yIndex);
-              const tile = sizedTiles[tileIndex];
-
-              const tileUsersToAdd = [];
-              if (tile) {
-                for (const tileEntry of tile) {
-                  pBuf.set(tileEntry.x, tileEntry.h, tileEntry.y);
-                  pBuf.project(camera);
-
-                  let canBeAdded = true;
-                  for (const alreadySelected of tileUsersToAdd) {
-
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        /**
-         * @param {THREE.PerspectiveCamera} camera
-         * @param {number} xIndex
-         * @param {number} yIndex
-         */
-        function getTileDiameter(camera, xIndex, yIndex) {
-          let tileDiameter = 1 / TILE_DIMENSION_COUNT;
-          pBuf.set(tileDiameter * xIndex * 2 - 1, 0, tileDiameter * yIndex * 2 - 1);
-
-          // pBuf.applyMatrix4(camera.matrixWorldInverse);
-          pBuf.project(camera);
-          let minX, minY, maxX, maxY;
-          minX = maxX = pBuf.x;
-          minY = maxY = pBuf.y;
-
-          pBuf.set((tileDiameter * xIndex + 1) * 2 - 1, 0, tileDiameter * yIndex * 2 - 1);
-          pBuf.project(camera);
-          minX = Math.min(minX, pBuf.x); maxX = Math.max(maxX, pBuf.x);
-          minY = Math.min(minY, pBuf.y); maxY = Math.max(maxY, pBuf.y);
-
-          pBuf.set((tileDiameter * xIndex + 1) * 2 - 1, 0, (tileDiameter * yIndex + 1) * 2 - 1);
-          pBuf.project(camera);
-          minX = Math.min(minX, pBuf.x); maxX = Math.max(maxX, pBuf.x);
-          minY = Math.min(minY, pBuf.y); maxY = Math.max(maxY, pBuf.y);
-
-          pBuf.set(tileDiameter * xIndex * 2 - 1, 0, (tileDiameter * yIndex + 1) * 2 - 1);
-          pBuf.project(camera);
-          minX = Math.min(minX, pBuf.x); maxX = Math.max(maxX, pBuf.x);
-          minY = Math.min(minY, pBuf.y); maxY = Math.max(maxY, pBuf.y);
-
-          tileDiameter = distance2D(minX, minY, maxX, maxY);
-          return tileDiameter;
         }
       }
 
