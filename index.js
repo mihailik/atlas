@@ -2482,6 +2482,7 @@ function atlas(invokeType) {
               avatarTexture = await avatarTextureLoader.loadAsync(avatarUrl);
 
               avatarMaterial = new THREE.MeshBasicMaterial({ map: avatarTexture, color: 0xffffff });
+              avatarMaterial.transparent = true;
               avatarGeometry = new THREE.CircleGeometry(0.0014, 16);
               avatarMesh = new THREE.Mesh(avatarGeometry, avatarMaterial);
               avatarMesh.position.set(0.005, 0.00068, 0);
