@@ -467,15 +467,15 @@ function atlas(invokeType) {
 
         const scene = new THREE.Scene();
 
-        const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.7);
+        const dirLight1 = new THREE.DirectionalLight(0xffffff, 5);
         dirLight1.position.set(3000, 1500, -3000);
         scene.add(dirLight1);
 
-        const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.7);
+        const dirLight2 = new THREE.DirectionalLight(0xffffff, 5);
         dirLight2.position.set(-3000, 1500, -3000);
         scene.add(dirLight2);
 
-        const ambientLight = new THREE.AmbientLight(0x101010, 3);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
         scene.add(ambientLight);
 
         const renderer = new THREE.WebGLRenderer();
@@ -573,6 +573,10 @@ function atlas(invokeType) {
           }
         }
 
+        /**
+         * @param {string} shortDID
+         * @param {number} weight
+         */
         function addActiveUser(shortDID, weight) {
           let existingUser = activeUsers[shortDID];
           if (existingUser) {
@@ -580,7 +584,9 @@ function atlas(invokeType) {
             return;
           }
 
-          const [shortHandle, x, y] = users[shortDID];
+          const usrTuple = users[shortDID];
+          if (!usrTuple) return; // TODO: process unknown users
+          const [shortHandle, x, y] = usrTuple;
           const { x: xAtlas, y: yAtlas, h: hAtlas } = mapUserCoordsToAtlas(x, y, bounds);
           const color = defaultUserColorer(shortDID);
 
@@ -603,9 +609,10 @@ function atlas(invokeType) {
             tick
           };
 
-          const ballBaseSize = 0.0008;
+          const ballBaseSize = 0.003;
           const ball = new THREE.SphereGeometry(ballBaseSize * 2, 16, 12);
-          const material = new THREE.MeshLambertMaterial({ color: (color32rgba / 256) | 0 });
+          const baseColor = (color32rgba / 256) | 0;
+          const material = new THREE.MeshLambertMaterial({ color: baseColor });
           const ballMesh = new THREE.Mesh(ball, material);
 
           ballMesh.position.set(xAtlas, hAtlas, yAtlas);
@@ -617,11 +624,12 @@ function atlas(invokeType) {
           /** @param {number} weightIncrement */
           function addWeight(weightIncrement) {
             weight *= 1 + weightIncrement;
+            if (weight > 0.3) weight = 0.3;
           }
 
           /** @param {number} timePassedSec */
           function tick(timePassedSec) {
-            weight -= timePassedSec * 0.1;
+            weight -= timePassedSec * 0.5;
             if (weight < ballBaseSize) {
               scene.remove(ballMesh);
               delete activeUsers[shortDID];
