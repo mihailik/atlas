@@ -454,13 +454,15 @@ function atlas(invokeType) {
 
   /** @param {{ [shortDID: string ]: UserTuple }} users */
   function getUserCoordBounds(users) {
-    const bounds = { x: { min: NaN, max: NaN }, y: { min: NaN, max: NaN } };
+    const bounds = { x: { min: NaN, max: NaN }, y: { min: NaN, max: NaN }, weight: { min: NaN, max: NaN } };
     for (const shortDID in users) {
-      const [shortHandle, x, y] = users[shortDID];
+      const [shortHandle, x, y, weight] = users[shortDID];
       if (!Number.isFinite(bounds.x.min) || x < bounds.x.min) bounds.x.min = x;
       if (!Number.isFinite(bounds.x.max) || x > bounds.x.max) bounds.x.max = x;
       if (!Number.isFinite(bounds.y.min) || y < bounds.y.min) bounds.y.min = y;
       if (!Number.isFinite(bounds.y.max) || y > bounds.y.max) bounds.y.max = y;
+      if (!Number.isFinite(bounds.weight.min) || weight < bounds.weight.min) bounds.weight.min = weight;
+      if (!Number.isFinite(bounds.weight.max) || weight > bounds.weight.max) bounds.weight.max = weight;
     }
     return bounds;
   }
@@ -718,7 +720,7 @@ function atlas(invokeType) {
             userMapper: (shortDID, pos) => {
               const [, xSpace, ySpace, weight] = users[shortDID];
               const { x, y, h } = mapUserCoordsToAtlas(xSpace, ySpace, userBounds);
-              pos.set(x, h, y, weight ? 0.001 : -0.001);
+              pos.set(x, h, y, weight ? 0.003 * (weight / userBounds.weight.max) : -0.0005);
             },
             userColorer: defaultUserColorer
           })
@@ -1404,14 +1406,20 @@ function atlas(invokeType) {
 
       }
 
-      /** @type {Function[]} */
+      /** @type {{ highlight(), dispose(), shortDID: string }[]} */
       var higlightUserStack;
       /** @param {string} shortDID */
       function focusAndHighlightUser(shortDID) {
         const MAX_HIGHLIGHT_COUNT = 25;
         while (higlightUserStack?.length > MAX_HIGHLIGHT_COUNT) {
-          const dispose = higlightUserStack.shift();
-          dispose?.();
+          const early = higlightUserStack.shift();
+          early?.dispose?.();
+        }
+
+        const existingEntry = higlightUserStack?.find(entry => entry.shortDID === shortDID);
+        if (existingEntry) {
+          existingEntry.highlight();
+          return;
         }
 
         const usrTuple = users[shortDID];
@@ -1427,9 +1435,8 @@ function atlas(invokeType) {
         const xPlus = (r + 0.09) * Math.cos(angle);
         const yPlus = (r + 0.09) * Math.sin(angle);
         const hPlus = h + 0.04;
-        orbit.moveAndPauseRotation({ x: xPlus, y: yPlus, h: hPlus });
 
-        const userColor = defaultUserColorer(shortDID);
+        const userColor = defaultUserColorer(shortDID) >> 8;
 
         const material = new THREE.MeshLambertMaterial({
           color: userColor,
@@ -1452,8 +1459,8 @@ function atlas(invokeType) {
         text.text = '@' + shortHandle;
         text.fontSize = 0.01;
         text.color = userColor;
-        // text.outlineWidth = 0.0005;
-        // text.outlineBlur = 0.005;
+        text.outlineWidth = 0.0005;
+        text.outlineBlur = 0.005;
         text.position.set(-0.005, 0.03, 0);
         //text.depthOffset = 0.001;
         const group = new THREE.Group();
@@ -1466,14 +1473,20 @@ function atlas(invokeType) {
         scene.add(group);
         text.sync();
 
-        if (!higlightUserStack) higlightUserStack = [unhighlightUser];
-        else higlightUserStack.push(unhighlightUser);
+        highlightUser();
+
+        if (!higlightUserStack) higlightUserStack = [{ shortDID, dispose: unhighlightUser, highlight: highlightUser }];
+        else higlightUserStack.push({ shortDID, dispose: unhighlightUser, highlight: highlightUser });
 
         function applyTextBillboarding() {
           group.rotation.y = Math.atan2(
             (camera.position.x - group.position.x),
             (camera.position.z - group.position.z));
           text.sync();
+        }
+
+        function highlightUser() {
+          orbit.moveAndPauseRotation({ x: xPlus, y: yPlus, h: hPlus });
         }
 
         function unhighlightUser() {
@@ -1589,6 +1602,7 @@ function atlas(invokeType) {
         let lastRender;
         let lastBottomStatsUpdate;
         let lastVibeCameraPos;
+        let lastVibeTime;
         function renderFrame() {
           const now = Date.now();
           let rareMoved = false;
@@ -1610,13 +1624,15 @@ function atlas(invokeType) {
 
           if (!lastVibeCameraPos) {
             lastVibeCameraPos = camera.position.clone();
+            lastVibeTime = now;
           } else {
             const vibeDist = Math.sqrt(
               (camera.position.x - lastVibeCameraPos.x) * (camera.position.x - lastVibeCameraPos.x) +
               (camera.position.y - lastVibeCameraPos.y) * (camera.position.y - lastVibeCameraPos.y) +
               (camera.position.z - lastVibeCameraPos.z) * (camera.position.z - lastVibeCameraPos.z));
-            if (Number.isFinite(vibeDist) && vibeDist > 0.1) {
+            if (Number.isFinite(vibeDist) && vibeDist > 0.1 && (now - lastVibeTime) > 200) {
               lastVibeCameraPos.copy(camera.position);
+              lastVibeTime = now;
               try {
                 if (typeof navigator.vibrate === 'function') {
                   navigator.vibrate(30);
