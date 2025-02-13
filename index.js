@@ -465,7 +465,7 @@ function atlas(invokeType) {
     }
   }
 
-  function runNode(invokeType) {
+  async function runNode(invokeType) {
 
     function patchLibExports() {
       /** @type {typeof import('./lib/lib')} */
@@ -955,6 +955,35 @@ function atlas(invokeType) {
       return continueUpdateUsers;
 
     })();
+
+    async function makeSmallFirehoseDump(count) {
+      if (!count) count = 200;
+      const firehoses = [];
+      let start = Date.now();
+      for await (const { commit, op, record } of api.operationsFirehose()) {
+        if (!record) continue;
+        if (!firehoses.length) start = Date.now();
+        const entry = {
+          ...record,
+          cid: op.cid + '',
+          action: op.action,
+          path: op.path,
+          timestamp: Date.now() - start
+        };
+        const keys = Object.keys(entry).sort();
+        firehoses.push(
+          '{ '+keys.map(key =>  JSON.stringify(key) + ':' + JSON.stringify(entry[key])).join(',\n  ')+' }'
+        );
+        if (firehoses.length > count) break;
+      }
+
+      fs.writeFileSync(
+        path.resolve(__dirname, '../atlas-db/firehose.json'),
+        '[\n' +
+        firehoses.join(',\n') +
+        '\n]\n',
+        'utf8');
+    }
   
 
     console.log('node: ', invokeType);
@@ -966,10 +995,7 @@ function atlas(invokeType) {
     patchLibExports();
     patchApi();
 
-    //shared.debugDumpFirehose();
-
-    continueUpdateUsers();
-
+    makeSmallFirehoseDump(2000);
 
   }
 
