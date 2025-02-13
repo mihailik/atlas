@@ -675,7 +675,7 @@ function atlas(invokeType) {
        * @param {HTMLElement} flyingElem
        */
       function addFlyingElement(flyingElem) {
-        const flyDurationMsec = 6000;
+        const flyDurationMsec = 2000;
         flyingElem.className += ' flying';
         flyingElem.style.animationDuration = flyDurationMsec + 'ms';  
         view.appendChild(flyingElem);
