@@ -124,7 +124,10 @@ export function massSpotMesh({ clock: clockArg, spots, get }) {
   });
 
   const mesh = new Mesh(geometry, material);
-  mesh.frustumCulled = false;
+
+  // seems to serve no purpose, but might slow things, let's cut it out for now
+  // mesh.frustumCulled = false;
+
   mesh.onBeforeRender = () => {
     material.uniforms['time'].value = clock.now() / 1000;
   };
@@ -162,7 +165,7 @@ export function massSpotMesh({ clock: clockArg, spots, get }) {
  * @param {TParticle[]} newSpots
  */
   function updateNodes(newSpots) {
-    newSpots = newSpots;
+    spots = newSpots;
     if (newSpots.length > geometry.instanceCount || newSpots.length < geometry.instanceCount / 2) {
       const newAllocateCount = Math.max(
         Math.floor(newSpots.length * 1.5),

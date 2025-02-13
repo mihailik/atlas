@@ -16,7 +16,7 @@ export function loadRelativeScriptJsonp(relativePath, scriptAlreadyExists) {
     return (
       new Promise(resolve => setTimeout(resolve, 300))
         .then(() =>
-          loadDirect(relativePath.replace(/^\.\.\//, 'https://oyin.bo/'), false)
+          loadDirect(relativePath.replace(/^\.\.\//, 'https://mihailik.github.io/'), false)
         )
     );
   }
