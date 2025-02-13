@@ -1951,7 +1951,16 @@ function atlas(invokeType) {
                 children: [
                   flashesSection = elem('span', {
                     children: [
-                      elem('span', { opacity: '0.6', textContent: '@' }),
+                      elem('span', {
+                        textContent: '@', style: `
+                          opacity: 0.6;
+                          color: transparent;
+                          text-shadow: cornflowerblue 0px 0px 0px;
+                          font-size: 91%;
+                          position: relative;
+                          display: inline-block;
+                          top: -0.07em;
+                      ` }),
                       labelsElem = elem('span', { opacity: '0.8', textContent: '0' }),
                       hitTestElem = elem('span', { opacity: '0.8', style: `
                         opacity: 0.8;
@@ -1960,7 +1969,16 @@ function atlas(invokeType) {
                         position: relative;
                         top: -0.5em;
                       ` }),
-                      elem('span', { opacity: '0.6', textContent: ' \u263a' }),
+                      elem('span', {
+                        textContent: ' \ud83d\ude3a', style: `
+                          opacity: 0.6;
+                          color: transparent;
+                          text-shadow: cornflowerblue 0px 0px 0px;
+                          font-size: 68%;
+                          position: relative;
+                          display: inline-block;
+                          top: -0.15em;
+                      ` }),
                       avatarImagesElem = elem('span', { opacity: '0.8', textContent: '0' }),
                       elem('span', {
                         style: `
