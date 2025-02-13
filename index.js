@@ -2199,7 +2199,7 @@ function atlas(invokeType) {
         let avatarRequestSuccesses = 0;
         let avatarRequestFailures = 0;
 
-        /** @type {{ [shortDID: string]: string | Promise<string> }} */
+        /** @type {{ [shortDID: string]: string | Promise<string> & { priority: number } }} */
         const avatarCids = {};
 
         const atClient = new atproto.BskyAgent({ service: 'https://bsky.social/xrpc' });
@@ -2404,8 +2404,8 @@ function atlas(invokeType) {
             let avatarCidPromise = avatarCids[user.shortDID];
             if (avatarCidPromise === 'none') return;
             if (typeof avatarCidPromise === 'string') return makeAvatarTexture(avatarCidPromise);
-            if (!avatarCidPromise)
-              avatarCidPromise = avatarCids[user.shortDID] = avatarRequestQueue.eventually(user.shortDID, getAvatarCid);
+            if (avatarCidPromise) avatarCidPromise.priority += 10;
+            else avatarCidPromise = avatarCids[user.shortDID] = avatarRequestQueue.eventually(user.shortDID, getAvatarCid);
 
             avatarCidPromise.then(makeAvatarTexture);
 
