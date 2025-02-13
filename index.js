@@ -495,6 +495,33 @@ function atlas(invokeType) {
   }
 
   /**
+   * @param {number} x1
+   * @param {number} y1
+   * @param {number} x2
+   * @param {number} y2
+   */
+  function distance2D(x1, y1, x2, y2) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  /**
+   * @param {number} x1
+   * @param {number} y1
+   * @param {number} z1
+   * @param {number} x2
+   * @param {number} y2
+   * @param {number} z2
+   */
+  function distance3D(x1, y1, z1, x2, y2, z2) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const dz = z2 - z1;
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+  }
+
+  /**
  * @param {number} x
  * @param {number} y
  * @param {{x: { min: number, max: number}, y: { min: number, max: number }}} bounds
@@ -503,7 +530,7 @@ function atlas(invokeType) {
   function mapUserCoordsToAtlas(x, y, bounds, result) {
     const xRatiod = (x - bounds.x.min) / (bounds.x.max - bounds.x.min) - 0.5;
     const yRatiod = (y - bounds.y.min) / (bounds.y.max - bounds.y.min) - 0.5;
-    const r = Math.sqrt(xRatiod * xRatiod + yRatiod * yRatiod);
+    const r = distance2D(xRatiod, yRatiod, 0, 0);
     let h = (1 - r * r) * 0.3 - 0.265;
     result.x = xRatiod;
     result.y = -yRatiod;
@@ -660,6 +687,23 @@ function atlas(invokeType) {
 
     matches.sort((m1, m2) => m2[1] - m1[1]);
     return matches?.length ? matches : undefined;
+  }
+
+  function makeClock() {
+    const clock = {
+      worldStartTime: Date.now(),
+      nowMSec: 0,
+      nowSeconds: 0,
+      update
+    };
+
+    return clock;
+
+    function update() {
+      clock.nowSeconds =
+        (clock.nowMSec = Date.now() - clock.worldStartTime)
+        / 1000;
+    }
   }
 
   async function runBrowser(invokeType) {
@@ -825,6 +869,9 @@ function atlas(invokeType) {
         const firehoseTrackingRenderer = trackFirehose({ users, usersBounds, clock });
         scene.add(firehoseTrackingRenderer.mesh);
 
+        const geoLayer = renderGeoLabels({ users, usersBounds, clock, userTiles: proximityTiles });
+        for (const geoLabel of geoLayer.textEntries) scene.add(geoLabel);
+
         startAnimation();
 
         function startAnimation() {
@@ -837,7 +884,7 @@ function atlas(invokeType) {
           }
 
           let lastCameraUpdate;
-          /** @type {{ x: number, y: number, z: number }} */
+          /** @type {THREE.Vector3} */
           let lastCameraPos;
           let lastRender;
           let lastBottomStatsUpdate;
@@ -846,17 +893,14 @@ function atlas(invokeType) {
           function renderFrame() {
             clock.update();
 
+            geoLayer.updateWithCamera(camera.position);
+
             let rareMoved = false;
             if (!lastCameraPos || !(clock.nowMSec < lastCameraUpdate + 200)) {
               lastCameraUpdate = clock.nowMSec;
-              if (!lastCameraPos) lastCameraPos = {
-                x: NaN, y: NaN, z: NaN
-              };
+              if (!lastCameraPos) lastCameraPos = new THREE.Vector3(NaN, NaN, NaN);
 
-              const dist = Math.sqrt(
-                (camera.position.x - lastCameraPos.x) * (camera.position.x - lastCameraPos.x) +
-                (camera.position.y - lastCameraPos.y) * (camera.position.y - lastCameraPos.y) +
-                (camera.position.z - lastCameraPos.z) * (camera.position.z - lastCameraPos.z));
+              const dist = camera.position.distanceTo(lastCameraPos);
 
               if (!(dist < 0.0001)) {
                 rareMoved = true;
@@ -867,10 +911,7 @@ function atlas(invokeType) {
               lastVibeCameraPos = camera.position.clone();
               lastVibeTime = clock.nowMSec;
             } else {
-              const vibeDist = Math.sqrt(
-                (camera.position.x - lastVibeCameraPos.x) * (camera.position.x - lastVibeCameraPos.x) +
-                (camera.position.y - lastVibeCameraPos.y) * (camera.position.y - lastVibeCameraPos.y) +
-                (camera.position.z - lastVibeCameraPos.z) * (camera.position.z - lastVibeCameraPos.z));
+              const vibeDist = camera.position.distanceTo(lastVibeCameraPos);
               if (Number.isFinite(vibeDist) && vibeDist > 0.1 && (clock.nowMSec - lastVibeTime) > 200) {
                 lastVibeCameraPos.copy(camera.position);
                 lastVibeTime = clock.nowMSec;
@@ -893,9 +934,7 @@ function atlas(invokeType) {
             stats.end();
 
             if (rareMoved) {
-              lastCameraPos.x = camera.position.x;
-              lastCameraPos.y = camera.position.y;
-              lastCameraPos.z = camera.position.z;
+              lastCameraPos.copy(camera.position);
               domElements.status.update(
                 camera,
                 orbit.rotating,
@@ -999,7 +1038,7 @@ function atlas(invokeType) {
             const [, xSpace, ySpace, weight] = users[shortDID];
             mapUserCoordsToAtlas(xSpace, ySpace, usersBounds, xyhBuf);
             const weightRatio = weight / usersBounds.weight.max;
-            pos.set(xyhBuf.x, xyhBuf.h, xyhBuf.y, weight ? Math.max(0.0007, 0.01 * weightRatio * Math.sqrt(weightRatio)) : 0.001);
+            pos.set(xyhBuf.x, xyhBuf.h, xyhBuf.y, weight ? Math.max(0.0007, 0.01 * weightRatio * Math.sqrt(weightRatio)) : 0.0005);
           },
           userColorer: defaultUserColorer
         })
@@ -1140,7 +1179,7 @@ function atlas(invokeType) {
           const startCameraPosition = camera.position.clone();
           const startCameraTarget = controls.target.clone();
 
-          const r = Math.sqrt(xyh.x * xyh.x + xyh.y * xyh.y);
+          const r = distance2D(xyh.x, xyh.y, 0, 0);
           const angle = Math.atan2(xyh.y, xyh.x);
           const xMiddle = (r + 0.6) * Math.cos(angle);
           const yMiddle = (r + 0.6) * Math.sin(angle);
@@ -1810,7 +1849,7 @@ function atlas(invokeType) {
 
         const xyhBuf = { x: 0, y: 0, h: 0 };
         mapUserCoordsToAtlas(xSpace, ySpace, usersBounds, xyhBuf);
-        const r = Math.sqrt(xyhBuf.x * xyhBuf.x + xyhBuf.y * xyhBuf.y);
+        const r = distance2D(xyhBuf.x, xyhBuf.y, 0, 0);
         const angle = Math.atan2(xyhBuf.y, xyhBuf.x);
         const xPlus = (r + 0.09) * Math.cos(angle);
         const yPlus = (r + 0.09) * Math.sin(angle);
@@ -1981,7 +2020,7 @@ function atlas(invokeType) {
        *  clock: ReturnType<typeof makeClock>
        * }} _
        */
-      function renderLargeUsersCaptions({ users, usersBounds, userTiles, clock }) {
+      function renderGeoLabels({ users, usersBounds, userTiles, clock }) {
         /**
          * @typedef {{
          *  shortDID: string;
@@ -1989,19 +2028,61 @@ function atlas(invokeType) {
          * }} LabelInfo
          */
 
-        /** @type {Set<LabelInfo>} */
-        const labels = new Set();
+        // /** @type {Set<LabelInfo>} */
+        // const labels = new Set();
+
+        const NUMBER_OF_LARGEST = 100;
+        const largestUsers = Object.keys(users).sort((a, b) => users[b][3] - users[a][3]).slice(0, NUMBER_OF_LARGEST);
+
+        /** @type {(THREE.Group & { handleText: import('troika-three-text').Text })[]} */
+        const textEntries = [];
+        for (const shortDID of largestUsers) {
+          const [shortHandle, xSpace, ySpace, weight] = users[shortDID];
+          const xyhBuf = { x: 0, y: 0, h: 0 };
+          mapUserCoordsToAtlas(xSpace, ySpace, usersBounds, xyhBuf);
+
+          const userColor = defaultUserColorer(shortDID) >> 8;
+
+          const handleText = new troika_three_text.Text();
+          handleText.text = '@' + shortHandle;
+          handleText.fontSize = 0.002;
+          handleText.color = userColor;
+          handleText.outlineWidth = 0.0002;
+          handleText.outlineBlur = 0.0005;
+          handleText.position.set(-0.001, 0.005, 0);
+          handleText.sync(() => {
+            var info = handleText.textRenderInfo;
+          });
+
+          const group = /** @type {THREE.Group & { handleText: import('troika-three-text').Text }} */(new THREE.Group());
+          group.position.set(xyhBuf.x, xyhBuf.h, xyhBuf.y);
+          group.add(/** @type {*} */(handleText));
+          group.handleText = handleText;
+          //group.scale.set(10, 10, 10);
+
+          textEntries.push(group);
+        }
 
         return {
+          textEntries,
           updateWithCamera
         };
 
         /** @param {THREE.Vector3} cameraPos */
         function updateWithCamera(cameraPos) {
+
+          for (const group of textEntries) {
+            group.rotation.y = Math.atan2(
+              (cameraPos.x - group.position.x),
+              (cameraPos.z - group.position.z));
+            group.handleText.sync();
+          }
+
           // const tiles = userTiles.findTiles(
           //   { spaceX: cameraPos.x, spaceY: cameraPos.y },
           //   (shortDID, usrTuple, usrSpaceX, usrSpaceY) => {
-
+          //     const cameraDistance = distance2D(cameraPos.x, cameraPos.y, usrSpaceX, usrSpaceY);
+          //     return cameraDistance < 0.1;
           //   });
         }
       }
@@ -2282,23 +2363,6 @@ function atlas(invokeType) {
 
           geometry.instanceCount = userKeys.length;
         }
-      }
-    }
-
-    function makeClock() {
-      const clock = {
-        worldStartTime: Date.now(),
-        nowMSec: 0,
-        nowSeconds: 0,
-        update
-      };
-
-      return clock;
-
-      function update() {
-        clock.nowSeconds =
-          (clock.nowMSec = Date.now() - clock.worldStartTime)
-          / 1000;
       }
     }
 
