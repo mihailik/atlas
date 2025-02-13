@@ -714,6 +714,7 @@ function atlas(invokeType) {
 
         function createFarUsersMesh() {
           const { mesh } = billboardShaderRenderer({
+            worldStartTime,
             fragmentShader: `
             `,
             userKeys: Object.keys(users),
@@ -894,6 +895,7 @@ function atlas(invokeType) {
 
         function flashesRenderer() {
           const rend = billboardShaderRenderer({
+            worldStartTime,
             vertexShader: /* glsl */`
             float startTime = min(extra.x, extra.y);
             float endTime = max(extra.x, extra.y);
@@ -1681,73 +1683,74 @@ function atlas(invokeType) {
         }
       }
 
-      /**
-       * @param {THREE.BufferGeometry} geometry
-       */
-      function geometryVertices(geometry) {
-        const geoPos = geometry.getAttribute('position');
-        const index = geometry.getIndex();
-        if (index) {
-          const positions = [];
-          for (let i = 0; i < index.count; i++) {
-            const posIndex = index.getX(i);
-            positions.push(geoPos.getX(posIndex));
-            positions.push(geoPos.getY(posIndex));
-            positions.push(geoPos.getZ(posIndex));
-          }
-          return positions;
-        } else {
-          const positions = [];
-          for (let i = 0; i < geoPos.count; i++) {
-            positions.push(geoPos.getX(i));
-            positions.push(geoPos.getY(i));
-            positions.push(geoPos.getZ(i));
-          }
-          return positions;
+    }
+
+    /** @param {THREE.BufferGeometry} geometry */
+    function geometryVertices(geometry) {
+      const geoPos = geometry.getAttribute('position');
+      const index = geometry.getIndex();
+      if (index) {
+        const positions = [];
+        for (let i = 0; i < index.count; i++) {
+          const posIndex = index.getX(i);
+          positions.push(geoPos.getX(posIndex));
+          positions.push(geoPos.getY(posIndex));
+          positions.push(geoPos.getZ(posIndex));
         }
+        return positions;
+      } else {
+        const positions = [];
+        for (let i = 0; i < geoPos.count; i++) {
+          positions.push(geoPos.getX(i));
+          positions.push(geoPos.getY(i));
+          positions.push(geoPos.getZ(i));
+        }
+        return positions;
       }
+    }
 
-      /**
-       * @param {{
-       *  userKeys: K[];
-       *  userMapper(i: K, pos: THREE.Vector4, extra: THREE.Vector4): void;
-       *  userColorer(i: K): number;
-       *  fragmentShader?: string;
-       *  vertexShader?: string;
-       * }} _ 
-       * @template K
-       */
-      function billboardShaderRenderer({ userKeys, userMapper, userColorer, fragmentShader, vertexShader }) {
-        const baseHalf = 1.5 * Math.tan(Math.PI / 6);
-        let positions = new Float32Array([
-          -baseHalf, 0, -0.5,
-          0, 0, 1,
-          baseHalf, 0, -0.5
-        ]);
-        let offsetBuf = new Float32Array(userKeys.length * 4);
-        let diameterBuf = new Float32Array(userKeys.length);
-        let extraBuf = new Float32Array(userKeys.length * 4);
-        let colorBuf = new Uint32Array(userKeys.length);
-        let offsetsChanged = false;
-        let diametersChanged = false;
-        let colorsChanged = false;
-        let extrasChanged = false;
+    /**
+     * @param {{
+     *  worldStartTime: number;
+     *  userKeys: K[];
+     *  userMapper(i: K, pos: THREE.Vector4, extra: THREE.Vector4): void;
+     *  userColorer(i: K): number;
+     *  fragmentShader?: string;
+     *  vertexShader?: string;
+     * }} _ 
+     * @template K
+     */
+    function billboardShaderRenderer({ worldStartTime, userKeys, userMapper, userColorer, fragmentShader, vertexShader }) {
+      const baseHalf = 1.5 * Math.tan(Math.PI / 6);
+      let positions = new Float32Array([
+        -baseHalf, 0, -0.5,
+        0, 0, 1,
+        baseHalf, 0, -0.5
+      ]);
+      let offsetBuf = new Float32Array(userKeys.length * 4);
+      let diameterBuf = new Float32Array(userKeys.length);
+      let extraBuf = new Float32Array(userKeys.length * 4);
+      let colorBuf = new Uint32Array(userKeys.length);
+      let offsetsChanged = false;
+      let diametersChanged = false;
+      let colorsChanged = false;
+      let extrasChanged = false;
 
-        populateAttributes(userKeys);
+      populateAttributes(userKeys);
 
-        const geometry = new THREE.InstancedBufferGeometry();
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-        geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(offsetBuf, 3));
-        geometry.setAttribute('diameter', new THREE.InstancedBufferAttribute(diameterBuf, 1));
-        geometry.setAttribute('extra', new THREE.InstancedBufferAttribute(extraBuf, 4));
-        geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colorBuf, 1));
-        geometry.instanceCount = userKeys.length;
+      const geometry = new THREE.InstancedBufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(offsetBuf, 3));
+      geometry.setAttribute('diameter', new THREE.InstancedBufferAttribute(diameterBuf, 1));
+      geometry.setAttribute('extra', new THREE.InstancedBufferAttribute(extraBuf, 4));
+      geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colorBuf, 1));
+      geometry.instanceCount = userKeys.length;
 
-        const material = new THREE.ShaderMaterial({
-          uniforms: {
-            time: { value: Date.now() / 1000.0 }
-          },
-          vertexShader: /* glsl */`
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          time: { value: Date.now() / 1000.0 }
+        },
+        vertexShader: /* glsl */`
             precision highp float;
 
             attribute vec3 offset;
@@ -1785,7 +1788,7 @@ function atlas(invokeType) {
               ${vertexShader || ''}
             }
           `,
-          fragmentShader: /* glsl */`
+        fragmentShader: /* glsl */`
             precision highp float;
 
             uniform float time;
@@ -1829,121 +1832,120 @@ function atlas(invokeType) {
               ${fragmentShader || ''}
             }
           `,
-          side: THREE.BackSide,
-          forceSinglePass: true,
-          transparent: true,
-          depthWrite: false
-        });
+        side: THREE.BackSide,
+        forceSinglePass: true,
+        transparent: true,
+        depthWrite: false
+      });
 
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.frustumCulled = false;
-        mesh.onBeforeRender = () => {
-          material.uniforms['time'].value = (Date.now() - worldStartTime) / 1000;
-        };
-        return { mesh, updateUserSet };
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.frustumCulled = false;
+      mesh.onBeforeRender = () => {
+        material.uniforms['time'].value = (Date.now() - worldStartTime) / 1000;
+      };
+      return { mesh, updateUserSet };
 
-        /**
-         * @param {Parameters<typeof userColorer>[0][]} userKeys
-         */
-        function populateAttributes(userKeys) {
-          const userPos = new THREE.Vector4();
-          const userExtra = new THREE.Vector4();
-          const oldUserPos = new THREE.Vector4();
-          const oldUserExtra = new THREE.Vector4();
+      /**
+       * @param {Parameters<typeof userColorer>[0][]} userKeys
+       */
+      function populateAttributes(userKeys) {
+        const userPos = new THREE.Vector4();
+        const userExtra = new THREE.Vector4();
+        const oldUserPos = new THREE.Vector4();
+        const oldUserExtra = new THREE.Vector4();
 
-          for (let i = 0; i < userKeys.length; i++) {
-            const user = userKeys[i];
-            userExtra.copy(userPos.set(NaN, NaN, NaN, NaN));
-            userMapper(user, userPos, userExtra);
-            oldUserPos.set(
-              offsetBuf[i * 3 + 0],
-              offsetBuf[i * 3 + 1],
-              offsetBuf[i * 3 + 2],
-              diameterBuf[i]);
-            oldUserExtra.set(
-              extraBuf[i * 4 + 0],
-              extraBuf[i * 4 + 1],
-              extraBuf[i * 4 + 2],
-              extraBuf[i * 4 + 3]);
-            const oldColor = colorBuf[i];
+        for (let i = 0; i < userKeys.length; i++) {
+          const user = userKeys[i];
+          userExtra.copy(userPos.set(NaN, NaN, NaN, NaN));
+          userMapper(user, userPos, userExtra);
+          oldUserPos.set(
+            offsetBuf[i * 3 + 0],
+            offsetBuf[i * 3 + 1],
+            offsetBuf[i * 3 + 2],
+            diameterBuf[i]);
+          oldUserExtra.set(
+            extraBuf[i * 4 + 0],
+            extraBuf[i * 4 + 1],
+            extraBuf[i * 4 + 2],
+            extraBuf[i * 4 + 3]);
+          const oldColor = colorBuf[i];
 
-            offsetBuf[i * 3 + 0] = userPos.x;
-            offsetBuf[i * 3 + 1] = userPos.y;
-            offsetBuf[i * 3 + 2] = userPos.z;
-            diameterBuf[i] = userPos.w;
-            colorBuf[i] = userColorer(user);
-            extraBuf[i * 4 + 0] = userExtra.x;
-            extraBuf[i * 4 + 1] = userExtra.y;
-            extraBuf[i * 4 + 2] = userExtra.z;
-            extraBuf[i * 4 + 3] = userExtra.w;
+          offsetBuf[i * 3 + 0] = userPos.x;
+          offsetBuf[i * 3 + 1] = userPos.y;
+          offsetBuf[i * 3 + 2] = userPos.z;
+          diameterBuf[i] = userPos.w;
+          colorBuf[i] = userColorer(user);
+          extraBuf[i * 4 + 0] = userExtra.x;
+          extraBuf[i * 4 + 1] = userExtra.y;
+          extraBuf[i * 4 + 2] = userExtra.z;
+          extraBuf[i * 4 + 3] = userExtra.w;
 
-            if (offsetBuf[i * 3 + 0] !== oldUserPos.x
-              || offsetBuf[i * 3 + 1] !== oldUserPos.y
-              || offsetBuf[i * 3 + 2] !== oldUserPos.z)
-              offsetsChanged = true;
-            if (diameterBuf[i] !== oldUserPos.w)
-              diametersChanged = true;
-            if (extraBuf[i * 4 + 0] !== oldUserExtra.x ||
-              extraBuf[i * 4 + 1] !== oldUserExtra.y ||
-              extraBuf[i * 4 + 2] !== oldUserExtra.z ||
-              extraBuf[i * 4 + 3] !== oldUserExtra.w)
-              extrasChanged = true;
-            if (colorBuf[i] !== oldColor)
-              colorsChanged = true;
-          }
+          if (offsetBuf[i * 3 + 0] !== oldUserPos.x
+            || offsetBuf[i * 3 + 1] !== oldUserPos.y
+            || offsetBuf[i * 3 + 2] !== oldUserPos.z)
+            offsetsChanged = true;
+          if (diameterBuf[i] !== oldUserPos.w)
+            diametersChanged = true;
+          if (extraBuf[i * 4 + 0] !== oldUserExtra.x ||
+            extraBuf[i * 4 + 1] !== oldUserExtra.y ||
+            extraBuf[i * 4 + 2] !== oldUserExtra.z ||
+            extraBuf[i * 4 + 3] !== oldUserExtra.w)
+            extrasChanged = true;
+          if (colorBuf[i] !== oldColor)
+            colorsChanged = true;
+        }
+      }
+
+      /**
+       * @param {Parameters<typeof userColorer>[0][]} userKeys
+       */
+      function updateUserSet(userKeys) {
+        if (userKeys.length > colorBuf.length) {
+          const newSize = Math.max(colorBuf.length * 2, userKeys.length);
+          offsetBuf = new Float32Array(newSize * 3);
+          diameterBuf = new Float32Array(newSize);
+          colorBuf = new Uint32Array(newSize);
+          extraBuf = new Float32Array(newSize * 4);
+
+          geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(offsetBuf, 3));
+          geometry.attributes['offset'].needsUpdate = true;
+          geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colorBuf, 1));
+          geometry.attributes['color'].needsUpdate = true;
+          geometry.setAttribute('diameter', new THREE.InstancedBufferAttribute(diameterBuf, 1));
+          geometry.attributes['diameter'].needsUpdate = true;
+          geometry.setAttribute('extra', new THREE.InstancedBufferAttribute(extraBuf, 4));
+          geometry.attributes['extra'].needsUpdate = true;
         }
 
-        /**
-         * @param {Parameters<typeof userColorer>[0][]} userKeys
-         */
-        function updateUserSet(userKeys) {
-          if (userKeys.length > colorBuf.length) {
-            const newSize = Math.max(colorBuf.length * 2, userKeys.length);
-            offsetBuf = new Float32Array(newSize * 3);
-            diameterBuf = new Float32Array(newSize);
-            colorBuf = new Uint32Array(newSize);
-            extraBuf = new Float32Array(newSize * 4);
+        populateAttributes(userKeys);
+        if (offsetsChanged) geometry.attributes['offset'].needsUpdate = true;
+        if (diametersChanged) geometry.attributes['diameter'].needsUpdate = true;
+        if (colorsChanged) geometry.attributes['color'].needsUpdate = true;
+        if (extrasChanged) geometry.attributes['extra'].needsUpdate = true;
 
-            geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(offsetBuf, 3));
-            geometry.attributes['offset'].needsUpdate = true;
-            geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colorBuf, 1));
-            geometry.attributes['color'].needsUpdate = true;
-            geometry.setAttribute('diameter', new THREE.InstancedBufferAttribute(diameterBuf, 1));
-            geometry.attributes['diameter'].needsUpdate = true;
-            geometry.setAttribute('extra', new THREE.InstancedBufferAttribute(extraBuf, 4));
-            geometry.attributes['extra'].needsUpdate = true;
-          }
-
-          populateAttributes(userKeys);
-          if (offsetsChanged) geometry.attributes['offset'].needsUpdate = true;
-          if (diametersChanged) geometry.attributes['diameter'].needsUpdate = true;
-          if (colorsChanged) geometry.attributes['color'].needsUpdate = true;
-          if (extrasChanged) geometry.attributes['extra'].needsUpdate = true;
-          
-          const LOG_BUFFER_UPDATES = false;
-          if (LOG_BUFFER_UPDATES && (
-            offsetsChanged ||
-            diametersChanged ||
-            colorsChanged ||
-            extrasChanged)) {
-            console.log('changed: ' +
-              (offsetsChanged ? 'o' : ' ') +
-              (diametersChanged ? 'd' : ' ') +
-              (colorsChanged ? 'c' : ' ') +
-              (extrasChanged ? 'x' : ' '),
-              ' ',
-              userKeys.length
-            );
-          }
-
-          offsetsChanged =
-            diametersChanged =
-            colorsChanged =
-            extrasChanged =
-            false;
-
-          geometry.instanceCount = userKeys.length;
+        const LOG_BUFFER_UPDATES = false;
+        if (LOG_BUFFER_UPDATES && (
+          offsetsChanged ||
+          diametersChanged ||
+          colorsChanged ||
+          extrasChanged)) {
+          console.log('changed: ' +
+            (offsetsChanged ? 'o' : ' ') +
+            (diametersChanged ? 'd' : ' ') +
+            (colorsChanged ? 'c' : ' ') +
+            (extrasChanged ? 'x' : ' '),
+            ' ',
+            userKeys.length
+          );
         }
+
+        offsetsChanged =
+          diametersChanged =
+          colorsChanged =
+          extrasChanged =
+          false;
+
+        geometry.instanceCount = userKeys.length;
       }
     }
 
@@ -2018,6 +2020,7 @@ function atlas(invokeType) {
   }
 
 
+  /** @param {{ [shortDID: string]: [unknown, x: number, y: number] }} users */
   function getMassCenter(users) {
     let xTotal = 0, yTotal = 0, count = 0;
     for (const shortDID in users) {
