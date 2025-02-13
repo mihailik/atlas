@@ -317,16 +317,18 @@ function atlas(invokeType) {
         stats,
         clock,
         controls
-      } = setups();
+      } = setupScene();
 
       const domElements = appendToDOM();
       handleWindowResizes();
       webgl_buffergeometry_instancing_demo();
       startAnimation();
 
-      function setups() {
+      function setupScene() {
         const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.01, 1000);
+        camera.position.x = 0.05;
         camera.position.z = 2;
+        camera.position.y = 0.1;
 
         // const camera = new THREE.PerspectiveCamera(
         //   15,
@@ -366,6 +368,8 @@ function atlas(invokeType) {
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.maxDistance = 40 * 1000;
         controls.enableDamping = true;
+
+        scene.add(new THREE.AxesHelper(1000));
 
         return {
           scene,
@@ -426,13 +430,6 @@ function atlas(invokeType) {
           stats.begin();
           const delta = clock.getDelta();
 
-          const time = performance.now();
-          const object = scene.children.find(child => child.material);
-
-          object.rotation.y = time * 0.0005;
-          object.material.uniforms['time'].value = time * 0.005;
-          object.material.uniforms['sineTime'].value = Math.sin(object.material.uniforms['time'].value * 0.05);
-
           renderer.render(scene, camera);
           controls.update(delta);
           stats.end();
@@ -440,17 +437,14 @@ function atlas(invokeType) {
       }
 
       function webgl_buffergeometry_instancing_demo() {
-        const vector = new THREE.Vector4();
 
-        const positions = [];
+        const positions = [
+          0.025, - 0.025, -0.01,
+          -0.025, 0.025, -0.01,
+          0, 0, 0.03
+        ];
         const offsets = [];
         const colors = [];
-        const orientationsStart = [];
-        const orientationsEnd = [];
-
-        positions.push(0.025, - 0.025, -0.01);
-        positions.push(- 0.025, 0.025, -0.01);
-        positions.push(0, 0, 0.03);
 
         const bounds = { x: { min: NaN, max: NaN }, y: { min: NaN, max: NaN } };
         for (const shortDID in users) {
@@ -473,40 +467,18 @@ function atlas(invokeType) {
           const r = Math.sqrt(xRatiod * xRatiod + yRatiod * yRatiod);
 
           offsets.push(xRatiod - 0.5, (1 - r * r) * 0.6, yRatiod - 0.5);
-          //offsets.push(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
-
 
           // colors
           colors.push(Math.random(), Math.random(), Math.random(), Math.random());
-
-          // orientation start
-          //vector.set(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1);
-          vector.set(0, 0, 0, 0);
-          vector.normalize();
-
-          orientationsStart.push(vector.x, vector.y, vector.z, vector.w);
-
-          // orientation end
-          //vector.set(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1);
-          vector.set(0.01, 0.01, 0.01, 0);
-          vector.normalize();
-
-          orientationsEnd.push(vector.x, vector.y, vector.z, vector.w);
 
           //if (instanceCount > 20) break;
         }
 
         const geometry = new THREE.InstancedBufferGeometry();
-        //geometry.instanceCount = instanceCount;
-
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-
         geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(new Float32Array(offsets), 3));
         geometry.setAttribute('color', new THREE.InstancedBufferAttribute(new Float32Array(colors), 4));
-        geometry.setAttribute('orientationStart', new THREE.InstancedBufferAttribute(new Float32Array(orientationsStart), 4));
-        geometry.setAttribute('orientationEnd', new THREE.InstancedBufferAttribute(new Float32Array(orientationsEnd), 4));
 
-        // material
         const material = new THREE.ShaderMaterial({
           uniforms: {
             'time': { value: 1.0 },
@@ -515,30 +487,19 @@ function atlas(invokeType) {
           vertexShader: `
 		precision highp float;
 
-		uniform float sineTime;
+		uniform float time;
 
 		attribute vec3 offset;
 		attribute vec4 color;
-		attribute vec4 orientationStart;
-		attribute vec4 orientationEnd;
 
 		varying vec3 vPosition;
 		varying vec4 vColor;
 
 		void main(){
 
-			vPosition = offset * max( abs( sineTime * 2.0 + 1.0 ), 0.5 ) + position;
-			vec4 orientation = normalize( mix( orientationStart, orientationEnd, sineTime ) );
-			vec3 vcV = cross( orientation.xyz, vPosition );
-			vPosition = vcV * ( 2.0 * orientation.w ) + ( cross( orientation.xyz, vcV ) * 1.5 + vPosition );
-
 			vColor = color;
 
-			gl_Position = projectionMatrix * modelViewMatrix * vec4( mix(vPosition, offset, 0.9), 0.7 );
-
-      // gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 0.2 );
-        //vec4(position, 1) * 0.2;
-        //mix(gl_Position, vec4(position, 1) * 0.2, 0.999);
+			gl_Position = projectionMatrix * modelViewMatrix * vec4( mix(position, offset * 1.6, 0.9), 1.0 );
 
 		}
           `,
@@ -560,8 +521,6 @@ function atlas(invokeType) {
           `,
           side: THREE.DoubleSide,
           forceSinglePass: true,
-          transparent: true
-
         });
 
         //
