@@ -2,7 +2,7 @@
 
 export function makeClock() {
   const clock = {
-    worldStartTime: Date.now(),
+    worldStartTime: performance.now(),
     nowMSec: 0,
     nowSeconds: 0,
     update
@@ -12,7 +12,7 @@ export function makeClock() {
 
   function update() {
     clock.nowSeconds =
-      (clock.nowMSec = Date.now() - clock.worldStartTime)
+      (clock.nowMSec = performance.now() - clock.worldStartTime)
       / 1000;
   }
 }
