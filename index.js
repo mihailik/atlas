@@ -20419,14 +20419,14 @@ void main() {
   // src/webgl/clock.js
   function makeClock() {
     const clock = {
-      worldStartTime: Date.now(),
+      worldStartTime: performance.now(),
       nowMSec: 0,
       nowSeconds: 0,
       update
     };
     return clock;
     function update() {
-      clock.nowSeconds = (clock.nowMSec = Date.now() - clock.worldStartTime) / 1e3;
+      clock.nowSeconds = (clock.nowMSec = performance.now() - clock.worldStartTime) / 1e3;
     }
   }
 
@@ -20483,7 +20483,7 @@ void main() {
   }
 
   // package.json
-  var version = "1.2.1";
+  var version = "1.2.2";
 
   // src/webgl/create-dom-layout.js
   function createDOMLayout({ canvas3D, statsElem, userCount }) {
