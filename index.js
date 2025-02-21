@@ -27798,18 +27798,7 @@ if (edgeAlpha == 0.0) {
       color: 0
     };
     const baseHalf = 1.5 * Math.tan(Math.PI / 6);
-    let useTriangleRender = Math.random() > 10;
-    const positions = useTriangleRender ? new Float32Array([
-      -baseHalf,
-      0,
-      -0.5,
-      0,
-      0,
-      1,
-      baseHalf,
-      0,
-      -0.5
-    ]) : new Float32Array([0, 0, 0]);
+    const positions = new Float32Array([0, 0, 0]);
     let offsetBuf = new Float32Array(spots.length * 4);
     let diameterBuf = new Float32Array(spots.length);
     let colorBuf = new Uint32Array(spots.length);
@@ -27836,17 +27825,22 @@ if (edgeAlpha == 0.0) {
 
             uniform float time;
 
-            varying vec3 vPosition;
             varying float vDiameter;
 
             varying float vFogDist;
             varying vec4 vColor;
 
             void main(){
-              vPosition = position;
               vDiameter = diameter;
 
-              ${useTriangleRender ? "gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1) + vec4(position.xz * abs(diameter), 0, 0));" : "gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1.0));\ngl_PointSize = abs(diameter);"}
+              gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1.0));
+
+              vec4 viewPosition = modelViewMatrix * vec4(offset, 1.0);
+              float distanceToCamera = length(viewPosition.xyz);
+
+              // Calculate the point size based on the diameter and distance (example)
+              float pointScaleFactor = 1600.0; // Adjust this value to control scaling
+              gl_PointSize = abs(diameter) * pointScaleFactor / distanceToCamera;
 
               // https://stackoverflow.com/a/22899161/140739
               uint rInt = (color / uint(256 * 256 * 256)) % uint(256);
@@ -27869,12 +27863,11 @@ if (edgeAlpha == 0.0) {
             varying vec4 vColor;
             varying float vFogDist;
 
-            varying vec3 vPosition;
             varying float vDiameter;
 
             void main() {
               gl_FragColor = vColor;
-              float dist = distance(vPosition, vec3(0.0));
+              float dist = distance(gl_PointCoord, vec2(0.5, 0.5));
               dist = vDiameter < 0.0 ? dist * 2.0 : dist;
               float rad = 0.25;
               float areola = rad * 2.0;
@@ -27902,7 +27895,7 @@ if (edgeAlpha == 0.0) {
       transparent: true,
       depthWrite: false
     });
-    const mesh = useTriangleRender ? new Mesh(geometry, material) : new Points(geometry, material);
+    const mesh = new Points(geometry, material);
     mesh.onBeforeRender = () => {
       material.uniforms["time"].value = clock.now() / 1e3;
     };
@@ -29057,17 +29050,7 @@ if (edgeAlpha == 0.0) {
     const stop = { x: 0, y: 0, z: 0, time: 0, mass: 0, color: 0 };
     const control = { x: 0, y: 0, z: 0 };
     const baseHalf = 1.5 * Math.tan(Math.PI / 6);
-    let positions = new Float32Array([
-      -baseHalf,
-      0,
-      -0.5,
-      0,
-      0,
-      1,
-      baseHalf,
-      0,
-      -0.5
-    ]);
+    const positions = new Float32Array([0, 0, 0]);
     let [
       offsetStartBuf,
       offsetStopBuf,
@@ -29099,7 +29082,6 @@ if (edgeAlpha == 0.0) {
 
             uniform float time;
 
-            varying vec3 vPosition;
             varying vec3 vOffset;
             varying float vDiameter;
 
@@ -29114,7 +29096,6 @@ if (edgeAlpha == 0.0) {
             }
 
             void main(){
-              vPosition = position;
 
             float startTime = min(timeStartStop.x, timeStartStop.y);
             float endTime = max(timeStartStop.x, timeStartStop.y);
@@ -29156,7 +29137,14 @@ if (edgeAlpha == 0.0) {
               vDiameter = 0.0;
             }
 
-            gl_Position = projectionMatrix * (modelViewMatrix * vec4(vOffset, 1) + vec4(position.xz * abs(vDiameter), 0, 0));
+            gl_Position = projectionMatrix * (modelViewMatrix * vec4(vOffset, 1.0));
+
+            vec4 viewPosition = modelViewMatrix * vec4(vOffset, 1.0);
+            float distanceToCamera = length(viewPosition.xyz);
+
+            // Calculate the point size based on the diameter and distance (example)
+            float pointScaleFactor = 1600.0; // Adjust this value to control scaling
+            gl_PointSize = abs(vDiameter) * pointScaleFactor / distanceToCamera;
 
             vFogDist = distance(cameraPosition, vOffset);
 
@@ -29170,7 +29158,6 @@ if (edgeAlpha == 0.0) {
 
             uniform float time;
 
-            varying vec3 vPosition;
             varying vec3 vOffset;
             varying float vDiameter;
 
@@ -29181,7 +29168,7 @@ if (edgeAlpha == 0.0) {
 
             void main() {
               gl_FragColor = vColor;
-              float dist = distance(vPosition, vec3(0.0));
+              float dist = distance(gl_PointCoord * 2.0, vec2(1.0, 1.0));
               dist = vDiameter < 0.0 ? dist * 2.0 : dist;
               float rad = 0.25;
               float areola = rad * 2.0;
@@ -29202,8 +29189,6 @@ if (edgeAlpha == 0.0) {
               gl_FragColor = vDiameter < 0.0 ? vec4(0.6,0.0,0.0,1.0) : gl_FragColor;
               gl_FragColor.a = bodyRatio;
 
-              vec3 position = vPosition;
-
               gl_FragColor = tintColor;
 
               float stepIn = 0.05;
@@ -29217,7 +29202,7 @@ if (edgeAlpha == 0.0) {
 
               gl_FragColor.a *= timeFunction;
 
-              vec2 posR = vec2(vPosition.x, vPosition.z);
+              vec2 posR = gl_PointCoord * 2.0 - vec2(1.0, 1.0);
               float angle = vTimeRatio * 3.14159 * 4.0;
               mat2 rotationMatrix = mat2(
                 cos(angle), -sin(angle),
@@ -29241,7 +29226,7 @@ if (edgeAlpha == 0.0) {
       transparent: true,
       depthWrite: false
     });
-    const mesh = new Mesh(geometry, material);
+    const mesh = new Points(geometry, material);
     mesh.onBeforeRender = () => {
       material.uniforms["time"].value = clock.now() / 1e3;
     };
@@ -29361,17 +29346,7 @@ if (edgeAlpha == 0.0) {
       stop: 0
     };
     const baseHalf = 1.5 * Math.tan(Math.PI / 6);
-    let positions = new Float32Array([
-      -baseHalf,
-      0,
-      -0.5,
-      0,
-      0,
-      1,
-      baseHalf,
-      0,
-      -0.5
-    ]);
+    const positions = new Float32Array([0, 0, 0]);
     let offsetBuf = new Float32Array(flashes.length * 4);
     let diameterBuf = new Float32Array(flashes.length);
     let extraBuf = new Float32Array(flashes.length * 2);
@@ -29400,7 +29375,6 @@ if (edgeAlpha == 0.0) {
 
             uniform float time;
 
-            varying vec3 vPosition;
             varying vec3 vOffset;
             varying float vDiameter;
             varying vec2 vExtra;
@@ -29409,12 +29383,18 @@ if (edgeAlpha == 0.0) {
             varying vec4 vColor;
 
             void main(){
-              vPosition = position;
               vOffset = offset;
               vDiameter = diameter;
               vExtra = extra;
 
-              gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1) + vec4(position.xz * abs(diameter), 0, 0));
+              gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1.0));
+
+              vec4 viewPosition = modelViewMatrix * vec4(offset, 1.0);
+              float distanceToCamera = length(viewPosition.xyz);
+
+              // Calculate the point size based on the diameter and distance (example)
+              float pointScaleFactor = 2000.0; // Adjust this value to control scaling
+              gl_PointSize = abs(diameter) * pointScaleFactor / distanceToCamera;
 
               // https://stackoverflow.com/a/22899161/140739
               uint rInt = (color / uint(256 * 256 * 256)) % uint(256);
@@ -29446,14 +29426,13 @@ if (edgeAlpha == 0.0) {
             varying vec4 vColor;
             varying float vFogDist;
 
-            varying vec3 vPosition;
             varying vec3 vOffset;
             varying float vDiameter;
             varying vec2 vExtra;
 
             void main() {
               gl_FragColor = vColor;
-              float dist = distance(vPosition, vec3(0.0));
+              float dist = distance(gl_PointCoord * 2.0, vec2(1.0, 1.0));
               dist = vDiameter < 0.0 ? dist * 2.0 : dist;
               float rad = 0.25;
               float areola = rad * 2.0;
@@ -29474,7 +29453,7 @@ if (edgeAlpha == 0.0) {
               gl_FragColor = vDiameter < 0.0 ? vec4(0.6,0.0,0.0,1.0) : gl_FragColor;
               gl_FragColor.a = bodyRatio;
 
-              vec3 position = vPosition;
+              vec3 position = vec3((gl_PointCoord * 2.0 - vec2(1.0, 1.0)), 0.0) * vDiameter;
               vec3 offset = vOffset;
               float diameter = vDiameter;
               vec2 extra = vExtra;
@@ -29508,7 +29487,7 @@ if (edgeAlpha == 0.0) {
             //   timeRatio < 0.0 ? vec4(1.0, 0.0, 0.0, tintColor.a) :
             //   vec4(1.0, 1.0, 0.0, tintColor.a);
 
-            float diagBias = 1.0 - max(abs(vPosition.x), abs(vPosition.z));
+            float diagBias = 1.0 - max(abs(gl_PointCoord.x - 0.5), abs(gl_PointCoord.y - 0.5));
             float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
             gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra;
 
@@ -29520,7 +29499,7 @@ if (edgeAlpha == 0.0) {
       transparent: true,
       depthWrite: false
     });
-    const mesh = new Mesh(geometry, material);
+    const mesh = new Points(geometry, material);
     mesh.onBeforeRender = () => {
       material.uniforms["time"].value = clock.now() / 1e3;
     };
