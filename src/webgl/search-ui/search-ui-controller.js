@@ -4,12 +4,10 @@ import { elem } from '../../ui/elem';
 
 /**
  * @param {{
- *  titleBarElem: HTMLElement,
- *  onSearchText: (searchText: string) => void,
- *  onClose: () => void
+ *  titleBarElem: HTMLElement
  * }} _
  */
-export function searchUIController({ titleBarElem, onSearchText, onClose }) {
+export function searchUIController({ titleBarElem }) {
   /** @type {HTMLElement} */
   var searchBar;
   /** @type {HTMLInputElement} */
@@ -21,7 +19,13 @@ export function searchUIController({ titleBarElem, onSearchText, onClose }) {
 
   const controller = {
     showSearch,
-    closeSearch
+    closeSearch,
+    /** @type {((searchText: string) => void) | undefined} */
+    onSearchText: undefined,
+    /** @type {(() => void) | undefined} */
+    onLayout: undefined,
+    /** @type {(() => void) | undefined} */
+    onClose: undefined
   };
 
   titleBarElem.addEventListener('click', () => {
@@ -51,8 +55,14 @@ export function searchUIController({ titleBarElem, onSearchText, onClose }) {
                   `,
             onkeydown: (event) => {
               if (event.keyCode === 27) {
-                onClose();
+                controller.onClose?.();
                 closeSearch();
+              } else if (event.keyCode === 13 && searchInput.value === '/layout') {
+                searchInput.value = '';
+                controller.onClose?.();
+                closeSearch();
+                controller.onLayout?.();
+                return;
               }
               handleInputEventQueue(event);
             },
@@ -75,7 +85,7 @@ export function searchUIController({ titleBarElem, onSearchText, onClose }) {
             textContent: '\u00d7', // cross like x, but not a letter
             onclick: (event) => {
               event.preventDefault();
-              onClose();
+              controller.onClose?.();
               closeSearch();
             }
           })
@@ -113,6 +123,6 @@ export function searchUIController({ titleBarElem, onSearchText, onClose }) {
 
     console.log('search to run: ', currentSearchInputStr);
     latestSearchInputApplied = currentSearchInputStr;
-    onSearchText(currentSearchInputStr);
+    controller.onSearchText?.(currentSearchInputStr);
   }
 }

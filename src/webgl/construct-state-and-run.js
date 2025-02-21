@@ -6,17 +6,16 @@ import { processUsersToTiles } from '../tiles/process-users-to-tiles';
 import { makeClock } from './clock';
 import { createDOMLayout } from './create-dom-layout';
 import { focusAndHighlightUser } from './focus-and-highlight-user';
+import { handleWindowResizes } from './handle-window-resizes';
+import { renderGeoLabels } from './render-geo-labels';
 import { searchReportMatches } from './search-ui/search-report-matches';
 import { searchReportNoMatches } from './search-ui/search-report-no-matches';
 import { searchUIController } from './search-ui/search-ui-controller';
 import { setupOrbitControls } from './setup-orbit-controls';
 import { setupScene } from './setup-scene';
-import { handleWindowResizes } from './handle-window-resizes';
-import { trackTouchWithCallback } from './track-touch-with-callback';
 import { trackFirehose } from './track-firehose';
-import { renderGeoLabels } from './render-geo-labels';
-import { rndUserColorer } from '../colors/rnd-user-colorer';
-import { shortenDID } from '../coldsky-borrow/shorten';
+import { trackTouchWithCallback } from './track-touch-with-callback';
+import { shaderLayoutGPU } from './shader-layout/shader-layout-gpgpu';
 
 export async function constructStateAndRun(rawUsers) {
   const startProcessToTiles = Date.now();
@@ -50,26 +49,59 @@ export async function constructStateAndRun(rawUsers) {
 
   const searchUI = searchUIController({
     titleBarElem: domElements.title,
-    onClose: () => {
-      domElements.subtitleArea.innerHTML = '';
-    },
-    onSearchText: (searchText) => {
-      const matches = findUserMatches(searchText, usersAndTiles.all);
-      if (!matches?.length) searchReportNoMatches(domElements.subtitleArea);
-      else searchReportMatches({
-        matches,
-        subtitleArea: domElements.subtitleArea,
-        onChipClick: (shortDID, userChipElem) =>
-          focusAndHighlightUser({
-            shortDID,
-            users: usersAndTiles.byShortDID,
-            scene,
-            camera,
-            moveAndPauseRotation: orbit.moveAndPauseRotation
-          })
+  });
+
+  searchUI.onClose = () => {
+    domElements.subtitleArea.innerHTML = '';
+  };
+
+  searchUI.onSearchText = (searchText) => {
+    const matches = findUserMatches(searchText, usersAndTiles.all);
+    if (!matches?.length) searchReportNoMatches(domElements.subtitleArea);
+    else searchReportMatches({
+      matches,
+      subtitleArea: domElements.subtitleArea,
+      onChipClick: (shortDID, userChipElem) =>
+        focusAndHighlightUser({
+          shortDID,
+          users: usersAndTiles.byShortDID,
+          scene,
+          camera,
+          moveAndPauseRotation: orbit.moveAndPauseRotation
+        })
+    });
+  };
+
+  /** @type {ReturnType<typeof shaderLayoutGPU<import('..').UserEntry>> | undefined} */
+  let shaderLayout;
+
+  searchUI.onLayout = () => {
+    if (!shaderLayout) {
+      shaderLayout = shaderLayoutGPU({
+        particles: usersAndTiles.all,
+        get: (user, coords) => {
+          coords.x = user.x;
+          coords.y = user.h;
+          coords.z = user.y;
+          coords.mass = user.weight;
+          coords.vx = 0;
+          coords.vy = 0;
+          coords.vz = 0;
+        },
+        set: (user, coords) => {
+          user.x = coords.x;
+          user.h = coords.y;
+          user.y = coords.z;
+          user.vx = coords.vx;
+          user.vy = coords.vy;
+          user.vz = coords.vz;
+        }
       });
     }
-  });
+
+    const applyBack = shaderLayout.runLayout(0.001);
+    applyBack();
+  };
 
   if (location.hash?.length > 3) {
     const hasCommaParts = location.hash.replace(/^#/, '').split(',');
