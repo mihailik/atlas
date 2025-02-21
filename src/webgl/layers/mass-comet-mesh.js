@@ -1,6 +1,14 @@
 // @ts-check
 
-import { BackSide, Float32BufferAttribute, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial } from 'three';
+import {
+  BackSide,
+  Float32BufferAttribute,
+  InstancedBufferAttribute,
+  InstancedBufferGeometry,
+  Mesh,
+  Points,
+  ShaderMaterial
+} from 'three';
 
 /**
  * @template {{
@@ -29,11 +37,7 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
   const control = { x: 0, y: 0, z: 0 };
 
   const baseHalf = 1.5 * Math.tan(Math.PI / 6);
-  let positions = new Float32Array([
-    -baseHalf, 0, -0.5,
-    0, 0, 1,
-    baseHalf, 0, -0.5
-  ]);
+  const positions = new Float32Array([0, 0, 0]);
 
   let [
     offsetStartBuf,
@@ -67,7 +71,6 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
 
             uniform float time;
 
-            varying vec3 vPosition;
             varying vec3 vOffset;
             varying float vDiameter;
 
@@ -82,7 +85,6 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
             }
 
             void main(){
-              vPosition = position;
 
             float startTime = min(timeStartStop.x, timeStartStop.y);
             float endTime = max(timeStartStop.x, timeStartStop.y);
@@ -124,7 +126,14 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
               vDiameter = 0.0;
             }
 
-            gl_Position = projectionMatrix * (modelViewMatrix * vec4(vOffset, 1) + vec4(position.xz * abs(vDiameter), 0, 0));
+            gl_Position = projectionMatrix * (modelViewMatrix * vec4(vOffset, 1.0));
+
+            vec4 viewPosition = modelViewMatrix * vec4(vOffset, 1.0);
+            float distanceToCamera = length(viewPosition.xyz);
+
+            // Calculate the point size based on the diameter and distance (example)
+            float pointScaleFactor = 1600.0; // Adjust this value to control scaling
+            gl_PointSize = abs(vDiameter) * pointScaleFactor / distanceToCamera;
 
             vFogDist = distance(cameraPosition, vOffset);
 
@@ -135,7 +144,6 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
 
             uniform float time;
 
-            varying vec3 vPosition;
             varying vec3 vOffset;
             varying float vDiameter;
 
@@ -146,7 +154,7 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
 
             void main() {
               gl_FragColor = vColor;
-              float dist = distance(vPosition, vec3(0.0));
+              float dist = distance(gl_PointCoord * 2.0, vec2(1.0, 1.0));
               dist = vDiameter < 0.0 ? dist * 2.0 : dist;
               float rad = 0.25;
               float areola = rad * 2.0;
@@ -167,8 +175,6 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
               gl_FragColor = vDiameter < 0.0 ? vec4(0.6,0.0,0.0,1.0) : gl_FragColor;
               gl_FragColor.a = bodyRatio;
 
-              vec3 position = vPosition;
-
               gl_FragColor = tintColor;
 
               float stepIn = 0.05;
@@ -182,7 +188,7 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
 
               gl_FragColor.a *= timeFunction;
 
-              vec2 posR = vec2(vPosition.x, vPosition.z);
+              vec2 posR = gl_PointCoord * 2.0 - vec2(1.0, 1.0);
               float angle = vTimeRatio * 3.14159 * 4.0;
               mat2 rotationMatrix = mat2(
                 cos(angle), -sin(angle),
@@ -206,7 +212,7 @@ export function massCometMesh({ clock: clockArg, comets, get }) {
     depthWrite: false
   });
 
-  const mesh = new Mesh(geometry, material);
+  const mesh = new Points(geometry, material);
 
   // seems to serve no purpose, but might slow things, let's cut it out for now
   // mesh.frustumCulled = false;

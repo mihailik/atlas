@@ -13,10 +13,13 @@
   "dependencies": {
     "bski": "*",
     "esbuild": "*",
+    "gpu.js": "^2.16.0",
     "three": "*",
     "troika-three-text": "*"
   },
   "overrides": {
-    "three": "$three"
+    "three": "$three",
+    "webgpu": "./webgpu-node-mock",
+    "gl": "./webgpu-node-mock/gl"
   }
 }

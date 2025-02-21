@@ -7,6 +7,7 @@ import {
   InstancedBufferAttribute,
   InstancedBufferGeometry,
   Mesh,
+  Points,
   ShaderMaterial
 } from 'three';
 
@@ -37,11 +38,9 @@ export function massSpotMesh({ clock: clockArg, spots, get }) {
   };
 
   const baseHalf = 1.5 * Math.tan(Math.PI / 6);
-  let positions = new Float32Array([
-    -baseHalf, 0, -0.5,
-    0, 0, 1,
-    baseHalf, 0, -0.5
-  ]);
+
+  const positions = new Float32Array([0, 0, 0]);
+
   let offsetBuf = new Float32Array(spots.length * 4);
   let diameterBuf = new Float32Array(spots.length);
   let colorBuf = new Uint32Array(spots.length);
@@ -69,17 +68,22 @@ export function massSpotMesh({ clock: clockArg, spots, get }) {
 
             uniform float time;
 
-            varying vec3 vPosition;
             varying float vDiameter;
 
             varying float vFogDist;
             varying vec4 vColor;
 
             void main(){
-              vPosition = position;
               vDiameter = diameter;
 
-              gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1) + vec4(position.xz * abs(diameter), 0, 0));
+              gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1.0));
+
+              vec4 viewPosition = modelViewMatrix * vec4(offset, 1.0);
+              float distanceToCamera = length(viewPosition.xyz);
+
+              // Calculate the point size based on the diameter and distance (example)
+              float pointScaleFactor = 1600.0; // Adjust this value to control scaling
+              gl_PointSize = abs(diameter) * pointScaleFactor / distanceToCamera;
 
               // https://stackoverflow.com/a/22899161/140739
               uint rInt = (color / uint(256 * 256 * 256)) % uint(256);
@@ -99,12 +103,11 @@ export function massSpotMesh({ clock: clockArg, spots, get }) {
             varying vec4 vColor;
             varying float vFogDist;
 
-            varying vec3 vPosition;
             varying float vDiameter;
 
             void main() {
               gl_FragColor = vColor;
-              float dist = distance(vPosition, vec3(0.0));
+              float dist = distance(gl_PointCoord, vec2(0.5, 0.5));
               dist = vDiameter < 0.0 ? dist * 2.0 : dist;
               float rad = 0.25;
               float areola = rad * 2.0;
@@ -132,7 +135,7 @@ export function massSpotMesh({ clock: clockArg, spots, get }) {
     depthWrite: false
   });
 
-  const mesh = new Mesh(geometry, material);
+  const mesh = new Points(geometry, material);
 
   // seems to serve no purpose, but might slow things, let's cut it out for now
   // mesh.frustumCulled = false;

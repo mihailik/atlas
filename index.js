@@ -8324,6 +8324,121 @@
       object
     };
   }
+  var PointsMaterial = class extends Material {
+    constructor(parameters) {
+      super();
+      this.isPointsMaterial = true;
+      this.type = "PointsMaterial";
+      this.color = new Color(16777215);
+      this.map = null;
+      this.alphaMap = null;
+      this.size = 1;
+      this.sizeAttenuation = true;
+      this.fog = true;
+      this.setValues(parameters);
+    }
+    copy(source) {
+      super.copy(source);
+      this.color.copy(source.color);
+      this.map = source.map;
+      this.alphaMap = source.alphaMap;
+      this.size = source.size;
+      this.sizeAttenuation = source.sizeAttenuation;
+      this.fog = source.fog;
+      return this;
+    }
+  };
+  var _inverseMatrix = /* @__PURE__ */ new Matrix4();
+  var _ray = /* @__PURE__ */ new Ray();
+  var _sphere = /* @__PURE__ */ new Sphere();
+  var _position$2 = /* @__PURE__ */ new Vector3();
+  var Points = class extends Object3D {
+    constructor(geometry = new BufferGeometry(), material = new PointsMaterial()) {
+      super();
+      this.isPoints = true;
+      this.type = "Points";
+      this.geometry = geometry;
+      this.material = material;
+      this.updateMorphTargets();
+    }
+    copy(source, recursive) {
+      super.copy(source, recursive);
+      this.material = Array.isArray(source.material) ? source.material.slice() : source.material;
+      this.geometry = source.geometry;
+      return this;
+    }
+    raycast(raycaster, intersects) {
+      const geometry = this.geometry;
+      const matrixWorld = this.matrixWorld;
+      const threshold = raycaster.params.Points.threshold;
+      const drawRange = geometry.drawRange;
+      if (geometry.boundingSphere === null) geometry.computeBoundingSphere();
+      _sphere.copy(geometry.boundingSphere);
+      _sphere.applyMatrix4(matrixWorld);
+      _sphere.radius += threshold;
+      if (raycaster.ray.intersectsSphere(_sphere) === false) return;
+      _inverseMatrix.copy(matrixWorld).invert();
+      _ray.copy(raycaster.ray).applyMatrix4(_inverseMatrix);
+      const localThreshold = threshold / ((this.scale.x + this.scale.y + this.scale.z) / 3);
+      const localThresholdSq = localThreshold * localThreshold;
+      const index = geometry.index;
+      const attributes = geometry.attributes;
+      const positionAttribute = attributes.position;
+      if (index !== null) {
+        const start = Math.max(0, drawRange.start);
+        const end = Math.min(index.count, drawRange.start + drawRange.count);
+        for (let i = start, il = end; i < il; i++) {
+          const a = index.getX(i);
+          _position$2.fromBufferAttribute(positionAttribute, a);
+          testPoint(_position$2, a, localThresholdSq, matrixWorld, raycaster, intersects, this);
+        }
+      } else {
+        const start = Math.max(0, drawRange.start);
+        const end = Math.min(positionAttribute.count, drawRange.start + drawRange.count);
+        for (let i = start, l = end; i < l; i++) {
+          _position$2.fromBufferAttribute(positionAttribute, i);
+          testPoint(_position$2, i, localThresholdSq, matrixWorld, raycaster, intersects, this);
+        }
+      }
+    }
+    updateMorphTargets() {
+      const geometry = this.geometry;
+      const morphAttributes = geometry.morphAttributes;
+      const keys = Object.keys(morphAttributes);
+      if (keys.length > 0) {
+        const morphAttribute = morphAttributes[keys[0]];
+        if (morphAttribute !== void 0) {
+          this.morphTargetInfluences = [];
+          this.morphTargetDictionary = {};
+          for (let m = 0, ml = morphAttribute.length; m < ml; m++) {
+            const name = morphAttribute[m].name || String(m);
+            this.morphTargetInfluences.push(0);
+            this.morphTargetDictionary[name] = m;
+          }
+        }
+      }
+    }
+  };
+  function testPoint(point, index, localThresholdSq, matrixWorld, raycaster, intersects, object) {
+    const rayPointDistanceSq = _ray.distanceSqToPoint(point);
+    if (rayPointDistanceSq < localThresholdSq) {
+      const intersectPoint = new Vector3();
+      _ray.closestPointToPoint(point, intersectPoint);
+      intersectPoint.applyMatrix4(matrixWorld);
+      const distance = raycaster.ray.origin.distanceTo(intersectPoint);
+      if (distance < raycaster.near || distance > raycaster.far) return;
+      intersects.push({
+        distance,
+        distanceToRay: Math.sqrt(rayPointDistanceSq),
+        point: intersectPoint,
+        index,
+        face: null,
+        faceIndex: null,
+        barycoord: null,
+        object
+      });
+    }
+  }
   var DepthTexture = class extends Texture {
     constructor(width, height, type, mapping, wrapS, wrapT, magFilter, minFilter, anisotropy, format = DepthFormat) {
       if (format !== DepthFormat && format !== DepthStencilFormat) {
@@ -26599,7 +26714,7 @@ if (edgeAlpha == 0.0) {
   var _changeEvent = { type: "change" };
   var _startEvent = { type: "start" };
   var _endEvent = { type: "end" };
-  var _ray = new Ray();
+  var _ray2 = new Ray();
   var _plane = new Plane();
   var _TILT_LIMIT = Math.cos(70 * MathUtils.DEG2RAD);
   var _v = new Vector3();
@@ -26838,13 +26953,13 @@ if (edgeAlpha == 0.0) {
           if (this.screenSpacePanning) {
             this.target.set(0, 0, -1).transformDirection(this.object.matrix).multiplyScalar(newRadius).add(this.object.position);
           } else {
-            _ray.origin.copy(this.object.position);
-            _ray.direction.set(0, 0, -1).transformDirection(this.object.matrix);
-            if (Math.abs(this.object.up.dot(_ray.direction)) < _TILT_LIMIT) {
+            _ray2.origin.copy(this.object.position);
+            _ray2.direction.set(0, 0, -1).transformDirection(this.object.matrix);
+            if (Math.abs(this.object.up.dot(_ray2.direction)) < _TILT_LIMIT) {
               this.object.lookAt(this.target);
             } else {
               _plane.setFromNormalAndCoplanarPoint(this.object.up, this.target);
-              _ray.intersectPlane(_plane, this.target);
+              _ray2.intersectPlane(_plane, this.target);
             }
           }
         }
@@ -27683,7 +27798,8 @@ if (edgeAlpha == 0.0) {
       color: 0
     };
     const baseHalf = 1.5 * Math.tan(Math.PI / 6);
-    let positions = new Float32Array([
+    let useTriangleRender = Math.random() > 10;
+    const positions = useTriangleRender ? new Float32Array([
       -baseHalf,
       0,
       -0.5,
@@ -27693,7 +27809,7 @@ if (edgeAlpha == 0.0) {
       baseHalf,
       0,
       -0.5
-    ]);
+    ]) : new Float32Array([0, 0, 0]);
     let offsetBuf = new Float32Array(spots.length * 4);
     let diameterBuf = new Float32Array(spots.length);
     let colorBuf = new Uint32Array(spots.length);
@@ -27730,7 +27846,7 @@ if (edgeAlpha == 0.0) {
               vPosition = position;
               vDiameter = diameter;
 
-              gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1) + vec4(position.xz * abs(diameter), 0, 0));
+              ${useTriangleRender ? "gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1) + vec4(position.xz * abs(diameter), 0, 0));" : "gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1.0));\ngl_PointSize = abs(diameter);"}
 
               // https://stackoverflow.com/a/22899161/140739
               uint rInt = (color / uint(256 * 256 * 256)) % uint(256);
@@ -27786,7 +27902,7 @@ if (edgeAlpha == 0.0) {
       transparent: true,
       depthWrite: false
     });
-    const mesh = new Mesh(geometry, material);
+    const mesh = useTriangleRender ? new Mesh(geometry, material) : new Points(geometry, material);
     mesh.onBeforeRender = () => {
       material.uniforms["time"].value = clock.now() / 1e3;
     };

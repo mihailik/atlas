@@ -1,6 +1,14 @@
 // @ts-check
 
-import { BackSide, Float32BufferAttribute, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial } from 'three';
+import {
+  BackSide,
+  Float32BufferAttribute,
+  InstancedBufferAttribute,
+  InstancedBufferGeometry,
+  Mesh,
+  Points,
+  ShaderMaterial
+} from 'three';
 
 /**
  * @template {{
@@ -33,11 +41,7 @@ export function massFlashMesh({ clock: clockArg, flashes, get }) {
   };
 
   const baseHalf = 1.5 * Math.tan(Math.PI / 6);
-  let positions = new Float32Array([
-    -baseHalf, 0, -0.5,
-    0, 0, 1,
-    baseHalf, 0, -0.5
-  ]);
+  const positions = new Float32Array([0, 0, 0]);
   let offsetBuf = new Float32Array(flashes.length * 4);
   let diameterBuf = new Float32Array(flashes.length);
   let extraBuf = new Float32Array(flashes.length * 2);
@@ -67,7 +71,6 @@ export function massFlashMesh({ clock: clockArg, flashes, get }) {
 
             uniform float time;
 
-            varying vec3 vPosition;
             varying vec3 vOffset;
             varying float vDiameter;
             varying vec2 vExtra;
@@ -76,12 +79,18 @@ export function massFlashMesh({ clock: clockArg, flashes, get }) {
             varying vec4 vColor;
 
             void main(){
-              vPosition = position;
               vOffset = offset;
               vDiameter = diameter;
               vExtra = extra;
 
-              gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1) + vec4(position.xz * abs(diameter), 0, 0));
+              gl_Position = projectionMatrix * (modelViewMatrix * vec4(offset, 1.0));
+
+              vec4 viewPosition = modelViewMatrix * vec4(offset, 1.0);
+              float distanceToCamera = length(viewPosition.xyz);
+
+              // Calculate the point size based on the diameter and distance (example)
+              float pointScaleFactor = 2000.0; // Adjust this value to control scaling
+              gl_PointSize = abs(diameter) * pointScaleFactor / distanceToCamera;
 
               // https://stackoverflow.com/a/22899161/140739
               uint rInt = (color / uint(256 * 256 * 256)) % uint(256);
@@ -110,14 +119,13 @@ export function massFlashMesh({ clock: clockArg, flashes, get }) {
             varying vec4 vColor;
             varying float vFogDist;
 
-            varying vec3 vPosition;
             varying vec3 vOffset;
             varying float vDiameter;
             varying vec2 vExtra;
 
             void main() {
               gl_FragColor = vColor;
-              float dist = distance(vPosition, vec3(0.0));
+              float dist = distance(gl_PointCoord * 2.0, vec2(1.0, 1.0));
               dist = vDiameter < 0.0 ? dist * 2.0 : dist;
               float rad = 0.25;
               float areola = rad * 2.0;
@@ -138,7 +146,7 @@ export function massFlashMesh({ clock: clockArg, flashes, get }) {
               gl_FragColor = vDiameter < 0.0 ? vec4(0.6,0.0,0.0,1.0) : gl_FragColor;
               gl_FragColor.a = bodyRatio;
 
-              vec3 position = vPosition;
+              vec3 position = vec3((gl_PointCoord * 2.0 - vec2(1.0, 1.0)), 0.0) * vDiameter;
               vec3 offset = vOffset;
               float diameter = vDiameter;
               vec2 extra = vExtra;
@@ -172,7 +180,7 @@ export function massFlashMesh({ clock: clockArg, flashes, get }) {
             //   timeRatio < 0.0 ? vec4(1.0, 0.0, 0.0, tintColor.a) :
             //   vec4(1.0, 1.0, 0.0, tintColor.a);
 
-            float diagBias = 1.0 - max(abs(vPosition.x), abs(vPosition.z));
+            float diagBias = 1.0 - max(abs(gl_PointCoord.x - 0.5), abs(gl_PointCoord.y - 0.5));
             float diagBiasUltra = diagBias * diagBias * diagBias * diagBias;
             gl_FragColor.a *= diagBiasUltra * diagBiasUltra * diagBiasUltra;
 
@@ -184,7 +192,7 @@ export function massFlashMesh({ clock: clockArg, flashes, get }) {
     depthWrite: false
   });
 
-  const mesh = new Mesh(geometry, material);
+  const mesh = new Points(geometry, material);
 
   // seems to serve no purpose, but might slow things, let's cut it out for now
   // mesh.frustumCulled = false;
