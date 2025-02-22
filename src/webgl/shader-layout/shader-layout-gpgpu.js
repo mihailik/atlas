@@ -1,7 +1,6 @@
 // @ts-check
 
 import gpuLib from 'gpu.js';
-import { Input } from 'gpu.js';
 
 var DEFAULT_GRAVITY = 9.8;
 
@@ -10,19 +9,22 @@ var DEFAULT_GRAVITY = 9.8;
  *  x?: number,
  *  y?: number,
  *  z?: number,
+ *  vx?: number,
+ *  vy?: number,
+ *  vz?: number,
  *  mass?: number,
  * }} TParticle
  *
  * @param {{
  *  gravity?: number,
  *  particles: TParticle[],
- *  get: (particle: TParticle, coords: { x: number, y: number, z: number, mass: number, vx: number, vy: number, vz: number }) => void
- *  set: (particle: TParticle, coords: { x: number, y: number, z: number, vx: number, vy: number, vz: number }) => void
+ *  get?: (particle: TParticle, coords: { index: number, x: number, y: number, z: number, mass: number, vx: number, vy: number, vz: number }) => void
+ *  set?: (particle: TParticle, coords: { index: number, x: number, y: number, z: number, vx: number, vy: number, vz: number }) => void
  * }} _ 
  */
 export function shaderLayoutGPU({ gravity, particles, get, set }) {
 
-  let [w,h] = fitDimensions(particles.length);
+  let [w, h] = fitDimensions(particles.length);
 
   const gpu = new gpuLib.GPU(); // TODO: try to request GPU?
 
@@ -33,14 +35,14 @@ export function shaderLayoutGPU({ gravity, particles, get, set }) {
     tactic: 'precision',
   })
     .setArgumentTypes({
-      positions: 'Array3D(3)',
+      positions: 'Array2D(3)',
       masses: 'Array',
-      velocities: 'Array3D(3)',
+      velocities: 'Array2D(3)',
       deltaTime: 'Float',
       count: 'Integer'
     })
     .setLoopMaxIterations((w + 1) * (h + 1));
-  
+
   let calcPositions = gpu.createKernel(nBodyPositions, {
     output: [w, h],
     constants: { w, h },
@@ -48,8 +50,8 @@ export function shaderLayoutGPU({ gravity, particles, get, set }) {
     tactic: 'precision'
   })
     .setArgumentTypes({
-      positions: 'Array3D(3)',
-      velocities: 'Array3D(3)',
+      positions: 'Array2D(3)',
+      velocities: 'Array2D(3)',
       deltaTime: 'Float',
       count: 'Integer'
     });
@@ -73,13 +75,19 @@ export function shaderLayoutGPU({ gravity, particles, get, set }) {
     runLayout
   };
 
+  function patchInput(arg, dim) {
+    arg.value = arg;
+    arg.size = dim;
+    return arg;
+  }
+
   /** @param {number} deltaTime */
   function runLayout(deltaTime) {
-    const posArg = texPositionsOut || new Input(/** @type {any} */(bufPositionsIn), [w, h, 3]);
+    const posArg = texPositionsOut || patchInput(/** @type {any} */(bufPositionsIn), [w, h, 3]);
     const velocitiesRes = /** @type {import('gpu.js').Texture} */(calcVelocities(
       posArg,
-      new Input(/** @type {any} */(bufMasses), [w, h]),
-      texVelocitiesOut || new Input(/** @type {any} */(bufVelocities), [w, h, 3]),
+      patchInput(/** @type {any} */(bufMasses), [w, h]),
+      texVelocitiesOut || patchInput(/** @type {any} */(bufVelocities), [w, h, 3]),
       deltaTime,
       particles.length));
 
@@ -104,15 +112,8 @@ export function shaderLayoutGPU({ gravity, particles, get, set }) {
     const positions = texPositionsOut.toArray();
     const velocities = texVelocitiesOut.toArray();
 
-    for (let i = 0; i < particles.length; i++) {
-      const particle = particles[i];
-      const [x, y, z] = /** @type {[number, number, number][]} */(positions)[i];
-      const [vx, vy, vz] = /** @type {[number, number, number][]} */(velocities)[i];
-
-      get(particle, { x, y, z, mass: 0, vx, vy, vz });
-    }
-
     const dummy = {
+      index: 0,
       x: 0, y: 0, z: 0,
       mass: 0,
       vx: 0, vy: 0, vz: 0
@@ -124,18 +125,31 @@ export function shaderLayoutGPU({ gravity, particles, get, set }) {
         dummy.mass = 0;
         dummy.vx = dummy.vy = dummy.vz = 0;
 
-        const particle = particles[indexH * w + indexW];
+        const index = indexH * w + indexW;
+        if (index >= particles.length) break;
+
+        const particle = particles[index];
 
         const posWH = positions[indexH][indexW];
-        dummy.x = posWH[0];
-        dummy.y = posWH[1];
-        dummy.z = posWH[2];
         const velWH = velocities[indexH][indexW];
-        dummy.vx = velWH[0];
-        dummy.vy = velWH[1];
-        dummy.vz = velWH[2];
 
-        set(particle, dummy);
+        if (typeof set === 'function') {
+          dummy.index = index;
+          dummy.x = posWH[0];
+          dummy.y = posWH[1];
+          dummy.z = posWH[2];
+          dummy.vx = velWH[0];
+          dummy.vy = velWH[1];
+          dummy.vz = velWH[2];
+          set(particle, dummy);
+        } else {
+          particle.x = posWH[0];
+          particle.y = posWH[1];
+          particle.z = posWH[2];
+          particle.vx = velWH[0];
+          particle.vy = velWH[1];
+          particle.vz = velWH[2];
+        }
       }
     }
   }
@@ -147,27 +161,43 @@ export function shaderLayoutGPU({ gravity, particles, get, set }) {
    */
   function populateBuffers(bufPositionsIn, bufMasses, bufVelocities) {
     const dummy = {
+      index: 0,
       x: 0, y: 0, z: 0,
       mass: 0,
       vx: 0, vy: 0, vz: 0
     };
 
     for (let i = 0; i < particles.length; i++) {
-      dummy.x = dummy.y = dummy.z = 0;
-      dummy.mass = 0;
-      dummy.vx = dummy.vy = dummy.vz = 0;
-
       const particle = particles[i];
-      get(particle, dummy);
+      const bufIndex = i * 3;
 
-      const index = i * 3;
-      bufPositionsIn[index] = dummy.x;
-      bufPositionsIn[index + 1] = dummy.y;
-      bufPositionsIn[index + 2] = dummy.z;
-      bufMasses[i] = dummy.mass;
-      bufVelocities[index] = dummy.vx;
-      bufVelocities[index + 1] = dummy.vy;
-      bufVelocities[index + 2] = dummy.vz;
+      if (typeof get === 'function') {
+        dummy.index = i;
+        dummy.x = particle.x || 0;
+        dummy.y = particle.y || 0;
+        dummy.z = particle.z || 0;
+        dummy.mass = particle.mass || 0;
+        dummy.vx = particle.vx || 0;
+        dummy.vy = particle.vy || 0;
+        dummy.vz = particle.vz || 0;
+        get(particle, dummy);
+
+        bufPositionsIn[bufIndex] = dummy.x;
+        bufPositionsIn[bufIndex + 1] = dummy.y;
+        bufPositionsIn[bufIndex + 2] = dummy.z;
+        bufMasses[i] = dummy.mass;
+        bufVelocities[bufIndex] = dummy.vx;
+        bufVelocities[bufIndex + 1] = dummy.vy;
+        bufVelocities[bufIndex + 2] = dummy.vz;
+      } else {
+        bufPositionsIn[bufIndex] = particle.x || 0;
+        bufPositionsIn[bufIndex + 1] = particle.y || 0;
+        bufPositionsIn[bufIndex + 2] = particle.z || 0;
+        bufMasses[i] = particle.mass || 0;
+        bufVelocities[bufIndex] = particle.vx || 0;
+        bufVelocities[bufIndex + 1] = particle.vy || 0;
+        bufVelocities[bufIndex + 2] = particle.vz || 0;
+      }
     }
   }
 
@@ -295,8 +325,14 @@ function nBodyVelocities(positions, masses, velocities, deltaTime, count) {
 function nBodyPositions(positions, velocities, deltaTime, count) {
   if (this.thread.y * this.constants.w + this.thread.x > count) return [0, 0, 0];
 
-  const [x, y, z] = positions[this.thread.y][this.thread.x];
-  const [vx, vy, vz] = velocities[this.thread.y][this.thread.x];
+  const xyz = positions[this.thread.y][this.thread.x];
+  const x = xyz[0];
+  const y = xyz[1];
+  const z = xyz[2];
+  const vXYZ = velocities[this.thread.y][this.thread.x];
+  const vx = vXYZ[0];
+  const vy = vXYZ[1];
+  const vz = vXYZ[2];
 
   const newX = x + vx * deltaTime;
   const newY = y + vy * deltaTime;

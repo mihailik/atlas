@@ -10092,7 +10092,7 @@ ${result.join("\n")}
           };
         }, {}], 36: [function(require2, module3, exports3) {
           const { utils } = require2("../utils");
-          const { Input: Input2 } = require2("../input");
+          const { Input } = require2("../input");
           class Kernel {
             static get isSupported() {
               throw new Error(`"isSupported" not implemented on ${this.name}`);
@@ -10269,7 +10269,7 @@ ${result.join("\n")}
               this.argumentBitRatios = new Int32Array(args.length);
               for (let i = 0; i < args.length; i++) {
                 const arg = args[i];
-                this.argumentSizes[i] = arg.constructor === Input2 ? arg.size : null;
+                this.argumentSizes[i] = arg.constructor === Input ? arg.size : null;
                 this.argumentBitRatios[i] = this.getBitRatio(arg);
               }
               if (this.argumentNames.length !== args.length) {
@@ -10474,7 +10474,7 @@ ${result.join("\n")}
                 return 4;
               } else if (Array.isArray(value2[0])) {
                 return this.getBitRatio(value2[0]);
-              } else if (value2.constructor === Input2) {
+              } else if (value2.constructor === Input) {
                 return this.getBitRatio(value2.value);
               }
               switch (value2.constructor) {
@@ -12627,7 +12627,7 @@ ${updateArr.join("")};`);
           };
         }, { "./kernel-value/array2": 41, "./kernel-value/array3": 42, "./kernel-value/array4": 43, "./kernel-value/boolean": 44, "./kernel-value/dynamic-html-image": 45, "./kernel-value/dynamic-html-video": 46, "./kernel-value/dynamic-memory-optimized-number-texture": 47, "./kernel-value/dynamic-number-texture": 48, "./kernel-value/dynamic-single-array": 49, "./kernel-value/dynamic-single-array1d-i": 50, "./kernel-value/dynamic-single-array2d-i": 51, "./kernel-value/dynamic-single-array3d-i": 52, "./kernel-value/dynamic-single-input": 53, "./kernel-value/dynamic-unsigned-array": 54, "./kernel-value/dynamic-unsigned-input": 55, "./kernel-value/float": 56, "./kernel-value/html-image": 57, "./kernel-value/html-video": 58, "./kernel-value/integer": 60, "./kernel-value/memory-optimized-number-texture": 61, "./kernel-value/number-texture": 62, "./kernel-value/single-array": 63, "./kernel-value/single-array1d-i": 64, "./kernel-value/single-array2d-i": 65, "./kernel-value/single-array3d-i": 66, "./kernel-value/single-input": 67, "./kernel-value/unsigned-array": 68, "./kernel-value/unsigned-input": 69 }], 40: [function(require2, module3, exports3) {
           const { WebGLKernelValue } = require2("./index");
-          const { Input: Input2 } = require2("../../../input");
+          const { Input } = require2("../../../input");
           class WebGLKernelArray extends WebGLKernelValue {
             checkSize(width, height) {
               if (!this.kernel.validate) return;
@@ -12668,7 +12668,7 @@ ${updateArr.join("")};`);
             getBitRatio(value2) {
               if (Array.isArray(value2[0])) {
                 return this.getBitRatio(value2[0]);
-              } else if (value2.constructor === Input2) {
+              } else if (value2.constructor === Input) {
                 return this.getBitRatio(value2.value);
               }
               switch (value2.constructor) {
@@ -17148,7 +17148,7 @@ void main(void) {
           const { GPU } = require2("./gpu");
           const { alias } = require2("./alias");
           const { utils } = require2("./utils");
-          const { Input: Input2, input } = require2("./input");
+          const { Input, input } = require2("./input");
           const { Texture: Texture2 } = require2("./texture");
           const { FunctionBuilder } = require2("./backend/function-builder");
           const { FunctionNode } = require2("./backend/function-node");
@@ -17173,7 +17173,7 @@ void main(void) {
             FunctionBuilder,
             FunctionNode,
             HeadlessGLKernel,
-            Input: Input2,
+            Input,
             input,
             Texture: Texture2,
             utils,
@@ -17191,7 +17191,7 @@ void main(void) {
             }
           };
         }, { "./alias": 5, "./backend/cpu/function-node": 6, "./backend/cpu/kernel": 8, "./backend/function-builder": 9, "./backend/function-node": 10, "./backend/function-tracer": 11, "./backend/gl/kernel": 13, "./backend/headless-gl/kernel": 34, "./backend/kernel": 36, "./backend/web-gl/function-node": 38, "./backend/web-gl/kernel": 70, "./backend/web-gl/kernel-value-maps": 39, "./backend/web-gl2/function-node": 73, "./backend/web-gl2/kernel": 105, "./backend/web-gl2/kernel-value-maps": 74, "./gpu": 108, "./input": 110, "./plugins/math-random-uniformly-distributed": 112, "./texture": 113, "./utils": 114 }], 110: [function(require2, module3, exports3) {
-          class Input2 {
+          class Input {
             constructor(value2, size) {
               this.value = value2;
               if (Array.isArray(size)) {
@@ -17234,10 +17234,10 @@ void main(void) {
             }
           }
           function input(value2, size) {
-            return new Input2(value2, size);
+            return new Input(value2, size);
           }
           module3.exports = {
-            Input: Input2,
+            Input,
             input
           };
         }, { "./utils": 114 }], 111: [function(require2, module3, exports3) {
@@ -17401,7 +17401,7 @@ highp float nrand(highp vec2 n) {
           };
         }, {}], 114: [function(require2, module3, exports3) {
           const acorn = require2("acorn");
-          const { Input: Input2 } = require2("./input");
+          const { Input } = require2("./input");
           const { Texture: Texture2 } = require2("./texture");
           const FUNCTION_NAME = /function ([^(]*)/;
           const STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
@@ -17476,7 +17476,7 @@ highp float nrand(highp vec2 n) {
                   return "Float";
                 case Texture2:
                   return value2.type;
-                case Input2:
+                case Input:
                   return "Input";
               }
               if ("nodeName" in value2) {
@@ -17546,7 +17546,7 @@ highp float nrand(highp vec2 n) {
                 ret = dim.reverse();
               } else if (x instanceof Texture2) {
                 ret = x.output;
-              } else if (x instanceof Input2) {
+              } else if (x instanceof Input) {
                 ret = x.size;
               } else {
                 throw new Error(`Unknown dimensions of ${x}`);
@@ -38828,7 +38828,7 @@ void main() {
   }
 
   // package.json
-  var version = "1.2.4";
+  var version = "1.2.5";
 
   // src/webgl/create-dom-layout.js
   function createDOMLayout({ canvas3D, statsElem, userCount }) {
@@ -48514,7 +48514,6 @@ if (edgeAlpha == 0.0) {
 
   // src/webgl/shader-layout/shader-layout-gpgpu.js
   var import_gpu = __toESM(require_gpu_browser());
-  var import_gpu2 = __toESM(require_gpu_browser());
   var DEFAULT_GRAVITY = 9.8;
   function shaderLayoutGPU({ gravity, particles, get, set }) {
     let [w, h] = fitDimensions(particles.length);
@@ -48525,9 +48524,9 @@ if (edgeAlpha == 0.0) {
       pipeline: true,
       tactic: "precision"
     }).setArgumentTypes({
-      positions: "Array3D(3)",
+      positions: "Array2D(3)",
       masses: "Array",
-      velocities: "Array3D(3)",
+      velocities: "Array2D(3)",
       deltaTime: "Float",
       count: "Integer"
     }).setLoopMaxIterations((w + 1) * (h + 1));
@@ -48537,8 +48536,8 @@ if (edgeAlpha == 0.0) {
       pipeline: true,
       tactic: "precision"
     }).setArgumentTypes({
-      positions: "Array3D(3)",
-      velocities: "Array3D(3)",
+      positions: "Array2D(3)",
+      velocities: "Array2D(3)",
       deltaTime: "Float",
       count: "Integer"
     });
@@ -48552,8 +48551,13 @@ if (edgeAlpha == 0.0) {
       updateParticles,
       runLayout
     };
+    function patchInput(arg, dim) {
+      arg.value = arg;
+      arg.size = dim;
+      return arg;
+    }
     function runLayout(deltaTime) {
-      const posArg = texPositionsOut || new import_gpu2.Input(
+      const posArg = texPositionsOut || patchInput(
         /** @type {any} */
         bufPositionsIn,
         [w, h, 3]
@@ -48562,12 +48566,12 @@ if (edgeAlpha == 0.0) {
         /** @type {import('gpu.js').Texture} */
         calcVelocities(
           posArg,
-          new import_gpu2.Input(
+          patchInput(
             /** @type {any} */
             bufMasses,
             [w, h]
           ),
-          texVelocitiesOut || new import_gpu2.Input(
+          texVelocitiesOut || patchInput(
             /** @type {any} */
             bufVelocities,
             [w, h, 3]
@@ -48594,19 +48598,8 @@ if (edgeAlpha == 0.0) {
       if (!texPositionsOut || !texVelocitiesOut) throw new Error("Textures are released already.");
       const positions = texPositionsOut.toArray();
       const velocities = texVelocitiesOut.toArray();
-      for (let i = 0; i < particles.length; i++) {
-        const particle = particles[i];
-        const [x, y, z] = (
-          /** @type {[number, number, number][]} */
-          positions[i]
-        );
-        const [vx, vy, vz] = (
-          /** @type {[number, number, number][]} */
-          velocities[i]
-        );
-        get(particle, { x, y, z, mass: 0, vx, vy, vz });
-      }
       const dummy = {
+        index: 0,
         x: 0,
         y: 0,
         z: 0,
@@ -48620,21 +48613,34 @@ if (edgeAlpha == 0.0) {
           dummy.x = dummy.y = dummy.z = 0;
           dummy.mass = 0;
           dummy.vx = dummy.vy = dummy.vz = 0;
-          const particle = particles[indexH * w + indexW];
+          const index = indexH * w + indexW;
+          if (index >= particles.length) break;
+          const particle = particles[index];
           const posWH = positions[indexH][indexW];
-          dummy.x = posWH[0];
-          dummy.y = posWH[1];
-          dummy.z = posWH[2];
           const velWH = velocities[indexH][indexW];
-          dummy.vx = velWH[0];
-          dummy.vy = velWH[1];
-          dummy.vz = velWH[2];
-          set(particle, dummy);
+          if (typeof set === "function") {
+            dummy.index = index;
+            dummy.x = posWH[0];
+            dummy.y = posWH[1];
+            dummy.z = posWH[2];
+            dummy.vx = velWH[0];
+            dummy.vy = velWH[1];
+            dummy.vz = velWH[2];
+            set(particle, dummy);
+          } else {
+            particle.x = posWH[0];
+            particle.y = posWH[1];
+            particle.z = posWH[2];
+            particle.vx = velWH[0];
+            particle.vy = velWH[1];
+            particle.vz = velWH[2];
+          }
         }
       }
     }
     function populateBuffers(bufPositionsIn2, bufMasses2, bufVelocities2) {
       const dummy = {
+        index: 0,
         x: 0,
         y: 0,
         z: 0,
@@ -48644,19 +48650,34 @@ if (edgeAlpha == 0.0) {
         vz: 0
       };
       for (let i = 0; i < particles.length; i++) {
-        dummy.x = dummy.y = dummy.z = 0;
-        dummy.mass = 0;
-        dummy.vx = dummy.vy = dummy.vz = 0;
         const particle = particles[i];
-        get(particle, dummy);
-        const index = i * 3;
-        bufPositionsIn2[index] = dummy.x;
-        bufPositionsIn2[index + 1] = dummy.y;
-        bufPositionsIn2[index + 2] = dummy.z;
-        bufMasses2[i] = dummy.mass;
-        bufVelocities2[index] = dummy.vx;
-        bufVelocities2[index + 1] = dummy.vy;
-        bufVelocities2[index + 2] = dummy.vz;
+        const bufIndex = i * 3;
+        if (typeof get === "function") {
+          dummy.index = i;
+          dummy.x = particle.x || 0;
+          dummy.y = particle.y || 0;
+          dummy.z = particle.z || 0;
+          dummy.mass = particle.mass || 0;
+          dummy.vx = particle.vx || 0;
+          dummy.vy = particle.vy || 0;
+          dummy.vz = particle.vz || 0;
+          get(particle, dummy);
+          bufPositionsIn2[bufIndex] = dummy.x;
+          bufPositionsIn2[bufIndex + 1] = dummy.y;
+          bufPositionsIn2[bufIndex + 2] = dummy.z;
+          bufMasses2[i] = dummy.mass;
+          bufVelocities2[bufIndex] = dummy.vx;
+          bufVelocities2[bufIndex + 1] = dummy.vy;
+          bufVelocities2[bufIndex + 2] = dummy.vz;
+        } else {
+          bufPositionsIn2[bufIndex] = particle.x || 0;
+          bufPositionsIn2[bufIndex + 1] = particle.y || 0;
+          bufPositionsIn2[bufIndex + 2] = particle.z || 0;
+          bufMasses2[i] = particle.mass || 0;
+          bufVelocities2[bufIndex] = particle.vx || 0;
+          bufVelocities2[bufIndex + 1] = particle.vy || 0;
+          bufVelocities2[bufIndex + 2] = particle.vz || 0;
+        }
       }
     }
     function updateParticles(newParticles) {
@@ -48737,8 +48758,14 @@ if (edgeAlpha == 0.0) {
   }
   function nBodyPositions(positions, velocities, deltaTime, count) {
     if (this.thread.y * this.constants.w + this.thread.x > count) return [0, 0, 0];
-    const [x, y, z] = positions[this.thread.y][this.thread.x];
-    const [vx, vy, vz] = velocities[this.thread.y][this.thread.x];
+    const xyz = positions[this.thread.y][this.thread.x];
+    const x = xyz[0];
+    const y = xyz[1];
+    const z = xyz[2];
+    const vXYZ = velocities[this.thread.y][this.thread.x];
+    const vx = vXYZ[0];
+    const vy = vXYZ[1];
+    const vz = vXYZ[2];
     const newX = x + vx * deltaTime;
     const newY = y + vy * deltaTime;
     const newZ = z + vz * deltaTime;
@@ -48806,14 +48833,19 @@ if (edgeAlpha == 0.0) {
             user.x = coords.x;
             user.h = coords.y;
             user.y = coords.z;
-            user.vx = coords.vx;
-            user.vy = coords.vy;
-            user.vz = coords.vz;
+            const userV = user;
+            userV.vx = coords.vx;
+            userV.vy = coords.vy;
+            userV.vz = coords.vz;
           }
         });
       }
+      const start = performance.now();
       const applyBack = shaderLayout.runLayout(1e-3);
+      const runTime = performance.now() - start;
       applyBack();
+      const applyTime = performance.now() - start - runTime;
+      console.log("Shader layout took ", runTime, " msec, apply took ", applyTime, " msec");
     };
     if (location.hash?.length > 3) {
       const hasCommaParts = location.hash.replace(/^#/, "").split(",");

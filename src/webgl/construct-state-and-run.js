@@ -92,15 +92,23 @@ export async function constructStateAndRun(rawUsers) {
           user.x = coords.x;
           user.h = coords.y;
           user.y = coords.z;
-          user.vx = coords.vx;
-          user.vy = coords.vy;
-          user.vz = coords.vz;
+
+          /** @type {*} */
+          const userV = user;
+          userV.vx = coords.vx;
+          userV.vy = coords.vy;
+          userV.vz = coords.vz;
         }
       });
     }
 
+    const start = performance.now();
     const applyBack = shaderLayout.runLayout(0.001);
+    const runTime = performance.now() - start;
     applyBack();
+    const applyTime = performance.now() - start - runTime;
+
+    console.log('Shader layout took ', runTime, ' msec, apply took ', applyTime, ' msec');
   };
 
   if (location.hash?.length > 3) {
