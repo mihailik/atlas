@@ -36,7 +36,6 @@ export function setupScene(users, clock) {
 
   const farUsersMesh =
     massSpotMesh({
-      clock: { now: () => clock.nowMSec },
       spots: users,
       get: (user, dummy) => {
         dummy.x = user.x;

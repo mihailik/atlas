@@ -38828,7 +38828,7 @@ void main() {
   }
 
   // package.json
-  var version = "1.2.3";
+  var version = "1.2.4";
 
   // src/webgl/create-dom-layout.js
   function createDOMLayout({ canvas3D, statsElem, userCount }) {
@@ -46740,7 +46740,6 @@ if (edgeAlpha == 0.0) {
     renderer.setSize(window.innerWidth, window.innerHeight);
     const stats = new stats_module_default();
     const farUsersMesh = massSpotMesh({
-      clock: { now: () => clock.nowMSec },
       spots: users,
       get: (user, dummy) => {
         dummy.x = user.x;
